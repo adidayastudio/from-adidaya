@@ -1,0 +1,24 @@
+-- =========================================
+-- SCHEMA REFERENCE
+-- =========================================
+-- This file documents the Supabase schema that exists in the database.
+-- The actual schema is managed in Supabase Dashboard.
+-- DO NOT run this file - it's for reference only.
+--
+-- Tables:
+-- - workspaces
+-- - workspace_members
+-- - projects
+-- - project_stages
+-- - project_wbs_items
+-- - project_rab_versions
+-- - project_rab_items
+-- - project_schedule_versions
+-- - project_schedule_tasks
+-- - project_schedule_dependencies
+-- - project_tasks
+-- - project_docs
+-- - stage_templates
+-- - wbs_templates
+--
+-- See full schema in Supabase Dashboard or the original migration file.

@@ -1,0 +1,115 @@
+import { useState, useEffect, useCallback, useMemo } from "react";
+import useUserProfile from "./useUserProfile";
+import { createClient } from "@/utils/supabase/client";
+import * as clockApi from "@/lib/api/clock";
+
+export function useClock() {
+    const { profile } = useUserProfile();
+    const [isCheckedIn, setIsCheckedIn] = useState(false);
+    const [startTime, setStartTime] = useState<Date | null>(null);
+    const [elapsed, setElapsed] = useState(0);
+    const supabase = useMemo(() => createClient(), []);
+
+    const checkActiveSession = useCallback(async () => {
+        if (!profile?.id) return;
+
+        const dateStr = new Date().toISOString().split("T")[0];
+
+        // Try new sessions table first, fallback to old records table
+        let { data, error } = await supabase
+            .from("attendance_sessions")
+            .select("id, clock_in, clock_out, session_number")
+            .eq("user_id", profile.id)
+            .eq("date", dateStr)
+            .is("clock_out", null)
+            .maybeSingle();
+
+        // Fallback to attendance_records if sessions table doesn't exist
+        if (error?.code === "42P01" || error?.message?.includes("does not exist")) {
+            const fallback = await supabase
+                .from("attendance_records")
+                .select("clock_in, clock_out")
+                .eq("user_id", profile.id)
+                .eq("date", dateStr)
+                .maybeSingle();
+
+            if (fallback.data && fallback.data.clock_in && !fallback.data.clock_out) {
+                setIsCheckedIn(true);
+                setStartTime(new Date(fallback.data.clock_in));
+            } else {
+                setIsCheckedIn(false);
+                setStartTime(null);
+            }
+            return;
+        }
+
+        if (error) {
+            console.error("❌ Error checking active session:", error.message);
+            return;
+        }
+
+        if (data && data.clock_in) {
+            setIsCheckedIn(true);
+            setStartTime(new Date(data.clock_in));
+        } else {
+            setIsCheckedIn(false);
+            setStartTime(null);
+        }
+    }, [profile?.id, supabase]);
+
+    useEffect(() => {
+        checkActiveSession();
+    }, [checkActiveSession]);
+
+    const handleClock = useCallback(async (metadata?: clockApi.ClockActionMetadata) => {
+        if (!profile?.id) return;
+
+        const type = isCheckedIn ? "OUT" : "IN";
+        await clockApi.clockAction(profile.id, type, metadata);
+
+        // Refresh state
+        await checkActiveSession();
+    }, [profile?.id, isCheckedIn, checkActiveSession]);
+
+    // Timer Logic
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isCheckedIn && startTime) {
+            const updateElapsed = () => {
+                const now = new Date();
+                setElapsed(Math.floor((now.getTime() - startTime.getTime()) / 1000));
+            };
+
+            updateElapsed();
+            interval = setInterval(updateElapsed, 1000);
+        } else {
+            setElapsed(0);
+        }
+        return () => clearInterval(interval);
+    }, [isCheckedIn, startTime]);
+
+    const formatTime = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    const getStatus = () => {
+        if (!startTime) return "on-time";
+        const limit = new Date(startTime);
+        limit.setHours(9, 0, 0, 0);
+        if (startTime > limit) return "late";
+
+        const now = new Date();
+        const limitOt = new Date(now);
+        limitOt.setHours(17, 0, 0, 0);
+        if (now > limitOt) return "overtime";
+
+        return "on-time";
+    }
+
+    const status = getStatus();
+
+    return { isCheckedIn, startTime, elapsed, toggleClock: handleClock, formatTime, status, refresh: checkActiveSession };
+}

@@ -1,0 +1,7 @@
+-- Add percentage columns to classes (cost_templates) table
+ALTER TABLE classes 
+ADD COLUMN IF NOT EXISTS percentage_s NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS percentage_a NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS percentage_m NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS percentage_i NUMERIC DEFAULT 0,
+ADD COLUMN IF NOT EXISTS percentage_l NUMERIC DEFAULT 0;

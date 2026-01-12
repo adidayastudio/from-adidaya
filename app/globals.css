@@ -1,26 +1,270 @@
-@import "tailwindcss";
+/* 🟢 IMPORT TOKEN DULU */
+@import "../shared/styles/tokens.css";
+@import "../shared/styles/typography.css";
 
+/* 🟢 Baru panggil Tailwind */
+@tailwind base;
+/* Force rebuild */
+@tailwind components;
+@tailwind utilities;
+
+/* =========================================
+   ADIDAYAOS DESIGN TOKENS (LIGHT MODE)
+========================================= */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* BRAND COLORS (LIGHT MODE) */
+  --brand-red: #D91011;
+  --brand-red-soft: #FF6B63;
+  --brand-red-fade: #FCE8E7;
+  /* soft red wash background */
+
+  --brand-blue: #2176FF;
+  --brand-green: #20BF55;
+  --brand-yellow: #F8C537;
+
+  /* ACTION COLORS (BRIGHTER FOR LIGHT BACKGROUND) */
+  --action-primary: var(--brand-red);
+  --action-primary-hover: #C80F0F;
+  --action-primary-pressed: #980B0B;
+
+  --action-danger: #E11D48;
+  --action-warning: #CA8A04;
+  --action-success: #16A34A;
+  --action-info: #2563EB;
+
+  /* TEXT COLORS (LIGHT MODE) */
+  --text-primary: #1A1A1A;
+  /* Very dark grey */
+  --text-secondary: #4B5563;
+  /* Gray-600 */
+  --text-tertiary: #6B7280;
+  /* Gray-500 */
+  --text-muted: #9CA3AF;
+  /* Gray-400 */
+  --text-inverse: #FFFFFF;
+
+  /* BACKGROUND COLORS (LIGHT MODE) */
+  --bg-0: #FFFFFF;
+  /* Main page background */
+  --bg-100: #FAFAFA;
+  --bg-200: #F4F4F5;
+  --bg-300: #E5E7EB;
+  --bg-400: #D1D5DB;
+
+  --bg-surface: #FFFFFF;
+  /* Cards, panels */
+  --bg-raised: #F9FAFB;
+  /* Slightly raised elements */
+  --bg-overlay: rgba(0, 0, 0, 0.05);
+
+  /* BORDER COLORS (LIGHT MODE) */
+  --border-light: #E5E7EB;
+  --border-default: #D1D5DB;
+  --border-strong: #9CA3AF;
+
+  /* SYSTEM STATES (PASTEL BACKGROUNDS) */
+  --success-bg: #DFFDEB;
+  --warning-bg: #FFF6D5;
+  --danger-bg: #FFE5E7;
+  --info-bg: #E4F0FF;
+
+  /* SPACING */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* TYPOGRAPHY */
+  --font-family: "Inter", sans-serif;
+
+  --h1-size: 32px;
+  --h1-weight: 700;
+
+  --h2-size: 28px;
+  --h2-weight: 700;
+
+  --h3-size: 24px;
+  --h3-weight: 600;
+
+  --h4-size: 18px;
+  --h4-weight: 600;
+
+  --h5-size: 16px;
+  --h5-weight: 600;
+
+  --body-size: 16px;
+  --body-weight: 400;
+
+  --small-size: 12px;
+  --small-weight: 400;
+
+  /* RADIUS */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 999px;
+
+  /* SHADOWS (LIGHT MODE — SOFT & REALISTIC) */
+  --shadow-soft: 0 2px 6px rgba(0, 0, 0, 0.07);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 12px rgba(217, 16, 17, 0.15);
+
+  /* DEFAULT PILLAR (FALLBACK) */
+  --bg-soft: var(--bg-100);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* =========================================
+   PILLAR THEMES
+   ========================================= */
+
+/* FRAME: Identity (Black/Neutral) */
+.theme-frame {
+  --action-primary: #0F0F0F;
+  --action-primary-hover: #1C1C1C;
+  --action-primary-pressed: #000000;
+  --bg-soft: #F5F5F5;
+  --border-soft: #E5E7EB;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* FLOW: Work (Red) */
+.theme-flow {
+  --action-primary: #D91011;
+  --action-primary-hover: #C80F0F;
+  --action-primary-pressed: #980B0B;
+  --bg-soft: #FCEAEA;
+  /* brand-red-fade */
+  --border-soft: #F5B5B5;
 }
 
+/* FEEL: People (Blue) */
+.theme-feel {
+  --action-primary: #2176FF;
+  --action-primary-hover: #185AD8;
+  --action-primary-pressed: #1040A0;
+  --bg-soft: #EAF1FF;
+  --border-soft: #BFDBFE;
+}
+
+
+/* TYPOGRAPHY HELPERS */
+.h1 {
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
+}
+
+.h2 {
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+}
+
+.h3 {
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+}
+
+.h4 {
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+}
+
+.h5 {
+  font-size: var(--h5-size);
+  font-weight: var(--h5-weight);
+}
+
+.p {
+  font-size: var(--body-size);
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+.small {
+  font-size: var(--small-size);
+  opacity: 0.75;
+}
+
+/* =========================================
+   TIPTAP (LIGHT MODE)
+========================================= */
+
+.ProseMirror ul {
+  list-style-type: disc !important;
+  padding-left: 1.4rem;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal !important;
+  padding-left: 1.4rem;
+}
+
+/* Headings */
+.ProseMirror h1 {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.ProseMirror h2 {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.ProseMirror h3 {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.ProseMirror p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0.2rem 0;
+  color: var(--text-secondary);
+}
+
+.prose blockquote {
+  border-left: 3px solid rgba(0, 0, 0, 0.25);
+  padding-left: 1rem;
+  margin-left: 0;
+  color: rgba(0, 0, 0, 0.6);
+  font-style: italic;
+}
+
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden !important;
+}
+
+/* GLOBAL FOCUS OVERRIDE */
+*:focus-visible {
+  outline-color: var(--brand-red) !important;
+  outline-width: 2px;
+  outline-style: solid;
+  outline-offset: 1px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  /* Let Tailwind ring handle it, or custom styles */
+  --tw-ring-color: var(--brand-red) !important;
 }

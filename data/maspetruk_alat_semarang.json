@@ -1,0 +1,272 @@
+[
+    {
+        "name": "Rock Drill Breaker",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 400000
+    },
+    {
+        "name": "Alat Las Listrik",
+        "category": "equipment",
+        "unit": "Hari",
+        "price": 75000
+    },
+    {
+        "name": "Mesin Las",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 40000
+    },
+    {
+        "name": "Welding Set",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 50000
+    },
+    {
+        "name": "Bored Pile Machine (Hidraulik) Auger dia. 30-60 cm",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 15000
+    },
+    {
+        "name": "Bored Pile Machine (Hidraulik) Auger dia. 45 - 120 cm",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 550000
+    },
+    {
+        "name": "Mesin Bor",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 5800
+    },
+    {
+        "name": "Mesin Bor Pipe Jacking",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 21500
+    },
+    {
+        "name": "Crane",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 593750
+    },
+    {
+        "name": "Crane 10-15 Ton",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 562500
+    },
+    {
+        "name": "Crane 2",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 562500
+    },
+    {
+        "name": "Crane 3",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 562500
+    },
+    {
+        "name": "Crane on Track",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 593750
+    },
+    {
+        "name": "Crane On Track (75- 100)T; 75 HP",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 1000000
+    },
+    {
+        "name": "Crane On Truck",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 625000
+    },
+    {
+        "name": "Crane Truck 3 Ton; Winch 5 Ton",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 625000
+    },
+    {
+        "name": "Mobile crane <= 3 ton",
+        "category": "equipment",
+        "unit": "Hari",
+        "price": 1218000
+    },
+    {
+        "name": "Sewa crane",
+        "category": "equipment",
+        "unit": "unit Hari",
+        "price": 4500000
+    },
+    {
+        "name": "Dump Truck",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 418000
+    },
+    {
+        "name": "Dump Truck 10 Ton",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 500000
+    },
+    {
+        "name": "Excavator",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 375000
+    },
+    {
+        "name": "Mini Excavator",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 220000
+    },
+    {
+        "name": "Sewa excavator type 225 kapasitas 0,5 - 1,0 m3",
+        "category": "equipment",
+        "unit": "Hari",
+        "price": 3800000
+    },
+    {
+        "name": "Generator Set 20 KVA",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 291660
+    },
+    {
+        "name": "Generator Set 250A (0,33 HP)",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 50000
+    },
+    {
+        "name": "Jack Hammer",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 45000
+    },
+    {
+        "name": "Jack Hammer + Kompresor (40 HP)",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 330800
+    },
+    {
+        "name": "AMP (Asphalt Mixing Plant)",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 5500000
+    },
+    {
+        "name": "Aspal Finisher",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 280000
+    },
+    {
+        "name": "Asphalt Cutter",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 38000
+    },
+    {
+        "name": "Asphalt Distributor",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 200000
+    },
+    {
+        "name": "Baby Vibratory Roller",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 80000
+    },
+    {
+        "name": "Bar Bender",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 22000
+    },
+    {
+        "name": "Bar Cutter",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 22000
+    },
+    {
+        "name": "Batching Plant",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 750000
+    },
+    {
+        "name": "Bulldozer 100-155 HP",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 477500
+    },
+    {
+        "name": "Concrete Mixer",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 80000
+    },
+    {
+        "name": "Concrete Pump",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 400000
+    },
+    {
+        "name": "Concrete Vibrator",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 45000
+    },
+    {
+        "name": "Motor Grader",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 350000
+    },
+    {
+        "name": "Pneumatic Tire Roller",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 270000
+    },
+    {
+        "name": "Stamper",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 40000
+    },
+    {
+        "name": "Tandem Roller",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 243500
+    },
+    {
+        "name": "Water Tank Truck",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 255200
+    },
+    {
+        "name": "Wheel Loader",
+        "category": "equipment",
+        "unit": "Jam",
+        "price": 300000
+    }
+]

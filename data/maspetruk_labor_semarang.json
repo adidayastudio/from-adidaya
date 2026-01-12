@@ -1,0 +1,272 @@
+[
+    {
+        "name": "Tukang Pipa",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Juru Ukur",
+        "unit": "OH",
+        "price": 170000
+    },
+    {
+        "name": "Kepala Tukang",
+        "unit": "OJ",
+        "price": 24286
+    },
+    {
+        "name": "Kepala Tukang",
+        "unit": "OH",
+        "price": 170000
+    },
+    {
+        "name": "Kepala Tukang batu",
+        "unit": "OH",
+        "price": 170000
+    },
+    {
+        "name": "Kepala Tukang Besi",
+        "unit": "OH",
+        "price": 170000
+    },
+    {
+        "name": "Kepala Tukang Cat",
+        "unit": "OH",
+        "price": 170000
+    },
+    {
+        "name": "Kepala Tukang Kayu",
+        "unit": "OH",
+        "price": 170000
+    },
+    {
+        "name": "Kepala Tukang Listrik",
+        "unit": "OH",
+        "price": 170000
+    },
+    {
+        "name": "Kepala Tukang Tanam",
+        "unit": "OH",
+        "price": 170000
+    },
+    {
+        "name": "Mandor",
+        "unit": "OH",
+        "price": 170000
+    },
+    {
+        "name": "Mandor",
+        "unit": "OJ",
+        "price": 24286
+    },
+    {
+        "name": "Pekerja",
+        "unit": "OH",
+        "price": 145000
+    },
+    {
+        "name": "Pekerja",
+        "unit": "OJ",
+        "price": 20714
+    },
+    {
+        "name": "Pembantu Juru Ukur",
+        "unit": "OH",
+        "price": 150000
+    },
+    {
+        "name": "Penyelam",
+        "unit": "OJ",
+        "price": 39286
+    },
+    {
+        "name": "Penyelam minimum 2 orang",
+        "unit": "OJ",
+        "price": 39286
+    },
+    {
+        "name": "Tenaga Ahli",
+        "unit": "OJ",
+        "price": 30714
+    },
+    {
+        "name": "Tenaga Ahli Pratama",
+        "unit": "OH",
+        "price": 210000
+    },
+    {
+        "name": "Tenaga Terampil Operator",
+        "unit": "OH",
+        "price": 270000
+    },
+    {
+        "name": "Tukang",
+        "unit": "OJ",
+        "price": 22857
+    },
+    {
+        "name": "Tukang",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Aluminium",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Batu",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Batu",
+        "unit": "OJ",
+        "price": 22857
+    },
+    {
+        "name": "Tukang Batu dan Tukang Las Listrik",
+        "unit": "OJ",
+        "price": 22857
+    },
+    {
+        "name": "Tukang Batu/Tembok",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Batu/Tembok",
+        "unit": "OJ",
+        "price": 22857
+    },
+    {
+        "name": "Tukang Besi",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Besi",
+        "unit": "OJ",
+        "price": 22857
+    },
+    {
+        "name": "Tukang Besi / Besi Beton",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Besi Konstruksi",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Besi Tulangan",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Cat",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Cat/Pelitur",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Ereksi",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Kaca",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Kayu",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Kayu Halus",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Kayu Kasar",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Kayu, Tukang Batu, dsb",
+        "unit": "OJ",
+        "price": 22857
+    },
+    {
+        "name": "Tukang Kayu/Tembok",
+        "unit": "OJ",
+        "price": 22857
+    },
+    {
+        "name": "Tukang Konstruksi",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Las",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Las",
+        "unit": "OJ",
+        "price": 22857
+    },
+    {
+        "name": "Tukang las geotextile",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang las listrik",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Listrik",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Listrik / Elektronik",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Pemelihara Taman",
+        "unit": "OH",
+        "price": 165000
+    },
+    {
+        "name": "Tukang Pompa",
+        "unit": "OJ",
+        "price": 22857
+    },
+    {
+        "name": "Tukang Pompa",
+        "unit": "OH",
+        "price": 160000
+    },
+    {
+        "name": "Tukang Tanam",
+        "unit": "OH",
+        "price": 180000
+    },
+    {
+        "name": "Tukang Tembok",
+        "unit": "OH",
+        "price": 160000
+    }
+]
