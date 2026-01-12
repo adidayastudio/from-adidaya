@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
+import { createClient } from "@/utils/supabase/client";
 
 import {
   LayoutDashboard,
@@ -30,8 +31,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+
   Menu,
-  X
+  X,
+  LogOut
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
@@ -101,6 +104,8 @@ function getSectionColors(section: string) {
 
 export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number) => void }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
   const [open, setOpen] = useState(false); // Default to collapsed
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -121,6 +126,12 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
     setMobileOpen(false);
   }, [pathname]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
+
   if (!mounted) return null;
 
   return (
@@ -131,6 +142,15 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
         className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-lg bg-white border border-neutral-200 shadow-md"
       >
         <Menu className="w-6 h-6 text-neutral-700" />
+      </button>
+
+      {/* MOBILE LOGOUT BUTTON - Fixed top right */}
+      <button
+        onClick={handleLogout}
+        className="fixed top-4 right-4 z-50 md:hidden p-2 rounded-lg bg-white border border-neutral-200 shadow-md text-red-600 active:scale-95 transition-transform"
+        aria-label="Sign Out"
+      >
+        <LogOut className="w-6 h-6" />
       </button>
 
       {/* MOBILE OVERLAY BACKDROP */}
