@@ -330,10 +330,10 @@ export async function createCrewMember(input: CreateCrewMemberInput): Promise<Cr
 
     if (error) {
         console.error("❌ Error creating crew member:", error);
-        return null;
+        throw new Error(error.message);
     }
 
-    return data ? mapDbToCrewMember(data) : null;
+    return mapDbToCrewMember(data);
 }
 
 // ============================================
@@ -400,10 +400,10 @@ export async function updateCrewMember(
 
     if (error) {
         console.error("❌ Error updating crew member:", error);
-        return null;
+        throw new Error(error.message);
     }
 
-    return data ? mapDbToCrewMember(data) : null;
+    return mapDbToCrewMember(data);
 }
 
 // ============================================
@@ -418,7 +418,7 @@ export async function deleteCrewMember(id: string): Promise<boolean> {
 
     if (error) {
         console.error("❌ Error deleting crew member:", error);
-        return false;
+        throw new Error(error.message);
     }
 
     return true;

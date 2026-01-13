@@ -270,12 +270,10 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 await loadData();
                 setShowAddDrawer(false);
                 resetForm();
-            } else {
-                alert("Failed to create crew member. Please check your connection and try again.");
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to add crew:", err);
-            alert("An parsing error occurred while adding crew.");
+            alert(`Failed to add crew: ${err.message || "Unknown error"}`);
         } finally {
             setIsSaving(false);
         }
@@ -304,12 +302,10 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 setShowEditDrawer(false);
                 setSelectedCrew(null);
                 resetForm();
-            } else {
-                alert("Failed to update crew member. Please try again.");
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to update crew:", err);
-            alert("An error occurred while updating crew.");
+            alert(`Failed to update crew: ${err.message || "Unknown error"}`);
         } finally {
             setIsSaving(false);
         }
@@ -324,12 +320,10 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 await loadData();
                 setShowDeleteConfirm(false);
                 setSelectedCrew(null);
-            } else {
-                alert("Failed to delete crew member. Please try again.");
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to delete crew:", err);
-            alert("An error occurred while deleting crew.");
+            alert(`Failed to delete crew: ${err.message || "Unknown error"}`);
         } finally {
             setIsSaving(false);
         }
