@@ -251,7 +251,19 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
             if (typeof keyOrUpdates === 'string') {
                 if (keyOrUpdates === 'status') {
                     // Apply toggle if it's a status update
-                    updated.status = handleStatusToggle(e.status, val as string) as AttendanceStatus;
+                    const newStatus = handleStatusToggle(e.status, val as string) as AttendanceStatus;
+
+                    // Only update if status actually changes (or toggles to empty)
+                    if (updated.status !== newStatus) {
+                        updated.status = newStatus;
+
+                        // Defaults based on NEW status
+                        if (updated.status === "PRESENT") { updated.regularHrs = 8; }
+                        else if (updated.status === "ABSENT" || updated.status === "CUTI" || updated.status === "") {
+                            updated.regularHrs = 0; updated.ot1Hrs = 0; updated.ot2Hrs = 0; updated.ot3Hrs = 0;
+                        }
+                        else if (updated.status === "HALF_DAY") { updated.regularHrs = 4; }
+                    }
                 } else {
                     (updated as any)[keyOrUpdates] = val;
                 }
@@ -259,11 +271,9 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                 updated = { ...updated, ...keyOrUpdates };
             }
 
-            if (updated.status === "PRESENT") { updated.regularHrs = 8; }
-            else if (updated.status === "ABSENT" || updated.status === "CUTI" || updated.status === "") {
-                updated.regularHrs = 0; updated.ot1Hrs = 0; updated.ot2Hrs = 0; updated.ot3Hrs = 0;
-            }
+            // Enforce constraints
             if (updated.status === "HALF_DAY" && updated.regularHrs > 4) updated.regularHrs = 4;
+
             return updated;
         }));
     };
@@ -384,9 +394,9 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
     const HourInput = ({ label, value, onChange, disabled, max = 8 }: { label: string; value: number; onChange: (v: number) => void; disabled?: boolean; max?: number }) => (
         <div className="flex items-center gap-2">
             <span className="w-8 text-xs text-neutral-500">{label}</span>
-            <button onClick={() => onChange(Math.max(0, value - 1))} disabled={disabled || value <= 0} className={clsx("w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors", disabled || value <= 0 ? "bg-neutral-100 text-neutral-300" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200")}>-</button>
+            <button type="button" onClick={() => onChange(Math.max(0, value - 1))} disabled={disabled || value <= 0} className={clsx("w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors", disabled || value <= 0 ? "bg-neutral-100 text-neutral-300" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200")}>-</button>
             <span className={clsx("w-5 text-center text-sm font-medium", disabled ? "text-neutral-300" : "text-neutral-700")}>{value}</span>
-            <button onClick={() => onChange(Math.min(max, value + 1))} disabled={disabled || value >= max} className={clsx("w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors", disabled || value >= max ? "bg-neutral-100 text-neutral-300" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200")}>+</button>
+            <button type="button" onClick={() => onChange(Math.min(max, value + 1))} disabled={disabled || value >= max} className={clsx("w-7 h-7 rounded-full flex items-center justify-center text-sm transition-colors", disabled || value >= max ? "bg-neutral-100 text-neutral-300" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200")}>+</button>
         </div>
     );
 
