@@ -191,9 +191,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
         else { setSortBy(col); setSortOrder("asc"); }
     };
 
-    const SortIcon = ({ col }: { col: "name" | "role" | "status" | "project" }) =>
-        sortBy !== col ? <ArrowUpDown className="w-3 h-3 text-neutral-400" /> :
-            sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+
 
     const toggleRole = (r: CrewRole) => setSelectedRoles(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
     const toggleStatus = (s: CrewStatus) => setSelectedStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
@@ -395,14 +393,9 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
     const activeFiltersCount = selectedRoles.length + selectedStatuses.length + selectedProjects.length;
 
-    const inputClass = "w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all";
 
-    const FormInput = ({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) => (
-        <div>
-            <label className="block text-sm font-medium text-neutral-700 mb-1.5">{label}</label>
-            <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={inputClass} />
-        </div>
-    );
+
+
 
     // Loading state
     if (isLoading) {
@@ -493,10 +486,10 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                         <table className="w-full text-sm">
                             <thead className="bg-neutral-50 border-b border-neutral-200">
                                 <tr>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon col="name" /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("role")}><div className="flex items-center gap-1">Role <SortIcon col="role" /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon col="project" /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon col="status" /></div></th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon col="name" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("role")}><div className="flex items-center gap-1">Role <SortIcon col="role" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon col="project" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon col="status" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
                                     <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Actions</th>
                                 </tr>
                             </thead>
@@ -653,3 +646,16 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
         </div>
     );
 }
+
+const inputClass = "w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all";
+
+const FormInput = ({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) => (
+    <div>
+        <label className="block text-sm font-medium text-neutral-700 mb-1.5">{label}</label>
+        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={inputClass} />
+    </div>
+);
+
+const SortIcon = ({ col, sortBy, sortOrder }: { col: "name" | "role" | "status" | "project", sortBy: string, sortOrder: string }) =>
+    sortBy !== col ? <ArrowUpDown className="w-3 h-3 text-neutral-400" /> :
+        sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
