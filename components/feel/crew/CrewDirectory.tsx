@@ -61,6 +61,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     const [crewList, setCrewList] = useState<CrewListItem[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
     const [stats, setStats] = useState({ total: 0, active: 0, skilled: 0, unskilled: 0 });
+    const [workspaceId, setWorkspaceId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [exporting, setExporting] = useState(false);
@@ -147,6 +148,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
             setCrewList(mappedCrew);
             setStats(statsData);
+            setWorkspaceId(wsId);
         } catch (err) {
             console.error("Failed to load crew:", err);
         } finally {
@@ -254,6 +256,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
         try {
             const skillTags = formSkills.split(",").map(s => s.trim()).filter(Boolean);
             const result = await createCrewMember({
+                workspaceId: workspaceId || undefined,
                 name: formName.trim(),
                 initials: formInitials,
                 role: formRole,
