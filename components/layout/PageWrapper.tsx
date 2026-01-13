@@ -1,12 +1,15 @@
 import React from "react";
+import clsx from "clsx";
 
 type PageWrapperProps = {
   sidebar: React.ReactNode;
+  header?: React.ReactNode;
   children: React.ReactNode;
 };
 
 export default function PageWrapper({
   sidebar,
+  header,
   children,
 }: PageWrapperProps) {
   return (
@@ -23,7 +26,8 @@ export default function PageWrapper({
 
         {/* MAIN CONTENT CONTAINER */}
         <main className="flex-1 min-w-0">
-          <div className="bg-white rounded-[16px] p-4 h-full pb-24 md:pb-4">
+          {header && <div className="mb-6">{header}</div>}
+          <div className={clsx("bg-white rounded-[16px] p-4 h-full pb-24 md:pb-4", !header && "mt-0")}>
             {children}
           </div>
         </main>

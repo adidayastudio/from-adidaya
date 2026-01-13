@@ -35,6 +35,7 @@ export interface CrewMember {
     id: string;
     workspaceId?: string;
     name: string;
+    initials: string;
     nik?: string;
     phone?: string;
     email?: string;
@@ -93,11 +94,18 @@ export interface DailyLog {
 // MAPPERS
 // ============================================
 
+const getInitialsFallback = (name: string): string => {
+    const words = name.trim().split(/\s+/);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return words[0].substring(0, 2).toUpperCase();
+};
+
 function mapDbToCrewMember(row: any): CrewMember {
     return {
         id: row.id,
         workspaceId: row.workspace_id,
         name: row.name,
+        initials: row.initials || getInitialsFallback(row.name),
         nik: row.nik,
         phone: row.phone,
         email: row.email,
@@ -267,6 +275,7 @@ export async function fetchCrewStats(workspaceId?: string): Promise<{
 export interface CreateCrewMemberInput {
     workspaceId?: string;
     name: string;
+    initials?: string;
     nik?: string;
     phone?: string;
     email?: string;
@@ -293,6 +302,7 @@ export async function createCrewMember(input: CreateCrewMemberInput): Promise<Cr
     const insertData = {
         workspace_id: input.workspaceId || null,
         name: input.name,
+        initials: input.initials || null,
         nik: input.nik || null,
         phone: input.phone || null,
         email: input.email || null,
@@ -332,6 +342,7 @@ export async function createCrewMember(input: CreateCrewMemberInput): Promise<Cr
 
 export interface UpdateCrewMemberInput {
     name?: string;
+    initials?: string;
     nik?: string;
     phone?: string;
     email?: string;
@@ -361,6 +372,7 @@ export async function updateCrewMember(
     const updateData: Record<string, any> = {};
 
     if (input.name !== undefined) updateData.name = input.name;
+    if (input.initials !== undefined) updateData.initials = input.initials;
     if (input.nik !== undefined) updateData.nik = input.nik;
     if (input.phone !== undefined) updateData.phone = input.phone;
     if (input.email !== undefined) updateData.email = input.email;

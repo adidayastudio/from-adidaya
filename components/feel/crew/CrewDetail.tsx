@@ -24,6 +24,18 @@ const getInitials = (name: string): string => {
     return words[0].substring(0, 2).toUpperCase();
 };
 
+const InputField = ({ label, value, onChange, type = "text" }: { label: string, value: string | number, onChange: (v: any) => void, type?: string }) => (
+    <div>
+        <label className="text-xs text-neutral-500 mb-1 block">{label}</label>
+        <input
+            type={type}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full px-3 py-2 text-sm font-medium border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+        />
+    </div>
+);
+
 export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
     const [crew, setCrew] = useState<CrewMember | null>(null);
     const [projectHistory, setProjectHistory] = useState<CrewProjectHistory[]>([]);
@@ -91,18 +103,6 @@ export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
         setIsEditing(false);
     };
 
-    const InputField = ({ label, value, onChange, type = "text" }: { label: string, value: string | number, onChange: (v: any) => void, type?: string }) => (
-        <div>
-            <label className="text-xs text-neutral-500 mb-1 block">{label}</label>
-            <input
-                type={type}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="w-full px-3 py-2 text-sm font-medium border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
-            />
-        </div>
-    );
-
     // Loading state
     if (isLoading) {
         return (
@@ -132,7 +132,7 @@ export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
                     </button>
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white text-xl font-bold shadow-lg">
-                            {getInitials(crew.name)}
+                            {crew.initials || getInitials(crew.name)}
                         </div>
                         <div>
                             <h1 className="text-2xl font-bold text-neutral-900">{crew.name}</h1>

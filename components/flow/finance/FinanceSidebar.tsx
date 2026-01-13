@@ -20,10 +20,9 @@ import { useState, useRef, useEffect } from "react";
 ====================== */
 const NAV_ITEMS = [
   { label: "Overview", path: "/flow/finance", icon: LayoutDashboard },
-  { label: "Cash Flow", path: "/flow/finance/cash-flow", icon: TrendingUp },
-  { label: "Invoices", path: "/flow/finance/invoices", icon: FileText },
+  { label: "Transactions", path: "/flow/finance/transactions", icon: FileText },
+  { label: "Approvals", path: "/flow/finance/approvals", icon: FileText }, // Using FileText for now, maybe CheckCircle?
   { label: "Payments", path: "/flow/finance/payments", icon: CreditCard },
-  { label: "Budget", path: "/flow/finance/budget", icon: PieChart },
   { label: "Reports", path: "/flow/finance/reports", icon: BarChart },
   { label: "Settings", path: "/flow/finance/settings", icon: Settings },
 ];

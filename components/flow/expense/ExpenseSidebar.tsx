@@ -18,7 +18,7 @@ import { useState, useRef, useEffect } from "react";
 ====================== */
 const NAV_ITEMS = [
   { label: "Overview", path: "/flow/expense", icon: LayoutDashboard },
-  { label: "Expenses", path: "/flow/expense/expenses", icon: Receipt },
+  { label: "Expenses", path: "/flow/expense/list", icon: Receipt },
   { label: "Reimbursements", path: "/flow/expense/reimbursements", icon: Receipt },
   { label: "Payments", path: "/flow/expense/payments", icon: CreditCard },
   { label: "Reports", path: "/flow/expense/reports", icon: BarChart },

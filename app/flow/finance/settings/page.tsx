@@ -1,11 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import PageWrapper from "@/components/layout/PageWrapper";
-import FinanceSidebar from "@/components/flow/finance/FinanceSidebar";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
-import { User, Users, Workflow, CreditCard, FileText, Shield, ChevronRight, Building2 } from "lucide-react";
-import clsx from "clsx";
+import FinanceHeader from "@/components/flow/finance/FinanceHeader";
+import { useFinance } from "@/components/flow/finance/FinanceContext";
+import { Workflow, CreditCard, FileText, Shield, ChevronRight, Building2 } from "lucide-react";
 
 function SettingCard({ icon, title, description, onClick }: { icon: React.ReactNode; title: string; description: string; onClick?: () => void }) {
     return (
@@ -22,64 +19,40 @@ function SettingCard({ icon, title, description, onClick }: { icon: React.ReactN
     );
 }
 
+import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
+
 export default function FinanceSettingsPage() {
-    const [viewMode, setViewMode] = useState<"personal" | "team">("team");
+    const { viewMode } = useFinance();
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
-            <Breadcrumb items={[{ label: "Flow" }, { label: "Finance" }, { label: "Settings" }]} />
-
-            <PageWrapper sidebar={<FinanceSidebar />}>
-                <div className="space-y-8 w-full animate-in fade-in duration-500">
-                    {/* HEADER */}
+        <FinancePageWrapper
+            breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Settings" }]}
+            header={
+                <FinanceHeader
+                    title="Settings"
+                    subtitle="Configure finance system settings."
+                />
+            }
+        >
+            <div className="space-y-8 w-full animate-in fade-in duration-500">
+                {viewMode === "team" ? (
                     <div className="space-y-4">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-2xl font-bold text-neutral-900">Settings</h1>
-                                <p className="text-sm text-neutral-500 mt-1">Configure finance system settings.</p>
-                            </div>
-
-                            <div className="flex items-center bg-neutral-100 rounded-full p-1 self-start md:self-auto">
-                                <button onClick={() => setViewMode("personal")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all", viewMode === "personal" ? "bg-white shadow text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}>
-                                    <User className="w-4 h-4" /> Personal
-                                </button>
-                                <button onClick={() => setViewMode("team")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all", viewMode === "team" ? "bg-white shadow text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}>
-                                    <Users className="w-4 h-4" /> Team
-                                </button>
-                            </div>
+                        <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">Team Settings</h3>
+                        <div className="grid gap-4">
+                            <SettingCard icon={<Workflow className="w-5 h-5" />} title="Payment Approval Flow" description="Configure approval workflow for payments" />
+                            <SettingCard icon={<FileText className="w-5 h-5" />} title="Invoice Templates" description="Manage invoice templates and numbering" />
+                            <SettingCard icon={<CreditCard className="w-5 h-5" />} title="Bank Accounts" description="Configure company bank accounts" />
+                            <SettingCard icon={<Building2 className="w-5 h-5" />} title="Tax Settings" description="VAT and tax configuration" />
+                            <SettingCard icon={<Shield className="w-5 h-5" />} title="Permissions" description="Role-based access control for finance module" />
                         </div>
-                        <div className="border-b border-neutral-200" />
                     </div>
-
-                    {/* SETTINGS CONTENT */}
-                    {viewMode === "team" ? (
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">Team Settings</h3>
-                            <div className="grid gap-4">
-                                <SettingCard icon={<Workflow className="w-5 h-5" />} title="Payment Approval Flow" description="Configure approval workflow for payments" />
-                                <SettingCard icon={<FileText className="w-5 h-5" />} title="Invoice Templates" description="Manage invoice templates and numbering" />
-                                <SettingCard icon={<CreditCard className="w-5 h-5" />} title="Bank Accounts" description="Configure company bank accounts" />
-                                <SettingCard icon={<Building2 className="w-5 h-5" />} title="Tax Settings" description="VAT and tax configuration" />
-                                <SettingCard icon={<Shield className="w-5 h-5" />} title="Permissions" description="Role-based access control for finance module" />
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider">Personal Preferences</h3>
-                            <div className="grid gap-4">
-                                <SettingCard icon={<FileText className="w-5 h-5" />} title="Report Preferences" description="Configure your default report views" />
-                                <SettingCard icon={<CreditCard className="w-5 h-5" />} title="Notification Settings" description="Payment and invoice alerts" />
-                            </div>
-
-                            <div className="mt-8 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                                <div className="text-sm text-blue-700">
-                                    <strong>Note:</strong> Team-wide settings are managed by your administrator.
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </PageWrapper>
-        </div>
+                ) : (
+                    <div className="text-center py-20 bg-white rounded-xl border border-dashed border-neutral-200">
+                        <p className="text-neutral-500">Finance Settings are available in Team View only.</p>
+                        <p className="text-xs text-neutral-400 mt-2">Please switch to Team View if you have access.</p>
+                    </div>
+                )}
+            </div>
+        </FinancePageWrapper>
     );
 }

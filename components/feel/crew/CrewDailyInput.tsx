@@ -18,6 +18,7 @@ type AttendanceStatus = "PRESENT" | "ABSENT" | "HALF_DAY" | "CUTI" | "";
 interface DailyEntry {
     id: string;
     crewName: string;
+    initials: string;
     crewRole: CrewRole;
     status: AttendanceStatus;
     regularHrs: number;
@@ -27,11 +28,7 @@ interface DailyEntry {
     saved: boolean;
 }
 
-const getInitials = (name: string): string => {
-    const words = name.trim().split(/\s+/);
-    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-    return words[0].substring(0, 2).toUpperCase();
-};
+// Removed local getInitials
 
 // Helper to format project code (get 3 letters after dash)
 const formatProjectCode = (code?: string) => {
@@ -118,6 +115,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                         return {
                             id: c.id,
                             crewName: c.name,
+                            initials: c.initials,
                             crewRole: c.role,
                             status: (log?.status as any) || "",
                             regularHrs: log ? log.regularHours : 8,
@@ -508,7 +506,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                                             <td className="px-3 py-3"><input type="checkbox" checked={selectedRows.has(entry.id)} onChange={() => toggleRowSelection(entry.id)} className="rounded border-neutral-300" /></td>
                                             <td className="px-3 py-3">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(entry.crewName)}</div>
+                                                    <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{entry.initials}</div>
                                                     <div><div className="font-medium text-neutral-900 text-sm">{entry.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[entry.crewRole]?.id || entry.crewRole}</div></div>
                                                 </div>
                                             </td>

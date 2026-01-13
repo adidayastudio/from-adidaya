@@ -16,6 +16,7 @@ interface CrewPayrollProps {
 interface PayrollEntry {
     id: string;
     crewName: string;
+    initials: string;
     crewRole: CrewRole;
     days: number;
     basePay: number;
@@ -25,11 +26,7 @@ interface PayrollEntry {
     total: number;
 }
 
-const getInitials = (name: string): string => {
-    const words = name.trim().split(/\s+/);
-    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-    return words[0].substring(0, 2).toUpperCase();
-};
+// Removed local getInitials
 
 // Helper to format project code (get 3 letters after dash)
 const formatProjectCode = (code?: string) => {
@@ -135,6 +132,7 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                     payrollMap.set(crew.id, {
                         id: crew.id,
                         crewName: crew.name,
+                        initials: crew.initials,
                         crewRole: crew.role,
                         days: 0,
                         basePay: 0,
@@ -454,7 +452,7 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                                     const adj = e.reimburse - e.kasbon;
                                     return (
                                         <tr key={e.id} className="hover:bg-neutral-50 transition-colors">
-                                            <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(e.crewName)}</div><div><span className="font-medium text-neutral-900">{e.crewName}</span><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[e.crewRole]?.id || e.crewRole}</div></div></div></td>
+                                            <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{e.initials}</div><div><span className="font-medium text-neutral-900">{e.crewName}</span><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[e.crewRole]?.id || e.crewRole}</div></div></div></td>
                                             <td className="px-4 py-3 text-right text-neutral-600 hidden md:table-cell">{e.days}</td>
                                             <td className="px-4 py-3 text-right text-neutral-700">{formatNumFull(e.basePay)}</td>
                                             <td className="px-4 py-3 text-right text-blue-600 hidden md:table-cell">{formatNumFull(e.otPay)}</td>

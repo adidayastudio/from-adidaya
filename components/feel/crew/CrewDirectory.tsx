@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
+import { generateSmartInitials } from "@/lib/initials";
 
 interface CrewDirectoryProps {
     role?: string;
@@ -34,6 +35,7 @@ type FilterCard = "ALL" | "ACTIVE" | "SKILLED" | "UNSKILLED";
 interface CrewListItem {
     id: string;
     name: string;
+    initials: string;
     role: CrewRole;
     status: CrewStatus;
     skillTags: string[];
@@ -53,7 +55,6 @@ const ROLE_COLORS: Record<CrewRole, string> = {
     OPERATOR: "bg-amber-100 text-amber-700",
     GENERAL: "bg-neutral-100 text-neutral-700"
 };
-const getInitials = (name: string): string => { const w = name.trim().split(/\s+/); return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : w[0].substring(0, 2).toUpperCase(); };
 
 export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectoryProps) {
     // Data state
@@ -83,6 +84,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
     // Form state
     const [formName, setFormName] = useState("");
+    const [formInitials, setFormInitials] = useState("");
     const [formRole, setFormRole] = useState<CrewRole>("SKILLED");
     const [formStatus, setFormStatus] = useState<CrewStatus>("ACTIVE");
     const [formSkills, setFormSkills] = useState("");
@@ -131,6 +133,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             const mappedCrew: CrewListItem[] = members.map(m => ({
                 id: m.id,
                 name: m.name,
+                initials: m.initials,
                 role: m.role,
                 status: m.status,
                 skillTags: m.skillTags,
@@ -155,6 +158,22 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+
+    // Handlers
+    const resetForm = () => {
+        setFormName("");
+        setFormInitials("");
+        setFormRole("SKILLED");
+        setFormStatus("ACTIVE");
+        setFormSkills("");
+        setFormProject("");
+        setFormBaseRate("0");
+        setFormOvertimeRate("0");
+        setFormOtRate1("0");
+        setFormOtRate2("0");
+        setFormOtRate3("0");
+    };
 
     // FAB trigger
     useEffect(() => {
@@ -185,13 +204,10 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
         });
     }, [crewList, searchQuery, selectedRoles, selectedStatuses, selectedProjects, activeCard, sortBy, sortOrder]);
 
-    // Handlers
     const handleSort = (col: "name" | "role" | "status" | "project") => {
         if (sortBy === col) setSortOrder(sortOrder === "asc" ? "desc" : "asc");
         else { setSortBy(col); setSortOrder("asc"); }
     };
-
-
 
     const toggleRole = (r: CrewRole) => setSelectedRoles(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
     const toggleStatus = (s: CrewStatus) => setSelectedStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
@@ -200,6 +216,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     const openEditDrawer = (crew: CrewListItem) => {
         setSelectedCrew(crew);
         setFormName(crew.name);
+        setFormInitials(crew.initials);
         setFormRole(crew.role);
         setFormStatus(crew.status);
         setFormSkills(crew.skillTags.join(", "));
@@ -217,18 +234,18 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
         setShowDeleteConfirm(true);
     };
 
-    const resetForm = () => {
-        setFormName("");
-        setFormRole("SKILLED");
-        setFormStatus("ACTIVE");
-        setFormSkills("");
-        setFormProject("");
-        setFormBaseRate("0");
-        setFormOvertimeRate("0");
-        setFormOtRate1("0");
-        setFormOtRate2("0");
-        setFormOtRate3("0");
-    };
+    // Auto-generate initials on name change
+    useEffect(() => {
+        // Only run if form is open (to avoid unnecessary calcs)
+        if (!showAddDrawer && !showEditDrawer) return;
+
+        const occupied = crewList
+            .filter(c => c.id !== selectedCrew?.id) // Exclude self if editing
+            .map(c => c.initials);
+
+        const smart = generateSmartInitials(formName, occupied);
+        setFormInitials(smart);
+    }, [formName, crewList, selectedCrew, showAddDrawer, showEditDrawer]);
 
     // CRUD handlers
     const handleAddCrew = async () => {
@@ -238,6 +255,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             const skillTags = formSkills.split(",").map(s => s.trim()).filter(Boolean);
             const result = await createCrewMember({
                 name: formName.trim(),
+                initials: formInitials,
                 role: formRole,
                 status: formStatus,
                 skillTags,
@@ -252,9 +270,12 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 await loadData();
                 setShowAddDrawer(false);
                 resetForm();
+            } else {
+                alert("Failed to create crew member. Please check your connection and try again.");
             }
         } catch (err) {
             console.error("Failed to add crew:", err);
+            alert("An parsing error occurred while adding crew.");
         } finally {
             setIsSaving(false);
         }
@@ -267,6 +288,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             const skillTags = formSkills.split(",").map(s => s.trim()).filter(Boolean);
             const result = await updateCrewMember(selectedCrew.id, {
                 name: formName.trim(),
+                initials: formInitials,
                 role: formRole,
                 status: formStatus,
                 skillTags,
@@ -282,9 +304,12 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 setShowEditDrawer(false);
                 setSelectedCrew(null);
                 resetForm();
+            } else {
+                alert("Failed to update crew member. Please try again.");
             }
         } catch (err) {
             console.error("Failed to update crew:", err);
+            alert("An error occurred while updating crew.");
         } finally {
             setIsSaving(false);
         }
@@ -299,9 +324,12 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 await loadData();
                 setShowDeleteConfirm(false);
                 setSelectedCrew(null);
+            } else {
+                alert("Failed to delete crew member. Please try again.");
             }
         } catch (err) {
             console.error("Failed to delete crew:", err);
+            alert("An error occurred while deleting crew.");
         } finally {
             setIsSaving(false);
         }
@@ -393,10 +421,6 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
     const activeFiltersCount = selectedRoles.length + selectedStatuses.length + selectedProjects.length;
 
-
-
-
-
     // Loading state
     if (isLoading) {
         return (
@@ -408,9 +432,6 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
-            {/* DEBUG INFO - REMOVE LATER */}
-
-
             {/* Header */}
             <div className="space-y-4">
                 <div className="flex flex-col gap-3">
@@ -496,7 +517,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                             <tbody className="divide-y divide-neutral-100">
                                 {filteredCrew.map((crew) => (
                                     <tr key={crew.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
-                                        <td className="px-4 py-3"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{getInitials(crew.name)}</div><span className="font-medium text-neutral-900">{crew.name}</span></div></td>
+                                        <td className="px-4 py-3"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{crew.initials}</div><span className="font-medium text-neutral-900">{crew.name}</span></div></td>
                                         <td className="px-4 py-3"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].id}</span></td>
                                         <td className="px-4 py-3 hidden sm:table-cell">{crew.projectCode ? <span className="px-2 py-1 text-xs font-mono bg-neutral-100 text-neutral-600 rounded">{formatProjectCode(crew.projectCode)}</span> : <span className="text-neutral-400 text-xs">-</span>}</td>
                                         <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span></td>
@@ -520,7 +541,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                     {filteredCrew.map((crew) => (
                         <div key={crew.id} className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
                             <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold flex-shrink-0">{getInitials(crew.name)}</div>
+                                <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold flex-shrink-0">{crew.initials}</div>
                                 <div className="min-w-0 flex-1">
                                     <div className="font-semibold text-neutral-900 truncate">{crew.name}</div>
                                     <span className={clsx("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].id}</span>
@@ -597,9 +618,12 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                         </div>
                         <div className="p-4 space-y-4 pb-24">
                             <div className="flex justify-center">
-                                <div className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-2xl font-bold">{getInitials(formName)}</div>
+                                <div className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-2xl font-bold">{formInitials}</div>
                             </div>
-                            <FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" />
+                            <div className="flex gap-3">
+                                <div className="flex-1"><FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" /></div>
+                                <div className="w-24"><FormInput label="Initials" value={formInitials} onChange={setFormInitials} placeholder="XX" /></div>
+                            </div>
                             <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" />
                             <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" />
                             {/* Project is set via Project Assignments only */}
