@@ -16,7 +16,14 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
   return (
     <>
       <Sidebar onWidthChange={setSidebarWidth} />
-      <main style={{ marginLeft: sidebarWidth }} className="transition-all">
+      <main
+        style={
+          {
+            "--sidebar-width": `${sidebarWidth}px`,
+          } as React.CSSProperties
+        }
+        className="transition-all ml-0 md:ml-[var(--sidebar-width)]"
+      >
         {children}
       </main>
     </>

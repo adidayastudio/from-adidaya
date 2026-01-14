@@ -498,7 +498,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                     <div><div className="text-xs font-medium text-neutral-500 mb-2">Roles</div><div className="flex flex-wrap gap-2">{CREW_ROLE_OPTIONS.map(opt => <button key={opt.value} onClick={() => toggleRole(opt.value)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedRoles.includes(opt.value) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{CREW_ROLE_LABELS[opt.value].id}</button>)}</div></div>
                     <div><div className="text-xs font-medium text-neutral-500 mb-2">Status</div><div className="flex flex-wrap gap-2">{(["ACTIVE", "INACTIVE"] as CrewStatus[]).map(s => <button key={s} onClick={() => toggleStatus(s)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedStatuses.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{s}</button>)}</div></div>
                     {uniqueProjects.length > 0 && (
-                        <div><div className="text-xs font-medium text-neutral-500 mb-2">Projects</div><div className="flex flex-wrap gap-2">{uniqueProjects.map(p => <button key={p} onClick={() => toggleProject(p)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(p) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{p}</button>)}</div></div>
+                        <div><div className="text-xs font-medium text-neutral-500 mb-2">Projects</div><div className="flex flex-wrap gap-2">{uniqueProjects.map(p => <button key={p} onClick={() => toggleProject(p)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(p) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{formatProjectCode(p)}</button>)}</div></div>
                     )}
                     {activeFiltersCount > 0 && <button onClick={() => { setSelectedRoles([]); setSelectedStatuses([]); setSelectedProjects([]); }} className="text-sm text-red-600 hover:underline">Clear all</button>}
                 </div>
@@ -524,20 +524,51 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                             <thead className="bg-neutral-50 border-b border-neutral-200">
                                 <tr>
                                     <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon col="name" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("role")}><div className="flex items-center gap-1">Role <SortIcon col="role" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon col="project" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon col="status" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+
+                                    {/* Desktop Headers */}
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 hidden sm:table-cell" onClick={() => handleSort("role")}><div className="flex items-center gap-1">Role <SortIcon col="role" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 hidden sm:table-cell" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon col="project" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 hidden sm:table-cell" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon col="status" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+
+                                    {/* Mobile Consolidated Header */}
+                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase sm:hidden">Details</th>
+
                                     <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-100">
                                 {filteredCrew.map((crew) => (
                                     <tr key={crew.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
-                                        <td className="px-4 py-3"><div className="flex items-center gap-3"><div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{crew.initials}</div><span className="font-medium text-neutral-900">{crew.name}</span></div></td>
-                                        <td className="px-4 py-3"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].id}</span></td>
+                                        <td className="px-4 py-3 align-top sm:align-middle">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{crew.initials}</div>
+                                                <span className="font-medium text-neutral-900">{crew.name}</span>
+                                            </div>
+                                        </td>
+
+                                        {/* Desktop Columns */}
+                                        <td className="px-4 py-3 hidden sm:table-cell"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].id}</span></td>
                                         <td className="px-4 py-3 hidden sm:table-cell">{crew.projectCode ? <span className="px-2 py-1 text-xs font-mono bg-neutral-100 text-neutral-600 rounded">{formatProjectCode(crew.projectCode)}</span> : <span className="text-neutral-400 text-xs">-</span>}</td>
-                                        <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span></td>
-                                        <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                        <td className="px-4 py-3 hidden sm:table-cell"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span></td>
+
+                                        {/* Mobile Consolidated Column */}
+                                        <td className="px-4 py-3 sm:hidden align-middle">
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                <span className={clsx("px-2 py-1 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>
+                                                    {CREW_ROLE_LABELS[crew.role].id}
+                                                </span>
+                                                {crew.projectCode && (
+                                                    <span className="px-2 py-1 text-[10px] font-mono bg-neutral-100 text-neutral-600 rounded">
+                                                        {formatProjectCode(crew.projectCode)}
+                                                    </span>
+                                                )}
+                                                <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
+                                                    {crew.status === "ACTIVE" ? "Active" : "Inactive"}
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        <td className="px-4 py-3 text-right align-middle" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center justify-end gap-1">
                                                 <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-4 h-4" /></button>
                                                 <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
@@ -587,15 +618,15 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                             <h2 className="text-lg font-bold text-neutral-900">Add Crew</h2>
                             <button onClick={() => setShowAddDrawer(false)} className="p-2 rounded-full hover:bg-neutral-100"><X className="w-5 h-5 text-neutral-500" /></button>
                         </div>
-                        <div className="p-4 space-y-4 pb-24">
+                        <div className="p-4 space-y-4 pb-48 md:pb-24">
                             <div className="flex justify-center">
                                 <div className="w-20 h-20 rounded-full bg-neutral-100 border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-neutral-400">
                                     <Plus className="w-6 h-6 text-neutral-400" />
                                 </div>
                             </div>
                             <FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" />
-                            <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" />
-                            <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" />
+                            <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" accentColor="blue" />
+                            <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" accentColor="blue" />
                             {/* Project is set via Project Assignments only */}
                             <FormInput label="Skills (comma separated)" value={formSkills} onChange={setFormSkills} placeholder="e.g. Beton, Finishing" />
 
@@ -613,7 +644,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                             </div>
 
                         </div>
-                        <div className="fixed bottom-0 right-0 w-full max-w-md p-4 border-t bg-white">
+                        <div className="fixed bottom-24 md:bottom-0 right-0 w-full max-w-md p-4 border-t bg-white">
                             <button onClick={handleAddCrew} disabled={isSaving || !formName.trim()} className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                                 Save Crew
@@ -632,7 +663,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                             <h2 className="text-lg font-bold text-neutral-900">Edit Crew</h2>
                             <button onClick={() => setShowEditDrawer(false)} className="p-2 rounded-full hover:bg-neutral-100"><X className="w-5 h-5 text-neutral-500" /></button>
                         </div>
-                        <div className="p-4 space-y-4 pb-24">
+                        <div className="p-4 space-y-4 pb-48 md:pb-24">
                             <div className="flex justify-center">
                                 <div className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-2xl font-bold">{formInitials}</div>
                             </div>
@@ -640,8 +671,8 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                                 <div className="flex-1"><FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" /></div>
                                 <div className="w-24"><FormInput label="Initials" value={formInitials} onChange={setFormInitials} placeholder="XX" /></div>
                             </div>
-                            <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" />
-                            <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" />
+                            <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" accentColor="blue" />
+                            <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" accentColor="blue" />
                             {/* Project is set via Project Assignments only */}
                             {selectedCrew.projectCode && (
                                 <div>
@@ -653,7 +684,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                             )}
                             <FormInput label="Skills (comma separated)" value={formSkills} onChange={setFormSkills} placeholder="e.g. Beton, Finishing" />
                         </div>
-                        <div className="fixed bottom-0 right-0 w-full max-w-md p-4 border-t bg-white">
+                        <div className="fixed bottom-24 md:bottom-0 right-0 w-full max-w-md p-4 border-t bg-white">
                             <button onClick={handleEditCrew} disabled={isSaving || !formName.trim()} className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                                 Save Changes
@@ -687,7 +718,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     );
 }
 
-const inputClass = "w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all";
+const inputClass = "w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:!ring-blue-500/30 focus:!border-blue-500 transition-all";
 
 const FormInput = ({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) => (
     <div>

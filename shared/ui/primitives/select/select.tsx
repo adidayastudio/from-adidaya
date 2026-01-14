@@ -25,6 +25,7 @@ interface SelectProps {
   disabled?: boolean;
   onChange?: (value: string) => void;
   className?: string;
+  accentColor?: "red" | "blue";
   placeholder?: string;
 }
 
@@ -42,6 +43,7 @@ export function Select({
   onChange,
   className,
   placeholder = "Select...",
+  accentColor = "red",
 }: SelectProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [internalValue, setInternalValue] = React.useState(
@@ -138,16 +140,16 @@ export function Select({
 
   // ── STYLES ──────────────────────────────────────────────
 
-  // ── STYLES ──────────────────────────────────────────────
-
   const base =
     "w-full rounded-lg border bg-white text-neutral-900 transition-all duration-150 outline-none";
 
+  const focusStyles = accentColor === "blue"
+    ? "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
+    : "focus:border-red-500 focus:ring-2 focus:ring-red-500/30";
+
   const variants: Record<SelectVariant, string> = {
-    default:
-      "border-neutral-200 hover:border-neutral-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/30",
-    filled:
-      "bg-neutral-50 border-neutral-200 hover:border-neutral-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/30",
+    default: clsx("border-neutral-200 hover:border-neutral-300", focusStyles),
+    filled: clsx("bg-neutral-50 border-neutral-200 hover:border-neutral-300", focusStyles),
   };
 
   const sizes: Record<SelectSize, string> = {
@@ -155,6 +157,8 @@ export function Select({
     md: "pl-3 pr-8 h-9 text-sm",
     lg: "pl-4 pr-10 h-10 text-sm",
   };
+
+  const errorStyles = error ? (accentColor === "blue" ? "border-red-500 text-red-600 focus:ring-red-500/30" : "border-red-500 text-red-600 focus:ring-red-500/30") : "";
 
   return (
     <div className="flex flex-col gap-1.5" ref={containerRef}>
@@ -176,7 +180,7 @@ export function Select({
             sizes[selectSize],
             "flex items-center justify-between cursor-pointer",
             disabled && "opacity-60 cursor-not-allowed",
-            error && "border-red-500 text-red-600 focus:ring-red-500/30",
+            errorStyles,
             className
           )}
           onClick={() => !disabled && setIsOpen((open) => !open)}
@@ -210,6 +214,19 @@ export function Select({
               {options.map((opt, index) => {
                 const isSelected = opt.value === currentValue;
                 const isHighlighted = index === highlightedIndex;
+
+                const highlightClass = accentColor === "blue"
+                  ? "bg-blue-50 text-neutral-900"
+                  : "bg-red-50 text-neutral-900";
+
+                const selectedClass = accentColor === "blue"
+                  ? "bg-blue-100 text-blue-700 font-medium"
+                  : "bg-red-100 text-red-700 font-medium";
+
+                const normalClass = accentColor === "blue"
+                  ? "text-neutral-600 hover:bg-blue-50 hover:text-neutral-900"
+                  : "text-neutral-600 hover:bg-red-50 hover:text-neutral-900";
+
                 return (
                   <li
                     key={opt.value}
@@ -217,9 +234,9 @@ export function Select({
                     aria-selected={isSelected}
                     className={clsx(
                       "w-full text-left px-4 py-2 text-body transition-colors cursor-pointer",
-                      isHighlighted && "bg-red-50 text-neutral-900",
-                      isSelected && "bg-red-100 text-red-700 font-medium",
-                      !isHighlighted && !isSelected && "text-neutral-600 hover:bg-red-50 hover:text-neutral-900"
+                      isHighlighted && highlightClass,
+                      isSelected && selectedClass,
+                      !isHighlighted && !isSelected && normalClass
                     )}
                     onClick={() => handleSelect(opt.value)}
                     onMouseEnter={() => setHighlightedIndex(index)}
