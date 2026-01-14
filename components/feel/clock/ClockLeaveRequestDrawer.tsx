@@ -297,7 +297,7 @@ export function ClockLeaveRequestDrawer({ open, onClose, editData, readOnly }: C
 
                 </form>
 
-                <div className="p-4 border-t border-neutral-200 bg-white flex items-center justify-end gap-3 rounded-b-xl z-10">
+                <div className="p-4 pb-24 md:pb-4 border-t border-neutral-200 bg-white flex items-center justify-end gap-3 rounded-b-xl z-10">
                     <Button variant="secondary" onClick={onClose} disabled={isSubmitting} className="!rounded-full px-6">{readOnly ? "Close" : "Cancel"}</Button>
                     {!readOnly && (
                         <Button

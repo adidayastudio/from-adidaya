@@ -5,7 +5,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { ViewToggle } from "./ViewToggle";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
-import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWithinInterval, parseISO, differenceInDays } from "date-fns";
+import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWithinInterval, parseISO, differenceInDays, isBefore, isAfter } from "date-fns";
 import { useClockData } from "@/hooks/useClockData";
 import useUserProfile from "@/hooks/useUserProfile";
 import {
@@ -80,6 +80,18 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", onNewReque
     const filteredData = useMemo(() => {
         let data = [...rawData];
 
+        // Filter by selected month - include records that overlap with current month
+        const monthStart = startOfMonth(currentMonth);
+        const monthEnd = endOfMonth(currentMonth);
+        data = data.filter(d => {
+            const startDate = parseISO(d.from);
+            const endDate = parseISO(d.to);
+            // Include if any part of the leave overlaps with the selected month
+            return isWithinInterval(startDate, { start: monthStart, end: monthEnd }) ||
+                isWithinInterval(endDate, { start: monthStart, end: monthEnd }) ||
+                (isBefore(startDate, monthStart) && isAfter(endDate, monthEnd));
+        });
+
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             data = data.filter(d =>
@@ -100,7 +112,7 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", onNewReque
             }
             return 0;
         });
-    }, [rawData, searchQuery, sortBy, sortOrder]);
+    }, [rawData, searchQuery, sortBy, sortOrder, currentMonth]);
 
     const handleSort = (column: "date" | "employee" | "status") => {
         if (sortBy === column) {
@@ -338,8 +350,26 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", onNewReque
 
     const getLeaveForDay = (date: Date) => {
         return filteredData.filter(leave =>
-            isWithinInterval(date, { start: parseISO(leave.from), end: parseISO(leave.to) })
+            isWithinInterval(date, { start: parseISO(leave.from), end: parseISO(leave.to) }) &&
+            (leave.status === "approved" || leave.status === "pending")
         );
+    };
+
+    // Helper to get initials from name
+    const getInitials = (name: string) => {
+        return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    };
+
+    // Helper to shorten leave type for calendar display
+    const shortenLeaveType = (type: string) => {
+        const typeMap: Record<string, string> = {
+            "Annual Leave": "Annual",
+            "Sick Leave": "Sick",
+            "Permission": "Perm",
+            "Unpaid Leave": "Unpaid",
+            "Maternity Leave": "Maternity"
+        };
+        return typeMap[type] || type;
     };
 
     return (
@@ -608,8 +638,40 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", onNewReque
                                 ))}
                                 {filteredData.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} className="px-6 py-8 text-center text-neutral-500">
-                                            {loading ? "Loading..." : "No leave requests found."}
+                                        <td colSpan={7} className="px-6 py-16 text-center">
+                                            {loading ? (
+                                                <div className="text-neutral-500">Loading...</div>
+                                            ) : (
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
+                                                        <CalendarRange className="w-8 h-8 text-neutral-400" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <p className="text-neutral-700 font-medium">
+                                                            {viewMode === "team"
+                                                                ? `No team leave requests for ${formatMonthYear(currentMonth)}`
+                                                                : `No leave requests in ${formatMonthYear(currentMonth)}`
+                                                            }
+                                                        </p>
+                                                        <p className="text-sm text-neutral-500">
+                                                            {viewMode === "team"
+                                                                ? "Everyone's present and accounted for! 📋"
+                                                                : "Need time off? Submit a new request and take a well-deserved break! 🌴"
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                    {viewMode === "personal" && (
+                                                        <Button
+                                                            variant="primary"
+                                                            className="!rounded-full mt-2"
+                                                            icon={<Plus className="w-4 h-4" />}
+                                                            onClick={onNewRequest}
+                                                        >
+                                                            New Request
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 )}
@@ -655,9 +717,12 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", onNewReque
                                                     leave.status === "approved" ? "bg-emerald-100 text-emerald-800" :
                                                         leave.status === "pending" ? "bg-yellow-100 text-yellow-800" : "bg-neutral-100 text-neutral-600"
                                                 )}
-                                                title={`${leave.employee} - ${leave.type}`}
+                                                title={`${leave.employee} - ${leave.type} (${leave.status})`}
                                             >
-                                                {viewMode === "team" ? leave.employee.split(' ').map(n => n[0]).join('') : leave.type}
+                                                {viewMode === "team"
+                                                    ? `${getInitials(leave.employee)} - ${shortenLeaveType(leave.type)}`
+                                                    : leave.type
+                                                }
                                             </div>
                                         ))}
                                     </div>
