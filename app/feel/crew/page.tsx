@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import CrewSidebar, { CrewSection } from "@/components/feel/crew/CrewSidebar";
 import { CrewDirectory } from "@/components/feel/crew/CrewDirectory";
 import { CrewAssignments } from "@/components/feel/crew/CrewAssignments";
@@ -14,7 +15,19 @@ import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { Plus } from "lucide-react";
 
 export default function CrewPage() {
-  const [activeSection, setActiveSection] = useState<CrewSection>("directory");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const tabParam = searchParams.get("tab");
+  const activeSection: CrewSection = (tabParam as CrewSection) || "directory";
+
+  const setActiveSection = (section: CrewSection) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("tab", section);
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
   const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
   const userRole = "admin";
 

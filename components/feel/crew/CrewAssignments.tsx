@@ -16,6 +16,7 @@ import {
 } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
+import { toast } from "react-hot-toast";
 
 interface CrewAssignmentsProps {
     role?: string;
@@ -30,6 +31,7 @@ interface CrewOption {
 
 interface Assignment {
     id: string;
+    crewId: string; // Added crewId for editing
     crewName: string;
     crewRole: CrewRole;
     projectCode: string;
@@ -102,6 +104,8 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
     const [formEndDate, setFormEndDate] = useState("");
     const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
 
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
     const resetForm = () => { setFormRole(""); setFormCrew(""); setFormProject(""); setFormStartDate(""); setFormEndDate(""); setEditingAssignment(null); };
 
     // Load Assignments
@@ -119,6 +123,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                 .filter(c => c.currentProjectCode)
                 .map(c => ({
                     id: c.id,
+                    crewId: c.id, // Map crew ID
                     crewName: c.name,
                     crewRole: c.role,
                     projectCode: c.currentProjectCode!,
@@ -130,6 +135,14 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
     };
 
     useEffect(() => { loadAssignments(); }, []);
+
+    // Listen to floating button trigger
+    useEffect(() => {
+        if (triggerOpen && triggerOpen > 0) {
+            resetForm();
+            setShowDrawer(true);
+        }
+    }, [triggerOpen]);
 
     const handleSave = async () => {
         if (!formRole || !formCrew || !formProject) return;
@@ -147,16 +160,39 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                 await loadAssignments();
                 setShowDrawer(false);
                 resetForm();
+                toast.success("Assignment saved successfully");
             } else {
-                alert("Failed to assign crew. Please try again.");
+                toast.error("Failed to assign crew. Please try again.");
             }
         } catch (e) {
             console.error(e);
-            alert("An error occurred while saving.");
+            toast.error("An error occurred while saving.");
         }
     };
 
-    const openEditDrawer = (a: Assignment) => { setEditingAssignment(a); setFormRole(a.crewRole); setFormCrew(a.crewName); setFormProject(a.projectCode); setFormStartDate(a.startDate); setFormEndDate(a.endDate || ""); setShowDrawer(true); };
+    const handleDelete = async () => {
+        if (!deleteConfirmId) return;
+
+        // Mock delete - in real app call API
+        setAssignments(prev => prev.filter(a => a.id !== deleteConfirmId));
+        setDeleteConfirmId(null);
+        toast.success("Assignment deleted successfully");
+    };
+
+    const openEditDrawer = (a: Assignment) => {
+        setEditingAssignment(a);
+        setFormRole(a.crewRole);
+        setFormCrew(a.crewId);
+
+        // Find matching project (handle potential format mismatch e.g., "008-RWM" vs "RWM")
+        const matchingProject = projects.find(p => p.code === a.projectCode || p.code.endsWith(`-${a.projectCode}`));
+        setFormProject(matchingProject ? matchingProject.code : a.projectCode);
+
+        // Extract YYYY-MM-DD from ISO string
+        setFormStartDate(a.startDate.split('T')[0]);
+        setFormEndDate(a.endDate ? a.endDate.split('T')[0] : "");
+        setShowDrawer(true);
+    };
 
     const stats = useMemo(() => ({
         total: assignments.length,
@@ -235,7 +271,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
 
                 return {
                     crewName: a.crewName,
-                    crewRole: CREW_ROLE_LABELS[a.crewRole]?.id || a.crewRole,
+                    crewRole: CREW_ROLE_LABELS[a.crewRole]?.en || a.crewRole,
                     project: formattedProject,
                     startDate: formatDate(a.startDate),
                     status: a.status
@@ -280,7 +316,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
         }
     };
 
-    const inputClass = "w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all";
+    const inputClass = "w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all";
 
     const FormInput = ({ label, type = "text", value, onChange }: { label: string; type?: string; value: string; onChange: (v: string) => void }) => (
         <div>
@@ -364,6 +400,8 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                 </div>
             )}
 
+
+
             {/* TABLE */}
             {filteredAssignments.length > 0 && (
                 <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
@@ -381,11 +419,11 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                             <tbody className="divide-y divide-neutral-100">
                                 {filteredAssignments.map((a) => (
                                     <tr key={a.id} className="hover:bg-neutral-50 transition-colors">
-                                        <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(a.crewName)}</div><div><div className="font-medium text-neutral-900">{a.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[a.crewRole]?.id || a.crewRole}</div></div></div></td>
+                                        <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(a.crewName)}</div><div><div className="font-medium text-neutral-900">{a.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[a.crewRole]?.en || a.crewRole}</div></div></div></td>
                                         <td className="px-4 py-3"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(a.projectCode)}</span></td>
                                         <td className="px-4 py-3 text-neutral-600 text-xs">{formatDate(a.startDate)} → {a.endDate ? formatDate(a.endDate) : "Present"}</td>
                                         <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", a.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-50 text-neutral-600")}>{a.status === "ACTIVE" ? "Active" : "Done"}</span></td>
-                                        <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1"><button onClick={() => openEditDrawer(a)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button><button className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 hover:text-blue-600" title="Contract"><FileText className="w-3.5 h-3.5" /></button><button className="p-1.5 rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-500" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
+                                        <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1"><button onClick={() => openEditDrawer(a)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button><button className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 hover:text-blue-600" title="Contract"><FileText className="w-3.5 h-3.5" /></button><button onClick={() => setDeleteConfirmId(a.id)} className="p-1.5 rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-500" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -393,6 +431,26 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                     </div>
                 </div>
             )}
+
+            {/* DELETE CONFIRMATION */}
+            {deleteConfirmId && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)} />
+                    <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6 animate-in zoom-in-95">
+                        <div className="flex flex-col items-center text-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600"><Trash2 className="w-6 h-6" /></div>
+                            <h3 className="text-lg font-bold text-neutral-900">Delete Assignment?</h3>
+                            <p className="text-sm text-neutral-500">Are you sure you want to remove this assignment? This action cannot be undone.</p>
+                            <div className="flex gap-2 w-full mt-2">
+                                <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-2.5 text-sm font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200">Cancel</button>
+                                <button onClick={handleDelete} className="flex-1 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+
 
             {/* DRAWER */}
             {showDrawer && (
@@ -403,8 +461,8 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                             <h2 className="text-lg font-bold text-neutral-900">{editingAssignment ? "Edit Assignment" : "New Assignment"}</h2>
                             <button onClick={() => setShowDrawer(false)} className="p-2 rounded-full hover:bg-neutral-100"><X className="w-5 h-5 text-neutral-500" /></button>
                         </div>
-                        <div className="p-4 space-y-4 pb-24">
-                            <Select label="Role *" value={formRole} onChange={(v) => { setFormRole(v as CrewRole); setFormCrew(""); }} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role first" />
+                        <div className="p-4 space-y-4 pb-32 sm:pb-24">
+                            <Select label="Role *" value={formRole} onChange={(v) => { setFormRole(v as CrewRole); setFormCrew(""); }} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role first" accentColor="blue" />
                             <Select
                                 label="Crew *"
                                 value={formCrew}
@@ -412,12 +470,14 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                                 disabled={!formRole}
                                 options={crewOptions.filter(c => c.role === formRole).map(c => ({ value: c.value, label: c.label }))}
                                 placeholder={formRole ? "Select crew member" : "Select role first"}
+                                accentColor="blue"
+                                searchable={true}
                             />
-                            <Select label="Project *" value={formProject} onChange={setFormProject} options={projects.map(p => ({ value: p.code, label: `[${p.code}] ${p.name}` }))} placeholder="Select project" />
+                            <Select label="Project *" value={formProject} onChange={setFormProject} options={projects.map(p => ({ value: p.code, label: `[${p.code}] ${p.name}` }))} placeholder="Select project" accentColor="blue" searchable={true} />
                             <FormInput label="Start Date *" type="date" value={formStartDate} onChange={setFormStartDate} />
                             <FormInput label="End Date" type="date" value={formEndDate} onChange={setFormEndDate} />
                         </div>
-                        <div className="fixed bottom-0 right-0 w-full max-w-md p-4 border-t bg-white"><button onClick={handleSave} className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">Save Assignment</button></div>
+                        <div className="fixed bottom-24 md:bottom-0 right-0 w-full max-w-md p-4 border-t bg-white"><button onClick={handleSave} className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">Save Assignment</button></div>
                     </div>
                 </div>
             )}

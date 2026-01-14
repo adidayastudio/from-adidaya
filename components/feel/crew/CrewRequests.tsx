@@ -353,24 +353,73 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                 <button onClick={() => setActiveCard("REJECTED")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "REJECTED" ? "bg-red-600 border-red-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "REJECTED" ? "text-red-100" : "text-neutral-500")}>Rejected</div><div className={clsx("text-2xl font-bold", activeCard === "REJECTED" ? "text-white" : "text-red-600")}>{stats.rejected}</div></button>
             </div>
 
-            <div className="flex items-center justify-between gap-2 w-full flex-wrap">
-                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-                    <div className="relative flex-shrink-0"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-32 sm:w-40 transition-all" /></div>
-                    <div className="relative flex-shrink-0"><select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))} className="appearance-none pl-3 pr-7 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500">{MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}</select><ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" /></div>
-                    <div className="w-48">
-                        <Select value={selectedProject} onChange={setSelectedProject} options={[{ value: "ALL", label: "All Projects" }, ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))]} placeholder="Project" />
+            {/* TOOLBAR */}
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 w-full bg-neutral-50/50 p-2 rounded-2xl border border-neutral-100">
+
+                {/* 1. Filters Group */}
+                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-2 w-full xl:w-auto">
+                    {/* Search - Full width on mobile/tablet, auto on desktop */}
+                    <div className="relative w-full lg:w-auto pointer-events-auto z-10">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="w-full lg:w-64 pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all"
+                        />
+                    </div>
+
+                    {/* Month & Project - Row on mobile, but might wrap on small screens */}
+                    <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full lg:w-auto pointer-events-auto z-10">
+                        <div className="relative flex-1 sm:flex-none">
+                            <select
+                                value={selectedMonth}
+                                onChange={e => setSelectedMonth(parseInt(e.target.value))}
+                                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all"
+                            >
+                                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+                        </div>
+                        <div className="flex-1 sm:flex-none sm:w-48">
+                            <Select
+                                value={selectedProject}
+                                onChange={setSelectedProject}
+                                options={[{ value: "ALL", label: "All Projects" }, ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))]}
+                                placeholder="Project"
+                            />
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center bg-neutral-100 rounded-full p-1">{(["ALL", "LEAVE", "KASBON", "REIMBURSE"] as (RequestType | "ALL")[]).map(t => <button key={t} onClick={() => setSelectedType(t)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-colors", selectedType === t ? "bg-white shadow text-neutral-900" : "text-neutral-500")}>{t === "ALL" ? "All" : t === "LEAVE" ? "Leave" : t === "KASBON" ? "Kasbon" : "Reimb"}</button>)}</div>
-                <Button
-                    variant="secondary"
-                    className="!rounded-full !py-1.5 !px-3"
-                    icon={exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    onClick={handleExport}
-                    disabled={exporting || filtered.length === 0}
-                >
-                    {exporting ? "Exporting..." : "Export"}
-                </Button>
+
+                {/* 2. Actions Group */}
+                <div className="flex items-center justify-between xl:justify-end gap-2 w-full xl:w-auto overflow-x-auto xl:overflow-visible no-scrollbar">
+                    <div className="flex items-center bg-neutral-200/50 rounded-full p-1 flex-shrink-0">
+                        {(["ALL", "LEAVE", "KASBON", "REIMBURSE"] as (RequestType | "ALL")[]).map(t => (
+                            <button
+                                key={t}
+                                onClick={() => setSelectedType(t)}
+                                className={clsx(
+                                    "px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap",
+                                    selectedType === t ? "bg-white shadow text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
+                                )}
+                            >
+                                {t === "ALL" ? "All" : t === "LEAVE" ? "Leave" : t === "KASBON" ? "Kasbon" : "Reimb"}
+                            </button>
+                        ))}
+                    </div>
+
+                    <Button
+                        variant="secondary"
+                        className="!rounded-full !py-1.5 !px-3 shadow-sm active:scale-95 transition-all flex-shrink-0"
+                        icon={exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        onClick={handleExport}
+                        disabled={exporting || filtered.length === 0}
+                    >
+                        {exporting ? "..." : "Export"}
+                    </Button>
+                </div>
             </div>
 
             {requests.length === 0 && <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center"><Users className="w-12 h-12 mx-auto text-neutral-300 mb-4" /><h3 className="font-medium text-neutral-600 mb-2">No requests yet</h3><p className="text-sm text-neutral-400 mb-4">Submit leave, cash advance, or reimbursement requests.</p><Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => { resetForm(); setShowDrawer(true); }}>Add Request</Button></div>}
@@ -397,7 +446,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                                                 <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(r.crewName)}</div>
                                                 <div>
                                                     <div className="font-medium text-neutral-900">{r.crewName || "Unknown"}</div>
-                                                    <div className="text-xs text-neutral-500">{r.crewRole ? (CREW_ROLE_LABELS[r.crewRole]?.display || r.crewRole) : "-"}</div>
+                                                    <div className="text-xs text-neutral-500">{r.crewRole ? (CREW_ROLE_LABELS[r.crewRole]?.en || r.crewRole) : "-"}</div>
                                                 </div>
                                             </div>
                                         </td>
@@ -455,7 +504,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                                 const p1 = formProject.toLowerCase();
                                 const p2 = c.projectCode.toLowerCase();
                                 return p1.includes(p2) || p2.includes(p1);
-                            }).map(c => ({ value: c.id, label: `${c.name} (${CREW_ROLE_LABELS[c.role]?.display || c.role})` }))} placeholder={formProject ? "Select crew" : "Select project first"} />
+                            }).map(c => ({ value: c.id, label: `${c.name} (${CREW_ROLE_LABELS[c.role]?.en || c.role})` }))} placeholder={formProject ? "Select crew" : "Select project first"} />
                             {formType === "LEAVE" && <><FormInput label="Start Date *" type="date" value={formStartDate} onChange={setFormStartDate} /><FormInput label="End Date *" type="date" value={formEndDate} onChange={setFormEndDate} /></>}
                             {(formType === "KASBON" || formType === "REIMBURSE") && <FormInput label="Amount *" type="number" value={formAmount} onChange={setFormAmount} placeholder="e.g. 500000" />}
                             <div><label className="block text-sm font-medium text-neutral-700 mb-1.5">{formType === "REIMBURSE" ? "Description *" : "Reason *"}</label><textarea value={formReason} onChange={e => setFormReason(e.target.value)} className={inputClass} rows={3} placeholder={formType === "REIMBURSE" ? "Describe the expense..." : "Explain the reason..."} /></div>

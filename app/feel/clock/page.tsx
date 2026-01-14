@@ -29,9 +29,8 @@ function ClockPageContent() {
 
   // Read initial section from URL or default to "overview"
   const sectionFromUrl = searchParams.get("section") as ClockSection | null;
-  const initialSection = sectionFromUrl && VALID_SECTIONS.includes(sectionFromUrl) ? sectionFromUrl : "overview";
+  const currentSection: ClockSection = sectionFromUrl && VALID_SECTIONS.includes(sectionFromUrl) ? sectionFromUrl : "overview";
 
-  const [currentSection, setCurrentSection] = useState<ClockSection>(initialSection);
   const { profile, loading } = useUserProfile();
 
   const { isCheckedIn, elapsed, toggleClock, startTime } = useClock();
@@ -236,16 +235,10 @@ function ClockPageContent() {
         <ClockSidebar
           activeSection={currentSection}
           onSectionChange={(section) => {
-            setCurrentSection(section);
-            // Update URL without full page reload
+            // Update URL
             const params = new URLSearchParams(searchParams.toString());
-            if (section === "overview") {
-              params.delete("section");
-            } else {
-              params.set("section", section);
-            }
-            const newUrl = params.size > 0 ? `?${params.toString()}` : window.location.pathname;
-            router.replace(newUrl, { scroll: false });
+            params.set("section", section);
+            router.push(`?${params.toString()}`, { scroll: false });
           }}
           role={profile?.role}
           // Pass FAB to sidebar to render in mobile dock if needed, or we render completely separate?

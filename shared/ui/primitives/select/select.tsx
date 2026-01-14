@@ -2,7 +2,7 @@
 
 import React from "react";
 import clsx from "clsx";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Search as SearchIcon } from "lucide-react";
 
 type SelectVariant = "default" | "filled";
 type SelectSize = "sm" | "md" | "lg";
@@ -27,6 +27,7 @@ interface SelectProps {
   className?: string;
   accentColor?: "red" | "blue";
   placeholder?: string;
+  searchable?: boolean;
 }
 
 export function Select({
@@ -44,11 +45,13 @@ export function Select({
   className,
   placeholder = "Select...",
   accentColor = "red",
+  searchable = false,
 }: SelectProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [internalValue, setInternalValue] = React.useState(
     defaultValue ?? options[0]?.value ?? ""
   );
+  const [searchQuery, setSearchQuery] = React.useState("");
 
   // Keyboard navigation state
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1);
@@ -59,6 +62,11 @@ export function Select({
   const currentValue = value ?? internalValue;
   const selected = options.find((o) => o.value === currentValue);
 
+  const filteredOptions = React.useMemo(() => {
+    if (!searchable || !searchQuery) return options;
+    return options.filter(o => o.label.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [options, searchable, searchQuery]);
+
   const handleSelect = (val: string) => {
     if (value === undefined) {
       setInternalValue(val);
@@ -68,15 +76,16 @@ export function Select({
     triggerRef.current?.focus(); // Return focus to trigger
   };
 
-  // Reset highlighted index when opening
+  // Reset highlighted index and search when opening/closing
   React.useEffect(() => {
     if (isOpen) {
-      const idx = options.findIndex((o) => o.value === currentValue);
+      const idx = filteredOptions.findIndex((o) => o.value === currentValue);
       setHighlightedIndex(idx >= 0 ? idx : 0);
     } else {
       setHighlightedIndex(-1);
+      setSearchQuery(""); // Reset search on close
     }
-  }, [isOpen, currentValue, options]);
+  }, [isOpen, currentValue, filteredOptions]);
 
   // Handle keyboard interaction
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -144,8 +153,8 @@ export function Select({
     "w-full rounded-lg border bg-white text-neutral-900 transition-all duration-150 outline-none";
 
   const focusStyles = accentColor === "blue"
-    ? "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30"
-    : "focus:border-red-500 focus:ring-2 focus:ring-red-500/30";
+    ? "!focus:border-blue-500 !focus:ring-2 !focus:ring-blue-500/30"
+    : "!focus:border-red-500 !focus:ring-2 !focus:ring-red-500/30";
 
   const variants: Record<SelectVariant, string> = {
     default: clsx("border-neutral-200 hover:border-neutral-300", focusStyles),
@@ -206,45 +215,72 @@ export function Select({
         {/* Dropdown menu */}
         {isOpen && !disabled && (
           <div className="absolute z-20 mt-1 w-full rounded-xl border border-border-light bg-white shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+            {searchable && (
+              <div className="p-2 border-b border-neutral-100 sticky top-0 bg-white z-10">
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400">
+                    <SearchIcon className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    className={clsx(
+                      "w-full pl-9 pr-3 py-1.5 text-sm bg-neutral-50 border border-neutral-200 rounded-full focus:outline-none transition-all",
+                      accentColor === "blue"
+                        ? "focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)]"
+                        : "focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                    )}
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
             <ul
               className="max-h-60 overflow-y-auto py-1"
               role="listbox"
               tabIndex={-1}
             >
-              {options.map((opt, index) => {
-                const isSelected = opt.value === currentValue;
-                const isHighlighted = index === highlightedIndex;
+              {filteredOptions.length === 0 ? (
+                <li className="px-4 py-3 text-sm text-neutral-400 text-center">No results found</li>
+              ) : (
+                filteredOptions.map((opt, index) => {
+                  const isSelected = opt.value === currentValue;
+                  const isHighlighted = index === highlightedIndex;
 
-                const highlightClass = accentColor === "blue"
-                  ? "bg-blue-50 text-neutral-900"
-                  : "bg-red-50 text-neutral-900";
+                  const highlightClass = accentColor === "blue"
+                    ? "bg-blue-50 text-neutral-900"
+                    : "bg-red-50 text-neutral-900";
 
-                const selectedClass = accentColor === "blue"
-                  ? "bg-blue-100 text-blue-700 font-medium"
-                  : "bg-red-100 text-red-700 font-medium";
+                  const selectedClass = accentColor === "blue"
+                    ? "bg-blue-100 text-blue-700 font-medium"
+                    : "bg-red-100 text-red-700 font-medium";
 
-                const normalClass = accentColor === "blue"
-                  ? "text-neutral-600 hover:bg-blue-50 hover:text-neutral-900"
-                  : "text-neutral-600 hover:bg-red-50 hover:text-neutral-900";
+                  const normalClass = accentColor === "blue"
+                    ? "text-neutral-600 hover:bg-blue-50 hover:text-neutral-900"
+                    : "text-neutral-600 hover:bg-red-50 hover:text-neutral-900";
 
-                return (
-                  <li
-                    key={opt.value}
-                    role="option"
-                    aria-selected={isSelected}
-                    className={clsx(
-                      "w-full text-left px-4 py-2 text-body transition-colors cursor-pointer",
-                      isHighlighted && highlightClass,
-                      isSelected && selectedClass,
-                      !isHighlighted && !isSelected && normalClass
-                    )}
-                    onClick={() => handleSelect(opt.value)}
-                    onMouseEnter={() => setHighlightedIndex(index)}
-                  >
-                    {opt.label}
-                  </li>
-                );
-              })}
+                  return (
+                    <li
+                      key={opt.value}
+                      role="option"
+                      aria-selected={isSelected}
+                      className={clsx(
+                        "w-full text-left px-4 py-2 text-body transition-colors cursor-pointer text-sm",
+                        isHighlighted && highlightClass,
+                        isSelected && selectedClass,
+                        !isHighlighted && !isSelected && normalClass
+                      )}
+                      onClick={() => handleSelect(opt.value)}
+                      onMouseEnter={() => setHighlightedIndex(index)}
+                    >
+                      {opt.label}
+                    </li>
+                  );
+                })
+              )}
             </ul>
           </div>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import PageWrapper from "@/components/layout/PageWrapper";
 import PeopleSidebar, { PeopleSection } from "@/components/feel/people/PeopleSidebar";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
@@ -15,7 +16,19 @@ import { BarChart, Settings } from "lucide-react";
 
 export default function FeelPeoplePage() {
    const { profile, loading } = useUserProfile();
-   const [currentSection, setCurrentSection] = useState<PeopleSection>("directory");
+   const searchParams = useSearchParams();
+   const router = useRouter();
+   const pathname = usePathname();
+
+   const sectionParam = searchParams.get("section");
+   const currentSection: PeopleSection = (sectionParam as PeopleSection) || "directory";
+
+   const handleSectionChange = (section: PeopleSection) => {
+      const params = new URLSearchParams(searchParams);
+      params.set("section", section);
+      router.push(`${pathname}?${params.toString()}`);
+   };
+
    const [directoryFilter, setDirectoryFilter] = useState("all");
 
    // Find the full person object for the logged-in user
@@ -49,7 +62,7 @@ export default function FeelPeoplePage() {
          <PageWrapper sidebar={
             <PeopleSidebar
                activeSection={currentSection}
-               onSectionChange={setCurrentSection}
+               onSectionChange={handleSectionChange}
                activeFilter={directoryFilter as any}
                onFilterChange={(v) => setDirectoryFilter(v)}
             />

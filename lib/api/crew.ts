@@ -86,6 +86,7 @@ export interface DailyLog {
     ot1Hours: number;
     ot2Hours: number;
     ot3Hours: number;
+    rating?: number; // 1-5
     createdAt: string;
     updatedAt: string;
 }
@@ -153,6 +154,7 @@ function mapDbToDailyLog(row: any): DailyLog {
         ot1Hours: parseFloat(row.ot1_hours) || 0,
         ot2Hours: parseFloat(row.ot2_hours) || 0,
         ot3Hours: parseFloat(row.ot3_hours) || 0,
+        rating: row.rating ? parseInt(row.rating) : undefined,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
     };
@@ -695,4 +697,40 @@ export async function updateRequestStatus(id: string, status: RequestStatus, app
 
     if (error) throw error;
     return data;
+}
+
+// Helper to update just the rating
+export async function updateDailyRating(crewId: string, workspaceId: string, date: string, rating: number) {
+    // 1. Check if log exists
+    const { data: existing } = await supabase
+        .from("crew_daily_logs")
+        .select("*")
+        .eq("crew_id", crewId)
+        .eq("date", date)
+        .single();
+    
+    if (existing) {
+        // Update
+        const { error } = await supabase
+            .from("crew_daily_logs")
+            .update({ rating })
+            .eq("id", existing.id);
+        if (error) throw error;
+    } else {
+        // Create new log with just rating
+        const { error } = await supabase
+            .from("crew_daily_logs")
+            .insert({
+                workspace_id: workspaceId,
+                crew_id: crewId,
+                date: date,
+                rating: rating,
+                status: "PRESENT", // Default to Present if rating is given
+                regular_hours: 0,
+                ot1_hours: 0,
+                ot2_hours: 0,
+                ot3_hours: 0
+            });
+        if (error) throw error;
+    }
 }

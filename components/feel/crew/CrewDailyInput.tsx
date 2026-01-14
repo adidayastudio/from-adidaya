@@ -337,7 +337,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
             // 4. Prepare Data
             const rows = sortedEntries.map(e => ({
                 crewName: e.crewName,
-                crewRole: CREW_ROLE_LABELS[e.crewRole]?.id || e.crewRole,
+                crewRole: CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole,
                 status: e.status || "-",
                 reg: e.regularHrs,
                 ot: e.ot1Hrs + e.ot2Hrs + e.ot3Hrs
@@ -424,17 +424,21 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
             </div>
 
             {/* TOOLBAR */}
-            <div className="flex items-center justify-between gap-2 w-full flex-wrap">
-                <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-                    {projects.length > 0 && (
-                        <div className="relative flex-shrink-0">
-                            <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="appearance-none pl-3 pr-7 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all">
-                                <option value="">Select Project</option>
-                                {projects.map(p => <option key={p.code} value={p.code}>[{formatProjectCode(p.code)}] {p.name}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
-                        </div>
-                    )}
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full">
+
+                {/* 1. PROJECT SELECT */}
+                {projects.length > 0 && (
+                    <div className="relative w-full sm:w-auto sm:min-w-[200px]">
+                        <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="appearance-none w-full pl-3 pr-7 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all">
+                            <option value="">Select Project</option>
+                            {projects.map(p => <option key={p.code} value={p.code}>[{formatProjectCode(p.code)}] {p.name}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+                    </div>
+                )}
+
+                {/* 2. DATE CONTROL */}
+                <div className="flex items-center gap-2 order-2 sm:order-none">
                     <div className={clsx("flex items-center gap-0.5 border rounded-full px-1 py-1 shadow-sm flex-shrink-0", isWeekend ? "bg-amber-50 border-amber-200" : "bg-white border-neutral-200")}>
                         <button onClick={() => handleDateChange("prev")} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-500"><ChevronLeft className="w-3.5 h-3.5" /></button>
                         <span className={clsx("text-sm font-medium text-center select-none px-1 min-w-[80px] sm:min-w-[100px]", isWeekend ? "text-amber-700" : "text-neutral-700")}>
@@ -443,9 +447,11 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                         </span>
                         <button onClick={() => handleDateChange("next")} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-500"><ChevronRight className="w-3.5 h-3.5" /></button>
                     </div>
-                    {isWeekend && <span className="px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">Holiday</span>}
+                    {isWeekend && <span className="hidden sm:inline px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">Holiday</span>}
                 </div>
-                <div className="flex items-center gap-2">
+
+                {/* 3. ACTIONS */}
+                <div className="flex items-center gap-2 ml-auto order-2 sm:order-none">
                     <Button
                         variant="secondary"
                         className="!rounded-full !py-1.5 !px-3"
@@ -453,7 +459,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                         onClick={handleExport}
                         disabled={exporting || entries.length === 0}
                     >
-                        {exporting ? "Exporting..." : "Export"}
+                        {exporting ? "..." : "Export"}
                     </Button>
                     <Button variant="primary" className="!rounded-full !py-1.5 !px-4" icon={<Save className="w-4 h-4" />} onClick={saveAll} disabled={entries.length === 0}>Save {unsavedCount > 0 && `(${unsavedCount})`}</Button>
                 </div>
@@ -507,7 +513,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                                             <td className="px-3 py-3">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{entry.initials}</div>
-                                                    <div><div className="font-medium text-neutral-900 text-sm">{entry.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[entry.crewRole]?.id || entry.crewRole}</div></div>
+                                                    <div><div className="font-medium text-neutral-900 text-sm">{entry.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[entry.crewRole]?.en || entry.crewRole}</div></div>
                                                 </div>
                                             </td>
                                             <td className="px-3 py-3">

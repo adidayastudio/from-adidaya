@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import PageWrapper from "@/components/layout/PageWrapper";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { CultureSidebar } from "@/components/feel/culture/CultureSidebar";
@@ -21,20 +22,31 @@ type CultureSection = "home" | "chapter" | "journey" | "values" | "pulse" | "han
 type ViewMode = "PERSONAL" | "TEAM";
 
 export default function CulturePage() {
-  const [activeSection, setActiveSection] = useState<CultureSection>("home");
-  const [viewMode, setViewMode] = useState<ViewMode>("PERSONAL");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const sectionParam = searchParams.get("section");
+  const viewParam = searchParams.get("view");
+
+  const activeSection: CultureSection = (sectionParam as CultureSection) || "home";
+  const viewMode: ViewMode = (viewParam as ViewMode) || "PERSONAL";
 
   // Mock Role - toggle this to test access
   const userRole = "hr"; // "staff" or "hr"
 
   const handleSectionChange = (section: string) => {
-    setActiveSection(section as CultureSection);
+    const params = new URLSearchParams(searchParams);
+    params.set("section", section);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const toggleViewMode = (mode: ViewMode) => {
-    setViewMode(mode);
+    const params = new URLSearchParams(searchParams);
+    params.set("view", mode);
     // Reset section to logical default when switching views
-    setActiveSection(mode === "PERSONAL" ? "home" : "team_overview");
+    params.set("section", mode === "PERSONAL" ? "home" : "team_overview");
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const renderContent = () => {

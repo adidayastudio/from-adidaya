@@ -391,7 +391,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
                 return {
                     name: c.name,
-                    role: CREW_ROLE_LABELS[c.role]?.id || c.role,
+                    role: CREW_ROLE_LABELS[c.role]?.en || c.role,
                     project: formattedProject,
                     status: c.status === "ACTIVE" ? "Active" : "Inactive"
                 };
@@ -495,7 +495,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             {showFilterPopup && (
                 <div className="bg-white rounded-xl border border-neutral-200 shadow-lg p-4 space-y-4">
                     <div className="flex items-center justify-between"><h3 className="font-semibold text-neutral-900">Filters</h3><button onClick={() => setShowFilterPopup(false)} className="p-1 rounded-full hover:bg-neutral-100"><X className="w-4 h-4 text-neutral-500" /></button></div>
-                    <div><div className="text-xs font-medium text-neutral-500 mb-2">Roles</div><div className="flex flex-wrap gap-2">{CREW_ROLE_OPTIONS.map(opt => <button key={opt.value} onClick={() => toggleRole(opt.value)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedRoles.includes(opt.value) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{CREW_ROLE_LABELS[opt.value].id}</button>)}</div></div>
+                    <div><div className="text-xs font-medium text-neutral-500 mb-2">Roles</div><div className="flex flex-wrap gap-2">{CREW_ROLE_OPTIONS.map(opt => <button key={opt.value} onClick={() => toggleRole(opt.value)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedRoles.includes(opt.value) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{CREW_ROLE_LABELS[opt.value].en}</button>)}</div></div>
                     <div><div className="text-xs font-medium text-neutral-500 mb-2">Status</div><div className="flex flex-wrap gap-2">{(["ACTIVE", "INACTIVE"] as CrewStatus[]).map(s => <button key={s} onClick={() => toggleStatus(s)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedStatuses.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{s}</button>)}</div></div>
                     {uniqueProjects.length > 0 && (
                         <div><div className="text-xs font-medium text-neutral-500 mb-2">Projects</div><div className="flex flex-wrap gap-2">{uniqueProjects.map(p => <button key={p} onClick={() => toggleProject(p)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(p) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{formatProjectCode(p)}</button>)}</div></div>
@@ -547,7 +547,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                                         </td>
 
                                         {/* Desktop Columns */}
-                                        <td className="px-4 py-3 hidden sm:table-cell"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].id}</span></td>
+                                        <td className="px-4 py-3 hidden sm:table-cell"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span></td>
                                         <td className="px-4 py-3 hidden sm:table-cell">{crew.projectCode ? <span className="px-2 py-1 text-xs font-mono bg-neutral-100 text-neutral-600 rounded">{formatProjectCode(crew.projectCode)}</span> : <span className="text-neutral-400 text-xs">-</span>}</td>
                                         <td className="px-4 py-3 hidden sm:table-cell"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span></td>
 
@@ -555,7 +555,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                                         <td className="px-4 py-3 sm:hidden align-middle">
                                             <div className="flex flex-wrap items-center gap-1.5">
                                                 <span className={clsx("px-2 py-1 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>
-                                                    {CREW_ROLE_LABELS[crew.role].id}
+                                                    {CREW_ROLE_LABELS[crew.role].en}
                                                 </span>
                                                 {crew.projectCode && (
                                                     <span className="px-2 py-1 text-[10px] font-mono bg-neutral-100 text-neutral-600 rounded">
@@ -591,7 +591,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                                 <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold flex-shrink-0">{crew.initials}</div>
                                 <div className="min-w-0 flex-1">
                                     <div className="font-semibold text-neutral-900 truncate">{crew.name}</div>
-                                    <span className={clsx("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].id}</span>
+                                    <span className={clsx("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span>
                                 </div>
                             </div>
                             <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
