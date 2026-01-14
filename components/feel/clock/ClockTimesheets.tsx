@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import clsx from "clsx";
-import { format, startOfWeek } from "date-fns";
-import { Download, ChevronDown, ChevronUp, Clock, AlertCircle, CheckCircle, Search, List, Grid3X3, ArrowUpDown, BarChart3, Calendar, User, Users, ChevronLeft, ChevronRight, Check, AlertTriangle, Loader2 } from "lucide-react";
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, startOfMonth, endOfMonth, isSunday, isSaturday, min, isWeekend } from "date-fns";
+import { HOLIDAYS_2026 } from "@/lib/constants/holidays";
+import { Download, ChevronDown, ChevronUp, Clock, AlertCircle, CheckCircle, Search, List, Grid3X3, ArrowUpDown, BarChart3, Calendar, User, Users, ChevronLeft, ChevronRight, Check, AlertTriangle, Loader2, X, MapPin } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { ViewToggle } from "./ViewToggle";
 import { UserRole } from "@/hooks/useUserProfile";
@@ -25,7 +26,7 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
     const [viewMode, setViewMode] = useState<"list" | "grid" | "chart">("list");
     const [personalTeamView, setPersonalTeamView] = useState<"personal" | "team">("personal");
     const [sortBy, setSortBy] = useState<"date" | "employee">("date");
-    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -38,6 +39,8 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
 
     // Month Navigation
     const [currentMonth, setCurrentMonth] = useState(new Date());
+
+
 
     const handleMonthChange = (direction: "prev" | "next") => {
         const newDate = new Date(currentMonth);
@@ -61,7 +64,9 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
 
     const { profile } = useUserProfile();
     const isManager = canViewTeamData(role || profile?.role);
-    const { attendance, leaves, loading } = useClockData(profile?.id, personalTeamView === "team");
+    // -- DATA FETCHING --
+    // Now receiving currentMonth to filter fetching by month
+    const { attendance, leaves, overtime: otLogs, businessTrips: trips, teamMembers, loading: loadingData, refresh } = useClockData(profile?.id, personalTeamView === "team", currentMonth);
 
     // -- MAP DATA TO UI FORMAT --
     const rawData = useMemo(() => {
@@ -95,33 +100,105 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
         }
     };
 
-    const filteredData = useMemo(() => {
-        let data = [...rawData];
+    const EXCLUDED_USERS = ["Adidaya Admin", "Adidaya IT", "Adidaya Finance", "Adidaya Staff", "harryadin", "Adidaya Studio", "Harryadin Mahardika"];
 
-        // Filter by selected person
+    const filteredData = useMemo(() => {
+        let baseData = [...rawData];
+
+        // EXCLUDE SYSTEM ACCOUNTS - ONLY FOR TEAM VIEW
+        if (personalTeamView === "team") {
+            baseData = baseData.filter(d => !EXCLUDED_USERS.includes(d.employee || ""));
+        }
+
+        // DENSE DATA GENERATION (Personal View Only)
+        // Rule: Start from first check-in date of the month, fill gaps up to TODAY or End of Month.
+        if (personalTeamView === "personal" && baseData.length > 0) {
+            // 1. Find the first check-in date (Earliest record in the current dataset)
+            // rawData is derived from attendance, which is filtered by API to be within currentMonth.
+            // Sort by date to be sure
+            const sortedRecords = [...baseData].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            const firstRecordDate = new Date(sortedRecords[0].date);
+
+            // 2. Define the End Boundary: Min(Today, EndOfCurrentMonth)
+            const today = new Date();
+            const endMonth = endOfMonth(currentMonth);
+            const endDate = today < endMonth ? today : endMonth;
+
+            // Only generate if firstRecordDate <= endDate
+            if (firstRecordDate <= endDate) {
+                const denseData: any[] = [];
+                const allDays = eachDayOfInterval({ start: firstRecordDate, end: endDate });
+
+                allDays.forEach(dayObj => {
+                    const dayStr = format(dayObj, "yyyy-MM-dd");
+                    const existingRecord = baseData.find(r => r.date === dayStr);
+
+                    if (existingRecord) {
+                        denseData.push(existingRecord);
+                    } else {
+                        // GAP FILLING
+                        const isSun = isSunday(dayObj);
+                        const holidayInfo = HOLIDAYS_2026.find(h => h.date === dayStr);
+
+                        let status = "absent"; // Default for non-workday, non-holiday
+                        let notes: string | undefined;
+
+                        if (holidayInfo) {
+                            if (holidayInfo.type === "collective_leave") {
+                                status = "leave";
+                            } else { // Regular holiday
+                                status = "holiday";
+                            }
+                            notes = holidayInfo.nameEn;
+                        } else if (isSun) {
+                            status = "holiday"; // User rule: "hari minggu otomatis jadi Holiday (kode H)"
+                            notes = "Weekend";
+                        }
+
+                        denseData.push({
+                            id: `gen-${dayStr}`,
+                            date: dayStr,
+                            clockIn: "-",
+                            clockOut: "-",
+                            duration: "0h 0m",
+                            status: status as any,
+                            overtime: "-",
+                            employee: userName,
+                            day: format(dayObj, "EEE"),
+                            userId: profile?.id,
+                            totalMinutes: 0,
+                            notes: notes
+                        });
+                    }
+                });
+                baseData = denseData;
+            }
+        }
+
+        // Filter by selected person (Team View)
         if (selectedPerson !== "all") {
-            data = data.filter(d => d.employee === selectedPerson);
+            baseData = baseData.filter(d => d.employee === selectedPerson);
         }
 
         // Filter by date range
         if (dateFrom) {
-            data = data.filter(d => new Date(d.date) >= new Date(dateFrom));
+            baseData = baseData.filter(d => new Date(d.date) >= new Date(dateFrom));
         }
         if (dateTo) {
-            data = data.filter(d => new Date(d.date) <= new Date(dateTo));
+            baseData = baseData.filter(d => new Date(d.date) <= new Date(dateTo));
         }
 
         // Filter by search query
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            data = data.filter(d =>
+            baseData = baseData.filter(d =>
                 d.employee?.toLowerCase().includes(query) ||
                 d.date.includes(query) ||
                 d.status.toLowerCase().includes(query)
             );
         }
 
-        return data.sort((a, b) => {
+        return baseData.sort((a, b) => {
             if (sortBy === "date") {
                 const dateA = new Date(a.date).getTime();
                 const dateB = new Date(b.date).getTime();
@@ -133,7 +210,7 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
             }
             return 0;
         });
-    }, [rawData, sortBy, sortOrder, selectedPerson, dateFrom, dateTo, searchQuery]);
+    }, [rawData, sortBy, sortOrder, selectedPerson, dateFrom, dateTo, searchQuery, personalTeamView, currentMonth, userName, profile]);
 
     // Update stats when filtered data changes
     useEffect(() => {
@@ -147,12 +224,87 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
         }
     }, [filteredData, personalTeamView]);
 
-    // Pagination Logic
-    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+    // -- PAGINATION LOGIC --
+    // For Team List View: We paginate by DATE (Day), not by items.
+    // 1 Page = 1 Day (All employees for that day).
+    const uniqueDates = useMemo(() => {
+        if (personalTeamView === "team" && viewMode === "list") {
+            // Generate all days for the current month UP TO TODAY
+            const start = startOfMonth(currentMonth);
+            let end = endOfMonth(currentMonth);
+            const today = new Date();
+
+            // If end of month is in the future, cap it at Today
+            if (end > today) {
+                end = today;
+            }
+
+            // If start is also in future (future month), return empty
+            if (start > today) return [];
+
+            const days = eachDayOfInterval({ start, end });
+            // Sort Latest First
+            return days.map(d => format(d, "yyyy-MM-dd")).reverse();
+        }
+        return [];
+    }, [currentMonth, personalTeamView, viewMode]);
+
+    const totalPages = useMemo(() => {
+        if (personalTeamView === "team" && viewMode === "list") {
+            return uniqueDates.length || 1;
+        }
+        return Math.ceil(filteredData.length / ITEMS_PER_PAGE) || 1;
+    }, [filteredData.length, uniqueDates.length, personalTeamView, viewMode]);
+
     const paginatedData = useMemo(() => {
+        if (personalTeamView === "team" && viewMode === "list") {
+            // Logic: Show all records for the specific date at 'currentPage' index
+            const dateToShow = uniqueDates[currentPage - 1];
+            if (!dateToShow) return [];
+
+            // 1. Get existing records for this day
+            const dayRecords = filteredData.filter(d => d.date === dateToShow);
+
+            // 2. Hydrate with ALL team members (Excluding System Accounts)
+            const validMembers = teamMembers.filter(m => !EXCLUDED_USERS.includes(m.username));
+
+            const fullList = validMembers.map(member => {
+                // Try to match by userId first, then username fallback
+                const record = dayRecords.find(r => r.userId === member.id || r.employee === member.username);
+                if (record) return record;
+
+                // Create Mock Absent Record
+                return {
+                    id: `absent-${member.id}-${dateToShow}`,
+                    date: dateToShow,
+                    employee: member.username || "Unknown",
+                    userId: member.id,
+                    clockIn: "-",
+                    clockOut: "-",
+                    duration: "0h 0m",
+                    status: "absent" as any,
+                    overtime: "-",
+                    day: format(new Date(dateToShow), "EEE"),
+                };
+            });
+
+            // 3. Sort by Clock-In Time (Ascending), then Name
+            return fullList.sort((a, b) => {
+                const timeA = (a.clockIn && a.clockIn !== '-') ? a.clockIn : "23:59"; // Push absent to end
+                const timeB = (b.clockIn && b.clockIn !== '-') ? b.clockIn : "23:59";
+                if (timeA !== timeB) return timeA.localeCompare(timeB);
+                return (a.employee || "").localeCompare(b.employee || "");
+            });
+        }
+
         const start = (currentPage - 1) * ITEMS_PER_PAGE;
         return filteredData.slice(start, start + ITEMS_PER_PAGE);
-    }, [filteredData, currentPage]);
+    }, [filteredData, currentPage, uniqueDates, personalTeamView, viewMode, teamMembers]);
+
+    // Reset page on month/view change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [currentMonth, personalTeamView, viewMode, searchQuery]);
 
     // EXPORT FUNCTIONALITY
     const [exporting, setExporting] = useState(false);
@@ -167,12 +319,14 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
             const periodText = formatMonthYear(currentMonth);
 
             const ontimeCount = filteredData.filter(d => d.status === "ontime").length;
+            const intimeCount = filteredData.filter(d => d.status === "intime").length;
             const lateCount = filteredData.filter(d => d.status === "late").length;
             const absentCount = filteredData.filter(d => d.status === "absent").length;
 
             const summaryCards = [
                 { label: "Total Records", value: filteredData.length, format: "number" as const },
                 { label: "On Time", value: ontimeCount, format: "number" as const, color: "green" as const },
+                { label: "In Time", value: intimeCount, format: "number" as const, color: "orange" as const },
                 { label: "Late", value: lateCount, format: "number" as const, color: "red" as const },
                 { label: "Absent", value: absentCount, format: "number" as const, color: "orange" as const },
             ];
@@ -242,23 +396,25 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
         if (iconOnly) {
             switch (status) {
                 case "ontime": return <div className="p-1 rounded-full bg-emerald-100 text-emerald-600" title="On Time"><Check className="w-3 h-3" /></div>;
-                case "late": return <div className="p-1 rounded-full bg-rose-100 text-rose-600" title="Late"><AlertCircle className="w-3 h-3" /></div>;
-                case "weekend": return <div className="p-1 rounded-full bg-neutral-100 text-neutral-500" title="Weekend"><Clock className="w-3 h-3" /></div>;
-                case "holiday": return <div className="p-1 rounded-full bg-blue-100 text-blue-600" title="Holiday"><Calendar className="w-3 h-3" /></div>;
-                case "absent": return <div className="p-1 rounded-full bg-red-100 text-red-600" title="Absent"><AlertTriangle className="w-3 h-3" /></div>;
+                case "intime": return <div className="p-1 rounded-full bg-orange-100 text-orange-600" title="In Time"><AlertCircle className="w-3 h-3" /></div>;
+                case "late": return <div className="p-1 rounded-full bg-rose-100 text-rose-600" title="Late"><AlertTriangle className="w-3 h-3" /></div>;
+                case "weekend": return <div className="p-1 rounded-full bg-neutral-100 text-neutral-500" title="Weekend"><span className="text-[10px] font-bold px-0.5">W</span></div>;
+                case "holiday": return <div className="p-1 rounded-full bg-orange-100 text-orange-600" title="Holiday"><Calendar className="w-3 h-3" /></div>;
+                case "absent": return <div className="p-1 rounded-full bg-neutral-100 text-neutral-400" title="Absent"><X className="w-3 h-3" /></div>;
                 case "sick": return <div className="p-1 rounded-full bg-orange-100 text-orange-600" title="Sick"><AlertCircle className="w-3 h-3" /></div>;
-                case "leave": return <div className="p-1 rounded-full bg-purple-100 text-purple-600" title="Leave"><Calendar className="w-3 h-3" /></div>;
+                case "leave": return <div className="p-1 rounded-full bg-purple-100 text-purple-600" title="Leave"><span className="text-[10px] font-bold px-0.5">C</span></div>;
                 default: return <div className="w-5 h-5" />;
             }
         }
         switch (status) {
             case "ontime": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700"><CheckCircle className="w-3 h-3" /> On Time</span>;
-            case "late": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700"><AlertCircle className="w-3 h-3" /> Late</span>;
-            case "weekend": return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-500">Weekend</span>;
-            case "holiday": return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">Holiday</span>;
-            case "absent": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700"><AlertTriangle className="w-3 h-3" /> Absent</span>;
-            case "sick": return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700">Sick</span>;
-            case "leave": return <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">Leave</span>;
+            case "intime": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700"><AlertCircle className="w-3 h-3" /> In Time</span>;
+            case "late": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700"><AlertTriangle className="w-3 h-3" /> Late</span>;
+            case "weekend": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-500"><span className="font-bold text-[10px]">W</span> Weekend</span>;
+            case "holiday": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700"><Calendar className="w-3 h-3" /> Holiday</span>;
+            case "absent": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-500"><X className="w-3 h-3" /> Absent</span>;
+            case "sick": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700"><AlertCircle className="w-3 h-3" /> Sick</span>;
+            case "leave": return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700"><span className="font-bold text-[10px]">C</span> Leave</span>;
             default: return null;
         }
     };
@@ -275,59 +431,169 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                     <ViewToggle viewMode={personalTeamView} onViewChange={(v) => { setPersonalTeamView(v); setCurrentPage(1); }} role={role} />
                 </div>
 
-                {/* LATE ALERT (Personal) */}
-                {personalTeamView === "personal" && weeklyLateCount > 3 && (
-                    <div className="bg-rose-50 border border-rose-100 rounded-lg p-4 flex items-start gap-3">
-                        <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                        <div>
-                            <h4 className="text-sm font-semibold text-rose-800">Attendance Alert</h4>
-                            <p className="text-sm text-rose-700 mt-1">
-                                You have been late <span className="font-bold">{weeklyLateCount} times</span> this week.
-                                Please ensure punctuality to maintain your KPI score. Frequent lateness (3+ times/week) may impact your performance review.
-                            </p>
-                        </div>
-                    </div>
-                )}
-
                 <div className="border-b border-neutral-200" />
 
-                {/* SUMMARY STATS (Payroll / KPI Logic) */}
-                {stats && (
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
-                        <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Days Present</div>
-                            <div className="text-xl font-bold text-neutral-900 mt-1">{stats.totalDaysPresent}</div>
-                        </div>
-                        <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Late Arrivals</div>
-                            <div className={clsx("text-xl font-bold mt-1", stats.totalDaysLate > 0 ? "text-rose-600" : "text-neutral-900")}>
-                                {stats.totalDaysLate}
+                {/* ATTENDANCE ALERT (Personal) - Only show if there is data for the current month */}
+                {personalTeamView === "personal" && filteredData.length > 0 && (
+                    <>
+                        {weeklyLateCount === 0 ? (
+                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4 flex items-start gap-3">
+                                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <h4 className="text-sm font-semibold text-emerald-800">Perfect Attendance!</h4>
+                                    <p className="text-sm text-emerald-700 mt-1">
+                                        Congrats! Maintain your discipline by never being late this week.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                        <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Absent/Leave</div>
-                            <div className="text-xl font-bold text-neutral-900 mt-1">
-                                {stats.totalDaysAbsent + stats.totalDaysLeave + stats.totalDaysSick}
+                        ) : weeklyLateCount <= 3 ? (
+                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex items-start gap-3">
+                                <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <h4 className="text-sm font-semibold text-orange-800">Attendance Alert</h4>
+                                    <p className="text-sm text-orange-700 mt-1">
+                                        You have been late <span className="font-bold">{weeklyLateCount} times</span> this week. Please pay attention to your punctuality.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                        <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Overtime Hours</div>
-                            <div className="text-xl font-bold text-emerald-600 mt-1">
-                                {formatMinutes(stats.totalOvertimeMinutes)}
+                        ) : (
+                            <div className="bg-rose-50 border border-rose-100 rounded-lg p-4 flex items-start gap-3">
+                                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <h4 className="text-sm font-semibold text-rose-800">Critical Attendance Alert</h4>
+                                    <p className="text-sm text-rose-700 mt-1">
+                                        You have been late <span className="font-bold">{weeklyLateCount} times</span> this week. Your KPI score will decrease. Frequent lateness impacts your performance review.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                        <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Attendance Score</div>
-                            <div className={clsx(
-                                "text-xl font-bold mt-1",
-                                stats.attendanceScore >= 90 ? "text-emerald-600" :
-                                    stats.attendanceScore >= 75 ? "text-yellow-600" : "text-rose-600"
-                            )}>
-                                {stats.attendanceScore}%
-                            </div>
-                        </div>
-                    </div>
+                        )}
+                    </>
                 )}
+
+                {/* SUMMARY STATS (Payroll / KPI Logic) */}
+                {stats && (() => {
+                    // For Team View: Calculate AVERAGES across all team members from Jan 12
+                    if (personalTeamView === "team" && isManager) {
+                        const activeMembers = teamMembers.filter(m => !EXCLUDED_USERS.includes(m.username));
+                        const memberCount = activeMembers.length || 1;
+
+                        // Filter data from Jan 12 onwards (first clock-in date)
+                        const startDate = "2026-01-12";
+                        const today = new Date();
+                        const allDays = eachDayOfInterval({
+                            start: new Date(startDate),
+                            end: min([today, endOfMonth(currentMonth)])
+                        });
+                        const workDayDates = allDays.filter(d => !isSunday(d) && !HOLIDAYS_2026.find(h => h.date === format(d, "yyyy-MM-dd")));
+
+                        const teamData = filteredData.filter(d => d.date >= startDate);
+
+                        // Calculate totals across all team members
+                        const totalPresent = teamData.filter(d => d.status === "ontime" || d.status === "intime" || d.status === "late").length;
+                        const totalLate = teamData.filter(d => d.status === "late").length;
+                        const totalOT = teamData.reduce((sum, d) => sum + (d.overtimeMinutes || 0), 0);
+
+                        // Calculate ABSENT: For each workday, count members who have NO record
+                        let totalAbsent = 0;
+                        workDayDates.forEach(dayDate => {
+                            const dateStr = format(dayDate, "yyyy-MM-dd");
+                            activeMembers.forEach(member => {
+                                const hasRecord = teamData.some(d => d.date === dateStr && (d.userId === member.id || d.employee === member.username));
+                                if (!hasRecord) totalAbsent++;
+                            });
+                        });
+
+                        // Calculate averages (round up to 1 decimal)
+                        const avgPresent = Math.ceil((totalPresent / memberCount) * 10) / 10;
+                        const avgLate = Math.ceil((totalLate / memberCount) * 10) / 10;
+                        const avgAbsent = Math.ceil((totalAbsent / memberCount) * 10) / 10;
+                        const avgOTMinutes = Math.round(totalOT / memberCount);
+
+                        // Format overtime as Xh Ym
+                        const otHours = Math.floor(avgOTMinutes / 60);
+                        const otMins = Math.round(avgOTMinutes % 60);
+                        const avgOTFormatted = otHours > 0 ? `${otHours}h ${otMins}m` : `${otMins}m`;
+
+                        // Attendance Score
+                        const workDays = workDayDates.length;
+                        const avgScore = workDays > 0 ? Math.round((totalPresent / (workDays * memberCount)) * 100) : 0;
+
+                        return (
+                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
+                                <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                    <div className="text-xs text-neutral-500">Avg Days Present</div>
+                                    <div className="text-xl font-bold text-neutral-900 mt-1">{avgPresent.toFixed(1)}</div>
+                                </div>
+                                <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                    <div className="text-xs text-neutral-500">Avg Late Arrivals</div>
+                                    <div className={clsx("text-xl font-bold mt-1", avgLate > 0 ? "text-rose-600" : "text-neutral-900")}>
+                                        {avgLate.toFixed(1)}
+                                    </div>
+                                </div>
+                                <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                    <div className="text-xs text-neutral-500">Avg Absent/Leave</div>
+                                    <div className={clsx("text-xl font-bold mt-1", avgAbsent > 0 ? "text-rose-600" : "text-neutral-900")}>
+                                        {avgAbsent.toFixed(1)}
+                                    </div>
+                                </div>
+                                <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                    <div className="text-xs text-neutral-500">Avg Overtime</div>
+                                    <div className="text-xl font-bold text-emerald-600 mt-1">
+                                        {avgOTFormatted}
+                                    </div>
+                                </div>
+                                <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                    <div className="text-xs text-neutral-500">Avg Attendance Score</div>
+                                    <div className={clsx(
+                                        "text-xl font-bold mt-1",
+                                        avgScore >= 90 ? "text-emerald-600" :
+                                            avgScore >= 75 ? "text-yellow-600" : "text-rose-600"
+                                    )}>
+                                        {avgScore}%
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    }
+
+                    // Personal View: Show individual totals (existing logic)
+                    return (
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
+                            <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                <div className="text-xs text-neutral-500">Days Present</div>
+                                <div className="text-xl font-bold text-neutral-900 mt-1">{stats.totalDaysPresent}</div>
+                            </div>
+                            <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                <div className="text-xs text-neutral-500">Late Arrivals</div>
+                                <div className={clsx("text-xl font-bold mt-1", stats.totalDaysLate > 0 ? "text-rose-600" : "text-neutral-900")}>
+                                    {stats.totalDaysLate}
+                                </div>
+                            </div>
+                            <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                <div className="text-xs text-neutral-500">Absent/Leave</div>
+                                <div className="text-xl font-bold text-neutral-900 mt-1">
+                                    {stats.totalDaysAbsent + stats.totalDaysLeave + stats.totalDaysSick}
+                                </div>
+                            </div>
+                            <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                <div className="text-xs text-neutral-500">Overtime Hours</div>
+                                <div className="text-xl font-bold text-emerald-600 mt-1">
+                                    {formatMinutes(stats.totalOvertimeMinutes)}
+                                </div>
+                            </div>
+                            <div className="bg-white border rounded-xl p-3 shadow-sm">
+                                <div className="text-xs text-neutral-500">Attendance Score</div>
+                                <div className={clsx(
+                                    "text-xl font-bold mt-1",
+                                    stats.attendanceScore >= 90 ? "text-emerald-600" :
+                                        stats.attendanceScore >= 75 ? "text-yellow-600" : "text-rose-600"
+                                )}>
+                                    {stats.attendanceScore}%
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
 
             </div>
 
@@ -478,7 +744,6 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                                             )}
                                         </span>
                                     </th>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Schedule</th>
                                     <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock In</th>
                                     <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Location</th>
                                     <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock Out</th>
@@ -491,10 +756,11 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                                 {paginatedData.map((row, idx) => {
                                     // Get location label
                                     const getLocationLabel = () => {
-                                        const mode = row.checkInRemoteMode;
-                                        const locType = row.checkInLocationType;
-                                        const locCode = row.checkInLocationCode;
-                                        const status = row.checkInLocationStatus;
+                                        const r = row as any;
+                                        const mode = r.checkInRemoteMode;
+                                        const locType = r.checkInLocationType;
+                                        const locCode = r.checkInLocationCode;
+                                        const status = r.checkInLocationStatus;
 
                                         if (status === "inside" && locType === "office") {
                                             return { label: `WFO`, code: locCode, color: "text-blue-600" };
@@ -502,45 +768,59 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                                         if (status === "inside" && locType === "project") {
                                             return { label: `Project`, code: locCode, color: "text-emerald-600" };
                                         }
-                                        if (mode === "WFH") return { label: "WFH", code: null, color: "text-purple-600" };
-                                        if (mode === "WFA") return { label: "WFA", code: null, color: "text-indigo-600" };
-                                        if (mode === "business_trip") return { label: "BST", code: null, color: "text-orange-600" };
-                                        if (mode === "other") return { label: "Other", code: null, color: "text-neutral-500" };
-                                        return null;
+                                        // Handle Remote / Other
+                                        if (mode === 'business_trip') return { label: 'BST', code: null, color: "text-purple-600" };
+                                        if (mode && mode !== '-') return { label: mode, code: null, color: "text-purple-600" };
+
+                                        // Default fallback
+                                        return { label: "-", code: null, color: "text-neutral-400" };
                                     };
 
-                                    const mapsUrl = (row.checkInLatitude && row.checkInLongitude)
-                                        ? `https://maps.google.com/?q=${row.checkInLatitude},${row.checkInLongitude}`
-                                        : null;
                                     const locInfo = getLocationLabel();
+                                    const mapsUrl = (row as any).checkInLatitude
+                                        ? `https://www.google.com/maps?q=${(row as any).checkInLatitude},${(row as any).checkInLongitude}`
+                                        : "#";
 
                                     return (
-                                        <tr key={idx} className="hover:bg-neutral-50/50 transition-colors">
-                                            {isManager && personalTeamView === "team" && <td className="px-6 py-4 font-medium text-neutral-900">{row.employee}</td>}
-                                            <td className="px-6 py-4">
-                                                <div className="font-medium text-neutral-900">{row.day}</div>
-                                                <div className="text-xs text-neutral-500">{new Date(row.date).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                                            </td>
-                                            <td className="px-6 py-4 text-neutral-700">{row.schedule}</td>
-                                            <td className="px-6 py-4 font-mono text-neutral-900">{row.clockIn}</td>
-                                            <td className="px-6 py-4">
-                                                {locInfo ? (
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className={clsx("text-xs font-bold", locInfo.color)}>
+                                        <tr key={row.id} className="group hover:bg-neutral-50 transition-colors">
+                                            {isManager && personalTeamView === "team" && (
+                                                <td className="px-6 py-4 whitespace-nowrap font-medium text-neutral-900">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-500">
+                                                            {row.employee?.split(' ').map((n: string) => n[0]).join('')}
+                                                        </div>
+                                                        {row.employee}
+                                                    </div>
+                                                </td>
+                                            )}
+                                            <td className="px-6 py-4 whitespace-nowrap text-neutral-500">{format(new Date(row.date), "EEE, dd MMM")}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockIn}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="flex flex-col gap-1">
+                                                    <a
+                                                        href={mapsUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className={clsx("flex items-center gap-1.5 hover:underline decoration-neutral-300 underline-offset-2", locInfo.color)}
+                                                    >
+                                                        {/* Icon: Map Pin */}
+                                                        <MapPin className="w-3.5 h-3.5" />
+
+                                                        <span className="font-medium text-xs">
                                                             {locInfo.label}{locInfo.code && ` (${locInfo.code})`}
                                                         </span>
-                                                        {mapsUrl && (
-                                                            <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-blue-600 transition-colors" title="Open in Maps">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-neutral-400 text-xs">-</span>
-                                                )}
+                                                    </a>
+                                                    {/* NOTES DISPLAY - Only show if exists */}
+                                                    {(row as any).notes && (
+                                                        <span className="text-[10px] text-neutral-500 max-w-[200px] truncate leading-tight ml-5" title={(row as any).notes}>
+                                                            <span className="font-medium text-neutral-400">Note: </span>
+                                                            {(row as any).notes}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
-                                            <td className="px-6 py-4 font-mono text-neutral-900">{row.clockOut}</td>
-                                            <td className="px-6 py-4 font-medium text-neutral-900">{row.duration}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockOut}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-neutral-500 text-xs">{row.duration}</td>
                                             <td className="px-6 py-4">
                                                 {row.overtime !== "-" ? (
                                                     <span className="text-emerald-600 font-medium">+{row.overtime}</span>
@@ -548,21 +828,32 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                                                     <span className="text-neutral-400">-</span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4">{getStatusBadge(row.status)}</td>
+                                            <td className="px-6 py-4">
+                                                {getStatusBadge(row.status || "absent", false)}
+                                            </td>
                                         </tr>
                                     );
                                 })}
                                 {paginatedData.length === 0 && (
                                     <tr>
-                                        <td colSpan={isManager && personalTeamView === "team" ? 10 : 9} className="px-6 py-8 text-center text-neutral-500">
-                                            No records found.
+                                        <td colSpan={isManager && personalTeamView === "team" ? 10 : 9} className="px-6 py-12 text-center text-neutral-500">
+                                            <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
+                                                <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4">
+                                                    <Calendar className="w-8 h-8 text-neutral-400" />
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-neutral-900 mb-1">No Records Found</h3>
+                                                <p className="text-neutral-500 text-sm">
+                                                    Looks like there are no attendance records for <span className="font-medium text-neutral-700">{formatMonthYear(currentMonth)}</span>.
+                                                    {personalTeamView === "personal" ? " Enjoy the quiet time or check a different month!" : " Your team was either very quiet or on break."}
+                                                </p>
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
                     </div>
-                    {/* PAGINATION */}
+                    {/* PAGINATION - Hide if no data */}
                     {totalPages > 1 && (
                         <div className="px-6 py-4 border-t border-neutral-100 flex items-center justify-between">
                             <button
@@ -596,90 +887,330 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                                 {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
                                     <div key={day} className="text-center text-xs font-semibold text-neutral-500 uppercase py-2 hidden md:block">{day}</div>
                                 ))}
-                                {filteredData.map((row, idx) => (
-                                    <div
-                                        key={idx}
-                                        className={clsx(
-                                            "bg-white rounded-xl border p-3 min-h-[100px] transition-all hover:shadow-md",
-                                            row.status === "ontime" && "border-emerald-200 hover:border-emerald-300",
-                                            row.status === "late" && "border-rose-200 hover:border-rose-300",
-                                            row.status === "weekend" && "border-neutral-100 bg-neutral-50",
-                                            row.status === "holiday" && "border-blue-200 bg-blue-50/50",
-                                            row.status === "absent" && "border-red-200 bg-red-50/30",
-                                            row.status === "sick" && "border-orange-200 bg-orange-50/30",
-                                            row.status === "leave" && "border-purple-200 bg-purple-50/30",
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="text-xs text-neutral-500">{new Date(row.date).getDate()}</div>
-                                            <div className="text-xs font-medium text-neutral-900">{row.day}</div>
-                                        </div>
-                                        {(row.status === "ontime" || row.status === "late") && (
-                                            <>
-                                                <div className="mt-2 text-xs text-neutral-600 flex flex-col gap-0.5">
-                                                    <span className="font-mono text-[10px]">{row.clockIn}</span>
-                                                    <span className="font-mono text-[10px]">{row.clockOut}</span>
-                                                </div>
-                                                <div className="mt-2 flex justify-end">{getStatusBadge(row.status, true)}</div>
-                                            </>
-                                        )}
-                                        {/* Handle other statuses */}
-                                        {(row.status !== "ontime" && row.status !== "late") && (
-                                            <div className="mt-4 flex justify-center">
-                                                {getStatusBadge(row.status, true)}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                {/* Empty cells for start of month offset if needed, but since this is list-based, we likely need to fill gaps. 
+                                    However, the user wants calendar alignment. 
+                                    If we are showing a specific month, we should generate the days of that month.
+                                    If we are showing a filtered list, grid might be confusing if not complete.
+                                    Assuming we show the 'currentMonth' fully. 
+                                */}
+                                {(() => {
+                                    // Generate all days for the current month view
+                                    const year = currentMonth.getFullYear();
+                                    const month = currentMonth.getMonth(); // 0-indexed
+                                    const daysInMonth = new Date(year, month + 1, 0).getDate();
+                                    const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 (Sun) - 6 (Sat)
+
+                                    const calendarDays = [];
+
+                                    // Padding for previous month
+                                    for (let i = 0; i < firstDayOfMonth; i++) {
+                                        calendarDays.push(<div key={`pad-${i}`} className="hidden md:block"></div>);
+                                    }
+
+                                    // Days
+                                    // Determine Start Date from filteredData (which contains dense data starting from first check-in)
+                                    // Use rawData or filteredData? filteredData aligns with what's shown in table.
+                                    // FilteredData might be sorted DESC. Find min date.
+                                    const allDates = filteredData.map(d => new Date(d.date).getTime());
+                                    const firstCheckInTime = allDates.length > 0 ? Math.min(...allDates) : 0;
+                                    const firstCheckInDate = firstCheckInTime ? new Date(firstCheckInTime) : null;
+
+                                    for (let d = 1; d <= daysInMonth; d++) {
+                                        const dateObj = new Date(year, month, d);
+                                        const dayName = format(dateObj, "EEE");
+                                        const dateStr = format(dateObj, "yyyy-MM-dd");
+                                        const record = filteredData.find((r) => r.date === dateStr);
+
+                                        calendarDays.push(
+                                            (() => {
+                                                const isToday = isSameDay(dateObj, new Date());
+                                                const isPast = dateObj < new Date() && !isToday;
+                                                const status = record?.status;
+                                                const isWeekend = dateObj.getDay() === 0; // Only Sunday is "Weekend/Holiday" for visual purposes
+
+                                                // Check if date is before the first check-in of the month
+                                                // If no data exists (firstCheckInDate is null), treat all as "before start" (no Absent marks)
+                                                // Note: set hours to 0 to compare dates accurately
+                                                const dateObjTime = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()).getTime();
+                                                const startTime = firstCheckInDate ? new Date(firstCheckInDate.getFullYear(), firstCheckInDate.getMonth(), firstCheckInDate.getDate()).getTime() : null;
+                                                const isBeforeStart = startTime ? dateObjTime < startTime : true;
+
+                                                // Holiday / Leave Lookup (Global, outside of record existence)
+                                                // This ensures future holidays or past holidays (before start) are visible
+                                                const holidayInfo = HOLIDAYS_2026.find(h => h.date === dateStr);
+                                                const isGlobalHoliday = !!holidayInfo && holidayInfo.type === 'holiday';
+                                                const isGlobalCollectiveLeave = !!holidayInfo && holidayInfo.type === 'collective_leave';
+
+                                                // Effectively Absent: Past + Workday + Started + No Record + Not a Holiday
+                                                const isAbsent = isPast && !isWeekend && !isBeforeStart && !record && !isGlobalHoliday && !isGlobalCollectiveLeave;
+
+                                                let cardClasses = "bg-white border-neutral-100";
+
+                                                // CARD STYLING
+                                                if (isToday) {
+                                                    if (status === "ontime") cardClasses = "bg-emerald-100 border-emerald-200";
+                                                    else if (status === "intime") cardClasses = "bg-orange-100 border-orange-200";
+                                                    else if (status === "late") cardClasses = "bg-rose-100 border-rose-200";
+                                                    else if (status === "leave" || isGlobalCollectiveLeave) cardClasses = "bg-purple-100 border-purple-200";
+                                                    else if (status === "holiday" || isGlobalHoliday) cardClasses = "bg-orange-100 border-orange-200";
+                                                    else cardClasses = "bg-blue-50 border-blue-100";
+                                                } else if (isPast) {
+                                                    if (status === "ontime") cardClasses = "bg-white border-emerald-500";
+                                                    else if (status === "intime") cardClasses = "bg-white border-orange-500";
+                                                    else if (status === "late") cardClasses = "bg-white border-rose-500";
+                                                    else if (status === "leave" || isGlobalCollectiveLeave) cardClasses = "bg-white border-purple-500";
+                                                    else if (status === "holiday" || isGlobalHoliday) {
+                                                        // Holiday: Orange if Mon-Sat, Neutral if Sunday (unless specialized holiday overrides)
+                                                        // User preference: Public Holiday -> Orange.
+                                                        // If it's a Sunday but also a Public Holiday (e.g. Easter), use Orange.
+                                                        // Only use weekend style if it's a JUST a Sunday (no holiday info).
+                                                        if (isGlobalHoliday) cardClasses = "bg-white border-orange-500";
+                                                        else if (isWeekend) cardClasses = "bg-neutral-50 border-neutral-100";
+                                                        else cardClasses = "bg-white border-orange-500";
+                                                    }
+                                                    else if (isAbsent) cardClasses = "bg-neutral-50/50 border-neutral-200";
+                                                    else if (isWeekend) cardClasses = "bg-neutral-50 border-neutral-100";
+                                                } else {
+                                                    // FUTURE
+                                                    if (isGlobalCollectiveLeave) cardClasses = "bg-white border-purple-500";
+                                                    else if (isGlobalHoliday) cardClasses = "bg-white border-orange-500";
+                                                    else if (isWeekend) cardClasses = "bg-neutral-50 border-neutral-100";
+                                                    else cardClasses = "bg-white border-neutral-100";
+                                                }
+
+                                                const displayNotes = (record as any)?.notes || (holidayInfo ? holidayInfo.nameEn : null);
+
+                                                return (
+                                                    <div
+                                                        key={d}
+                                                        className={clsx(
+                                                            "rounded-xl border p-3 min-h-[100px] transition-all hover:shadow-md relative",
+                                                            cardClasses
+                                                        )}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className={clsx("text-xs", (!record && !isAbsent && !isGlobalHoliday && !isGlobalCollectiveLeave) ? "text-neutral-300" : "text-neutral-500")}>{d}</div>
+                                                            <div className={clsx("text-xs font-medium md:hidden", !record && "text-neutral-300", record && "text-neutral-900")}>{dayName}</div>
+                                                        </div>
+
+                                                        {record ? (
+                                                            <>
+                                                                {(record.status === "ontime" || record.status === "intime" || record.status === "late" || record.status === "leave" || record.status === "holiday") && (
+                                                                    <>
+                                                                        <div className="mt-2 text-xs text-neutral-600 flex flex-col gap-0.5">
+                                                                            {record.clockIn && record.clockIn !== "-" && <span className="font-mono text-[10px]">{record.clockIn}</span>}
+                                                                            {record.clockOut && record.clockOut !== "-" && <span className="font-mono text-[10px]">{record.clockOut}</span>}
+
+                                                                            {displayNotes && (
+                                                                                <span className="text-[9px] leading-tight text-neutral-400 mt-1 line-clamp-2">{displayNotes}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="mt-2 flex justify-end">{getStatusBadge(record.status, true)}</div>
+                                                                    </>
+                                                                )}
+                                                                {(record.status !== "ontime" && record.status !== "intime" && record.status !== "late" && record.status !== "leave" && (record.status as string) !== "holiday") && (
+                                                                    <div className="mt-4 flex justify-center">
+                                                                        {getStatusBadge(record.status, true)}
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {isAbsent ? (
+                                                                    <div className="mt-4 flex justify-center animate-in fade-in">
+                                                                        {getStatusBadge("absent", true)}
+                                                                    </div>
+                                                                ) : (isGlobalHoliday || isGlobalCollectiveLeave) ? (
+                                                                    // Render Holiday/Leave Card for Future/No-Record days
+                                                                    <>
+                                                                        <div className="mt-2 text-xs text-neutral-600 flex flex-col gap-0.5">
+                                                                            {displayNotes && (
+                                                                                <span className="text-[9px] leading-tight text-neutral-400 mt-1 line-clamp-2">{displayNotes}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="mt-2 flex justify-end">
+                                                                            {getStatusBadge(isGlobalCollectiveLeave ? "leave" : "holiday", true)}
+                                                                        </div>
+                                                                    </>
+                                                                ) : (
+                                                                    // Future / Weekend Empty
+                                                                    <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100"></div>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()
+                                        );
+                                    }
+                                    return calendarDays;
+                                })()}
                             </div>
                         )}
 
-                        {/* TEAM: Employee cards grid */}
+                        {/* TEAM: Team Calendar Grid View */}
                         {isManager && personalTeamView === "team" && (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {/* Group by unique employees */}
-                                {Array.from(new Set(filteredData.map(d => d.employee).filter(Boolean))).map((employee, idx) => {
-                                    const latestRecord = filteredData.find(d => d.employee === employee);
-                                    if (!latestRecord) return null;
-                                    return (
-                                        <div
-                                            key={idx}
-                                            className={clsx(
-                                                "bg-white rounded-xl border p-4 transition-all hover:shadow-md cursor-pointer",
-                                                latestRecord.status === "ontime" && "border-emerald-200 hover:border-emerald-400",
-                                                latestRecord.status === "late" && "border-rose-200 hover:border-rose-400",
-                                                latestRecord.status === "weekend" && "border-neutral-200",
-                                                latestRecord.status === "holiday" && "border-blue-200"
-                                            )}
-                                        >
-                                            {/* Avatar/Initials */}
-                                            <div className={clsx(
-                                                "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold mb-3",
-                                                latestRecord.status === "ontime" && "bg-emerald-100 text-emerald-700",
-                                                latestRecord.status === "late" && "bg-rose-100 text-rose-700",
-                                                (latestRecord.status === "weekend" || latestRecord.status === "holiday") && "bg-neutral-100 text-neutral-500"
-                                            )}>
-                                                {employee?.split(' ').map(n => n[0]).join('')}
-                                            </div>
-                                            {/* Name */}
-                                            <div className="font-semibold text-neutral-900 text-sm truncate">{employee}</div>
-                                            {/* Date */}
-                                            <div className="text-xs text-neutral-400 mt-0.5">
-                                                {new Date(latestRecord.date).toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' })}
-                                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                {(() => {
+                                    // Generate all days for the month (Up to today if current month)
+                                    const today = new Date();
+                                    const end = min([today, endOfMonth(currentMonth)]);
+                                    const days = eachDayOfInterval({
+                                        start: startOfMonth(currentMonth),
+                                        end: end
+                                    }).reverse(); // Latest first
 
-                                            {/* Time & Status Compact */}
-                                            <div className="mt-3 flex items-center justify-between">
-                                                {latestRecord.status !== "weekend" && latestRecord.status !== "holiday" ? (
-                                                    <div className="text-xs text-neutral-500 font-mono">
-                                                        {latestRecord.clockIn}
+                                    const activeMembers = teamMembers.filter(m => !EXCLUDED_USERS.includes(m.username)).sort((a, b) => (a.username || "").localeCompare(b.username || ""));
+
+                                    return days.map(dayDate => {
+                                        const dateStr = format(dayDate, "yyyy-MM-dd");
+                                        const isToday = isSameDay(dayDate, today);
+                                        const isSundayDay = isSunday(dayDate);
+
+                                        // Check for Public Holidays and Collective Leaves
+                                        const holidayInfo = HOLIDAYS_2026.find(h => h.date === dateStr);
+                                        const isGlobalHoliday = holidayInfo?.type === "holiday";
+                                        const isGlobalCollectiveLeave = holidayInfo?.type === "collective_leave";
+
+                                        // Determine card styling based on day type
+                                        let cardClasses = "bg-white border-neutral-200";
+                                        let headerClasses = "text-neutral-700";
+                                        let badgeElement: React.ReactNode = null;
+                                        let showAvatars = true;
+
+                                        if (isToday) {
+                                            cardClasses = "bg-blue-50 border-blue-500 ring-1 ring-blue-500";
+                                            headerClasses = "text-blue-600";
+                                        } else if (isGlobalCollectiveLeave) {
+                                            cardClasses = "bg-purple-50 border-purple-300";
+                                            headerClasses = "text-purple-700";
+                                            badgeElement = <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded font-medium truncate max-w-[100px]">{holidayInfo?.nameEn || "Collective Leave"}</span>;
+                                            showAvatars = false;
+                                        } else if (isGlobalHoliday) {
+                                            cardClasses = "bg-orange-50 border-orange-300";
+                                            headerClasses = "text-orange-700";
+                                            badgeElement = <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-medium truncate max-w-[100px]">{holidayInfo?.nameEn || "Holiday"}</span>;
+                                            showAvatars = false;
+                                        } else if (isSundayDay) {
+                                            cardClasses = "bg-neutral-50 border-neutral-200";
+                                            headerClasses = "text-neutral-400";
+                                            badgeElement = <span className="text-[10px] bg-neutral-100 text-neutral-400 px-1.5 py-0.5 rounded font-medium">Weekend</span>;
+                                            showAvatars = false;
+                                        }
+
+                                        return (
+                                            <div key={dateStr} className={clsx("rounded-xl border p-4 shadow-sm hover:shadow-md transition-shadow", cardClasses)}>
+                                                {/* Header */}
+                                                <div className="flex items-center justify-between mb-3 border-b border-neutral-100 pb-2">
+                                                    <span className={clsx("font-bold text-sm", headerClasses)}>
+                                                        {format(dayDate, "EEE, dd MMM")}
+                                                    </span>
+                                                    {isToday && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-bold">TODAY</span>}
+                                                    {!isToday && badgeElement}
+                                                </div>
+
+                                                {/* Holiday/Leave/Sunday Message */}
+                                                {!showAvatars && (
+                                                    <div className="flex items-center justify-center py-4">
+                                                        {isGlobalCollectiveLeave && (
+                                                            <div className="text-center">
+                                                                <Calendar className="w-8 h-8 mx-auto text-purple-400 mb-2" />
+                                                                <div className="text-xs text-purple-600 font-medium">Collective Leave</div>
+                                                            </div>
+                                                        )}
+                                                        {isGlobalHoliday && !isGlobalCollectiveLeave && (
+                                                            <div className="text-center">
+                                                                <Calendar className="w-8 h-8 mx-auto text-orange-400 mb-2" />
+                                                                <div className="text-xs text-orange-600 font-medium">Public Holiday</div>
+                                                            </div>
+                                                        )}
+                                                        {isSundayDay && !isGlobalHoliday && !isGlobalCollectiveLeave && (
+                                                            <div className="text-center">
+                                                                <div className="w-8 h-8 mx-auto rounded-full bg-neutral-100 flex items-center justify-center text-neutral-400 font-bold text-sm mb-2">W</div>
+                                                                <div className="text-xs text-neutral-400 font-medium">Weekend</div>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                ) : <span></span>}
-                                                <div>{getStatusBadge(latestRecord.status, true)}</div>
+                                                )}
+
+                                                {/* Avatars Grid - Only show on workdays */}
+                                                {showAvatars && (
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {activeMembers.map(member => {
+                                                            const record = filteredData.find(d => d.date === dateStr && (d.userId === member.id || d.employee === member.username));
+
+                                                            let status = record?.status || "absent";
+                                                            if (!record) status = "absent";
+
+                                                            let borderColor = "border-neutral-200";
+                                                            let textColor = "text-neutral-600";
+                                                            let initials = member.username?.split(' ').map((n: any) => n[0]).slice(0, 2).join('') || "??";
+
+                                                            if (status === "ontime") { borderColor = "border-emerald-500"; textColor = "text-emerald-700"; }
+                                                            else if (status === "intime") { borderColor = "border-orange-500"; textColor = "text-orange-700"; }
+                                                            else if (status === "late") { borderColor = "border-rose-500"; textColor = "text-rose-700"; }
+                                                            else if (status === "leave") { borderColor = "border-purple-500"; textColor = "text-purple-700"; }
+                                                            else if (status === "sick") { borderColor = "border-orange-500"; textColor = "text-orange-700"; }
+
+                                                            return (
+                                                                <div key={member.id} className="group relative">
+                                                                    <div className={clsx(
+                                                                        "w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-bold bg-white cursor-help transition-transform hover:scale-110 shadow-sm",
+                                                                        borderColor, textColor
+                                                                    )}>
+                                                                        {record?.avatar ? (
+                                                                            <img src={record.avatar} alt={member.username} className="w-full h-full rounded-full object-cover" />
+                                                                        ) : (
+                                                                            <span>{initials}</span>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* HOVER TOOLTIP */}
+                                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl pointer-events-none">
+                                                                        <div className="font-bold text-sm mb-1">{member.username}</div>
+                                                                        <div className="bg-white/10 h-px w-full my-1.5" />
+                                                                        <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1 text-gray-300">
+                                                                            <span>Status:</span>
+                                                                            <span className="capitalize text-white font-medium">{getStatusBadge(status, false)}</span>
+
+                                                                            <span>Clock In:</span>
+                                                                            <span className="font-mono text-white">{record?.clockIn || "--:--"}</span>
+
+                                                                            <span>Clock Out:</span>
+                                                                            <span className="font-mono text-white">{record?.clockOut || "--:--"}</span>
+
+                                                                            {record?.notes && (
+                                                                                <>
+                                                                                    <span className="col-span-2 pt-1 text-gray-400 italic">"{record.notes}"</span>
+                                                                                </>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1.5 border-4 border-transparent border-t-gray-900" />
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+
+                                                {/* Summary Footer for Day - Only show on workdays */}
+                                                {showAvatars && (
+                                                    <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center gap-3 text-[10px] text-neutral-400">
+                                                        <div className="flex -space-x-1">
+                                                            {activeMembers.slice(0, 3).map(m => (
+                                                                <div key={m.id} className="w-4 h-4 rounded-full bg-neutral-200 border border-white" />
+                                                            ))}
+                                                            {activeMembers.length > 3 && (
+                                                                <div className="w-4 h-4 rounded-full bg-neutral-100 border border-white flex items-center justify-center text-[8px] font-bold">+{activeMembers.length - 3}</div>
+                                                            )}
+                                                        </div>
+                                                        <span>{activeMembers.length} Members</span>
+                                                    </div>
+                                                )}
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    });
+                                })()}
                             </div>
                         )}
                     </>
@@ -698,6 +1229,10 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                                     <span className="text-neutral-600">On Time</span>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full bg-orange-500" />
+                                    <span className="text-neutral-600">In Time</span>
+                                </div>
+                                <div className="flex items-center gap-2">
                                     <div className="w-3 h-3 rounded-full bg-rose-500" />
                                     <span className="text-neutral-600">Late</span>
                                 </div>
@@ -706,41 +1241,54 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
 
                         {/* Bar Chart - Grouped by Employee */}
                         <div className="space-y-4">
-                            {Array.from(new Set(filteredData.map(d => d.employee).filter(Boolean))).map((employee, idx) => {
-                                const employeeRecords = filteredData.filter(d => d.employee === employee);
-                                const onTimeCount = employeeRecords.filter(d => d.status === "ontime").length;
-                                const lateCount = employeeRecords.filter(d => d.status === "late").length;
-                                const totalWork = onTimeCount + lateCount;
-                                const onTimePercent = totalWork > 0 ? (onTimeCount / totalWork) * 100 : 0;
-                                const latePercent = totalWork > 0 ? (lateCount / totalWork) * 100 : 0;
+                            {teamMembers
+                                .filter(m => !EXCLUDED_USERS.includes(m.username))
+                                .sort((a, b) => (a.username || "").localeCompare(b.username || ""))
+                                .map((member, idx) => {
+                                    const employeeRecords = filteredData.filter(d => d.userId === member.id || d.employee === member.username);
+                                    const onTimeCount = employeeRecords.filter(d => d.status === "ontime").length;
+                                    const intimeCount = employeeRecords.filter(d => d.status === "intime").length;
+                                    const lateCount = employeeRecords.filter(d => d.status === "late").length;
+                                    const totalWork = onTimeCount + intimeCount + lateCount;
+                                    const onTimePercent = totalWork > 0 ? (onTimeCount / totalWork) * 100 : 0;
+                                    const intimePercent = totalWork > 0 ? (intimeCount / totalWork) * 100 : 0;
+                                    const latePercent = totalWork > 0 ? (lateCount / totalWork) * 100 : 0;
 
-                                return (
-                                    <div key={idx} className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium text-neutral-900 truncate w-32">{employee}</span>
-                                            <span className="text-xs text-neutral-500">{onTimeCount} on time, {lateCount} late</span>
+                                    return (
+                                        <div key={member.id || idx} className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-medium text-neutral-900 truncate max-w-[200px]">{member.username}</span>
+                                                <span className="text-xs text-neutral-500">{totalWork > 0 ? `${onTimeCount} on time, ${lateCount} late` : "No records"}</span>
+                                            </div>
+                                            <div className="flex h-6 rounded-full overflow-hidden bg-neutral-100">
+                                                {onTimePercent > 0 && (
+                                                    <div
+                                                        className="bg-emerald-500 h-full flex items-center justify-center text-xs text-white font-medium"
+                                                        style={{ width: `${onTimePercent}%` }}
+                                                    >
+                                                        {onTimePercent > 20 && `${Math.round(onTimePercent)}%`}
+                                                    </div>
+                                                )}
+                                                {intimePercent > 0 && (
+                                                    <div
+                                                        className="bg-orange-500 h-full flex items-center justify-center text-xs text-white font-medium"
+                                                        style={{ width: `${intimePercent}%` }}
+                                                    >
+                                                        {intimePercent > 20 && `${Math.round(intimePercent)}%`}
+                                                    </div>
+                                                )}
+                                                {latePercent > 0 && (
+                                                    <div
+                                                        className="bg-rose-500 h-full flex items-center justify-center text-xs text-white font-medium"
+                                                        style={{ width: `${latePercent}%` }}
+                                                    >
+                                                        {latePercent > 20 && `${Math.round(latePercent)}%`}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="flex h-6 rounded-full overflow-hidden bg-neutral-100">
-                                            {onTimePercent > 0 && (
-                                                <div
-                                                    className="bg-emerald-500 h-full flex items-center justify-center text-xs text-white font-medium"
-                                                    style={{ width: `${onTimePercent}%` }}
-                                                >
-                                                    {onTimePercent > 20 && `${Math.round(onTimePercent)}%`}
-                                                </div>
-                                            )}
-                                            {latePercent > 0 && (
-                                                <div
-                                                    className="bg-rose-500 h-full flex items-center justify-center text-xs text-white font-medium"
-                                                    style={{ width: `${latePercent}%` }}
-                                                >
-                                                    {latePercent > 20 && `${Math.round(latePercent)}%`}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
                         </div>
 
                         {/* Summary Stats */}
@@ -759,7 +1307,11 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                                     <div className="text-xs text-neutral-500">Late Days</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-2xl font-bold text-action-primary">
+                                    <div className={clsx(
+                                        "text-2xl font-bold",
+                                        stats.attendanceScore < 50 ? "text-rose-600" :
+                                            stats.attendanceScore < 80 ? "text-orange-600" : "text-emerald-600"
+                                    )}>
                                         {stats.attendanceScore}%
                                     </div>
                                     <div className="text-xs text-neutral-500">Score</div>

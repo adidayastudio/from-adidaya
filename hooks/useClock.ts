@@ -97,16 +97,21 @@ export function useClock() {
 
     const getStatus = () => {
         if (!startTime) return "on-time";
-        const limit = new Date(startTime);
-        limit.setHours(9, 0, 0, 0);
-        if (startTime > limit) return "late";
+
+        const limitOnTime = new Date(startTime);
+        limitOnTime.setHours(9, 1, 0, 0); // 09:01:00
+
+        const limitInTime = new Date(startTime);
+        limitInTime.setHours(9, 16, 0, 0); // 09:16:00
+
+        if (startTime < limitOnTime) return "on-time";
+        if (startTime < limitInTime) return "intime";
+        return "late";
 
         const now = new Date();
         const limitOt = new Date(now);
         limitOt.setHours(17, 0, 0, 0);
         if (now > limitOt) return "overtime";
-
-        return "on-time";
     }
 
     const status = getStatus();

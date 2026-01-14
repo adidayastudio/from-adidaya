@@ -1,7 +1,7 @@
 
 import { addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, format, isWeekend, isSameDay, getDaysInMonth, startOfMonth, endOfMonth, isSaturday, isSunday } from "date-fns";
 
-export type AttendanceStatus = "ontime" | "late" | "absent" | "sick" | "leave" | "weekend" | "holiday";
+export type AttendanceStatus = "ontime" | "intime" | "late" | "absent" | "sick" | "leave" | "weekend" | "holiday";
 
 export interface AttendanceRecord {
     id: string;
@@ -77,7 +77,7 @@ export function calculateStats(records: AttendanceRecord[]): ClockStats {
     };
 
     const stats = records.reduce((acc, curr) => {
-        if (curr.status === "ontime" || curr.status === "late") {
+        if (curr.status === "ontime" || curr.status === "intime" || curr.status === "late") {
             acc.totalDaysPresent++;
         }
         if (curr.status === "absent") acc.totalDaysAbsent++;

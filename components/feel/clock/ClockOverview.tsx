@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { format, differenceInMinutes, isSaturday, isSunday, startOfMonth, eachDayOfInterval, endOfMonth, isSameDay } from "date-fns";
+import { formatMinutes } from "@/lib/clock-data-logic";
 import clsx from "clsx";
-import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, CloudSun, FileText, Timer, ArrowUpRight, Shield, UserCheck, Activity, MapPin, BadgeCheck } from "lucide-react";
+import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, Briefcase, CheckCircle, List, Grid as GridIcon, XCircle, LogOut, CloudSun } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
@@ -28,7 +30,7 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
     const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
     const [currentTime, setCurrentTime] = useState(new Date());
 
-    const { attendance, leaves, overtime, loading } = useClockData(profile?.id, viewMode === "team");
+    const { attendance, leaves, overtime, loading, teamMembers } = useClockData(profile?.id, viewMode === "team");
 
     // Time Phase Logic
     const getPhase = (date: Date) => {
@@ -58,6 +60,87 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
         return () => clearInterval(timer);
     }, []);
 
+    // Calculate Working Days Elapsed (Mon-Sat) for Late Percentage
+    const calculateLatePercentage = () => {
+        if (!attendance || attendance.length === 0) return { percent: 0, color: "text-neutral-700", bg: "bg-emerald-50", lateCount: 0, workingDaysElapsed: 0 };
+
+        const now = new Date();
+        const start = startOfMonth(now);
+        // Elapsed days up to yesterday (or today)
+        // Actually, we should count days that HAVE passed or are today
+        // Filter attendance records in current month
+        const currentMonthRecords = attendance.filter(r => new Date(r.date) >= start && new Date(r.date) <= now);
+
+        // Count working days elapsed in the month (Mon-Sat)
+        // We can approximate by checking the dates in attendance?
+        // Or generate days from start of month to today.
+        const daysElapsed = eachDayOfInterval({ start: start, end: now });
+        const workingDaysElapsed = daysElapsed.filter(d => !isSunday(d)).length;
+
+        if (workingDaysElapsed === 0) return { percent: 0, color: "text-emerald-700", bg: "bg-emerald-50", lateCount: 0, workingDaysElapsed: 0 };
+
+        const lateCount = currentMonthRecords.filter(r => r.status === 'late').length;
+        const percent = (lateCount / workingDaysElapsed) * 100;
+
+        let color = "text-emerald-700";
+        let bg = "bg-emerald-50";
+
+        if (percent > 50) {
+            color = "text-red-700";
+            bg = "bg-red-50";
+        } else if (percent > 25) {
+            color = "text-orange-700";
+            bg = "bg-orange-50";
+        }
+
+        return { percent, color, bg, lateCount, workingDaysElapsed };
+    }
+
+    const lateStats = calculateLatePercentage();
+
+    const excludedRoles = ['admin', 'finance', 'superadmin'];
+    const excludedUsers = ['harryadin', 'adidaya staff', 'adidaya it']; // username or part of name
+    const excludedDepts = ['IT', 'Finance']; // Helper in case role is missing but dept is set
+
+    // Combine team members with today's attendance
+    const combinedTeam = useMemo(() => {
+        if (!teamMembers || teamMembers.length === 0) return [];
+
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        return teamMembers.map(member => {
+            // Find attendance for today
+            const record = attendance.find(r => r.userId === member.id && r.date === todayStr);
+
+            // Find active leave
+            const activeLeave = leaves.find(l => {
+                const now = new Date();
+                return l.userId === member.id && l.status === 'approved' && now >= new Date(l.startDate) && now <= new Date(l.endDate);
+            });
+
+            const status = activeLeave ? 'on-leave' : (record ? record.status : 'not-in');
+
+            return {
+                ...member,
+                clockIn: record?.clockIn,
+                clockOut: record?.clockOut,
+                status: status,
+                attendanceRecord: record
+            };
+        }).filter(m => {
+            // Exclude by Role
+            if (m.role && excludedRoles.includes(m.role)) return false;
+
+            // Exclude by Name
+            if (m.username && excludedUsers.some(u => m.username?.toLowerCase().includes(u.toLowerCase()))) return false;
+
+            // Exclude by Department
+            if (m.department && excludedDepts.includes(m.department)) return false;
+
+            return true;
+        }).sort((a, b) => (a.username || "").localeCompare(b.username || ""));
+    }, [teamMembers, attendance, leaves]);
+
     const formatTime = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
@@ -71,16 +154,27 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
 
     const getStatus = () => {
         if (!startTime) return null;
-        const limit9am = new Date(startTime);
-        limit9am.setHours(9, 0, 0, 0);
-        const diffMs = startTime.getTime() - limit9am.getTime();
-        const isLate = diffMs > 0;
-        const lateMinutes = isLate ? Math.floor(diffMs / 60000) : 0;
+
+        const limitOnTime = new Date(startTime);
+        limitOnTime.setHours(9, 1, 0, 0);
+
+        const limitInTime = new Date(startTime);
+        limitInTime.setHours(9, 16, 0, 0);
+
+        const diffMsLate = startTime.getTime() - limitInTime.getTime();
+        const isLate = startTime >= limitInTime;
+
+        const diffMsInTime = startTime.getTime() - limitOnTime.getTime();
+        const isInTime = startTime >= limitOnTime && startTime < limitInTime;
+
+        const lateMinutes = isLate ? Math.floor(diffMsLate / 60000) : 0;
+
         const now = new Date();
         const limit5pm = new Date(now);
         limit5pm.setHours(17, 0, 0, 0);
         const isOvertime = now > limit5pm && isCheckedIn;
-        return { isLate, lateMinutes, isOvertime };
+
+        return { isLate, isInTime, lateMinutes, isOvertime };
     };
 
     const status = getStatus();
@@ -106,7 +200,7 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
         const approvedLeaves = leaves.filter(l => l.status === "approved").length;
 
         return {
-            workingHours: `${Math.floor(totalWorkMinutes / 60)}h ${totalWorkMinutes % 60}m`,
+            workingHours: (totalWorkMinutes / 60).toFixed(1), // Display as decimal hours
             lateCount,
             approvedLeaves,
         };
@@ -204,7 +298,15 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                             <div className="space-y-8">
                                 <OverviewRow icon={<Calendar className="w-5 h-5" />} iconBg="bg-blue-50 text-blue-600" title="Shift Schedule" subtitle="Standard Shift" value="09:00 - 17:00" />
                                 <div className="border-b border-neutral-100/80" />
-                                <OverviewRow icon={<AlertCircle className="w-5 h-5" />} iconBg="bg-orange-50 text-orange-600" title="Arrival Status" subtitle="Based on 09:00 entry" value={startTime ? (status?.isLate ? "Late Arrival" : "On Time") : "--"} valueClass={status?.isLate ? "bg-red-50 text-red-700" : ""} extra={status?.isLate ? `${status.lateMinutes} mins late` : undefined} />
+                                <OverviewRow
+                                    icon={<AlertCircle className="w-5 h-5" />}
+                                    iconBg={status?.isLate ? "bg-red-50 text-red-600" : status?.isInTime ? "bg-orange-50 text-orange-600" : "bg-emerald-50 text-emerald-600"}
+                                    title="Arrival Status"
+                                    subtitle="Based on 09:00 entry"
+                                    value={startTime ? (status?.isLate ? "Late Arrival" : status?.isInTime ? "In Time" : "On Time") : "--"}
+                                    valueClass={startTime ? (status?.isLate ? "bg-red-50 text-red-700" : status?.isInTime ? "bg-orange-50 text-orange-700" : "bg-emerald-50 text-emerald-700") : ""}
+                                    extra={status?.isLate ? `${status.lateMinutes} mins late` : undefined}
+                                />
                                 <div className="border-b border-neutral-100/80" />
                                 <OverviewRow icon={<Clock className="w-5 h-5" />} iconBg="bg-teal-50 text-teal-600" title="Hours Worked" subtitle="Today's total duration" value={isCheckedIn ? formatTime(elapsed) : "--"} />
                                 <div className="border-b border-neutral-100/80" />
@@ -217,7 +319,7 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                     <div className="space-y-4 pt-4">
                         <h3 className="text-lg font-bold text-neutral-900">Monthly Summary <span className="text-neutral-400 font-normal text-sm ml-2">(January 2025)</span></h3>
                         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <SummaryCard label="Working Hours" value={personalStats.workingHours.split(' ')[0]} unit="Hours" subtext="Total this month" />
+                            <SummaryCard label="Working Hours" value={personalStats.workingHours} unit="Hours" subtext="Total this month" />
                             <SummaryCard label="Late Arrivals" value={String(personalStats.lateCount)} unit="Days" subtext="Month to date" warning={personalStats.lateCount > 0} />
                             <SummaryCard label="Leave History" value={String(personalStats.approvedLeaves)} unit="Days" subtext="Total approved" />
                             <SummaryCard label="Annual Leave" value={hasAnnualLeave ? "12" : "0"} unit="Days" subtext={hasAnnualLeave ? "Available balance" : "No balance yet"} warning={!hasAnnualLeave} />
@@ -248,21 +350,33 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                             <h4 className="font-semibold text-neutral-900">Today's Activity</h4>
                         </div>
                         <div className="divide-y divide-neutral-100">
-                            {attendance.filter(t => t.date === new Date().toISOString().split('T')[0]).map((member, idx) => (
-                                <div key={member.id || idx} className="flex items-center justify-between px-6 py-4 hover:bg-neutral-50/50 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-medium text-sm">
-                                            {member.userName?.split(' ').map(n => n[0]).join('') || "U"}
+                            {combinedTeam.map((member, idx) => {
+                                const statusText = getStatusText(member);
+                                const isNotChecked = statusText.includes("Not yet");
+
+                                return (
+                                    <div key={member.id || idx} className="flex items-center justify-between px-6 py-4 hover:bg-neutral-50/50 transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            {/* Assuming member has an avatar property, otherwise fallback to initials */}
+                                            {member.avatar_url ? (
+                                                <img src={member.avatar_url} alt={member.username} className="w-10 h-10 rounded-full object-cover" />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-medium text-sm">
+                                                    {member.username?.split(' ').map((n: string) => n[0]).join('') || "U"}
+                                                </div>
+                                            )}
+                                            <div>
+                                                <div className="font-medium text-neutral-900">{member.username}</div>
+                                                <div className={clsx("text-xs", isNotChecked ? "text-orange-500 font-medium" : "text-neutral-500")}>
+                                                    {statusText}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="font-medium text-neutral-900">{member.userName}</div>
-                                            <div className="text-xs text-neutral-500">{member.clockIn ? `Checked in at ${new Date(member.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : "Not checked in"}</div>
-                                        </div>
+                                        <StatusBadge status={member.status} />
                                     </div>
-                                    <StatusBadge status={member.status === "late" ? "late" : (member.clockIn && !member.clockOut ? "checked-in" : "not-in")} />
-                                </div>
-                            ))}
-                            {attendance.filter(t => t.date === new Date().toISOString().split('T')[0]).length === 0 && (
+                                )
+                            })}
+                            {combinedTeam.length === 0 && (
                                 <div className="p-12 text-center text-neutral-400">
                                     <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
                                     <p>No attendance logs for today yet.</p>
@@ -276,7 +390,26 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
     );
 }
 
-function OverviewRow({ icon, iconBg, title, subtitle, value, valueClass, extra }: { icon: React.ReactNode; iconBg: string; title: string; subtitle: string; value: string; valueClass?: string; extra?: string }) {
+// Helper for Status Text
+function getStatusText(member: any) {
+    // Assuming member object has clockIn and clockOut properties as Date objects or ISO strings
+    const clockInTime = member.clockIn ? new Date(member.clockIn) : null;
+    const clockOutTime = member.clockOut ? new Date(member.clockOut) : null;
+
+    if (member.status === 'on-leave' || member.status === 'leave') return "On leave";
+
+    if (clockInTime && clockOutTime) {
+        return `Checked in at ${clockInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Checked out at ${clockOutTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    if (clockInTime && !clockOutTime) {
+        return `Checked in at ${clockInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Not yet checked out`;
+    }
+
+    return "Not yet checked in";
+}
+
+function OverviewRow({ icon, iconBg, title, subtitle, value, valueClass, extra }: { icon: React.ReactNode; iconBg: string; title: string; subtitle: string; value: React.ReactNode; valueClass?: string; extra?: React.ReactNode }) {
     return (
         <div className="flex items-start justify-between group">
             <div className="flex gap-4">
@@ -297,6 +430,8 @@ function OverviewRow({ icon, iconBg, title, subtitle, value, valueClass, extra }
 function StatusBadge({ status }: { status: string }) {
     switch (status) {
         case "checked-in": return <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">Checked In</span>;
+        case "ontime": return <span className="px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">On Time</span>;
+        case "intime": return <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-50 text-orange-700">In Time</span>;
         case "late": return <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700">Late</span>;
         case "on-leave": return <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">On Leave</span>;
         case "not-in": return <span className="px-2 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-500">Not In</span>;

@@ -6,7 +6,7 @@ const supabase = createClient();
 // TYPES
 // ============================================
 
-export type AttendanceStatus = "ontime" | "late" | "absent" | "sick" | "leave" | "weekend" | "holiday";
+export type AttendanceStatus = "ontime" | "intime" | "late" | "absent" | "sick" | "leave" | "weekend" | "holiday";
 
 export interface AttendanceRecord {
     id: string;
@@ -18,6 +18,9 @@ export interface AttendanceRecord {
     totalMinutes: number;
     overtimeMinutes: number;
     userName?: string; // For team view
+    userRole?: string; // For team filtering
+    userDepartment?: string; // For team filtering
+    avatar?: string; // User avatar URL
     // Location fields for check-in
     checkInLatitude?: number;
     checkInLongitude?: number;
@@ -25,6 +28,7 @@ export interface AttendanceRecord {
     checkInLocationType?: string;
     checkInRemoteMode?: string;
     checkInLocationStatus?: string;
+    notes?: string; // Reason or Override Note
 }
 
 export type LeaveType = "Annual Leave" | "Sick Leave" | "Permission" | "Unpaid Leave" | "Maternity Leave";
@@ -86,7 +90,7 @@ export interface BusinessTrip {
 export async function fetchAttendanceRecords(userId?: string, startDate?: string, endDate?: string): Promise<AttendanceRecord[]> {
     let query = supabase.from("attendance_records").select(`
         *,
-        profiles:user_id (full_name)
+        profiles:user_id (full_name, department, avatar_url)
     `);
 
     if (userId) {
@@ -102,27 +106,70 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
     const { data, error } = await query.order("date", { ascending: false });
 
     if (error) {
-        console.error("❌ Error fetching attendance:", error.message, error.details);
+        console.error("❌ Error fetching attendance:", error.message, (error as any).details);
         return [];
     }
 
-    return (data || []).map(row => ({
-        id: row.id,
-        userId: row.user_id,
-        date: row.date,
-        clockIn: row.clock_in,
-        clockOut: row.clock_out,
-        status: row.status as AttendanceStatus,
-        totalMinutes: row.total_minutes || 0,
-        overtimeMinutes: row.overtime_minutes || 0,
-        userName: row.profiles?.full_name,
-        checkInLatitude: row.check_in_latitude,
-        checkInLongitude: row.check_in_longitude,
-        checkInLocationCode: row.check_in_location_code,
-        checkInLocationType: row.check_in_location_type,
-        checkInRemoteMode: row.check_in_remote_mode,
-        checkInLocationStatus: row.check_in_location_status
-    }));
+    // Optimization: Fetch roles ONLY for the users in the result set
+    const userIds = Array.from(new Set((data || []).map(r => r.user_id as string).filter(Boolean)));
+    const roleMap = new Map<string, string>();
+
+    if (userIds.length > 0) {
+        const { data: rolesData, error: rolesError } = await supabase
+            .from("user_roles")
+            .select("user_id, role")
+            .in("user_id", userIds);
+
+        if (!rolesError && rolesData) {
+            rolesData.forEach(r => roleMap.set(r.user_id, r.role));
+        } else if (rolesError) {
+            console.warn("⚠️ Failed to fetch roles for attendance list:", rolesError.message);
+        }
+    }
+
+    return (data || []).map(row => {
+        // Enforce 3-tier 09:00 rule for status consistency
+        let status = row.status as AttendanceStatus;
+        if (row.clock_in && (status === 'ontime' || status === 'intime' || status === 'late')) {
+            const ck = new Date(row.clock_in);
+
+            const limitOnTime = new Date(ck);
+            limitOnTime.setHours(9, 1, 0, 0); // 09:01:00
+
+            const limitInTime = new Date(ck);
+            limitInTime.setHours(9, 16, 0, 0); // 09:16:00
+
+            if (ck < limitOnTime) {
+                status = "ontime";
+            } else if (ck < limitInTime) {
+                status = "intime";
+            } else {
+                status = "late";
+            }
+        }
+
+        return {
+            id: row.id,
+            userId: row.user_id,
+            date: row.date,
+            clockIn: row.clock_in,
+            clockOut: row.clock_out,
+            status: status,
+            totalMinutes: row.total_minutes || 0,
+            overtimeMinutes: row.overtime_minutes || 0,
+            userName: row.profiles?.full_name,
+            checkInLatitude: row.check_in_latitude,
+            checkInLongitude: row.check_in_longitude,
+            checkInLocationCode: row.check_in_location_code,
+            checkInLocationType: row.check_in_location_type,
+            checkInRemoteMode: row.check_in_remote_mode,
+            checkInLocationStatus: row.check_in_location_status,
+            userRole: roleMap.get(row.user_id),
+            userDepartment: row.profiles?.department,
+            avatar: row.profiles?.avatar_url,
+            notes: row.check_in_notes // Map check_in_notes to notes
+        };
+    });
 }
 
 // ============================================
@@ -259,17 +306,33 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
 
         // Update/Insert attendance_records (first clock in of the day)
         if (nextSessionNumber === 1) {
+            // Calculate status: 
+            // < 09:01:00 = ontime
+            // 09:01:00 - 09:15:59 = intime
+            // >= 09:16:00 = late
+
+            const limitOnTime = new Date(now);
+            limitOnTime.setHours(9, 1, 0, 0);
+
+            const limitInTime = new Date(now);
+            limitInTime.setHours(9, 16, 0, 0);
+
+            let status: AttendanceStatus = "late";
+            if (now < limitOnTime) status = "ontime";
+            else if (now < limitInTime) status = "intime";
+
             const { error: upsertError } = await supabase.from("attendance_records").upsert({
                 user_id: userId,
                 date: dateStr,
                 clock_in: now.toISOString(),
-                status: "ontime",
+                status: status,
                 check_in_latitude: metadata?.latitude,
                 check_in_longitude: metadata?.longitude,
                 check_in_location_code: metadata?.detectedLocationCode,
                 check_in_location_type: metadata?.detectedLocationType,
                 check_in_remote_mode: metadata?.remoteMode,
-                check_in_location_status: metadata?.locationStatus
+                check_in_location_status: metadata?.locationStatus,
+                check_in_notes: metadata?.overrideReason // Save reason to check_in_notes
             }, { onConflict: "user_id, date" });
             if (upsertError) console.error("❌ Error upserting attendance record:", upsertError.message);
         }
@@ -358,7 +421,7 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
 // LEAVE REQUESTS
 // ============================================
 
-export async function fetchLeaveRequests(userId?: string): Promise<LeaveRequest[]> {
+export async function fetchLeaveRequests(userId?: string, startDate?: string, endDate?: string): Promise<LeaveRequest[]> {
     let query = supabase.from("leave_requests").select(`
         *,
         profiles:user_id (full_name)
@@ -366,6 +429,18 @@ export async function fetchLeaveRequests(userId?: string): Promise<LeaveRequest[
 
     if (userId) {
         query = query.eq("user_id", userId);
+    }
+    if (startDate) {
+        // Overlap logic: (start_date <= endDate) AND (end_date >= startDate)
+        // Simplification for list: show if start_date >= valid range start OR end_date <= valid range end
+        // Let's just filter by start_date for listing logic to keep it simple, or checking range overlap
+        // A leave request is relevant for a month if it overlaps with that month.
+        // overlap: start_date <= range_end AND end_date >= range_start
+        if (endDate) {
+            query = query.lte("start_date", endDate).gte("end_date", startDate);
+        } else {
+            query = query.gte("start_date", startDate);
+        }
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });
@@ -497,7 +572,7 @@ export async function deleteLeaveAttendanceRecords(
 // OVERTIME
 // ============================================
 
-export async function fetchOvertimeLogs(userId?: string): Promise<OvertimeLog[]> {
+export async function fetchOvertimeLogs(userId?: string, startDate?: string, endDate?: string): Promise<OvertimeLog[]> {
     let query = supabase.from("overtime_logs").select(`
         *,
         profiles:user_id (full_name)
@@ -505,6 +580,12 @@ export async function fetchOvertimeLogs(userId?: string): Promise<OvertimeLog[]>
 
     if (userId) {
         query = query.eq("user_id", userId);
+    }
+    if (startDate) {
+        query = query.gte("date", startDate);
+    }
+    if (endDate) {
+        query = query.lte("date", endDate);
     }
 
     const { data, error } = await query.order("date", { ascending: false });
@@ -738,7 +819,7 @@ export async function deleteTripAttendanceRecords(
 // BUSINESS TRIPS
 // ============================================
 
-export async function fetchBusinessTrips(userId?: string): Promise<BusinessTrip[]> {
+export async function fetchBusinessTrips(userId?: string, startDate?: string, endDate?: string): Promise<BusinessTrip[]> {
     let query = supabase.from("business_trips").select(`
         *,
         profiles:user_id (full_name)
@@ -746,6 +827,13 @@ export async function fetchBusinessTrips(userId?: string): Promise<BusinessTrip[
 
     if (userId) {
         query = query.eq("user_id", userId);
+    }
+    if (startDate) {
+        if (endDate) {
+            query = query.lte("start_date", endDate).gte("end_date", startDate);
+        } else {
+            query = query.gte("start_date", startDate);
+        }
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });
