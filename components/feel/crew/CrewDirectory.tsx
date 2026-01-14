@@ -185,16 +185,35 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
         }
     }, [triggerOpen]);
 
-    // Filtered & sorted crew
-    const filteredCrew = useMemo(() => {
+    // Base filtered data (ignoring the Active Card filter) to calculate dynamic stats
+    const filteredBaseData = useMemo(() => {
         let data = crewList;
-        if (activeCard === "ACTIVE") data = data.filter(c => c.status === "ACTIVE");
-        else if (activeCard === "SKILLED") data = data.filter(c => SKILLED_ROLES.includes(c.role));
-        else if (activeCard === "UNSKILLED") data = data.filter(c => c.role === "HELPER" || c.role === "GENERAL");
         if (selectedRoles.length > 0) data = data.filter(c => selectedRoles.includes(c.role));
         if (selectedStatuses.length > 0) data = data.filter(c => selectedStatuses.includes(c.status));
         if (selectedProjects.length > 0) data = data.filter(c => c.projectCode && selectedProjects.includes(c.projectCode));
         if (searchQuery) data = data.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        return data;
+    }, [crewList, searchQuery, selectedRoles, selectedStatuses, selectedProjects]);
+
+    // Derived stats from the base filtered data
+    const derivedStats = useMemo(() => {
+        return {
+            total: filteredBaseData.length,
+            active: filteredBaseData.filter(c => c.status === "ACTIVE").length,
+            skilled: filteredBaseData.filter(c => SKILLED_ROLES.includes(c.role)).length,
+            unskilled: filteredBaseData.filter(c => c.role === "HELPER" || c.role === "GENERAL").length
+        };
+    }, [filteredBaseData]);
+
+    // Filtered & sorted crew (Applying the Active Card filter)
+    const filteredCrew = useMemo(() => {
+        let data = filteredBaseData;
+
+        // Apply Card Filter
+        if (activeCard === "ACTIVE") data = data.filter(c => c.status === "ACTIVE");
+        else if (activeCard === "SKILLED") data = data.filter(c => SKILLED_ROLES.includes(c.role));
+        else if (activeCard === "UNSKILLED") data = data.filter(c => c.role === "HELPER" || c.role === "GENERAL");
+
         return [...data].sort((a, b) => {
             let cmp = 0;
             if (sortBy === "name") cmp = a.name.localeCompare(b.name);
@@ -204,7 +223,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
             return sortOrder === "asc" ? cmp : -cmp;
         });
-    }, [crewList, searchQuery, selectedRoles, selectedStatuses, selectedProjects, activeCard, sortBy, sortOrder]);
+    }, [filteredBaseData, activeCard, sortBy, sortOrder]);
 
     const handleSort = (col: "name" | "role" | "status" | "project") => {
         if (sortBy === col) setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -346,10 +365,10 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
             // 2. Prepare Summary
             const summaryCards = [
-                { label: "Total Crew", value: stats.total, format: "number" as const },
-                { label: "Active", value: stats.active, format: "number" as const, color: "green" as const },
-                { label: "Skilled", value: stats.skilled, format: "number" as const, color: "blue" as const },
-                { label: "Unskilled", value: stats.unskilled, format: "number" as const, color: "default" as const },
+                { label: "Total Crew", value: derivedStats.total, format: "number" as const },
+                { label: "Active", value: derivedStats.active, format: "number" as const, color: "green" as const },
+                { label: "Skilled", value: derivedStats.skilled, format: "number" as const, color: "blue" as const },
+                { label: "Unskilled", value: derivedStats.unskilled, format: "number" as const, color: "default" as const },
             ];
 
             // 3. Prepare Columns
@@ -443,10 +462,10 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <button onClick={() => setActiveCard("ALL")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ALL" ? "bg-blue-600 border-blue-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "ALL" ? "text-blue-100" : "text-neutral-500")}>Total</div><div className={clsx("text-2xl font-bold", activeCard === "ALL" ? "text-white" : "text-blue-600")}>{stats.total}</div></button>
-                <button onClick={() => setActiveCard("ACTIVE")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ACTIVE" ? "bg-emerald-600 border-emerald-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "ACTIVE" ? "text-emerald-100" : "text-neutral-500")}>Active</div><div className={clsx("text-2xl font-bold", activeCard === "ACTIVE" ? "text-white" : "text-emerald-600")}>{stats.active}</div></button>
-                <button onClick={() => setActiveCard("SKILLED")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "SKILLED" ? "bg-purple-600 border-purple-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "SKILLED" ? "text-purple-100" : "text-neutral-500")}>Skilled</div><div className={clsx("text-2xl font-bold", activeCard === "SKILLED" ? "text-white" : "text-purple-600")}>{stats.skilled}</div></button>
-                <button onClick={() => setActiveCard("UNSKILLED")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "UNSKILLED" ? "bg-orange-500 border-orange-500" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "UNSKILLED" ? "text-orange-100" : "text-neutral-500")}>Unskilled</div><div className={clsx("text-2xl font-bold", activeCard === "UNSKILLED" ? "text-white" : "text-orange-500")}>{stats.unskilled}</div></button>
+                <button onClick={() => setActiveCard("ALL")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ALL" ? "bg-blue-600 border-blue-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "ALL" ? "text-blue-100" : "text-neutral-500")}>Total</div><div className={clsx("text-2xl font-bold", activeCard === "ALL" ? "text-white" : "text-blue-600")}>{derivedStats.total}</div></button>
+                <button onClick={() => setActiveCard("ACTIVE")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ACTIVE" ? "bg-emerald-600 border-emerald-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "ACTIVE" ? "text-emerald-100" : "text-neutral-500")}>Active</div><div className={clsx("text-2xl font-bold", activeCard === "ACTIVE" ? "text-white" : "text-emerald-600")}>{derivedStats.active}</div></button>
+                <button onClick={() => setActiveCard("SKILLED")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "SKILLED" ? "bg-purple-600 border-purple-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "SKILLED" ? "text-purple-100" : "text-neutral-500")}>Skilled</div><div className={clsx("text-2xl font-bold", activeCard === "SKILLED" ? "text-white" : "text-purple-600")}>{derivedStats.skilled}</div></button>
+                <button onClick={() => setActiveCard("UNSKILLED")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "UNSKILLED" ? "bg-orange-500 border-orange-500" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "UNSKILLED" ? "text-orange-100" : "text-neutral-500")}>Unskilled</div><div className={clsx("text-2xl font-bold", activeCard === "UNSKILLED" ? "text-white" : "text-orange-500")}>{derivedStats.unskilled}</div></button>
             </div>
 
             {/* Search & Filters Bar */}
