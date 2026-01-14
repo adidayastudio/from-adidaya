@@ -137,6 +137,14 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
     const filteredData = useMemo(() => {
         let data = [...approvals];
 
+        // Filter by selected month based on submitted date
+        const selectedYear = currentMonth.getFullYear();
+        const selectedMonthNum = currentMonth.getMonth();
+        data = data.filter(item => {
+            const submittedDate = new Date(item.submittedAt);
+            return submittedDate.getFullYear() === selectedYear && submittedDate.getMonth() === selectedMonthNum;
+        });
+
         if (filterType !== "all") {
             data = data.filter(item => item.type === filterType);
         }
@@ -167,7 +175,7 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
             }
             return 0;
         });
-    }, [approvals, filterType, searchQuery, sortBy, sortOrder]);
+    }, [approvals, filterType, searchQuery, sortBy, sortOrder, currentMonth]);
 
     // EXPORT FUNCTIONALITY
     const [exporting, setExporting] = useState(false);
@@ -376,12 +384,17 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
                         <tbody className="divide-y divide-neutral-100 text-neutral-600">
                             {filteredData.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="px-6 py-12 text-center">
-                                        <div className="flex flex-col items-center justify-center gap-3">
-                                            <div className="w-12 h-12 rounded-full bg-neutral-50 flex items-center justify-center text-neutral-300">
-                                                <Search className="w-6 h-6" />
+                                    <td colSpan={7} className="px-6 py-16 text-center">
+                                        <div className="flex flex-col items-center justify-center gap-4">
+                                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
+                                                <Clock className="w-8 h-8 text-amber-400" />
                                             </div>
-                                            <p className="text-neutral-400 font-medium">No requests found matching your filters.</p>
+                                            <div className="space-y-1">
+                                                <h3 className="font-semibold text-neutral-700">No requests to review</h3>
+                                                <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                                    No approval requests found for {formatMonthYear(currentMonth)}.
+                                                </p>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>

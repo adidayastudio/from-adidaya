@@ -80,6 +80,19 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", onNewTrip,
     const filteredData = useMemo(() => {
         let data = [...rawData];
 
+        // Filter by selected month - check if trip overlaps with selected month
+        const selectedYear = currentMonth.getFullYear();
+        const selectedMonthNum = currentMonth.getMonth();
+        const monthStart = startOfMonth(currentMonth);
+        const monthEnd = endOfMonth(currentMonth);
+
+        data = data.filter(d => {
+            const tripStart = parseISO(d.from);
+            const tripEnd = parseISO(d.to);
+            // Trip overlaps with selected month if trip starts before month end AND trip ends after month start
+            return tripStart <= monthEnd && tripEnd >= monthStart;
+        });
+
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             data = data.filter(d =>
@@ -101,7 +114,7 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", onNewTrip,
             }
             return 0;
         });
-    }, [rawData, searchQuery, sortBy, sortOrder]);
+    }, [rawData, searchQuery, sortBy, sortOrder, currentMonth]);
 
     const handleSort = (column: "date" | "employee" | "status") => {
         if (sortBy === column) {
@@ -590,8 +603,38 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", onNewTrip,
                                 ))}
                                 {filteredData.length === 0 && (
                                     <tr>
-                                        <td colSpan={8} className="px-6 py-8 text-center text-neutral-500">
-                                            {loading ? "Loading..." : "No business trips found."}
+                                        <td colSpan={8} className="px-6 py-16 text-center">
+                                            {loading ? (
+                                                <div className="flex flex-col items-center justify-center gap-3">
+                                                    <Loader2 className="w-8 h-8 text-action-primary animate-spin" />
+                                                    <p className="text-neutral-500">Loading business trips...</p>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center gap-4">
+                                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-teal-100 to-teal-50 flex items-center justify-center">
+                                                        <Briefcase className="w-8 h-8 text-teal-400" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <h3 className="font-semibold text-neutral-700">No business trips this month</h3>
+                                                        <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                                            {viewMode === "team"
+                                                                ? `No trips scheduled by your team in ${formatMonthYear(currentMonth)}.`
+                                                                : `You don't have any business trips in ${formatMonthYear(currentMonth)}.`
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                    {viewMode === "personal" && onNewTrip && (
+                                                        <Button
+                                                            variant="secondary"
+                                                            className="!rounded-full mt-2"
+                                                            icon={<Plus className="w-4 h-4" />}
+                                                            onClick={onNewTrip}
+                                                        >
+                                                            New Trip
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </td>
                                     </tr>
                                 )}

@@ -87,6 +87,14 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
     const filteredData = useMemo(() => {
         let data = [...rawData];
 
+        // Filter by selected month
+        const selectedYear = currentMonth.getFullYear();
+        const selectedMonthNum = currentMonth.getMonth();
+        data = data.filter(d => {
+            const recordDate = new Date(d.date);
+            return recordDate.getFullYear() === selectedYear && recordDate.getMonth() === selectedMonthNum;
+        });
+
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             data = data.filter(d =>
@@ -105,7 +113,7 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
             }
             return 0;
         });
-    }, [rawData, searchQuery, sortBy, sortOrder]);
+    }, [rawData, searchQuery, sortBy, sortOrder, currentMonth]);
 
     const handleSort = (column: "date" | "employee" | "overtime") => {
         if (sortBy === column) {
@@ -595,8 +603,38 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
                             ))}
                             {filteredData.length === 0 && (
                                 <tr>
-                                    <td colSpan={isManager && viewMode === "team" ? 8 : 7} className="px-6 py-8 text-center text-neutral-500">
-                                        {loading ? "Loading..." : "No overtime records found."}
+                                    <td colSpan={isManager && viewMode === "team" ? 8 : 7} className="px-6 py-16 text-center">
+                                        {loading ? (
+                                            <div className="flex flex-col items-center justify-center gap-3">
+                                                <Loader2 className="w-8 h-8 text-action-primary animate-spin" />
+                                                <p className="text-neutral-500">Loading overtime records...</p>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center gap-4">
+                                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
+                                                    <Hourglass className="w-8 h-8 text-purple-400" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="font-semibold text-neutral-700">No overtime records this month</h3>
+                                                    <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                                        {viewMode === "team"
+                                                            ? `No overtime logged by your team in ${formatMonthYear(currentMonth)}.`
+                                                            : `You haven't logged any overtime in ${formatMonthYear(currentMonth)}.`
+                                                        }
+                                                    </p>
+                                                </div>
+                                                {viewMode === "personal" && onLogOvertime && (
+                                                    <Button
+                                                        variant="secondary"
+                                                        className="!rounded-full mt-2"
+                                                        icon={<Plus className="w-4 h-4" />}
+                                                        onClick={onLogOvertime}
+                                                    >
+                                                        Log Overtime
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             )}

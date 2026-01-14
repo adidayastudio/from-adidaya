@@ -40,7 +40,7 @@ export function Drawer({
       {/* PANEL */}
       <div
         className={clsx(
-          "absolute right-0 top-0 h-full bg-white shadow-xl transition-transform",
+          "absolute right-0 top-0 h-full bg-white shadow-xl transition-transform max-w-full",
           size === "sm" && "w-[360px]",
           size === "md" && "w-[480px]",
           size === "lg" && "w-[640px]"

@@ -408,7 +408,7 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                     start_time: "17:00",
                     end_time: now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
                     description: "Auto-logged from clock session",
-                    status: "approved"
+                    status: "pending" // All overtime must go through approval mechanism
                 });
             }
         }
