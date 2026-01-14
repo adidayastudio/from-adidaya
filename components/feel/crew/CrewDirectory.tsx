@@ -472,7 +472,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-2 w-full">
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <div className="relative flex-1 sm:flex-none"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-full sm:w-40 transition-all" /></div>
-                    <button onClick={() => setShowFilterPopup(!showFilterPopup)} className={clsx("p-2 rounded-full border transition-colors flex items-center gap-1.5 flex-none", activeFiltersCount > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500")}><Filter className="w-4 h-4" />{activeFiltersCount > 0 && <span className="text-xs font-medium">{activeFiltersCount}</span>}</button>
+                    <button onClick={() => setShowFilterPopup(!showFilterPopup)} className={clsx("p-2.5 rounded-full border transition-colors flex items-center gap-1.5 flex-none", activeFiltersCount > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500")}><Filter className="w-4 h-4" />{activeFiltersCount > 0 && <span className="text-xs font-medium">{activeFiltersCount}</span>}</button>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Button
