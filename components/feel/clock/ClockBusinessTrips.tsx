@@ -36,7 +36,13 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", onNewTrip,
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-    const { businessTrips, loading, refresh } = useClockData(profile?.id, viewMode === "team");
+    // Month Navigation - declare before useClockData
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+
+    // Mobile search toggle
+    const [showSearchInput, setShowSearchInput] = useState(false);
+
+    const { businessTrips, loading, refresh } = useClockData(profile?.id, viewMode === "team", currentMonth);
 
     // Map fetched data to UI format
     const rawData = useMemo(() => {
@@ -55,11 +61,6 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", onNewTrip,
             original: t // Keep for edit
         }));
     }, [businessTrips, userName]);
-
-    const [currentMonth, setCurrentMonth] = useState(new Date());
-
-    // Mobile search toggle
-    const [showSearchInput, setShowSearchInput] = useState(false);
 
     const handleMonthChange = (direction: "prev" | "next") => {
         const newDate = new Date(currentMonth);

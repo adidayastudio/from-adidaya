@@ -36,7 +36,10 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", onNewReque
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-    const { leaves, loading, refresh } = useClockData(profile?.id, viewMode === "team");
+    // Month Navigation - declare before useClockData
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+
+    const { leaves, loading, refresh } = useClockData(profile?.id, viewMode === "team", currentMonth);
 
     // Map fetched data to UI format
     const rawData = useMemo(() => {
@@ -53,8 +56,6 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", onNewReque
             original: l // Keep original for edit
         }));
     }, [leaves, userName]);
-
-    const [currentMonth, setCurrentMonth] = useState(new Date());
 
     // Mobile search toggle
     const [showSearchInput, setShowSearchInput] = useState(false);

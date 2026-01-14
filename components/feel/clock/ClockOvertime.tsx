@@ -35,7 +35,11 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-    const { overtime, loading, refresh } = useClockData(profile?.id, viewMode === "team");
+    // Month Navigation - declare before useClockData
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [showSearchInput, setShowSearchInput] = useState(false);
+
+    const { overtime, loading, refresh } = useClockData(profile?.id, viewMode === "team", currentMonth);
 
     // Map fetched data to UI format
     const rawData = useMemo(() => {
@@ -63,10 +67,6 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
             };
         });
     }, [overtime, userName]);
-
-    // Month Navigation
-    const [currentMonth, setCurrentMonth] = useState(new Date());
-    const [showSearchInput, setShowSearchInput] = useState(false);
 
     const handleMonthChange = (direction: "prev" | "next") => {
         const newDate = new Date(currentMonth);
