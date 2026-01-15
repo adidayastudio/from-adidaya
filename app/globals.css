@@ -255,10 +255,10 @@ body {
 
 /* GLOBAL FOCUS OVERRIDE */
 *:focus-visible {
-  outline-color: var(--brand-red) !important;
-  outline-width: 2px;
+  outline-color: var(--brand-red);
+  outline-width: 1px;
   outline-style: solid;
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 input:focus,
@@ -266,5 +266,5 @@ select:focus,
 textarea:focus {
   outline: none !important;
   /* Let Tailwind ring handle it, or custom styles */
-  --tw-ring-color: var(--brand-red) !important;
+  --tw-ring-color: var(--brand-red-soft);
 }

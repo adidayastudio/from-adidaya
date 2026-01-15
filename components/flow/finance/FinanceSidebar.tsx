@@ -5,32 +5,43 @@ import Link from "next/link";
 import clsx from "clsx";
 import {
   LayoutDashboard,
-  TrendingUp,
-  FileText,
-  CreditCard,
-  PieChart,
+  ShoppingCart,
+  Landmark,
+  Receipt,
+  Wallet,
   BarChart,
-  Settings,
   MoreHorizontal
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { useFinance } from "./FinanceContext";
 
 /* ======================
    NAV ITEMS CONFIG
 ====================== */
-const NAV_ITEMS = [
+interface NavItem {
+  label: string;
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+  teamOnly?: boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { label: "Overview", path: "/flow/finance", icon: LayoutDashboard },
-  { label: "Transactions", path: "/flow/finance/transactions", icon: FileText },
-  { label: "Approvals", path: "/flow/finance/approvals", icon: FileText }, // Using FileText for now, maybe CheckCircle?
-  { label: "Payments", path: "/flow/finance/payments", icon: CreditCard },
-  { label: "Reports", path: "/flow/finance/reports", icon: BarChart },
-  { label: "Settings", path: "/flow/finance/settings", icon: Settings },
+  { label: "Purchasing", path: "/flow/finance/purchasing", icon: ShoppingCart },
+  { label: "Funding Sources", path: "/flow/finance/funding-sources", icon: Landmark, teamOnly: true },
+  { label: "Reimburse", path: "/flow/finance/reimburse", icon: Receipt },
+  { label: "Petty Cash", path: "/flow/finance/petty-cash", icon: Wallet, teamOnly: true },
+  { label: "Reports", path: "/flow/finance/reports", icon: BarChart, teamOnly: true },
 ];
 
 export default function FinanceSidebar() {
   const pathname = usePathname();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const { canAccessTeam } = useFinance();
+
+  // Filter items based on user access
+  const visibleItems = NAV_ITEMS.filter(item => !item.teamOnly || canAccessTeam);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -49,8 +60,8 @@ export default function FinanceSidebar() {
     return pathname.startsWith(path);
   };
 
-  const mobileMainItems = NAV_ITEMS.slice(0, 5);
-  const mobileMoreItems = NAV_ITEMS.slice(5);
+  const mobileMainItems = visibleItems.slice(0, 5);
+  const mobileMoreItems = visibleItems.slice(5);
 
   return (
     <>
@@ -58,7 +69,7 @@ export default function FinanceSidebar() {
       <aside className="w-full h-full hidden lg:flex flex-col justify-between pb-6">
         <div className="space-y-6 pt-2">
           <div className="space-y-1">
-            {NAV_ITEMS.map((item) => {
+            {visibleItems.map((item) => {
               const active = isActive(item.path);
               return (
                 <Link

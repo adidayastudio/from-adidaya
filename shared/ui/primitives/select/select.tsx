@@ -153,8 +153,8 @@ export function Select({
     "w-full rounded-lg border bg-white text-neutral-900 transition-all duration-150 outline-none";
 
   const focusStyles = accentColor === "blue"
-    ? "!focus:border-blue-500 !focus:ring-2 !focus:ring-blue-500/30"
-    : "!focus:border-red-500 !focus:ring-2 !focus:ring-red-500/30";
+    ? "!focus:border-blue-500/20 !focus:ring-4 !focus:ring-blue-500/[0.08]"
+    : "!focus:border-red-500/20 !focus:ring-4 !focus:ring-red-500/[0.08]";
 
   const variants: Record<SelectVariant, string> = {
     default: clsx("border-neutral-200 hover:border-neutral-300", focusStyles),
@@ -167,7 +167,7 @@ export function Select({
     lg: "pl-4 pr-10 h-10 text-sm",
   };
 
-  const errorStyles = error ? (accentColor === "blue" ? "border-red-500 text-red-600 focus:ring-red-500/30" : "border-red-500 text-red-600 focus:ring-red-500/30") : "";
+  const errorStyles = error ? (accentColor === "blue" ? "border-red-500 text-red-600 focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20" : "border-red-500 text-red-600 focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20") : "";
 
   return (
     <div className="flex flex-col gap-1.5" ref={containerRef}>
@@ -226,8 +226,8 @@ export function Select({
                     className={clsx(
                       "w-full pl-9 pr-3 py-1.5 text-sm bg-neutral-50 border border-neutral-200 rounded-full focus:outline-none transition-all",
                       accentColor === "blue"
-                        ? "focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)]"
-                        : "focus:ring-2 focus:ring-red-500/30 focus:border-red-500"
+                        ? "focus:border-blue-500/20 focus:ring-4 focus:ring-blue-500/[0.08]"
+                        : "focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20"
                     )}
                     placeholder="Search..."
                     value={searchQuery}
