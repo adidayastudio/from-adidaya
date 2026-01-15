@@ -62,6 +62,7 @@ export interface OvertimeLog {
     createdAt: string;
     approvedStartTime?: string;
     approvedEndTime?: string;
+    rejectReason?: string;
 }
 
 export interface BusinessTrip {
@@ -608,7 +609,8 @@ export async function fetchOvertimeLogs(userId?: string, startDate?: string, end
         photoUrl: row.photo_url,
         createdAt: row.created_at,
         approvedStartTime: row.approved_start_time,
-        approvedEndTime: row.approved_end_time
+        approvedEndTime: row.approved_end_time,
+        rejectReason: row.reject_reason
     }));
 }
 

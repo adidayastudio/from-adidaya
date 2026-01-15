@@ -56,6 +56,7 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", onNewTrip,
             to: t.endDate,
             days: differenceInDays(new Date(t.endDate), new Date(t.startDate)) + 1,
             status: t.status,
+            rejectReason: t.rejectReason,
             transportation: t.transportation,
             estimatedCost: t.estimatedCost,
             original: t // Keep for edit
@@ -526,7 +527,14 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", onNewTrip,
                                         <td className="px-6 py-4 text-neutral-700 font-mono text-xs">{format(parseISO(row.from), "MMM dd, yyyy")}</td>
                                         <td className="px-6 py-4 text-neutral-700 font-mono text-xs">{format(parseISO(row.to), "MMM dd, yyyy")}</td>
                                         <td className="px-6 py-4 font-medium text-neutral-900">{row.days}</td>
-                                        <td className="px-6 py-4">{getStatusBadge(row.status)}</td>
+                                        <td className="px-6 py-4">
+                                            {getStatusBadge(row.status)}
+                                            {row.status === "rejected" && row.rejectReason && (
+                                                <div className="text-[10px] text-rose-500 italic mt-0.5 truncate max-w-[150px]" title={row.rejectReason}>
+                                                    {row.rejectReason}
+                                                </div>
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-end gap-1">
                                                 {/* TEAM VIEW ACTIONS */}

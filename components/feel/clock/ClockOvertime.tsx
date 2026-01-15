@@ -63,6 +63,7 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
                 overtimeMinutes: diff,
                 status: o.status,
                 reason: o.description,
+                rejectReason: o.rejectReason,
                 original: o // Keep for edit
             };
         });
@@ -525,7 +526,14 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
                                     <td className="px-6 py-4 font-mono text-neutral-900">{row.clockIn}</td>
                                     <td className="px-6 py-4 font-mono text-neutral-900">{row.clockOut}</td>
                                     <td className="px-6 py-4 text-emerald-600 font-medium">+{formatDuration(row.overtimeMinutes)}</td>
-                                    <td className="px-6 py-4">{getStatusBadge(row.status)}</td>
+                                    <td className="px-6 py-4">
+                                        {getStatusBadge(row.status)}
+                                        {row.status === "rejected" && row.rejectReason && (
+                                            <div className="text-[10px] text-rose-500 italic mt-0.5 truncate max-w-[150px]" title={row.rejectReason}>
+                                                {row.rejectReason}
+                                            </div>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center justify-end gap-1">
                                             {/* TEAM VIEW ACTIONS */}
