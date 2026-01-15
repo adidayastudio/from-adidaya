@@ -41,8 +41,11 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
     // Approvals are always for Team view
     const isManager = true;
 
-    // Always fetch team data for approvals
-    const { leaves, overtime, businessTrips, loading, refresh } = useClockData(profile?.id, true);
+    // Always fetch team data for approvals (include attendance for overtime calculation)
+    const { leaves, overtime, businessTrips, attendance, loading, refresh } = useClockData(profile?.id, true);
+
+    // Constant for 8 hours in minutes
+    const REGULAR_WORK_MINUTES = 8 * 60;
 
     // Map and combine data
     const approvals = useMemo(() => {
@@ -60,7 +63,17 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
         }));
 
         const overtimeItems: ApprovalItem[] = overtime.map(o => {
-            const effectiveStartTime = o.approvedStartTime || o.startTime;
+            // Find corresponding attendance record for this user and date
+            const attendanceRecord = attendance.find(a => a.userId === o.userId && a.date === o.date);
+
+            // Calculate overtime start time: clock_in + 8 hours
+            let calculatedStartTime = o.approvedStartTime || o.startTime;
+            if (attendanceRecord?.clockIn) {
+                const clockInTime = new Date(attendanceRecord.clockIn);
+                const overtimeStart = new Date(clockInTime.getTime() + REGULAR_WORK_MINUTES * 60 * 1000);
+                calculatedStartTime = overtimeStart.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+            }
+
             const effectiveEndTime = o.approvedEndTime || o.endTime;
 
             return {
@@ -69,11 +82,11 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
                 employee: o.userName || "User",
                 type: "Overtime",
                 details: o.description,
-                dates: `${o.date} (${effectiveStartTime?.substring(0, 5)}-${effectiveEndTime?.substring(0, 5)})`,
+                dates: `${o.date} (${calculatedStartTime?.substring(0, 5)}-${effectiveEndTime?.substring(0, 5)})`,
                 submittedAt: o.createdAt,
                 status: o.status,
                 reason: o.description,
-                rawStartTime: effectiveStartTime?.substring(0, 5),
+                rawStartTime: calculatedStartTime?.substring(0, 5),
                 rawEndTime: effectiveEndTime?.substring(0, 5)
             };
         });
@@ -92,7 +105,7 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
         }));
 
         return [...leaveItems, ...overtimeItems, ...tripItems];
-    }, [leaves, overtime, businessTrips]);
+    }, [leaves, overtime, businessTrips, attendance, REGULAR_WORK_MINUTES]);
 
     // UI State
     const [searchQuery, setSearchQuery] = useState("");
@@ -486,6 +499,7 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
                     onClose={() => setViewOvertime(undefined)}
                     editData={viewOvertime}
                     readOnly={true}
+                    attendanceClockIn={attendance.find(a => a.userId === viewOvertime.userId && a.date === viewOvertime.date)?.clockIn ?? undefined}
                 />
             )}
 

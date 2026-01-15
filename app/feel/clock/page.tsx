@@ -19,6 +19,7 @@ import ClockActionModal from "@/components/feel/clock/ClockActionModal";
 import { Play, Square, Plus, Clock as ClockIcon } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { useClock } from "@/hooks/useClock";
+import { useClockData } from "@/hooks/useClockData";
 import { LeaveRequest, OvertimeLog, BusinessTrip } from "@/lib/api/clock";
 
 const VALID_SECTIONS: ClockSection[] = ["overview", "timesheets", "leaves", "overtime", "business-trip", "approvals"];
@@ -34,6 +35,9 @@ function ClockPageContent() {
   const { profile, loading } = useUserProfile();
 
   const { isCheckedIn, elapsed, toggleClock, startTime } = useClock();
+
+  // Fetch attendance data for calculating overtime start time
+  const { attendance } = useClockData(profile?.id, false);
 
   // -- GLOBAL DRAWER STATE --
   const [isLeaveDrawerOpen, setIsLeaveDrawerOpen] = useState(false);
@@ -206,6 +210,7 @@ function ClockPageContent() {
         onClose={handleCloseOvertimeDrawer}
         editData={selectedOvertime}
         readOnly={isReadOnly}
+        attendanceClockIn={selectedOvertime ? attendance.find(a => a.userId === selectedOvertime.userId && a.date === selectedOvertime.date)?.clockIn ?? undefined : undefined}
       />
       <ClockBusinessTripDrawer
         open={isBusinessTripDrawerOpen}

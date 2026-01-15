@@ -17,6 +17,7 @@ interface ClockOvertimeLogDrawerProps {
     onClose: () => void;
     editData?: OvertimeLog;
     readOnly?: boolean;
+    attendanceClockIn?: string; // Clock in time from attendance record for calculating correct overtime start
 }
 
 interface ProjectOption {
@@ -26,7 +27,7 @@ interface ProjectOption {
     icon: React.ReactNode;
 }
 
-export function ClockOvertimeLogDrawer({ open, onClose, editData, readOnly }: ClockOvertimeLogDrawerProps) {
+export function ClockOvertimeLogDrawer({ open, onClose, editData, readOnly, attendanceClockIn }: ClockOvertimeLogDrawerProps) {
     const { profile } = useUserProfile();
     // FORM STATE
     const [date, setDate] = useState("");
@@ -75,13 +76,22 @@ export function ClockOvertimeLogDrawer({ open, onClose, editData, readOnly }: Cl
         }
     }, [open]);
 
+    // Constant for 8 hours in minutes
+    const REGULAR_WORK_MINUTES = 8 * 60;
+
     // RESET STATE ON OPEN
     useEffect(() => {
         if (open) {
             if (editData) {
                 setDate(editData.date || "");
-                // Show approved time if available and readOnly (view mode), else original request
-                const sTime = (readOnly && (editData as any).approvedStartTime) ? (editData as any).approvedStartTime : (editData.startTime || "");
+
+                // Calculate correct start time from attendanceClockIn if provided
+                let sTime = (readOnly && (editData as any).approvedStartTime) ? (editData as any).approvedStartTime : (editData.startTime || "");
+                if (attendanceClockIn) {
+                    const clockInTime = new Date(attendanceClockIn);
+                    const overtimeStart = new Date(clockInTime.getTime() + REGULAR_WORK_MINUTES * 60 * 1000);
+                    sTime = overtimeStart.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+                }
                 const eTime = (readOnly && (editData as any).approvedEndTime) ? (editData as any).approvedEndTime : (editData.endTime || "");
 
                 setStartTime(sTime);
@@ -99,7 +109,7 @@ export function ClockOvertimeLogDrawer({ open, onClose, editData, readOnly }: Cl
             }
             setIsSubmitting(false);
         }
-    }, [open, editData, readOnly]);
+    }, [open, editData, readOnly, attendanceClockIn, REGULAR_WORK_MINUTES]);
 
     // CALCULATIONS & VALIDATIONS
     const duration = (() => {
