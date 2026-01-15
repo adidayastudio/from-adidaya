@@ -22,11 +22,11 @@ const USER_JOIN_DATE = new Date("2023-01-15"); // > 1 year
 const ANNUAL_LEAVE_BALANCE = 12;
 
 const LEAVE_CATEGORIES = [
-    { id: "annual", label: "Annual Leave", desc: "Paid leave for personal time off", minNotice: 7, requireFile: false },
-    { id: "sick", label: "Sick Leave", desc: "Medical reasons (Certificate needed >2 days)", minNotice: 0, requireFile: true },
-    { id: "permission", label: "Permission (Izin)", desc: "Specific approved reasons", minNotice: 3, requireFile: false },
-    { id: "unpaid", label: "Unpaid Leave", desc: "Deducted from salary", minNotice: 7, requireFile: false },
-    { id: "maternity", label: "Maternity/Paternity", desc: "Birth or adoption", minNotice: 30, requireFile: true },
+    { id: "annual", label: "Annual Leave", apiType: "Annual Leave", desc: "Paid leave for personal time off", minNotice: 7, requireFile: false },
+    { id: "sick", label: "Sick Leave", apiType: "Sick Leave", desc: "Medical reasons (Certificate needed >2 days)", minNotice: 0, requireFile: true },
+    { id: "permission", label: "Permission (Izin)", apiType: "Permission", desc: "Specific approved reasons", minNotice: 3, requireFile: false },
+    { id: "unpaid", label: "Unpaid Leave", apiType: "Unpaid Leave", desc: "Deducted from salary", minNotice: 7, requireFile: false },
+    { id: "maternity", label: "Maternity/Paternity", apiType: "Maternity Leave", desc: "Birth or adoption", minNotice: 30, requireFile: true },
 ];
 
 const PERMISSION_TYPES = [
@@ -52,8 +52,8 @@ export function ClockLeaveRequestDrawer({ open, onClose, editData, readOnly }: C
     useEffect(() => {
         if (open) {
             if (editData) {
-                // Map API type back to local ID if needed
-                const catId = LEAVE_CATEGORIES.find(c => c.label === editData.type)?.id || "annual";
+                // Map API type back to local ID using apiType field
+                const catId = LEAVE_CATEGORIES.find(c => c.apiType === editData.type)?.id || "annual";
                 setCategory(catId);
                 setStartDate(editData.startDate || "");
                 setEndDate(editData.endDate || "");
@@ -108,18 +108,12 @@ export function ClockLeaveRequestDrawer({ open, onClose, editData, readOnly }: C
 
         setIsSubmitting(true);
         try {
-            // Map category to LeaveType
-            const typeMap: Record<string, LeaveType> = {
-                "annual": "Annual Leave",
-                "sick": "Sick Leave",
-                "permission": "Permission",
-                "unpaid": "Unpaid Leave",
-                "maternity": "Maternity Leave"
-            };
+            // Use apiType from the selected category for consistency
+            const leaveType = selectedCategory?.apiType as LeaveType || "Permission";
 
             await submitLeaveRequest({
                 userId: profile.id,
-                type: typeMap[category] || "Permission",
+                type: leaveType,
                 startDate,
                 endDate,
                 reason: notes
