@@ -403,10 +403,25 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                 .maybeSingle();
 
             if (!existingOT.data) {
+                // Get clock_in time from attendance record to calculate overtime start time
+                const { data: attendanceData } = await supabase.from("attendance_records")
+                    .select("clock_in")
+                    .eq("user_id", userId)
+                    .eq("date", dateStr)
+                    .single();
+
+                // Calculate overtime start time = clock_in + 8 hours
+                let overtimeStartTime = "17:00"; // fallback
+                if (attendanceData?.clock_in) {
+                    const clockInTime = new Date(attendanceData.clock_in);
+                    const overtimeStart = new Date(clockInTime.getTime() + REGULAR_WORK_MINUTES * 60 * 1000);
+                    overtimeStartTime = overtimeStart.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+                }
+
                 await supabase.from("overtime_logs").insert({
                     user_id: userId,
                     date: dateStr,
-                    start_time: "17:00",
+                    start_time: overtimeStartTime,
                     end_time: now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }),
                     description: "Auto-logged from clock session",
                     status: "pending" // All overtime must go through approval mechanism
