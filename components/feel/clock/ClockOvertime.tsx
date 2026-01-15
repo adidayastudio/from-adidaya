@@ -39,27 +39,41 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showSearchInput, setShowSearchInput] = useState(false);
 
-    const { overtime, loading, refresh } = useClockData(profile?.id, viewMode === "team", currentMonth);
+    const { overtime, attendance, loading, refresh } = useClockData(profile?.id, viewMode === "team", currentMonth);
+
+    // Constant for 8 hours in milliseconds
+    const REGULAR_WORK_MINUTES = 8 * 60;
 
     // Map fetched data to UI format
     const rawData = useMemo(() => {
         return overtime.map(o => {
-            // Use approved times if available, otherwise original
-            const effectiveStartTime = o.approvedStartTime || o.startTime;
+            // Find corresponding attendance record for this user and date
+            const attendanceRecord = attendance.find(a => a.userId === o.userId && a.date === o.date);
+
+            // Calculate overtime start time: clock_in + 8 hours
+            let calculatedStartTime = o.approvedStartTime || o.startTime;
+            if (attendanceRecord?.clockIn) {
+                const clockInTime = new Date(attendanceRecord.clockIn);
+                const overtimeStart = new Date(clockInTime.getTime() + REGULAR_WORK_MINUTES * 60 * 1000);
+                calculatedStartTime = overtimeStart.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+            }
+
+            // Use approved times if available for end time
             const effectiveEndTime = o.approvedEndTime || o.endTime;
 
-            const start = new Date(`${o.date}T${effectiveStartTime}`);
+            // Calculate duration based on calculated start time and end time
+            const start = new Date(`${o.date}T${calculatedStartTime}`);
             const end = new Date(`${o.date}T${effectiveEndTime}`);
-            const diff = Math.floor((end.getTime() - start.getTime()) / 60000);
+            const diff = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 60000));
 
             return {
                 id: o.id,
                 userId: o.userId,
                 employee: o.userName || userName,
                 date: o.date,
-                clockIn: effectiveStartTime?.substring(0, 5), // Ensure HH:mm format
+                clockIn: calculatedStartTime?.substring(0, 5), // Use calculated start time
                 clockOut: effectiveEndTime?.substring(0, 5),   // Ensure HH:mm format
-                totalMinutes: diff + 480, // Assuming 8h work + OT
+                totalMinutes: diff + 480, // 8h work + OT
                 overtimeMinutes: diff,
                 status: o.status,
                 reason: o.description,
@@ -67,7 +81,7 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
                 original: o // Keep for edit
             };
         });
-    }, [overtime, userName]);
+    }, [overtime, attendance, userName, REGULAR_WORK_MINUTES]);
 
     const handleMonthChange = (direction: "prev" | "next") => {
         const newDate = new Date(currentMonth);
