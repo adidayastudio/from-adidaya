@@ -17,6 +17,7 @@ import {
     syncOvertimeToAttendance
 } from "@/lib/api/clock";
 import { ClockConfirmationModal } from "./ClockConfirmationModal";
+import { getOvertimeStart, getWorkMinutes } from "@/lib/work-hours-utils";
 
 interface ClockOvertimeProps {
     role?: UserRole;
@@ -41,20 +42,19 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
 
     const { overtime, attendance, loading, refresh } = useClockData(profile?.id, viewMode === "team", currentMonth);
 
-    // Constant for 8 hours in milliseconds
-    const REGULAR_WORK_MINUTES = 8 * 60;
-
     // Map fetched data to UI format
     const rawData = useMemo(() => {
         return overtime.map(o => {
             // Find corresponding attendance record for this user and date
             const attendanceRecord = attendance.find(a => a.userId === o.userId && a.date === o.date);
 
-            // Calculate overtime start time: clock_in + 8 hours
+            // Get work minutes dynamically based on the record date (8h for Mon-Fri, 5h for Sat)
+            const workMinutes = getWorkMinutes(o.date);
+
+            // Calculate overtime start time using dynamic work hours
             let calculatedStartTime = o.approvedStartTime || o.startTime;
             if (attendanceRecord?.clockIn) {
-                const clockInTime = new Date(attendanceRecord.clockIn);
-                const overtimeStart = new Date(clockInTime.getTime() + REGULAR_WORK_MINUTES * 60 * 1000);
+                const overtimeStart = getOvertimeStart(attendanceRecord.clockIn, o.date);
                 calculatedStartTime = overtimeStart.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
             }
 
@@ -73,7 +73,7 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
                 date: o.date,
                 clockIn: calculatedStartTime?.substring(0, 5), // Use calculated start time
                 clockOut: effectiveEndTime?.substring(0, 5),   // Ensure HH:mm format
-                totalMinutes: diff + 480, // 8h work + OT
+                totalMinutes: diff + workMinutes, // work hours + OT
                 overtimeMinutes: diff,
                 status: o.status,
                 reason: o.description,
@@ -81,7 +81,7 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
                 original: o // Keep for edit
             };
         });
-    }, [overtime, attendance, userName, REGULAR_WORK_MINUTES]);
+    }, [overtime, attendance, userName]);
 
     const handleMonthChange = (direction: "prev" | "next") => {
         const newDate = new Date(currentMonth);

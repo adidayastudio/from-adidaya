@@ -6,6 +6,7 @@ import { useClock } from "@/hooks/useClock";
 import useUserProfile from "@/hooks/useUserProfile";
 import ClockActionModal from "@/components/feel/clock/ClockActionModal";
 import { useState } from "react";
+import { formatTargetTime } from "@/lib/work-hours-utils";
 
 export type DashboardView = "overview" | "today" | "week" | "overdue";
 
@@ -50,7 +51,7 @@ export default function DashboardSidebar({ activeView, onChangeView }: Dashboard
   const [isClockModalOpen, setIsClockModalOpen] = useState(false);
   const { profile } = useUserProfile();
 
-  const formatStartTime = (date: Date | null) => {
+  const formatStartTimeLocal = (date: Date | null) => {
     if (!date) return "--:--";
     return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
   };
@@ -102,8 +103,8 @@ export default function DashboardSidebar({ activeView, onChangeView }: Dashboard
 
           {isCheckedIn && (
             <div className="flex items-center justify-between text-xs text-neutral-500 font-medium mb-5 px-1">
-              <span>Started: {formatStartTime(startTime)}</span>
-              <span>Target: 17:00</span>
+              <span>Started: {formatStartTimeLocal(startTime)}</span>
+              <span>Target: {formatTargetTime(startTime)}</span>
             </div>
           )}
 

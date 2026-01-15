@@ -11,6 +11,7 @@ import { canViewTeamData } from "@/lib/auth-utils";
 import { useClockData } from "@/hooks/useClockData";
 import useUserProfile from "@/hooks/useUserProfile";
 import { ViewToggle } from "./ViewToggle";
+import { isOvertime as isOvertimeCheck, getShiftSchedule, getWorkHoursConfig, getStandardEndTime } from "@/lib/work-hours-utils";
 
 interface ClockOverviewProps {
     userName: string;
@@ -170,9 +171,8 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
         const lateMinutes = isLate ? Math.floor(diffMsLate / 60000) : 0;
 
         const now = new Date();
-        const limit5pm = new Date(now);
-        limit5pm.setHours(17, 0, 0, 0);
-        const isOvertime = now > limit5pm && isCheckedIn;
+        // Use dynamic overtime detection: Mon-Fri after 17:00 or startTime+8h, Sat after 14:00 or startTime+5h
+        const isOvertime = isOvertimeCheck(now, startTime) && isCheckedIn;
 
         return { isLate, isInTime, lateMinutes, isOvertime };
     };
@@ -296,7 +296,7 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                         <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm flex flex-col justify-center h-full min-h-[400px]">
                             <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider mb-6">Today's Overview</h3>
                             <div className="space-y-8">
-                                <OverviewRow icon={<Calendar className="w-5 h-5" />} iconBg="bg-blue-50 text-blue-600" title="Shift Schedule" subtitle="Standard Shift" value="09:00 - 17:00" />
+                                <OverviewRow icon={<Calendar className="w-5 h-5" />} iconBg="bg-blue-50 text-blue-600" title="Shift Schedule" subtitle={getWorkHoursConfig(new Date()).dayName} value={getShiftSchedule()} />
                                 <div className="border-b border-neutral-100/80" />
                                 <OverviewRow
                                     icon={<AlertCircle className="w-5 h-5" />}
@@ -310,7 +310,7 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                                 <div className="border-b border-neutral-100/80" />
                                 <OverviewRow icon={<Clock className="w-5 h-5" />} iconBg="bg-teal-50 text-teal-600" title="Hours Worked" subtitle="Today's total duration" value={isCheckedIn ? formatTime(elapsed) : "--"} />
                                 <div className="border-b border-neutral-100/80" />
-                                <OverviewRow icon={<CheckCircle2 className="w-5 h-5" />} iconBg="bg-purple-50 text-purple-600" title="Overtime" subtitle="Work past 17:00" value={status?.isOvertime ? "Active" : "None"} valueClass={status?.isOvertime ? "text-green-600" : ""} />
+                                <OverviewRow icon={<CheckCircle2 className="w-5 h-5" />} iconBg="bg-purple-50 text-purple-600" title="Overtime" subtitle={`Work past ${getStandardEndTime(new Date())}`} value={status?.isOvertime ? "Active" : "None"} valueClass={status?.isOvertime ? "text-green-600" : ""} />
                             </div>
                         </div>
                     </div>

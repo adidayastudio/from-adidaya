@@ -11,6 +11,7 @@ import { submitOvertimeLog, OvertimeLog } from "@/lib/api/clock";
 import useUserProfile from "@/hooks/useUserProfile";
 import { fetchProjectsByWorkspace } from "@/lib/api/projects";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
+import { getOvertimeStart } from "@/lib/work-hours-utils";
 
 interface ClockOvertimeLogDrawerProps {
     open: boolean;
@@ -76,9 +77,6 @@ export function ClockOvertimeLogDrawer({ open, onClose, editData, readOnly, atte
         }
     }, [open]);
 
-    // Constant for 8 hours in minutes
-    const REGULAR_WORK_MINUTES = 8 * 60;
-
     // RESET STATE ON OPEN
     useEffect(() => {
         if (open) {
@@ -86,10 +84,10 @@ export function ClockOvertimeLogDrawer({ open, onClose, editData, readOnly, atte
                 setDate(editData.date || "");
 
                 // Calculate correct start time from attendanceClockIn if provided
+                // Uses dynamic work hours: Mon-Fri 8h, Sat 5h
                 let sTime = (readOnly && (editData as any).approvedStartTime) ? (editData as any).approvedStartTime : (editData.startTime || "");
-                if (attendanceClockIn) {
-                    const clockInTime = new Date(attendanceClockIn);
-                    const overtimeStart = new Date(clockInTime.getTime() + REGULAR_WORK_MINUTES * 60 * 1000);
+                if (attendanceClockIn && editData.date) {
+                    const overtimeStart = getOvertimeStart(attendanceClockIn, editData.date);
                     sTime = overtimeStart.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
                 }
                 const eTime = (readOnly && (editData as any).approvedEndTime) ? (editData as any).approvedEndTime : (editData.endTime || "");
@@ -109,7 +107,7 @@ export function ClockOvertimeLogDrawer({ open, onClose, editData, readOnly, atte
             }
             setIsSubmitting(false);
         }
-    }, [open, editData, readOnly, attendanceClockIn, REGULAR_WORK_MINUTES]);
+    }, [open, editData, readOnly, attendanceClockIn]);
 
     // CALCULATIONS & VALIDATIONS
     const duration = (() => {

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import useUserProfile from "./useUserProfile";
 import { createClient } from "@/utils/supabase/client";
 import * as clockApi from "@/lib/api/clock";
+import { isOvertime as isOvertimeCheck } from "@/lib/work-hours-utils";
 
 export function useClock() {
     const { profile } = useUserProfile();
@@ -98,23 +99,29 @@ export function useClock() {
     const getStatus = () => {
         if (!startTime) return "on-time";
 
+        const now = new Date();
+
+        // Check arrival status first
         const limitOnTime = new Date(startTime);
         limitOnTime.setHours(9, 1, 0, 0); // 09:01:00
 
         const limitInTime = new Date(startTime);
         limitInTime.setHours(9, 16, 0, 0); // 09:16:00
 
+        // Check for overtime using dynamic calculation based on day of week
+        // Uses work-hours-utils: Mon-Fri target = MAX(startTime+8h, 17:00), Sat target = MAX(startTime+5h, 14:00)
+        if (isOvertimeCheck(now, startTime)) {
+            return "overtime";
+        }
+
+        // Check arrival status
         if (startTime < limitOnTime) return "on-time";
         if (startTime < limitInTime) return "intime";
         return "late";
-
-        const now = new Date();
-        const limitOt = new Date(now);
-        limitOt.setHours(17, 0, 0, 0);
-        if (now > limitOt) return "overtime";
     }
 
     const status = getStatus();
 
     return { isCheckedIn, startTime, elapsed, toggleClock: handleClock, formatTime, status, refresh: checkActiveSession };
 }
+
