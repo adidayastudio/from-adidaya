@@ -88,7 +88,7 @@ export function PurchaseRequestForm({
                 {/* SECTION 1: CLASSIFICATION */}
                 <section className="space-y-4">
                     <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
-                        <Briefcase className="w-3.5 h-3.5" /> Classification
+                        <Briefcase className="w-3.5 h-3.5" strokeWidth={1.5} /> Classification
                     </h3>
                     <div className="space-y-4">
                         <Select
@@ -125,7 +125,7 @@ export function PurchaseRequestForm({
                 {/* SECTION 2: STAGE */}
                 <section className="space-y-4">
                     <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5" /> Purchase Stage
+                        <Clock className="w-3.5 h-3.5" strokeWidth={1.5} /> Purchase Stage
                     </h3>
                     <div className="grid grid-cols-1 gap-3">
                         {(["PLANNED", "INVOICED", "RECEIVED"] as PurchaseStage[]).map((s) => (
@@ -166,7 +166,7 @@ export function PurchaseRequestForm({
                 <section className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
-                            <Package className="w-3.5 h-3.5" /> Item Details
+                            <Package className="w-3.5 h-3.5" strokeWidth={1.5} /> Item Details
                         </h3>
                         <button
                             onClick={addItem}
@@ -198,7 +198,7 @@ export function PurchaseRequestForm({
                                             onClick={() => removeItem(item.id)}
                                             className="mt-7 p-2 text-neutral-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                                         >
-                                            <X className="w-4 h-4" />
+                                            <X className="w-4 h-4" strokeWidth={1.5} />
                                         </button>
                                     )}
                                 </div>
@@ -297,7 +297,7 @@ export function PurchaseRequestForm({
                 <section className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
-                            <FileText className="w-3.5 h-3.5" /> Documents
+                            <FileText className="w-3.5 h-3.5" strokeWidth={1.5} /> Documents
                         </h3>
                         {stage === "PLANNED" && <span className="text-xs text-neutral-400 italic">Not required for planned</span>}
                         {(stage === "INVOICED" || stage === "RECEIVED") && <span className="text-xs font-bold text-amber-600">* Required</span>}
@@ -320,13 +320,13 @@ export function PurchaseRequestForm({
                         />
                         {invoiceFile ? (
                             <div>
-                                <CheckCircle className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
+                                <CheckCircle className="w-8 h-8 mx-auto text-emerald-600 mb-2" strokeWidth={1.5} />
                                 <p className="text-sm font-bold text-emerald-700">{invoiceFile.name}</p>
                                 <p className="text-xs text-emerald-600 mt-1">Ready to upload</p>
                             </div>
                         ) : (
                             <div>
-                                <Upload className={clsx("w-8 h-8 mx-auto mb-2 transition-colors", stage === "PLANNED" ? "text-neutral-300" : "text-neutral-400 group-hover:text-red-500")} />
+                                <Upload className={clsx("w-8 h-8 mx-auto mb-2 transition-colors", stage === "PLANNED" ? "text-neutral-300" : "text-neutral-400 group-hover:text-red-500")} strokeWidth={1.5} />
                                 <p className={clsx("text-sm font-medium", stage === "PLANNED" ? "text-neutral-400" : "text-neutral-600 group-hover:text-neutral-900")}>
                                     {stage === "PLANNED" ? "Upload disabled" : "Upload Invoice / Nota"}
                                 </p>
@@ -337,7 +337,7 @@ export function PurchaseRequestForm({
 
                     {(stage === "INVOICED" || stage === "RECEIVED") && !invoiceFile && (
                         <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg font-medium">
-                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <AlertTriangle className="w-3.5 h-3.5" strokeWidth={1.5} />
                             Invoice wajib diunggah karena transaksi {stage === "RECEIVED" ? "sudah dibeli" : "sudah ditagihkan"}.
                         </div>
                     )}

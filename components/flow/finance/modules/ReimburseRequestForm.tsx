@@ -145,7 +145,7 @@ export function ReimburseRequestForm({
                 {/* SECTION 1: BASIC INFO */}
                 <section className="space-y-4">
                     <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
-                        <DollarSign className="w-3.5 h-3.5" /> Basic Info
+                        <DollarSign className="w-3.5 h-3.5" strokeWidth={1.5} /> Basic Info
                     </h3>
                     <div className="space-y-4">
                         <Select
@@ -195,12 +195,12 @@ export function ReimburseRequestForm({
                     <>
                         <section className="space-y-4">
                             <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-2">
-                                {reimbCategory === "TRANSPORTATION" && <Car className="w-3.5 h-3.5" />}
-                                {reimbCategory === "MATERIAL" && <Package className="w-3.5 h-3.5" />}
-                                {reimbCategory === "TOOLS" && <Wrench className="w-3.5 h-3.5" />}
-                                {reimbCategory === "CONSUMPTION" && <Utensils className="w-3.5 h-3.5" />}
-                                {reimbCategory === "ACCOMMODATION" && <Home className="w-3.5 h-3.5" />}
-                                {reimbCategory === "OTHER" && <MoreHorizontal className="w-3.5 h-3.5" />}
+                                {reimbCategory === "TRANSPORTATION" && <Car className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                                {reimbCategory === "MATERIAL" && <Package className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                                {reimbCategory === "TOOLS" && <Wrench className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                                {reimbCategory === "CONSUMPTION" && <Utensils className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                                {reimbCategory === "ACCOMMODATION" && <Home className="w-3.5 h-3.5" strokeWidth={1.5} />}
+                                {reimbCategory === "OTHER" && <MoreHorizontal className="w-3.5 h-3.5" strokeWidth={1.5} />}
                                 Detail {REIMBURSE_CATEGORY_OPTIONS.find(c => c.value === reimbCategory)?.label}
                             </h3>
 
@@ -343,13 +343,13 @@ export function ReimburseRequestForm({
                 <section className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
-                            <Package className="w-3.5 h-3.5" /> Itemized Breakdown
+                            <Package className="w-3.5 h-3.5" strokeWidth={1.5} /> Itemized Breakdown
                         </h3>
                         <button
                             onClick={addItem}
                             className="text-xs font-bold text-red-500 hover:text-red-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-neutral-50 transition-colors"
                         >
-                            <Plus className="w-3 h-3" /> Add Item
+                            <Plus className="w-3 h-3" strokeWidth={1.5} /> Add Item
                         </button>
                     </div>
 
@@ -375,7 +375,7 @@ export function ReimburseRequestForm({
                                             onClick={() => removeItem(item.id)}
                                             className="mt-7 p-2 text-neutral-300 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                                         >
-                                            <X className="w-4 h-4" />
+                                            <X className="w-4 h-4" strokeWidth={1.5} />
                                         </button>
                                     )}
                                 </div>
@@ -449,13 +449,13 @@ export function ReimburseRequestForm({
                         />
                         {invoiceFile ? (
                             <div>
-                                <CheckCircle className="w-8 h-8 mx-auto text-emerald-600 mb-2" />
+                                <CheckCircle className="w-8 h-8 mx-auto text-emerald-600 mb-2" strokeWidth={1.5} />
                                 <p className="text-sm font-bold text-emerald-700">{invoiceFile.name}</p>
                                 <p className="text-xs text-emerald-600 mt-1">Proof uploaded</p>
                             </div>
                         ) : (
                             <div>
-                                <Upload className="w-8 h-8 mx-auto text-neutral-400 mb-2 group-hover:text-red-500 transition-colors" />
+                                <Upload className="w-8 h-8 mx-auto text-neutral-400 mb-2 group-hover:text-red-500 transition-colors" strokeWidth={1.5} />
                                 <p className="text-sm font-medium text-neutral-600 group-hover:text-neutral-900">Upload Receipt / Proof</p>
                                 <p className="text-xs text-neutral-400 mt-1">Required for claim</p>
                             </div>

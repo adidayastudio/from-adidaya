@@ -5,9 +5,10 @@ import { FinanceViewToggle } from "@/components/flow/finance/FinanceViewToggle";
 interface FinanceHeaderProps {
     title: string;
     subtitle: string;
+    action?: React.ReactNode;
 }
 
-export default function FinanceHeader({ title, subtitle }: FinanceHeaderProps) {
+export default function FinanceHeader({ title, subtitle, action }: FinanceHeaderProps) {
     return (
         <div className="space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -15,7 +16,8 @@ export default function FinanceHeader({ title, subtitle }: FinanceHeaderProps) {
                     <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
                     <p className="text-sm text-neutral-500 mt-1">{subtitle}</p>
                 </div>
-                <div className="self-start md:self-auto">
+                <div className="flex items-center gap-3 self-start md:self-auto">
+                    {action}
                     <FinanceViewToggle />
                 </div>
             </div>

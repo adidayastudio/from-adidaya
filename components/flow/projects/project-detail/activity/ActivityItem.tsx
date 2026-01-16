@@ -121,11 +121,11 @@ function getIconColor(type: ActivityType) {
 function StatusBadge({ status }: { status: ActivityStatus }) {
     switch (status) {
         case "approved":
-            return <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700">Approved</span>;
+            return <span className="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold uppercase text-green-600">Approved</span>;
         case "in-progress":
-            return <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase text-blue-700">In Progress</span>;
+            return <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase text-orange-600">In Progress</span>;
         case "in-review":
-            return <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700">In Review</span>;
+            return <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-bold uppercase text-neutral-500">In Review</span>;
         case "need-revision":
             return <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold uppercase text-red-700">Need Revision</span>;
         case "not-started":

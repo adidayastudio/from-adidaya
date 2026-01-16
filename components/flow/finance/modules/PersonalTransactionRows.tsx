@@ -1,121 +1,130 @@
-import React from "react";
-import { clsx } from "clsx";
-import { AlertCircle, FileText, CheckCircle2, ShoppingCart, Receipt } from "lucide-react";
-import { PurchasingItem, ReimburseRequest, FinancialStatus } from "@/lib/types/finance-types";
-import { formatAmount, formatDate, formatStatus } from "./utils";
-const TYPE_ICONS: Record<string, React.ReactNode> = {
-    UNPAID_RECEIVED: <AlertCircle className="w-5 h-5" />,
-    UNPAID_INVOICED: <FileText className="w-5 h-5" />,
-    PAID: <CheckCircle2 className="w-5 h-5" />,
-    CANCELLED: <ShoppingCart className="w-5 h-5" />,
-};
+"use client";
 
-const STATUS_THEMES: Record<FinancialStatus, { bg: string; text: string; iconBg: string; iconText: string }> = {
-    UNPAID_RECEIVED: {
-        bg: "bg-orange-50", text: "text-orange-700",
-        iconBg: "bg-orange-50", iconText: "text-orange-600"
-    },
-    UNPAID_INVOICED: {
-        bg: "bg-yellow-50", text: "text-yellow-700",
-        iconBg: "bg-yellow-50", iconText: "text-yellow-600"
-    },
-    PAID: {
-        bg: "bg-green-50", text: "text-green-700",
-        iconBg: "bg-green-50", iconText: "text-green-600"
-    },
-    CANCELLED: {
-        bg: "bg-neutral-100", text: "text-neutral-500",
-        iconBg: "bg-neutral-100", iconText: "text-neutral-500"
-    },
-};
+import { CreditCard, Eye, Pencil, Trash2, Ban } from "lucide-react";
+import clsx from "clsx";
+import { PurchasingItem, ReimburseRequest } from "@/lib/types/finance-types";
+import { formatCurrency, formatDate, formatStatus, STATUS_THEMES, getPrimaryStatus, cleanEntityName } from "./utils";
 
-export function PersonalPurchaseRow({ item }: { item: PurchasingItem }) {
-    const theme = STATUS_THEMES[item.financial_status] || STATUS_THEMES.CANCELLED;
+interface PersonalPurchaseRowProps {
+    item: PurchasingItem;
+    onPay?: (item: PurchasingItem) => void;
+}
 
+export function PersonalPurchaseRow({ item, onPay }: PersonalPurchaseRowProps) {
     return (
-        <div className="group relative flex items-start gap-4 p-2 -mx-2 rounded-xl transition-all duration-300 border border-transparent cursor-pointer hover:bg-white/60 hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:border-white/50 hover:backdrop-blur-sm">
-            {/* Icon Circle */}
-            <div className={clsx(
-                "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors duration-300",
-                theme.iconBg, theme.iconText,
-                "group-hover:opacity-80"
-            )}>
-                {TYPE_ICONS[item.financial_status] || <ShoppingCart className="w-5 h-5" />}
-            </div>
-
-            {/* Main Content */}
-            <div className="flex-1 min-w-0 py-0.5">
-                <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2 min-w-0 pr-2">
-                        <span className="font-semibold text-neutral-900 text-sm truncate">{item.description}</span>
-                        {item.quantity && (
-                            <span className="text-xs text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded-md shrink-0 border border-neutral-200/50">
-                                {item.quantity}
-                            </span>
-                        )}
-                    </div>
-                    <span className="font-bold text-neutral-900 text-sm shrink-0 tracking-tight">{formatAmount(item.amount)}</span>
+        <div className="group hover:bg-white/60 hover:shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-300 cursor-pointer border-b border-neutral-50 last:border-0 rounded-xl grid grid-cols-[100px_1.5fr_2fr_1fr_100px_90px] items-center gap-4 px-6 py-4">
+            <div className="whitespace-nowrap">
+                <div className="text-[12px] font-normal text-neutral-500 tabular-nums">
+                    {formatDate(item.date)}
                 </div>
-
-                <div className="flex items-center justify-between text-xs text-neutral-500">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-medium text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded">{item.project_id}</span>
-                        <span className="truncate">{item.vendor}</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <span>{formatDate(item.date)}</span>
-                        <span className={clsx("font-medium px-1.5 py-0.5 rounded-md backdrop-blur-sm", theme.bg, theme.text)}>
-                            {formatStatus(item.financial_status.replace('UNPAID_', ''))}
+            </div>
+            <div>
+                <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100/60 px-1 py-0.5 rounded border border-neutral-200/30 w-fit tracking-tight">
+                        {item.project_code}
+                    </span>
+                    <span className="text-[12px] font-medium text-neutral-900 truncate max-w-[150px]">
+                        {cleanEntityName(item.project_name)}
+                    </span>
+                </div>
+            </div>
+            <div className="min-w-0">
+                <div className="text-[12px] font-semibold text-neutral-900 tracking-tight leading-tight mb-0.5 truncate">
+                    {item.description}
+                </div>
+                <div className="text-[10px] text-neutral-400 flex items-center gap-1.5 font-normal">
+                    <span className="text-neutral-500 font-medium">{item.quantity} {item.unit}</span>
+                    <span className="text-neutral-300">•</span>
+                    <span className="tracking-tight">{cleanEntityName(item.vendor)}</span>
+                </div>
+            </div>
+            <div className="text-right">
+                <div className="text-[12px] font-bold text-neutral-900 tabular-nums tracking-tight">
+                    {formatCurrency(item.amount)}
+                </div>
+            </div>
+            <div className="text-center">
+                {(() => {
+                    const primaryStatus = getPrimaryStatus(
+                        item.approval_status,
+                        item.purchase_stage,
+                        item.financial_status
+                    );
+                    const theme = STATUS_THEMES[primaryStatus];
+                    return (
+                        <span className={clsx(
+                            "px-1.5 py-0.5 rounded-full text-[10px] font-bold w-full block text-center uppercase tracking-widest shadow-sm backdrop-blur-md border border-white/10",
+                            theme.bg, theme.text
+                        )}>
+                            {primaryStatus}
                         </span>
-                    </div>
+                    );
+                })()}
+            </div>
+            <div className="text-right">
+                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <button className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all" title="Edit">
+                        <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                    <button className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all" title="Delete">
+                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                    <div className="w-px h-4 bg-neutral-100 mx-1" />
+                    <button onClick={(e) => { e.stopPropagation(); onPay?.(item); }} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all" title="View Details">
+                        <Eye className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
                 </div>
             </div>
         </div>
     );
 }
 
-export function PersonalReimburseRow({ item }: { item: ReimburseRequest }) {
-    const statusStyles: Record<string, string> = {
-        PENDING: "bg-orange-50 text-orange-700",
-        APPROVED: "bg-blue-50 text-blue-700",
-        PAID: "bg-green-50 text-green-700",
-        REJECTED: "bg-red-50 text-red-700",
-    };
+interface PersonalReimburseRowProps {
+    item: ReimburseRequest;
+}
 
+export function PersonalReimburseRow({ item }: PersonalReimburseRowProps) {
     return (
-        <div className="group relative flex items-start gap-4 p-2 -mx-2 rounded-xl transition-all duration-300 border border-transparent cursor-pointer hover:bg-white/60 hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:border-white/50 hover:backdrop-blur-sm">
-            {/* Icon Circle */}
-            <div className="w-9 h-9 rounded-full bg-red-50 text-red-600 flex items-center justify-center shrink-0 transition-colors duration-300 group-hover:bg-red-100">
-                <Receipt className="w-5 h-5" />
+        <div className="group hover:bg-white/60 hover:shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-300 cursor-pointer border-b border-neutral-50 last:border-0 rounded-xl grid grid-cols-[100px_1.5fr_2fr_1fr_100px_90px] items-center gap-4 px-6 py-4">
+            <div className="whitespace-nowrap text-[12px] font-normal text-neutral-500 tabular-nums">
+                {formatDate(item.created_at)}
             </div>
-
-            {/* Main Content */}
-            <div className="flex-1 min-w-0 py-0.5">
-                <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2 min-w-0 pr-2">
-                        <span className="font-semibold text-neutral-900 text-sm truncate">{item.description}</span>
-                        {item.quantity && (
-                            <span className="text-xs text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded-md shrink-0 border border-neutral-200/50">
-                                {item.quantity}
-                            </span>
-                        )}
-                    </div>
-                    <span className="font-bold text-neutral-900 text-sm shrink-0 tracking-tight">{formatAmount(item.amount)}</span>
+            <div>
+                <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100/60 px-1 py-0.5 rounded border border-neutral-200/30 w-fit tracking-tight">
+                        {item.project_id}
+                    </span>
+                    <span className="text-[12px] font-medium text-neutral-900 truncate max-w-[150px]">
+                        {cleanEntityName(item.project_name)}
+                    </span>
                 </div>
-
-                <div className="flex items-center justify-between text-xs text-neutral-500">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-medium text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded">{item.project_id}</span>
-                        <span className="truncate">Personal Reimburse</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <span>{formatDate(item.created_at)}</span>
-                        <span className={clsx("font-medium px-1.5 py-0.5 rounded-md backdrop-blur-sm", statusStyles[item.status] || "bg-neutral-100 text-neutral-600")}>
-                            {formatStatus(item.status)}
-                        </span>
-                    </div>
+            </div>
+            <div className="min-w-0">
+                <div className="text-[12px] font-semibold text-neutral-900 tracking-tight leading-tight truncate">
+                    {item.description}
+                </div>
+            </div>
+            <div className="text-right">
+                <div className="text-[12px] font-bold text-neutral-900 tabular-nums tracking-tight">
+                    {formatCurrency(item.amount)}
+                </div>
+            </div>
+            <div className="text-center">
+                <span className={clsx(
+                    "px-1.5 py-0.5 rounded-full text-[10px] font-bold w-full block text-center uppercase tracking-widest shadow-sm backdrop-blur-md border border-white/10",
+                    STATUS_THEMES[item.status].bg, STATUS_THEMES[item.status].text
+                )}>
+                    {item.status}
+                </span>
+            </div>
+            <div className="text-right">
+                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <button className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all" title="View Details">
+                        <Eye className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
                 </div>
             </div>
         </div>
     );
 }
+

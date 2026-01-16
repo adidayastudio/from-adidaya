@@ -28,9 +28,9 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: "Overview", path: "/flow/finance", icon: LayoutDashboard },
   { label: "Purchasing", path: "/flow/finance/purchasing", icon: ShoppingCart },
-  { label: "Funding Sources", path: "/flow/finance/funding-sources", icon: Landmark, teamOnly: true },
   { label: "Reimburse", path: "/flow/finance/reimburse", icon: Receipt },
   { label: "Petty Cash", path: "/flow/finance/petty-cash", icon: Wallet, teamOnly: true },
+  { label: "Funding Sources", path: "/flow/finance/funding-sources", icon: Landmark, teamOnly: true },
   { label: "Reports", path: "/flow/finance/reports", icon: BarChart, teamOnly: true },
 ];
 
@@ -140,8 +140,10 @@ export default function FinanceSidebar() {
                         href={item.path}
                         onClick={() => setIsMoreOpen(false)}
                         className={clsx(
-                          "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
-                          active ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
+                          "w-full text-left px-3 py-2 text-xs font-medium rounded-lg flex items-center gap-3 transition-colors",
+                          active
+                            ? "bg-red-50 text-red-600"
+                            : "text-neutral-600 hover:bg-neutral-50"
                         )}
                       >
                         <item.icon className={clsx("w-4 h-4", active ? "text-red-600" : "text-neutral-400")} />

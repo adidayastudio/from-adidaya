@@ -1,17 +1,15 @@
 // Finance Domain Types
 // Supports construction purchasing workflows: kasbon, post-spend, pre-approval
 
-export type FinancialStatus =
-    | "UNPAID_RECEIVED"   // kasbon: goods received, not paid
-    | "UNPAID_INVOICED"   // invoice submitted, not paid
-    | "PAID"
-    | "CANCELLED";
+export type FinancialStatus = "NOT_PAYABLE" | "UNPAID" | "PAID";
+export type ApprovalStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED";
+export type PurchaseStage = "PLANNED" | "INVOICED" | "RECEIVED";
 
 export type FundingSourceType = "BANK" | "CASH" | "PETTY_CASH" | "REIMBURSE";
 
 export type PurchaseType = "MATERIAL" | "TOOL" | "SERVICE";
 
-export type ReimburseStatus = "PENDING" | "APPROVED" | "PAID" | "REJECTED";
+export type ReimburseStatus = "DRAFT" | "PENDING" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED";
 
 export interface FundingSource {
     id: string;
@@ -28,21 +26,27 @@ export interface PurchasingItem {
     id: string;
     date: string;
     project_id: string;
+    project_code: string; // PRG, JPF
     project_name: string;
     vendor: string;
     description: string;
     quantity?: string;
+    unit?: string;
     type: PurchaseType;
+    subcategory?: string;
     amount: number;
+    approval_status: ApprovalStatus;
+    purchase_stage: PurchaseStage;
     financial_status: FinancialStatus;
-    physical_status?: string;
     source_of_fund_id?: string;
     source_of_fund_name?: string;
     payment_date?: string;
     payment_proof_url?: string;
     notes?: string;
+    rejection_reason?: string;
     created_by: string;
     created_by_name?: string;
+    submitted_by_name?: string;
     created_at: string;
     updated_at: string;
 }

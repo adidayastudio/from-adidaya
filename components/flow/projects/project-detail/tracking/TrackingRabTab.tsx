@@ -54,10 +54,10 @@ export default function TrackingRabTab({ items }: { items: TrackingItem[] }) {
                                 <div className="mt-1 text-xs text-neutral-400">{item.subtitle}</div>
                             </div>
                             <div className="w-24 text-right">
-                                <span className={clsx("text-[10px] uppercase font-bold px-2 py-1 rounded-full",
+                                <span className={clsx("text-[10px] uppercase font-bold px-2 py-1 rounded-full tracking-wider",
                                     item.status === "Completed" ? "bg-green-100 text-green-700" :
-                                        item.status === "In Progress" ? "bg-yellow-50 text-yellow-700" :
-                                            "bg-neutral-50 text-neutral-500"
+                                        item.status === "In Progress" ? "bg-orange-50 text-orange-600" :
+                                            "bg-neutral-100 text-neutral-500"
                                 )}>
                                     {item.status}
                                 </span>

@@ -17,8 +17,13 @@ const MOCK_REIMBURSEMENTS = [
 function formatCurrency(amount: number) { return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(amount); }
 
 function StatusBadge({ status }: { status: string }) {
-    const colors: Record<string, string> = { Pending: "bg-orange-50 text-orange-700", Approved: "bg-green-50 text-green-700", Paid: "bg-blue-50 text-blue-700", Rejected: "bg-red-50 text-red-700" };
-    return <span className={clsx("px-2 py-1 rounded-full text-xs font-medium", colors[status])}>{status}</span>;
+    const colors: Record<string, string> = {
+        Pending: "bg-orange-50 text-orange-600",
+        Approved: "bg-green-50 text-green-600",
+        Paid: "bg-green-100 text-green-700",
+        Rejected: "bg-red-50 text-red-700"
+    };
+    return <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider", colors[status])}>{status}</span>;
 }
 
 export default function ReimbursementsPage() {

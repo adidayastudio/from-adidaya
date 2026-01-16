@@ -15,7 +15,9 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
-    AttentionItem
+    AttentionItem,
+    ApprovalStatus,
+    FinancialStatus
 } from "@/lib/types/finance-types";
 import { useFinance } from "./FinanceContext";
 import {
@@ -280,8 +282,11 @@ export default function FinanceOverviewClient() {
                                                         quantity: p.quantity,
                                                         vendor: p.beneficiary,
                                                         project_name: p.projectName,
+                                                        project_code: p.projectCode,
                                                         amount: p.amount,
-                                                        financial_status: p.type === 'invoice' ? 'UNPAID_INVOICED' : 'UNPAID_RECEIVED',
+                                                        financial_status: 'UNPAID',
+                                                        approval_status: p.type === 'invoice' ? 'APPROVED' : 'SUBMITTED',
+                                                        purchase_stage: p.type === 'invoice' ? 'INVOICED' : 'RECEIVED',
                                                         type: 'MATERIAL',
                                                         date: p.submittedDate,
                                                         project_id: p.projectCode,

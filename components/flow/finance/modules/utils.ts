@@ -1,5 +1,7 @@
-
 import { format } from "date-fns";
+import { ApprovalStatus, PurchaseStage, FinancialStatus } from "@/lib/types/finance-types";
+
+export type PrimaryStatus = ApprovalStatus | FinancialStatus | "PENDING" | "UNPAID";
 
 export function formatCurrency(amount: number) {
     return new Intl.NumberFormat("id-ID", {
@@ -22,10 +24,10 @@ export function formatAmount(amount: number) {
     return `Rp ${amount.toLocaleString('id-ID').replace(/,/g, '.')}`;
 }
 
-// Format date nicely (Day Month only)
+// Format date nicely (Day Month Year)
 export function formatDate(dateStr: string) {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    return format(date, "dd MMM yyyy");
 }
 
 // Convert STATUS_NAME to Status Name (Title Case)
@@ -48,4 +50,38 @@ export function getDeadlineStatus(deadline?: string) {
     const diffDays = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays <= 3) return 'soon';
     return 'normal';
+}
+
+export function getPrimaryStatus(
+    approvalStatus: ApprovalStatus,
+    purchaseStage: PurchaseStage,
+    financialStatus: FinancialStatus
+): string {
+    if (financialStatus === 'PAID') return 'PAID';
+    if (financialStatus === 'UNPAID') return 'UNPAID';
+    if (approvalStatus === 'APPROVED') return 'APPROVED';
+    if (approvalStatus === 'REJECTED') return 'REJECTED';
+    if (approvalStatus === 'SUBMITTED') return 'SUBMITTED';
+    return approvalStatus;
+}
+
+export const STATUS_THEMES: Record<string, { bg: string; text: string; border?: string }> = {
+    DRAFT: { bg: "bg-neutral-100", text: "text-neutral-600" },
+    SUBMITTED: { bg: "bg-orange-50", text: "text-orange-700" },
+    APPROVED: { bg: "bg-blue-50", text: "text-blue-700" },
+    PAID: { bg: "bg-green-50", text: "text-green-700" },
+    UNPAID: { bg: "bg-red-50", text: "text-red-700" },
+    PENDING: { bg: "bg-orange-50", text: "text-orange-700" },
+    REJECTED: { bg: "bg-rose-50", text: "text-rose-700" },
+};
+
+export function cleanEntityName(name: string): string {
+    if (!name) return name;
+    // Regex to find common Indonesian entity prefixes with optional dots and spaces
+    const cleanedName = name.replace(
+        /\b(PT|CV|TB|UD)\s*\.?\s*/gi,
+        (match, p1) => p1.toUpperCase() + " "
+    ).trim();
+
+    return cleanedName.replace(/\s+/g, ' ');
 }

@@ -8,12 +8,16 @@ import { ReimburseRequestForm } from "./ReimburseRequestForm";
 
 export function NewRequestDrawer({
     isOpen,
-    onClose
+    onClose,
+    initialType = "PURCHASE",
+    hideSwitcher = false
 }: {
     isOpen: boolean;
     onClose: () => void;
+    initialType?: RequestType;
+    hideSwitcher?: boolean;
 }) {
-    const [requestType, setRequestType] = useState<RequestType>("PURCHASE");
+    const [requestType, setRequestType] = useState<RequestType>(initialType);
 
     if (!isOpen) return null;
 
@@ -49,39 +53,41 @@ export function NewRequestDrawer({
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-full transition-all"
+                            className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100/50 rounded-full transition-all duration-200"
                         >
-                            <X className="w-6 h-6" />
+                            <X className="w-5 h-5" strokeWidth={1.5} />
                         </button>
                     </div>
 
                     {/* Switcher */}
-                    <div className="bg-neutral-900/5 p-1 rounded-full flex items-center h-11 relative">
-                        <div
-                            className={clsx(
-                                "absolute h-9 bg-white rounded-full shadow-sm transition-all duration-300 ease-out",
-                                requestType === "PURCHASE" ? "left-1 w-[calc(50%-4px)]" : "left-[calc(50%+4px)] w-[calc(50%-8px)]"
-                            )}
-                        />
-                        <button
-                            onClick={() => setRequestType("PURCHASE")}
-                            className={clsx(
-                                "flex-1 h-full px-4 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 relative z-10",
-                                requestType === "PURCHASE" ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
-                            )}
-                        >
-                            Purchase
-                        </button>
-                        <button
-                            onClick={() => setRequestType("REIMBURSE")}
-                            className={clsx(
-                                "flex-1 h-full px-4 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 relative z-10",
-                                requestType === "REIMBURSE" ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
-                            )}
-                        >
-                            Reimburse
-                        </button>
-                    </div>
+                    {!hideSwitcher && (
+                        <div className="bg-neutral-900/5 p-1 rounded-full flex items-center h-11 relative">
+                            <div
+                                className={clsx(
+                                    "absolute h-9 bg-white rounded-full shadow-sm transition-all duration-300 ease-out",
+                                    requestType === "PURCHASE" ? "left-1 w-[calc(50%-4px)]" : "left-[calc(50%+4px)] w-[calc(50%-8px)]"
+                                )}
+                            />
+                            <button
+                                onClick={() => setRequestType("PURCHASE")}
+                                className={clsx(
+                                    "flex-1 h-full px-4 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 relative z-10",
+                                    requestType === "PURCHASE" ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
+                                )}
+                            >
+                                Purchase
+                            </button>
+                            <button
+                                onClick={() => setRequestType("REIMBURSE")}
+                                className={clsx(
+                                    "flex-1 h-full px-4 rounded-full text-sm font-bold transition-all flex items-center justify-center gap-2 relative z-10",
+                                    requestType === "REIMBURSE" ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
+                                )}
+                            >
+                                Reimburse
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Form Container (Scrollable) */}
