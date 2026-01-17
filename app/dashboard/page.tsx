@@ -101,7 +101,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6 relative">
+    <div className="min-h-screen bg-neutral-50 p-4 md:p-6 relative">
       <Breadcrumb
         items={[
           { label: "Dashboard" },
@@ -121,12 +121,12 @@ export default function DashboardPage() {
           </button>
         </>
       }>
-        <div className="h-full overflow-y-auto pr-2 scrollbar-hide">
+        <div className="h-full overflow-y-auto scrollbar-hide">
           <div className="w-full pb-20">
 
             {/* DYNAMIC WELCOME BANNER (Soft Minimalist Glass) */}
             <div className={clsx(
-              "rounded-2xl p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-700 mb-10 backdrop-blur-xl shadow-sm border",
+              "rounded-2xl p-5 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-700 mb-10 backdrop-blur-xl shadow-sm border",
               phase.bg,
               phase.border
             )}>
@@ -143,7 +143,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
-              <div className="text-left md:text-right flex flex-col items-start md:items-end border-l pl-8 border-neutral-900/5 md:border-l-0 md:pl-0 md:border-none">
+              <div className="text-left md:text-right flex flex-col items-start md:items-end">
                 <div className={clsx("text-3xl font-bold tabular-nums tracking-tight transition-colors duration-500", phase.color)}>
                   {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                 </div>
@@ -154,21 +154,43 @@ export default function DashboardPage() {
             </div>
 
             {/* APP GRID (Unified Minimalist Grid) */}
-            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-6 gap-y-10 mb-12">
-              {APPS.map((app) => (
-                <Link
-                  href={app.href}
-                  key={app.label}
-                  className="flex flex-col items-center gap-3 group"
-                >
-                  <div className={`w-[4.5rem] h-[4.5rem] rounded-[1.2rem] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-neutral-100 flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)] group-hover:-translate-y-1 ${app.bg} ${app.color} ring-1 ring-transparent ${app.ring}`}>
-                    <app.icon className="w-8 h-8 opacity-90 group-hover:opacity-100 transition-opacity" strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[11px] font-medium text-neutral-600 group-hover:text-neutral-900 transition-colors text-center w-full truncate px-1 tracking-tight">
-                    {app.label}
-                  </span>
-                </Link>
-              ))}
+            <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-4 md:gap-x-6 gap-y-10 mb-12">
+              {APPS.map((app) => {
+                const hoverGradient = app.color.includes("orange")
+                  ? "hover:bg-[linear-gradient(145deg,rgba(255,237,213,0.4),rgba(255,255,255,0.1))]" // Orange
+                  : app.color.includes("red")
+                    ? "hover:bg-[linear-gradient(145deg,rgba(254,202,202,0.4),rgba(255,255,255,0.1))]" // Red
+                    : "hover:bg-[linear-gradient(145deg,rgba(191,219,254,0.4),rgba(255,255,255,0.1))]"; // Blue
+
+                return (
+                  <Link
+                    href={app.href}
+                    key={app.label}
+                    className="flex flex-col items-center gap-3 group"
+                  >
+                    <div
+                      className={clsx(
+                        "flex items-center justify-center transition-all duration-300 group-hover:scale-105 group-hover:-translate-y-1 relative",
+                        "bg-[linear-gradient(145deg,rgba(255,255,255,0.25),rgba(255,255,255,0.05))]", // Default Glass
+                        hoverGradient
+                      )}
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '20px',
+                        backdropFilter: 'blur(16px)',
+                        border: '1px solid rgba(255,255,255,0.35)',
+                        boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.4), 0 4px 12px rgba(0,0,0,0.08)',
+                      }}
+                    >
+                      <app.icon className={`w-8 h-8 opacity-90 group-hover:opacity-100 transition-opacity ${app.color} drop-shadow-sm`} strokeWidth={1.5} />
+                    </div>
+                    <span className="text-[11px] font-medium text-neutral-600 group-hover:text-neutral-900 transition-colors text-center w-full truncate px-1 tracking-tight shadow-black/5 drop-shadow-sm">
+                      {app.label}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
 
             <div className="h-px bg-neutral-100 my-8" />
