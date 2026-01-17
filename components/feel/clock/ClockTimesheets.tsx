@@ -270,7 +270,7 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
 
             // 3. Find "Ghost" Members: Users who have a record but are NOT in the validMembers list
             // (e.g. Raka, or new users not yet synchronized to profiles, or permission issues)
-            const ghostMembers = dayRecords.reduce((acc: any[], record) => {
+            const ghostMembersFromRecords = dayRecords.reduce((acc: any[], record) => {
                 const isInData = validMembers.some(m => m.id === record.userId || m.username === record.employee);
                 const isAlreadyAdded = acc.some(m => m.id === record.userId);
 
@@ -286,8 +286,30 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                 return acc;
             }, []);
 
+            // 4. Find "Ghost" Members from LOGS (Fallback)
+            const dayLogs = logs?.filter(l => l.timestamp.startsWith(dateToShow) && l.type === "IN") || [];
+            const ghostMembersFromLogs = dayLogs.reduce((acc: any[], log) => {
+                const hasRecord = dayRecords.some(r => r.userId === log.userId);
+                const isInData = validMembers.some(m => m.id === log.userId);
+                const isInGhostRecords = ghostMembersFromRecords.some(m => m.id === log.userId);
+                const isAlreadyAdded = acc.some(m => m.id === log.userId);
+
+                if (!hasRecord && !isAlreadyAdded) {
+                    if (!isInData && !isInGhostRecords && !EXCLUDED_USERS.includes(log.userName || "")) {
+                        acc.push({
+                            id: log.userId,
+                            username: log.userName || "Unknown User",
+                            avatar_url: log.avatar,
+                            department: "Unknown",
+                            role: "staff"
+                        });
+                    }
+                }
+                return acc;
+            }, []);
+
             // Combine valid members and ghosts
-            const allMembersToDisplay = [...validMembers, ...ghostMembers];
+            const allMembersToDisplay = [...validMembers, ...ghostMembersFromRecords, ...ghostMembersFromLogs];
 
             const fullList = allMembersToDisplay.map(member => {
                 // Try to match by userId first, then username fallback
