@@ -78,6 +78,7 @@ export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
                 nik: formData.nik,
                 joinDate: formData.joinDate,
                 baseDailyRate: formData.baseDailyRate,
+                overtimeDailyRate: formData.overtimeDailyRate,
                 otRate1: formData.otRate1,
                 otRate2: formData.otRate2,
                 otRate3: formData.otRate3,
@@ -199,6 +200,7 @@ export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
                         {isEditing ? (
                             <div className="grid grid-cols-2 gap-3">
                                 <InputField label="Base Rate" type="number" value={formData.baseDailyRate} onChange={(v) => setFormData({ ...formData, baseDailyRate: Number(v) })} />
+                                <InputField label="Holiday Rate" type="number" value={formData.overtimeDailyRate} onChange={(v) => setFormData({ ...formData, overtimeDailyRate: Number(v) })} />
                                 <InputField label="OT1 Rate" type="number" value={formData.otRate1} onChange={(v) => setFormData({ ...formData, otRate1: Number(v) })} />
                                 <InputField label="OT2 Rate" type="number" value={formData.otRate2} onChange={(v) => setFormData({ ...formData, otRate2: Number(v) })} />
                                 <InputField label="OT3 Rate" type="number" value={formData.otRate3} onChange={(v) => setFormData({ ...formData, otRate3: Number(v) })} />
@@ -206,6 +208,7 @@ export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
                         ) : (
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-neutral-50 rounded-lg p-3"><div className="text-xs text-neutral-500">Base / Day</div><div className="text-lg font-bold text-neutral-900">Rp {formatNum(crew.baseDailyRate)}</div></div>
+                                <div className="bg-amber-50 rounded-lg p-3"><div className="text-xs text-amber-600">Holiday Rate / Day</div><div className="text-lg font-bold text-amber-700">Rp {formatNum(crew.overtimeDailyRate)}</div></div>
                                 {crew.otRate1 > 0 && <div className="bg-blue-50 rounded-lg p-3"><div className="text-xs text-blue-600">OT1 / Hr</div><div className="text-lg font-bold text-blue-700">Rp {formatNum(crew.otRate1)}</div></div>}
                                 {crew.otRate2 > 0 && <div className="bg-blue-50 rounded-lg p-3"><div className="text-xs text-blue-600">OT2 / Hr</div><div className="text-lg font-bold text-blue-700">Rp {formatNum(crew.otRate2)}</div></div>}
                                 {crew.otRate3 > 0 && <div className="bg-blue-50 rounded-lg p-3"><div className="text-xs text-blue-600">OT3 / Hr</div><div className="text-lg font-bold text-blue-700">Rp {formatNum(crew.otRate3)}</div></div>}
