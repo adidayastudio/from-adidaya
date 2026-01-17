@@ -1,3 +1,5 @@
+import { HOLIDAYS_2026 } from "@/lib/constants/holidays";
+
 export const HOLIDAYS = [
     // 2024 (For historical data if needed)
     "2024-01-01", // New Year
@@ -39,7 +41,9 @@ export const HOLIDAYS = [
 export function isHoliday(date: string | Date): boolean {
     const d = new Date(date);
     const dateStr = d.toISOString().split("T")[0];
-    return HOLIDAYS.includes(dateStr);
+    const isLegacyHoliday = HOLIDAYS.includes(dateStr);
+    const is2026Holiday = HOLIDAYS_2026.some(h => h.date === dateStr);
+    return isLegacyHoliday || is2026Holiday;
 }
 
 export function isSunday(date: string | Date): boolean {

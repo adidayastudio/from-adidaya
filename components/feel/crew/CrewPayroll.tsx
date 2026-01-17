@@ -13,6 +13,8 @@ interface CrewPayrollProps {
     role?: string;
 }
 
+type ViewMode = "weekly" | "monthly";
+
 interface PayrollEntry {
     id: string;
     crewName: string;
@@ -200,7 +202,11 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                 const dates: string[] = [];
                 let d = new Date(period.start);
                 while (d <= period.end) {
-                    dates.push(d.toISOString().split("T")[0]);
+                    // Use local time to avoid timezone shift from toISOString()
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    dates.push(`${year}-${month}-${day}`);
                     d.setDate(d.getDate() + 1);
                 }
 

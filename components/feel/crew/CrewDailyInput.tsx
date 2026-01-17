@@ -7,6 +7,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, upsertDailyLog, deleteDailyLogEntry, DailyLog } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
+import { isHolidayOrSunday } from "@/lib/holidays";
 
 interface CrewDailyInputProps {
     role?: string;
@@ -135,7 +136,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
     const formatDate = (d: Date) => d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
     const formatDateShort = (d: Date) => d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
     const handleDateChange = (dir: "prev" | "next") => { const n = new Date(selectedDate); n.setDate(n.getDate() + (dir === "next" ? 1 : -1)); setSelectedDate(n); };
-    const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
+    const isHolidayDay = isHolidayOrSunday(selectedDate);
 
     const toggleRowSelection = (id: string) => { const n = new Set(selectedRows); n.has(id) ? n.delete(id) : n.add(id); setSelectedRows(n); };
     const selectAll = () => { selectedRows.size === entries.length ? setSelectedRows(new Set()) : setSelectedRows(new Set(entries.map(e => e.id))); };
@@ -439,15 +440,15 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
 
                 {/* 2. DATE CONTROL */}
                 <div className="flex items-center gap-2 order-2 sm:order-none">
-                    <div className={clsx("flex items-center gap-0.5 border rounded-full px-1 py-1 shadow-sm flex-shrink-0", isWeekend ? "bg-amber-50 border-amber-200" : "bg-white border-neutral-200")}>
+                    <div className={clsx("flex items-center gap-0.5 border rounded-full px-1 py-1 shadow-sm flex-shrink-0", isHolidayDay ? "bg-amber-50 border-amber-200" : "bg-white border-neutral-200")}>
                         <button onClick={() => handleDateChange("prev")} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-500"><ChevronLeft className="w-3.5 h-3.5" /></button>
-                        <span className={clsx("text-sm font-medium text-center select-none px-1 min-w-[80px] sm:min-w-[100px]", isWeekend ? "text-amber-700" : "text-neutral-700")}>
+                        <span className={clsx("text-sm font-medium text-center select-none px-1 min-w-[80px] sm:min-w-[100px]", isHolidayDay ? "text-amber-700" : "text-neutral-700")}>
                             <span className="hidden sm:inline">{formatDate(selectedDate)}</span>
                             <span className="sm:hidden">{formatDateShort(selectedDate)}</span>
                         </span>
                         <button onClick={() => handleDateChange("next")} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-500"><ChevronRight className="w-3.5 h-3.5" /></button>
                     </div>
-                    {isWeekend && <span className="hidden sm:inline px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">Holiday</span>}
+                    {isHolidayDay && <span className="hidden sm:inline px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">Holiday</span>}
                 </div>
 
                 {/* 3. ACTIONS */}
