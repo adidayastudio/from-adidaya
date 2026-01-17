@@ -67,9 +67,7 @@ const menuItems: MenuSection[] = [
       { label: "Projects", href: "/flow/projects", icon: FolderKanban },
 
       { label: "Finance", href: "/flow/finance", icon: Banknote },
-      { label: "Supply", href: "/flow/supply", icon: Package },
-      { label: "Asset", href: "/flow/asset", icon: Box },
-      { label: "Track", href: "/flow/track", icon: Map },
+      { label: "Resources", href: "/flow/resources", icon: Package },
       { label: "Client", href: "/flow/client", icon: User },
     ],
   },
