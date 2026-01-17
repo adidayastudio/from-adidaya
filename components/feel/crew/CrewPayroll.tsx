@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, ArrowUpDown, Plus, Minus, Edit2, FileDown, Users } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -123,13 +124,34 @@ const getMonthlyPeriod = (anchorDate: Date) => {
 };
 
 export function CrewPayroll({ role }: CrewPayrollProps) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
     // Data state
     const [payrollData, setPayrollData] = useState<PayrollEntry[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
 
-    const [selectedProject, setSelectedProject] = useState("");
+    // Initialize from 'project' OR fallback to first of 'projects'
+    const [selectedProject, setSelectedProject] = useState(() => {
+        return searchParams.get("project") || searchParams.get("projects")?.split(",")[0] || "";
+    });
+
+    // Sync project to URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+        if (selectedProject) {
+            params.set("project", selectedProject);
+            params.set("projects", selectedProject);
+        }
+        else {
+            params.delete("project");
+            params.delete("projects");
+        }
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [selectedProject, searchParams, router, pathname]);
 
     // Anchor date is the reference. 
     // For Weekly: It's the Sunday of the selected week.
@@ -457,7 +479,7 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                     <div className="relative w-full sm:w-auto sm:min-w-[200px]">
                         <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="appearance-none w-full pl-3 pr-7 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all">
                             <option value="">Select Project</option>
-                            {projects.map(p => <option key={p.code} value={p.code}>[{formatProjectCode(p.code)}] {p.name}</option>)}
+                            {projects.map(p => <option key={p.code} value={formatProjectCode(p.code)}>[{formatProjectCode(p.code)}] {p.name}</option>)}
                         </select>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
                     </div>

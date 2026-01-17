@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
 import { Plus, Search, ChevronDown, ChevronUp, X, Download, ArrowUpDown, Filter, Edit2, FileText, Trash2, Users, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -56,6 +57,10 @@ const formatProjectCode = (code?: string) => {
 };
 
 export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
     // Data state - empty, will be populated from database later
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
@@ -88,12 +93,45 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
         load();
     }, []);
 
-    const [searchQuery, setSearchQuery] = useState("");
-    const [activeCard, setActiveCard] = useState<FilterCard>("ALL");
-    const [sortBy, setSortBy] = useState<"name" | "project" | "date">("date");
-    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+    // Helper for array params - checks 'projects' first, then fallback to 'project'
+    const getArrayParam = (key: string) => {
+        const val = searchParams.get(key);
+        if (val) return val.split(",");
+        // Fallback for compatibility
+        if (key === "projects") {
+            const single = searchParams.get("project");
+            return single ? [single] : [];
+        }
+        return [];
+    };
+
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+    const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
+    const [sortBy, setSortBy] = useState<"name" | "project" | "date">((searchParams.get("sort") as "name" | "project" | "date") || "date");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">((searchParams.get("order") as "asc" | "desc") || "desc");
     const [showFilterPopup, setShowFilterPopup] = useState(false);
-    const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+    const [selectedProjects, setSelectedProjects] = useState<string[]>(getArrayParam("projects"));
+
+    // Sync state to URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+
+        if (searchQuery) params.set("search", searchQuery); else params.delete("search");
+        if (activeCard && activeCard !== "ALL") params.set("card", activeCard); else params.delete("card");
+        if (sortBy) params.set("sort", sortBy); else params.delete("sort");
+        if (sortOrder) params.set("order", sortOrder); else params.delete("order");
+
+        if (selectedProjects.length > 0) {
+            params.set("projects", selectedProjects.join(","));
+            // Sync single param for compatibility
+            params.set("project", selectedProjects[0]);
+        } else {
+            params.delete("projects");
+            params.delete("project");
+        }
+
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [searchQuery, activeCard, sortBy, sortOrder, selectedProjects]);
     const [showDrawer, setShowDrawer] = useState(false);
 
     const [formRole, setFormRole] = useState<CrewRole | "">("");
@@ -385,7 +423,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
             {showFilterPopup && projects.length > 0 && (
                 <div className="bg-white rounded-xl border border-neutral-200 shadow-lg p-4 space-y-4">
                     <div className="flex items-center justify-between"><h3 className="font-semibold text-neutral-900">Filter by Project</h3><button onClick={() => setShowFilterPopup(false)} className="p-1 rounded-full hover:bg-neutral-100"><X className="w-4 h-4 text-neutral-500" /></button></div>
-                    <div className="flex flex-wrap gap-2">{projects.map(p => <button key={p.code} onClick={() => toggleProject(p.code)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(p.code) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{formatProjectCode(p.code)}</button>)}</div>
+                    <div className="flex flex-wrap gap-2">{projects.map(p => <button key={p.code} onClick={() => toggleProject(formatProjectCode(p.code))} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(formatProjectCode(p.code)) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{formatProjectCode(p.code)}</button>)}</div>
                     {selectedProjects.length > 0 && <button onClick={() => setSelectedProjects([])} className="text-sm text-red-600 hover:underline">Clear</button>}
                 </div>
             )}

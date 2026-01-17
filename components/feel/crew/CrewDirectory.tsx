@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
 import { Plus, Search, ChevronDown, ChevronUp, Edit2, Trash2, Filter, List, LayoutGrid, ArrowUpDown, X, Download, Loader2, Users } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -57,6 +58,10 @@ const ROLE_COLORS: Record<CrewRole, string> = {
 };
 
 export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectoryProps) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
     // Data state
     const [crewList, setCrewList] = useState<CrewListItem[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
@@ -66,16 +71,52 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     const [isSaving, setIsSaving] = useState(false);
     const [exporting, setExporting] = useState(false);
 
-    // Filter & UI state
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedRoles, setSelectedRoles] = useState<CrewRole[]>([]);
-    const [selectedStatuses, setSelectedStatuses] = useState<CrewStatus[]>([]);
-    const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
-    const [activeCard, setActiveCard] = useState<FilterCard>("ALL");
-    const [viewMode, setViewMode] = useState<ViewMode>("list");
+    // Initial Filter State from URL
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+
+    // Helper for array params - checks 'projects' first, then fallback to 'project'
+    const getArrayParam = (key: string) => {
+        const val = searchParams.get(key);
+        if (val) return val.split(",");
+        // Fallback for compatibility
+        if (key === "projects") {
+            const single = searchParams.get("project");
+            return single ? [single] : [];
+        }
+        return [];
+    };
+
+    const [selectedRoles, setSelectedRoles] = useState<CrewRole[]>(getArrayParam("roles") as CrewRole[]);
+    const [selectedStatuses, setSelectedStatuses] = useState<CrewStatus[]>(getArrayParam("statuses") as CrewStatus[]);
+    const [selectedProjects, setSelectedProjects] = useState<string[]>(getArrayParam("projects")); // Now stores SUFFIXES like "RBH"
+    const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
+    const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("view") as ViewMode) || "list");
     const [sortBy, setSortBy] = useState<"name" | "role" | "status" | "project">("name");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
     const [showFilterPopup, setShowFilterPopup] = useState(false);
+
+    // Sync state to URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+
+        if (searchQuery) params.set("search", searchQuery); else params.delete("search");
+        if (selectedRoles.length > 0) params.set("roles", selectedRoles.join(",")); else params.delete("roles");
+        if (selectedStatuses.length > 0) params.set("statuses", selectedStatuses.join(",")); else params.delete("statuses");
+
+        if (selectedProjects.length > 0) {
+            params.set("projects", selectedProjects.join(","));
+            // Sync single param for compatibility with single-select views
+            params.set("project", selectedProjects[0]);
+        } else {
+            params.delete("projects");
+            params.delete("project");
+        }
+
+        if (activeCard && activeCard !== "ALL") params.set("card", activeCard); else params.delete("card");
+        if (viewMode && viewMode !== "list") params.set("view", viewMode); else params.delete("view");
+
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [searchQuery, selectedRoles, selectedStatuses, selectedProjects, activeCard, viewMode]);
 
     // Drawer state
     const [showAddDrawer, setShowAddDrawer] = useState(false);
@@ -106,10 +147,12 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
         return parts.length > 1 ? parts[1] : code;
     };
 
-    // Get unique project codes from crew list
-    const uniqueProjects = useMemo(() => {
-        const codes = crewList.map(c => c.projectCode).filter(Boolean) as string[];
-        return [...new Set(codes)];
+    // Get unique project suffixes (e.g. "RBH" from "001-RBH")
+    const uniqueProjectSuffixes = useMemo(() => {
+        const suffixes = crewList
+            .map(c => formatProjectCode(c.projectCode))
+            .filter(Boolean) as string[];
+        return [...new Set(suffixes)].sort();
     }, [crewList]);
 
     // Load data from database
@@ -190,7 +233,13 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
         let data = crewList;
         if (selectedRoles.length > 0) data = data.filter(c => selectedRoles.includes(c.role));
         if (selectedStatuses.length > 0) data = data.filter(c => selectedStatuses.includes(c.status));
-        if (selectedProjects.length > 0) data = data.filter(c => c.projectCode && selectedProjects.includes(c.projectCode));
+        if (selectedProjects.length > 0) {
+            // Filter by Suffix
+            data = data.filter(c => {
+                const suffix = formatProjectCode(c.projectCode);
+                return suffix && selectedProjects.includes(suffix);
+            });
+        }
         if (searchQuery) data = data.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
         return data;
     }, [crewList, searchQuery, selectedRoles, selectedStatuses, selectedProjects]);
@@ -232,7 +281,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
     const toggleRole = (r: CrewRole) => setSelectedRoles(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
     const toggleStatus = (s: CrewStatus) => setSelectedStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
-    const toggleProject = (c: string) => setSelectedProjects(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+    const toggleProject = (suffix: string) => setSelectedProjects(prev => prev.includes(suffix) ? prev.filter(x => x !== suffix) : [...prev, suffix]);
 
     const openEditDrawer = (crew: CrewListItem) => {
         setSelectedCrew(crew);
@@ -497,8 +546,8 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                     <div className="flex items-center justify-between"><h3 className="font-semibold text-neutral-900">Filters</h3><button onClick={() => setShowFilterPopup(false)} className="p-1 rounded-full hover:bg-neutral-100"><X className="w-4 h-4 text-neutral-500" /></button></div>
                     <div><div className="text-xs font-medium text-neutral-500 mb-2">Roles</div><div className="flex flex-wrap gap-2">{CREW_ROLE_OPTIONS.map(opt => <button key={opt.value} onClick={() => toggleRole(opt.value)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedRoles.includes(opt.value) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{CREW_ROLE_LABELS[opt.value].en}</button>)}</div></div>
                     <div><div className="text-xs font-medium text-neutral-500 mb-2">Status</div><div className="flex flex-wrap gap-2">{(["ACTIVE", "INACTIVE"] as CrewStatus[]).map(s => <button key={s} onClick={() => toggleStatus(s)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedStatuses.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{s}</button>)}</div></div>
-                    {uniqueProjects.length > 0 && (
-                        <div><div className="text-xs font-medium text-neutral-500 mb-2">Projects</div><div className="flex flex-wrap gap-2">{uniqueProjects.map(p => <button key={p} onClick={() => toggleProject(p)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(p) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{formatProjectCode(p)}</button>)}</div></div>
+                    {uniqueProjectSuffixes.length > 0 && (
+                        <div><div className="text-xs font-medium text-neutral-500 mb-2">Projects</div><div className="flex flex-wrap gap-2">{uniqueProjectSuffixes.map(p => <button key={p} onClick={() => toggleProject(p)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(p) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{p}</button>)}</div></div>
                     )}
                     {activeFiltersCount > 0 && <button onClick={() => { setSelectedRoles([]); setSelectedStatuses([]); setSelectedProjects([]); }} className="text-sm text-red-600 hover:underline">Clear all</button>}
                 </div>
