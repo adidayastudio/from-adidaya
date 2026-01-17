@@ -66,7 +66,7 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
     const isManager = canViewTeamData(role || profile?.role);
     // -- DATA FETCHING --
     // Now receiving currentMonth to filter fetching by month
-    const { attendance, leaves, overtime: otLogs, businessTrips: trips, teamMembers, loading: loadingData, refresh } = useClockData(profile?.id, personalTeamView === "team", currentMonth);
+    const { attendance, leaves, overtime: otLogs, businessTrips: trips, teamMembers, logs, loading: loadingData, refresh } = useClockData(profile?.id, personalTeamView === "team", currentMonth);
 
     // -- MAP DATA TO UI FORMAT --
     const rawData = useMemo(() => {
@@ -268,7 +268,28 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
             // 2. Hydrate with ALL team members (Excluding System Accounts)
             const validMembers = teamMembers.filter(m => !EXCLUDED_USERS.includes(m.username));
 
-            const fullList = validMembers.map(member => {
+            // 3. Find "Ghost" Members: Users who have a record but are NOT in the validMembers list
+            // (e.g. Raka, or new users not yet synchronized to profiles, or permission issues)
+            const ghostMembers = dayRecords.reduce((acc: any[], record) => {
+                const isInData = validMembers.some(m => m.id === record.userId || m.username === record.employee);
+                const isAlreadyAdded = acc.some(m => m.id === record.userId);
+
+                if (!isInData && !isAlreadyAdded && !EXCLUDED_USERS.includes(record.employee || "")) {
+                    acc.push({
+                        id: record.userId || `ghost-${record.employee}`,
+                        username: record.employee || "Unknown User",
+                        avatar_url: record.avatar, // Use avatar from record if available
+                        department: record.userDepartment, // Use dept from record if available
+                        role: record.userRole || "staff"
+                    });
+                }
+                return acc;
+            }, []);
+
+            // Combine valid members and ghosts
+            const allMembersToDisplay = [...validMembers, ...ghostMembers];
+
+            const fullList = allMembersToDisplay.map(member => {
                 // Try to match by userId first, then username fallback
                 const record = dayRecords.find(r => r.userId === member.id || r.employee === member.username);
                 if (record) return record;
@@ -288,7 +309,7 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                 };
             });
 
-            // 3. Sort by Clock-In Time (Ascending), then Name
+            // 4. Sort by Clock-In Time (Ascending), then Name
             return fullList.sort((a, b) => {
                 const timeA = (a.clockIn && a.clockIn !== '-') ? a.clockIn : "23:59"; // Push absent to end
                 const timeB = (b.clockIn && b.clockIn !== '-') ? b.clockIn : "23:59";

@@ -229,6 +229,57 @@ export async function fetchAttendanceSessions(userId?: string, date?: string): P
     }));
 }
 
+// ============================================
+// ATTENDANCE LOGS (RAW)
+// ============================================
+
+export interface AttendanceLog {
+    id: string;
+    userId: string;
+    type: "IN" | "OUT";
+    timestamp: string;
+    latitude?: number;
+    longitude?: number;
+    detectedLocationCode?: string;
+    locationStatus?: string;
+    createdAt: string;
+    userName?: string; // from join
+    avatar?: string; // from join
+}
+
+export async function fetchAttendanceLogs(userId?: string, startDate?: string, endDate?: string): Promise<AttendanceLog[]> {
+    let query = supabase.from("attendance_logs")
+        .select(`
+            *,
+            profiles:user_id (full_name, avatar_url)
+        `);
+
+    if (userId) query = query.eq("user_id", userId);
+    if (startDate) query = query.gte("timestamp", `${startDate}T00:00:00`);
+    if (endDate) query = query.lte("timestamp", `${endDate}T23:59:59`);
+
+    const { data, error } = await query.order("timestamp", { ascending: false });
+
+    if (error) {
+        console.error("❌ Error fetching attendance logs:", error.message);
+        return [];
+    }
+
+    return (data || []).map(row => ({
+        id: row.id,
+        userId: row.user_id,
+        type: row.type,
+        timestamp: row.timestamp,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        detectedLocationCode: row.detected_location_code,
+        locationStatus: row.location_status,
+        createdAt: row.created_at,
+        userName: row.profiles?.full_name,
+        avatar: row.profiles?.avatar_url
+    }));
+}
+
 export interface ClockActionMetadata {
     latitude?: number;
     longitude?: number;

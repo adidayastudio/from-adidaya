@@ -25,6 +25,7 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
     const [overtime, setOvertime] = useState<OvertimeLog[]>([]);
     const [businessTrips, setBusinessTrips] = useState<BusinessTrip[]>([]);
     const [sessions, setSessions] = useState<AttendanceSession[]>([]);
+    const [logs, setLogs] = useState<clockApi.AttendanceLog[]>([]);
     const [teamMembers, setTeamMembers] = useState<TeamMemberProfile[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -50,7 +51,9 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
                 clockApi.fetchAttendanceSessions(targetId, targetDateStr).catch(e => {
                     console.warn("⚠️ Independent session fetch failed", e);
                     return [];
-                })
+                }),
+                // Fetch raw logs
+                clockApi.fetchAttendanceLogs(targetId, startDate, endDate)
             ]);
 
             // 2. Team data (optional/conditional)
@@ -61,12 +64,13 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
 
             // Handle Core Data
             if (clockResults.status === 'fulfilled') {
-                const [attData, leaveData, otData, tripData, sessionsData] = clockResults.value;
+                const [attData, leaveData, otData, tripData, sessionsData, logsData] = clockResults.value;
                 setAttendance(attData);
                 setLeaves(leaveData);
                 setOvertime(otData);
                 setBusinessTrips(tripData);
                 setSessions(sessionsData);
+                setLogs(logsData);
             } else {
                 console.error("❌ Critical: Failed to fetch clock data", clockResults.reason);
             }
@@ -97,6 +101,7 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
         overtime,
         businessTrips,
         sessions,
+        logs,
         teamMembers,
         loading,
         refresh: fetchData
