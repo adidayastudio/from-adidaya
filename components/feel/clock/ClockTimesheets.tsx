@@ -294,6 +294,24 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
                 const record = dayRecords.find(r => r.userId === member.id || r.employee === member.username);
                 if (record) return record;
 
+                // FALLBACK: Check Logs if no record exists
+                const userLog = dayLogs.find(l => l.userId === member.id && l.type === 'IN');
+                if (userLog) {
+                    return {
+                        id: `log-${member.id}-${dateToShow}`,
+                        date: dateToShow,
+                        employee: member.username || "Unknown",
+                        userId: member.id,
+                        clockIn: format(new Date(userLog.timestamp), "HH:mm"),
+                        clockOut: "-",
+                        duration: "-",
+                        status: "intime" as any, // Visual indicator
+                        overtime: "-",
+                        day: format(new Date(dateToShow), "EEE"),
+                        notes: "Raw Log (Record Missing)"
+                    };
+                }
+
                 // Create Mock Absent Record
                 return {
                     id: `absent-${member.id}-${dateToShow}`,
