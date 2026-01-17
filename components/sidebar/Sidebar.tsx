@@ -47,7 +47,7 @@ const menuItems: MenuSection[] = [
     section: "MAIN",
     items: [
       { label: "Search", href: "/search", icon: Search },
-      { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { label: "My Tasks", href: "/dashboard/tasks", icon: CheckSquare },
       { label: "My Projects", href: "/dashboard/projects", icon: FolderKanban },
       { label: "Notifications", href: "/dashboard/notifications", icon: Bell },

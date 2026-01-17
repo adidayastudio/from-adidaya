@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
     MapPin,
     AlertTriangle,
@@ -32,8 +33,14 @@ export default function ClockActionModal({
     const [reason, setReason] = useState("");
     const [remoteMode, setRemoteMode] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
-    if (!isOpen) return null;
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // If not open or not mounted yet, render nothing
+    if (!isOpen || !mounted) return null;
 
     const isOutside = detection?.status === "outside";
     const isUnknown = detection?.status === "unknown";
@@ -43,7 +50,7 @@ export default function ClockActionModal({
     const isStaff = userRole === "staff" || userRole === "supervisor" || userRole === "pm" || userRole === "management";
     const isCrew = !isAdmin && !isStaff; // Simple fallback check
 
-    const canClock = isAdmin || isStaff || (isCrew && !isOutside);
+    // Logic for validation
     const needsRemoteMode = (isAdmin || isStaff) && isOutside;
     const needsReason = isStaff && isOutside;
     const isBlocked = isCrew && isOutside;
@@ -105,9 +112,9 @@ export default function ClockActionModal({
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200">
+    const modalContent = (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className={`bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-neutral-200`}>
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
                     <div className="flex items-center gap-2">
@@ -259,4 +266,6 @@ export default function ClockActionModal({
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }

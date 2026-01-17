@@ -44,11 +44,11 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
     };
 
     const phases = {
-        morning: { greeting: "Good Morning", color: "text-amber-600", bg: "bg-amber-50/50", border: "border-amber-100", icon: Sunrise },
-        afternoon: { greeting: "Good Afternoon", color: "text-blue-600", bg: "bg-blue-50/50", border: "border-blue-100", icon: Sun },
-        "late-afternoon": { greeting: "Good Afternoon", color: "text-orange-600", bg: "bg-orange-50/50", border: "border-orange-100", icon: Sunset },
-        evening: { greeting: "Good Evening", color: "text-purple-600", bg: "bg-purple-50/50", border: "border-purple-100", icon: CloudSun },
-        night: { greeting: "Good Night", color: "text-indigo-900", bg: "bg-indigo-50/50", border: "border-indigo-100", icon: Moon },
+        morning: { greeting: "Good Morning", color: "text-amber-600", bg: "bg-gradient-to-br from-amber-50/80 to-white/60", border: "border-amber-100/50", icon: Sunrise },
+        afternoon: { greeting: "Good Afternoon", color: "text-blue-600", bg: "bg-gradient-to-br from-blue-50/80 to-white/60", border: "border-blue-100/50", icon: Sun },
+        "late-afternoon": { greeting: "Good Afternoon", color: "text-orange-600", bg: "bg-gradient-to-br from-orange-50/80 to-white/60", border: "border-orange-100/50", icon: Sunset },
+        evening: { greeting: "Good Evening", color: "text-purple-600", bg: "bg-gradient-to-br from-purple-50/80 to-white/60", border: "border-purple-100/50", icon: CloudSun },
+        night: { greeting: "Good Night", color: "text-indigo-900", bg: "bg-gradient-to-br from-indigo-50/80 to-white/60", border: "border-indigo-100/50", icon: Moon },
     };
 
     const currentPhaseKey = getPhase(currentTime);
@@ -246,29 +246,31 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
             {/* PERSONAL VIEW */}
             {viewMode === "personal" && (
                 <>
-                    {/* DYNAMIC WELCOME BANNER */}
+                    {/* DYNAMIC WELCOME BANNER (Soft Minimalist Glass) */}
                     <div className={clsx(
-                        "rounded-2xl border p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-700",
+                        "rounded-2xl p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-700 mb-10 backdrop-blur-xl shadow-sm border",
                         phase.bg,
                         phase.border
                     )}>
-                        <div className="flex items-center gap-4">
-                            <div className={clsx("w-12 h-12 rounded-xl flex items-center justify-center bg-white/80 backdrop-blur-sm shadow-sm", phase.color)}>
-                                <PhaseIcon className="w-6 h-6 animate-pulse-slow" />
+                        <div className="flex items-center gap-5">
+                            <div className={clsx("w-16 h-16 rounded-xl flex items-center justify-center bg-white shadow-sm border border-neutral-100/50", phase.color)}>
+                                <PhaseIcon className="w-8 h-8 opacity-90" strokeWidth={1.5} />
                             </div>
-                            <div>
-                                <h2 className={clsx("text-xl font-bold transition-colors duration-500", phase.color)}>
+                            <div className="space-y-0.5">
+                                <h2 className={clsx("text-xl font-bold tracking-tight transition-colors duration-500", phase.color)}>
                                     {phase.greeting}, {userName}
                                 </h2>
-                                <p className="text-neutral-600 text-sm">Have a productive day ahead.</p>
+                                <div className="flex items-center gap-2 text-neutral-500 font-medium text-sm">
+                                    Have a productive day ahead
+                                </div>
                             </div>
                         </div>
-                        <div className="text-left md:text-right flex flex-col items-start md:items-end border-l pl-6 border-neutral-200/50 md:border-l-0 md:pl-0 md:border-none">
-                            <div className={clsx("text-2xl font-bold tabular-nums tracking-tight transition-colors duration-500", phase.color)}>
+                        <div className="text-left md:text-right flex flex-col items-start md:items-end border-l pl-8 border-neutral-900/5 md:border-l-0 md:pl-0 md:border-none">
+                            <div className={clsx("text-3xl font-bold tabular-nums tracking-tight transition-colors duration-500", phase.color)}>
                                 {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                             </div>
-                            <div className="text-sm font-medium text-neutral-500">
-                                {currentTime.toLocaleDateString("en-US", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                            <div className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mt-1">
+                                {currentTime.toLocaleDateString("en-US", { weekday: 'long', day: 'numeric', month: 'long' })}
                             </div>
                         </div>
                     </div>

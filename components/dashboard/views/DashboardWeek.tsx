@@ -100,12 +100,18 @@ export function DashboardWeek() {
                                 return (
                                     <div key={dayData.name} className="space-y-1.5">
                                         <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">{dayData.name}</p>
-                                        <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden divide-y divide-neutral-100">
+                                        <div className="rounded-2xl border border-neutral-100 bg-white shadow-sm overflow-hidden divide-y divide-neutral-100">
                                             {tasks.map(task => (
-                                                <Link key={task.id} href={`/flow/projects/${task.projectId}`} className="flex items-center justify-between px-3 py-2.5 hover:bg-neutral-50 transition-colors group">
+                                                <Link key={task.id} href={`/flow/projects/${task.projectId}`} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-all group border-b border-neutral-50 last:border-b-0">
+                                                    <div className="w-8 h-8 rounded-lg bg-neutral-100 text-neutral-500 flex flex-col items-center justify-center shrink-0 border border-neutral-200">
+                                                        <span className="text-[8px] font-bold uppercase">{task.day}</span>
+                                                    </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <span className="text-xs font-medium text-neutral-700 group-hover:text-neutral-900 block truncate">{task.name}</span>
-                                                        <span className="text-[10px] text-neutral-400">{task.id} · {task.projectName}</span>
+                                                        <span className="text-xs font-semibold text-neutral-700 group-hover:text-neutral-900 block truncate transition-colors">{task.name}</span>
+                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                                            <span className="text-[10px] text-neutral-400 font-medium">{task.projectName}</span>
+                                                        </div>
                                                     </div>
                                                 </Link>
                                             ))}
@@ -122,7 +128,7 @@ export function DashboardWeek() {
                     PROJECTS_WEEK.length > 0 ? (
                         <div className="grid gap-3">
                             {PROJECTS_WEEK.map(project => (
-                                <Link key={project.id} href={`/flow/projects/${project.id}`} className="block p-4 rounded-xl border border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm transition-all group">
+                                <Link key={project.id} href={`/flow/projects/${project.id}`} className="block p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm hover:border-neutral-200 hover:shadow-md transition-all group">
                                     <div className="flex items-start justify-between mb-2">
                                         <div>
                                             <div className="flex items-center gap-2">
@@ -148,19 +154,26 @@ export function DashboardWeek() {
                 {/* === NOTIFICATIONS VIEW === */}
                 {mode === "notifications" && (
                     NOTIFICATIONS_WEEK.length > 0 ? (
-                        <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden divide-y divide-neutral-100">
+                        <div className="rounded-2xl border border-neutral-100 bg-white shadow-sm overflow-hidden divide-y divide-neutral-100">
                             {NOTIFICATIONS_WEEK.map(notif => (
-                                <Link key={notif.id} href={notif.link} className="flex items-start gap-3 p-3 hover:bg-neutral-50 transition-colors group">
-                                    <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center shrink-0", notif.type === "event" ? "bg-blue-100 text-blue-600" : notif.type === "reminder" ? "bg-orange-100 text-orange-600" : "bg-emerald-100 text-emerald-600")}>
-                                        {notif.type === "event" && <Calendar className="w-4 h-4" />}
-                                        {notif.type === "reminder" && <AlertCircle className="w-4 h-4" />}
-                                        {notif.type === "request" && <FileCheck className="w-4 h-4" />}
+                                <Link key={notif.id} href={notif.link} className="flex items-start gap-4 p-4 hover:bg-neutral-50 transition-all group border-b border-neutral-50 last:border-b-0">
+                                    <div className={clsx("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105",
+                                        notif.type === "event" ? "bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600" :
+                                            notif.type === "reminder" ? "bg-gradient-to-br from-orange-100 to-orange-50 text-orange-600" :
+                                                "bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600"
+                                    )}>
+                                        {notif.type === "event" && <Calendar className="w-5 h-5" />}
+                                        {notif.type === "reminder" && <AlertCircle className="w-5 h-5" />}
+                                        {notif.type === "request" && <FileCheck className="w-5 h-5" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs text-neutral-600 group-hover:text-neutral-900">
-                                            <span className="font-semibold text-neutral-800">{notif.user}</span>&nbsp;{notif.text}
+                                        <div className="flex justify-between items-start mb-0.5">
+                                            <p className="text-xs font-bold text-neutral-900">{notif.user}</p>
+                                            <span className="text-[10px] font-bold text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded-md">{notif.day}</span>
+                                        </div>
+                                        <p className="text-xs text-neutral-600 leading-relaxed group-hover:text-neutral-800 transition-colors">
+                                            {notif.text}
                                         </p>
-                                        <span className="text-[10px] text-neutral-400">{notif.day}</span>
                                     </div>
                                 </Link>
                             ))}
@@ -199,8 +212,11 @@ function TabButton({ active, onClick, icon, label, color, count }: { active: boo
 
 function EmptyState({ text }: { text: string }) {
     return (
-        <div className="flex items-center justify-center gap-2 h-28 text-xs text-neutral-400 italic rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50">
-            <Inbox className="w-4 h-4" /> {text}
+        <div className="flex flex-col items-center justify-center gap-3 h-40 text-neutral-400 rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/30">
+            <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-neutral-100 flex items-center justify-center">
+                <Inbox className="w-5 h-5 opacity-50" />
+            </div>
+            <span className="text-xs font-medium">{text}</span>
         </div>
     );
 }

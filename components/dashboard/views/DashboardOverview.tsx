@@ -74,27 +74,27 @@ export function DashboardOverview() {
             </div>
 
             {/* === ROW 3: YOUR PROGRESS (Full Width) === */}
-            <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-neutral-900">Your Progress</h3>
-                    <Link href="/dashboard/tasks?section=completed" className="text-[10px] font-medium text-neutral-400 hover:text-neutral-700 flex items-center gap-0.5">
-                        View completed <ArrowRight className="w-3 h-3" />
+            <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                    <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wide">Your Progress</h3>
+                    <Link href="/dashboard/tasks?section=completed" className="text-[10px] font-medium text-neutral-400 hover:text-neutral-900 transition-colors flex items-center gap-1 group">
+                        View completed <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                     </Link>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 rounded-xl border border-blue-100 bg-blue-50/50">
-                        <p className="text-[10px] font-semibold text-blue-600 mb-1">This week so far</p>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-xl font-bold text-blue-700">{PROGRESS.thisWeek.completed}</span>
-                            <span className="text-[10px] text-blue-500">done</span>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl border border-blue-100/60 bg-gradient-to-br from-blue-50/40 to-white/60 backdrop-blur-sm shadow-sm">
+                        <p className="text-[10px] font-bold text-blue-600 mb-1 uppercase tracking-wider">This week so far</p>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-2xl font-bold text-blue-700">{PROGRESS.thisWeek.completed}</span>
+                            <span className="text-[11px] font-medium text-blue-600/70">done</span>
                             <span className="text-[10px] text-neutral-400 ml-2">· {PROGRESS.thisWeek.inProgress} in progress</span>
                         </div>
                     </div>
-                    <div className="p-3 rounded-xl border border-emerald-100 bg-emerald-50/50">
-                        <p className="text-[10px] font-semibold text-emerald-600 mb-1">This month</p>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-xl font-bold text-emerald-700">{PROGRESS.thisMonth.completed}</span>
-                            <span className="text-[10px] text-emerald-500">done</span>
+                    <div className="p-4 rounded-2xl border border-emerald-100/60 bg-gradient-to-br from-emerald-50/40 to-white/60 backdrop-blur-sm shadow-sm">
+                        <p className="text-[10px] font-bold text-emerald-600 mb-1 uppercase tracking-wider">This month</p>
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="text-2xl font-bold text-emerald-700">{PROGRESS.thisMonth.completed}</span>
+                            <span className="text-[11px] font-medium text-emerald-600/70">done</span>
                             <span className="text-[10px] text-neutral-400 ml-2">· ~{PROGRESS.thisMonth.avgPerWeek}/week</span>
                         </div>
                     </div>
@@ -147,19 +147,19 @@ export function DashboardOverview() {
 
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: "blue" | "violet" | "orange" }) {
     const c = {
-        blue: { bg: "bg-blue-50", text: "text-blue-600" },
-        violet: { bg: "bg-violet-50", text: "text-violet-600" },
-        orange: { bg: "bg-orange-50", text: "text-orange-600" },
+        blue: { bg: "bg-blue-50/50", text: "text-blue-600", border: "border-blue-100" },
+        violet: { bg: "bg-violet-50/50", text: "text-violet-600", border: "border-violet-100" },
+        orange: { bg: "bg-orange-50/50", text: "text-orange-600", border: "border-orange-100" },
     }[color];
     return (
-        <div className="p-3 rounded-xl border border-neutral-200 bg-white">
+        <div className={clsx("p-4 rounded-2xl border bg-white/60 backdrop-blur-sm shadow-sm transition-all hover:shadow-md", c.border)}>
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-[9px] font-medium text-neutral-500 uppercase tracking-wide">{label}</p>
-                    <p className="text-2xl font-bold text-neutral-900">{value}</p>
+                    <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">{label}</p>
+                    <p className="text-2xl font-bold text-neutral-900 tracking-tight">{value}</p>
                 </div>
-                <div className={clsx("p-2 rounded-lg", c.bg, c.text)}>
-                    <Icon className="w-4 h-4" />
+                <div className={clsx("p-2.5 rounded-xl", c.bg, c.text)}>
+                    <Icon className="w-5 h-5" />
                 </div>
             </div>
         </div>
@@ -175,14 +175,14 @@ function PreviewSection({ title, titleIcon, viewAllHref, viewAllLabel = "View al
     cardStyle?: string;
 }) {
     return (
-        <div className="space-y-2">
-            <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-neutral-900 flex items-center gap-1">{titleIcon}{title}</h3>
-                <Link href={viewAllHref} className="text-[10px] font-medium text-neutral-400 hover:text-neutral-700 flex items-center gap-0.5">
-                    {viewAllLabel} <ArrowRight className="w-3 h-3" />
+        <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+                <h3 className="text-xs font-bold text-neutral-900 flex items-center gap-2 uppercase tracking-wide">{titleIcon}{title}</h3>
+                <Link href={viewAllHref} className="text-[10px] font-medium text-neutral-400 hover:text-neutral-900 transition-colors flex items-center gap-1 group">
+                    {viewAllLabel} <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
             </div>
-            <div className={clsx("rounded-xl border border-neutral-200 bg-white overflow-hidden divide-y divide-neutral-100", cardStyle)}>
+            <div className={clsx("rounded-2xl border border-neutral-100 bg-white/80 backdrop-blur-sm overflow-hidden divide-y divide-neutral-50 shadow-sm", cardStyle)}>
                 {children}
             </div>
         </div>
@@ -191,8 +191,11 @@ function PreviewSection({ title, titleIcon, viewAllHref, viewAllLabel = "View al
 
 function EmptyPlaceholder({ text = "No items" }: { text?: string }) {
     return (
-        <div className="flex items-center justify-center gap-2 h-20 text-xs text-neutral-400 italic">
-            <Inbox className="w-4 h-4" /> {text}
+        <div className="flex flex-col items-center justify-center gap-2 h-32 text-neutral-400">
+            <div className="w-10 h-10 rounded-full bg-neutral-50 flex items-center justify-center">
+                <Inbox className="w-5 h-5 opacity-50" />
+            </div>
+            <span className="text-xs font-medium">{text}</span>
         </div>
     );
 }

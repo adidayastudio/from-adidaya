@@ -32,7 +32,7 @@ export function DashboardOverdue() {
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
             {/* WARNING BANNER */}
-            <div className="p-4 rounded-xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 flex items-center gap-3">
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
                     <AlertTriangle className="w-5 h-5 text-red-600" />
                 </div>
@@ -55,14 +55,23 @@ export function DashboardOverdue() {
                 {/* === TASKS VIEW === */}
                 {mode === "tasks" && (
                     TASKS_OVERDUE.length > 0 ? (
-                        <div className="rounded-xl border border-red-100 bg-white overflow-hidden divide-y divide-red-50">
+                        <div className="rounded-2xl border border-red-100 bg-white shadow-sm overflow-hidden divide-y divide-red-50">
                             {TASKS_OVERDUE.map(task => (
-                                <Link key={task.id} href={`/flow/projects/${task.projectId}`} className="flex items-center justify-between px-3 py-3 hover:bg-red-50/50 transition-colors group">
-                                    <div className="flex-1 min-w-0">
-                                        <span className="text-xs font-medium text-neutral-700 group-hover:text-red-700 block truncate">{task.name}</span>
-                                        <span className="text-[10px] text-neutral-400">{task.id} · {task.projectName}</span>
+                                <Link key={task.id} href={`/flow/projects/${task.projectId}`} className="flex items-center gap-3 px-4 py-3 hover:bg-red-50/30 transition-all group border-b border-red-50 last:border-b-0">
+                                    <div className="w-8 h-8 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0 border border-red-200 font-bold text-xs ring-4 ring-red-50">
+                                        !
                                     </div>
-                                    <span className="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full shrink-0 ml-2">{task.daysOverdue}d late</span>
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-xs font-bold text-neutral-800 group-hover:text-red-700 block truncate transition-colors">{task.name}</span>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <span className="text-[10px] text-neutral-500">{task.projectName}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-[10px] font-bold text-white bg-red-500 px-2 py-0.5 rounded-full shadow-sm shadow-red-200">
+                                            {task.daysOverdue}d late
+                                        </span>
+                                    </div>
                                 </Link>
                             ))}
                         </div>
@@ -74,7 +83,7 @@ export function DashboardOverdue() {
                     PROJECTS_OVERDUE.length > 0 ? (
                         <div className="grid gap-3">
                             {PROJECTS_OVERDUE.map(project => (
-                                <Link key={project.id} href={`/flow/projects/${project.id}`} className="block p-4 rounded-xl border border-red-200 bg-red-50/30 hover:border-red-300 hover:shadow-sm transition-all group">
+                                <Link key={project.id} href={`/flow/projects/${project.id}`} className="block p-4 rounded-2xl border border-red-200 bg-red-50/30 hover:border-red-300 hover:shadow-md transition-all group">
                                     <div className="flex items-start justify-between mb-2">
                                         <div>
                                             <div className="flex items-center gap-2">
@@ -97,18 +106,26 @@ export function DashboardOverdue() {
                 {/* === NOTIFICATIONS VIEW === */}
                 {mode === "notifications" && (
                     NOTIFICATIONS_OVERDUE.length > 0 ? (
-                        <div className="rounded-xl border border-orange-100 bg-white overflow-hidden divide-y divide-orange-50">
+                        <div className="rounded-2xl border border-orange-100 bg-white shadow-sm overflow-hidden divide-y divide-orange-50">
                             {NOTIFICATIONS_OVERDUE.map(notif => (
-                                <Link key={notif.id} href={notif.link} className="flex items-start gap-3 p-3 hover:bg-orange-50/50 transition-colors group">
-                                    <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center shrink-0", notif.type === "approval" ? "bg-orange-100 text-orange-600" : "bg-amber-100 text-amber-600")}>
-                                        {notif.type === "approval" && <Clock className="w-4 h-4" />}
-                                        {notif.type === "signature" && <FileCheck className="w-4 h-4" />}
+                                <Link key={notif.id} href={notif.link} className="flex items-start gap-4 p-4 hover:bg-orange-50/30 transition-all group border-b border-orange-50 last:border-b-0">
+                                    <div className={clsx("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105",
+                                        notif.type === "approval" ? "bg-gradient-to-br from-orange-100 to-orange-50 text-orange-600" :
+                                            "bg-gradient-to-br from-amber-100 to-amber-50 text-amber-600"
+                                    )}>
+                                        {notif.type === "approval" && <Clock className="w-5 h-5" />}
+                                        {notif.type === "signature" && <FileCheck className="w-5 h-5" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs text-neutral-600 group-hover:text-orange-700">
-                                            <span className="font-semibold text-neutral-800">{notif.user}</span>&nbsp;{notif.text}
+                                        <div className="flex justify-between items-start mb-0.5">
+                                            <p className="text-xs font-bold text-neutral-900">{notif.user}</p>
+                                        </div>
+                                        <p className="text-xs text-neutral-600 leading-relaxed mb-2 group-hover:text-orange-900 transition-colors">
+                                            {notif.text}
                                         </p>
-                                        <span className="text-[10px] text-orange-500 font-medium">{notif.daysOverdue} days waiting</span>
+                                        <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-md font-bold">
+                                            {notif.daysOverdue} days waiting
+                                        </span>
                                     </div>
                                 </Link>
                             ))}
@@ -147,8 +164,11 @@ function TabButton({ active, onClick, icon, label, color, count }: { active: boo
 
 function EmptyState({ text }: { text: string }) {
     return (
-        <div className="flex items-center justify-center gap-2 h-28 text-xs text-neutral-400 italic rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50">
-            <Inbox className="w-4 h-4" /> {text}
+        <div className="flex flex-col items-center justify-center gap-3 h-32 text-neutral-400 rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/50">
+            <div className="w-8 h-8 rounded-full bg-white shadow-sm border border-neutral-100 flex items-center justify-center">
+                <Inbox className="w-4 h-4 opacity-50" />
+            </div>
+            <span className="text-xs font-medium italic">{text}</span>
         </div>
     );
 }

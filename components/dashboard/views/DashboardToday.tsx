@@ -60,7 +60,7 @@ export function DashboardToday() {
                         {timedTasks.length > 0 && (
                             <div className="space-y-2">
                                 <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide flex items-center gap-1"><Clock className="w-3 h-3" /> Scheduled</p>
-                                <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
+                                <div className="rounded-2xl border border-neutral-100 bg-white shadow-sm overflow-hidden">
                                     {timedTasks.map((task, i) => (
                                         <Link key={task.id} href={`/flow/projects/${task.projectId}`} className="flex items-start gap-3 p-3 hover:bg-neutral-50 transition-colors group border-b border-neutral-100 last:border-b-0">
                                             <div className="flex flex-col items-center pt-0.5">
@@ -79,12 +79,19 @@ export function DashboardToday() {
                         {untimedTasks.length > 0 && (
                             <div className="space-y-2">
                                 <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wide">Anytime</p>
-                                <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden divide-y divide-neutral-100">
+                                <div className="rounded-2xl border border-neutral-100 bg-white shadow-sm overflow-hidden divide-y divide-neutral-100">
                                     {untimedTasks.map(task => (
-                                        <Link key={task.id} href={`/flow/projects/${task.projectId}`} className="flex items-center justify-between px-3 py-2.5 hover:bg-neutral-50 transition-colors group">
+                                        <Link key={task.id} href={`/flow/projects/${task.projectId}`} className="flex items-center gap-3 px-4 py-3 hover:bg-neutral-50 transition-all group border-b border-neutral-50 last:border-b-0">
+                                            <div className="w-5 h-5 rounded-md border-2 border-neutral-200 group-hover:border-blue-400 transition-colors flex items-center justify-center shrink-0">
+                                                <div className="w-2.5 h-2.5 rounded-sm bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </div>
                                             <div className="flex-1 min-w-0">
-                                                <span className="text-xs font-medium text-neutral-700 group-hover:text-neutral-900 block truncate">{task.name}</span>
-                                                <span className="text-[10px] text-neutral-400">{task.id} · {task.projectName}</span>
+                                                <span className="text-xs font-semibold text-neutral-700 group-hover:text-neutral-900 block truncate transition-colors">{task.name}</span>
+                                                <div className="flex items-center gap-1.5 mt-0.5">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-neutral-300" />
+                                                    <span className="text-[10px] text-neutral-400 font-medium">{task.projectName}</span>
+                                                    <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-500 font-mono opacity-0 group-hover:opacity-100 transition-opacity">{task.id}</span>
+                                                </div>
                                             </div>
                                         </Link>
                                     ))}
@@ -100,7 +107,7 @@ export function DashboardToday() {
                     PROJECTS_TODAY.length > 0 ? (
                         <div className="grid gap-3">
                             {PROJECTS_TODAY.map(project => (
-                                <Link key={project.id} href={`/flow/projects/${project.id}`} className="block p-4 rounded-xl border border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm transition-all group">
+                                <Link key={project.id} href={`/flow/projects/${project.id}`} className="block p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm hover:border-neutral-200 hover:shadow-md transition-all group">
                                     <div className="flex items-start justify-between mb-2">
                                         <div>
                                             <div className="flex items-center gap-2">
@@ -126,19 +133,26 @@ export function DashboardToday() {
                 {/* === NOTIFICATIONS VIEW (DETAILED) === */}
                 {mode === "notifications" && (
                     NOTIFICATIONS_TODAY.length > 0 ? (
-                        <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden divide-y divide-neutral-100">
+                        <div className="rounded-2xl border border-neutral-100 bg-white shadow-sm overflow-hidden divide-y divide-neutral-100">
                             {NOTIFICATIONS_TODAY.map(notif => (
-                                <Link key={notif.id} href={notif.link} className="flex items-start gap-3 p-3 hover:bg-neutral-50 transition-colors group">
-                                    <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center shrink-0", notif.type === "approval" ? "bg-orange-100 text-orange-600" : notif.type === "comment" ? "bg-blue-100 text-blue-600" : "bg-emerald-100 text-emerald-600")}>
-                                        {notif.type === "approval" && <AlertCircle className="w-4 h-4" />}
-                                        {notif.type === "comment" && <MessageCircle className="w-4 h-4" />}
-                                        {notif.type === "submission" && <FileCheck className="w-4 h-4" />}
+                                <Link key={notif.id} href={notif.link} className="flex items-start gap-4 p-4 hover:bg-neutral-50 transition-all group border-b border-neutral-50 last:border-b-0">
+                                    <div className={clsx("w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105",
+                                        notif.type === "approval" ? "bg-gradient-to-br from-orange-100 to-orange-50 text-orange-600" :
+                                            notif.type === "comment" ? "bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600" :
+                                                "bg-gradient-to-br from-emerald-100 to-emerald-50 text-emerald-600"
+                                    )}>
+                                        {notif.type === "approval" && <AlertCircle className="w-5 h-5" />}
+                                        {notif.type === "comment" && <MessageCircle className="w-5 h-5" />}
+                                        {notif.type === "submission" && <FileCheck className="w-5 h-5" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs text-neutral-600 group-hover:text-neutral-900">
-                                            <span className="font-semibold text-neutral-800">{notif.user}</span>&nbsp;{notif.text}
+                                        <div className="flex justify-between items-start mb-0.5">
+                                            <p className="text-xs font-bold text-neutral-900">{notif.user}</p>
+                                            <span className="text-[10px] font-medium text-neutral-400">{notif.time}</span>
+                                        </div>
+                                        <p className="text-xs text-neutral-600 leading-relaxed line-clamp-2 group-hover:text-neutral-800 transition-colors">
+                                            {notif.text}
                                         </p>
-                                        <span className="text-[10px] text-neutral-400">{notif.time}</span>
                                     </div>
                                 </Link>
                             ))}
@@ -177,8 +191,11 @@ function TabButton({ active, onClick, icon, label, color, count }: { active: boo
 
 function EmptyState({ text }: { text: string }) {
     return (
-        <div className="flex items-center justify-center gap-2 h-28 text-xs text-neutral-400 italic rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50">
-            <Inbox className="w-4 h-4" /> {text}
+        <div className="flex flex-col items-center justify-center gap-3 h-40 text-neutral-400 rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/30">
+            <div className="w-10 h-10 rounded-full bg-white shadow-sm border border-neutral-100 flex items-center justify-center">
+                <Inbox className="w-5 h-5 opacity-50" />
+            </div>
+            <span className="text-xs font-medium">{text}</span>
         </div>
     );
 }
