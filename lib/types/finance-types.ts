@@ -7,6 +7,20 @@ export type PurchaseStage = "PLANNED" | "INVOICED" | "RECEIVED";
 
 export type FundingSourceType = "BANK" | "CASH" | "PETTY_CASH" | "REIMBURSE";
 
+export type BankProvider =
+    | "MANDIRI"
+    | "BCA"
+    | "BRI"
+    | "BNI"
+    | "BSI"
+    | "BLU"
+    | "JAGO"
+    | "JENIUS"
+    | "CIMB"
+    | "DANAMON"
+    | "PERMATA"
+    | "OTHER";
+
 export type PurchaseType = "MATERIAL" | "TOOL" | "SERVICE";
 
 export type ReimburseStatus = "DRAFT" | "PENDING" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED";
@@ -15,9 +29,14 @@ export interface FundingSource {
     id: string;
     name: string;
     type: FundingSourceType;
+    provider?: BankProvider; // For styling specific bank cards
     currency: string;
     balance?: number;
+    account_number?: string;
+    workspace_id?: string;
+    position?: number;
     is_active: boolean;
+    is_archived?: boolean;
     created_at: string;
     updated_at: string;
 }

@@ -64,11 +64,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     // Force personal view if user loses access (role change)
     useEffect(() => {
-        if (!canAccessTeam && viewMode === "team") {
+        // CRITICAL FIX: Only force switch if we are NOT loading. 
+        // Prevents race conditions where optimistic load says "staff" briefly before DB says "admin".
+        if (!loading && !canAccessTeam && viewMode === "team") {
             setViewModeState("personal");
             sessionStorage.removeItem(STORAGE_KEY);
         }
-    }, [canAccessTeam, viewMode]);
+        // DEBUG: Log current state
+        console.log(`[FinanceContext] Role: ${profile?.role}, CanAccessTeam: ${canAccessTeam}, ViewMode: ${viewMode}, Loading: ${loading}`);
+    }, [canAccessTeam, viewMode, profile, loading]);
 
     return (
         <FinanceContext.Provider
