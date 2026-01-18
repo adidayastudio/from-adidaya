@@ -43,13 +43,14 @@ export interface FundingSource {
 
 export interface PurchasingItem {
     id: string;
+    request_id?: string; // Link back to parent request
     date: string;
     project_id: string;
     project_code: string; // PRG, JPF
     project_name: string;
     vendor: string;
     description: string;
-    quantity?: string;
+    quantity?: number;
     unit?: string;
     type: PurchaseType;
     subcategory?: string;
@@ -57,6 +58,7 @@ export interface PurchasingItem {
     approval_status: ApprovalStatus;
     purchase_stage: PurchaseStage;
     financial_status: FinancialStatus;
+    invoice_url?: string;
     source_of_fund_id?: string;
     source_of_fund_name?: string;
     payment_date?: string;
@@ -65,6 +67,7 @@ export interface PurchasingItem {
     rejection_reason?: string;
     created_by: string;
     created_by_name?: string;
+    created_by_role?: string;
     submitted_by_name?: string;
     created_at: string;
     updated_at: string;
@@ -74,15 +77,21 @@ export interface ReimburseRequest {
     id: string;
     staff_id: string;
     staff_name: string;
+    staff_role?: string;
     project_id: string;
+    project_code?: string;
     project_name: string;
+    category: string;
     description: string;
     quantity?: string;
     amount: number;
+    approved_amount?: number;
     status: ReimburseStatus;
-    invoice_url?: string;
+    invoice_url?: string; // Receipt
+    payment_proof_url?: string; // Proof of transfer
     payment_date?: string;
     source_of_fund_id?: string;
+    details?: any;
     notes?: string;
     created_at: string;
     updated_at: string;

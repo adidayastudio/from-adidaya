@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
 import {
@@ -14,14 +13,10 @@ import {
     Plus,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import {
-    AttentionItem,
-    ApprovalStatus,
-    FinancialStatus
-} from "@/lib/types/finance-types";
 import { useFinance } from "./FinanceContext";
 import {
     formatShort,
+    cleanEntityName
 } from "./modules/utils";
 import { SummaryCard } from "./modules/SummaryCard";
 import { AttentionItemRow } from "./modules/AttentionItemRow";
@@ -29,39 +24,38 @@ import { RecentActivityList } from "./modules/RecentActivityList";
 import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 import { RequestTypeSelector, RequestType } from "./modules/RequestTypeSelector";
 import { PersonalPurchaseRow, PersonalReimburseRow } from "./modules/PersonalTransactionRows";
-import { MOCK_TEAM_SUMMARY, MOCK_GOODS_RECEIVED, MOCK_INVOICES, MOCK_STAFF_CLAIMS, MOCK_RECENT_ACTIVITY, MOCK_PERSONAL_SUMMARY, MOCK_MY_PURCHASES, MOCK_MY_REIMBURSE } from "./modules/mocks";
+import { fetchFinanceDashboardData } from "@/lib/api/finance";
 
 // Sort by: 1) deadline closest (expired first), 2) highest amount
-function sortAttentionItems(items: AttentionItem[]): AttentionItem[] {
+function sortAttentionItems(items: any[]): any[] {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     return [...items].sort((a, b) => {
-        const aDeadline = a.deadline ? new Date(a.deadline) : null;
-        const bDeadline = b.deadline ? new Date(b.deadline) : null;
-        const aOverdue = aDeadline && aDeadline <= today;
-        const bOverdue = bDeadline && bDeadline <= today;
-
-        if (aOverdue && !bOverdue) return -1;
-        if (!aOverdue && bOverdue) return 1;
-
-        if (aDeadline && bDeadline) {
-            const diff = aDeadline.getTime() - bDeadline.getTime();
-            if (diff !== 0) return diff;
-        }
-        if (aDeadline && !bDeadline) return -1;
-        if (!aDeadline && bDeadline) return 1;
-
-        return b.amount - a.amount;
+        const aDate = new Date(a.date || a.created_at);
+        const bDate = new Date(b.date || b.created_at);
+        return aDate.getTime() - bDate.getTime(); // Oldest first for attention
     });
 }
 
 export default function FinanceOverviewClient() {
-    const { viewMode, isLoading } = useFinance();
+    const { viewMode, isLoading: isAuthLoading, userId } = useFinance();
     const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [listType, setListType] = useState<RequestType>("PURCHASE");
+    const [data, setData] = useState<any>(null);
+    const [isLoadingData, setIsLoadingData] = useState(true);
     const router = useRouter();
+
+    useEffect(() => {
+        if (userId) {
+            setIsLoadingData(true);
+            fetchFinanceDashboardData(userId)
+                .then(res => setData(res))
+                .catch(err => console.error("Failed to load dashboard data", err))
+                .finally(() => setIsLoadingData(false));
+        }
+    }, [userId]);
 
     const handleNavigation = (path: string, params?: Record<string, string>) => {
         if (!params) {
@@ -71,6 +65,8 @@ export default function FinanceOverviewClient() {
         const searchParams = new URLSearchParams(params);
         router.push(`${path}?${searchParams.toString()}`);
     };
+
+    const isLoading = isAuthLoading || isLoadingData || !data;
 
     if (isLoading) {
         return <div className="p-8 text-center text-neutral-500">Loading finance data...</div>;
@@ -98,7 +94,7 @@ export default function FinanceOverviewClient() {
                                 icon={<DollarSign className="w-5 h-5 text-green-600" />}
                                 iconBg="bg-green-50"
                                 label="Total Paid (Month)"
-                                value={formatShort(MOCK_TEAM_SUMMARY.totalPaidThisMonth)}
+                                value={formatShort(data.summary.team.totalPaidThisMonth)}
                                 subtext="vs prev. month"
                                 trend="up"
                             />
@@ -106,22 +102,22 @@ export default function FinanceOverviewClient() {
                                 icon={<Receipt className="w-5 h-5 text-orange-600" />}
                                 iconBg="bg-orange-50"
                                 label="Outstanding Bills"
-                                value={formatShort(MOCK_TEAM_SUMMARY.outstanding)}
-                                subtext="12 invoices pending"
+                                value={formatShort(data.summary.team.outstanding)}
+                                subtext="pending payment"
                             />
                             <SummaryCard
                                 icon={<Users className="w-5 h-5 text-red-600" />}
                                 iconBg="bg-red-50"
                                 label="Reimburse Pending"
-                                value={formatShort(MOCK_TEAM_SUMMARY.reimbursePending)}
-                                subtext="5 requests waiting"
+                                value={formatShort(data.summary.team.reimbursePending)}
+                                subtext="waiting approval"
                             />
                             <SummaryCard
                                 icon={<Wallet className="w-5 h-5 text-purple-600" />}
                                 iconBg="bg-purple-50"
                                 label="Petty Cash Balance"
-                                value={formatShort(MOCK_TEAM_SUMMARY.pettyCashBalance)}
-                                subtext="Across 3 projects"
+                                value={formatShort(data.summary.team.pettyCashBalance)}
+                                subtext="Total balance"
                             />
                         </>
                     ) : (
@@ -130,28 +126,28 @@ export default function FinanceOverviewClient() {
                                 icon={<ShoppingCart className="w-5 h-5 text-red-600" />}
                                 iconBg="bg-red-50"
                                 label="My Purchases"
-                                value={MOCK_PERSONAL_SUMMARY.myPurchases.toString()}
+                                value={data.summary.personal.myPurchases.toString()}
                                 subtext="This month"
                             />
                             <SummaryCard
                                 icon={<Receipt className="w-5 h-5 text-purple-600" />}
                                 iconBg="bg-purple-50"
                                 label="My Reimbursements"
-                                value={MOCK_PERSONAL_SUMMARY.myReimburse.toString()}
+                                value={data.summary.personal.myReimburse.toString()}
                                 subtext="This month"
                             />
                             <SummaryCard
                                 icon={<DollarSign className="w-5 h-5 text-orange-600" />}
                                 iconBg="bg-orange-50"
                                 label="Pending Approval"
-                                value={formatShort(MOCK_PERSONAL_SUMMARY.pendingApproval)}
+                                value={formatShort(data.summary.personal.pendingApproval)}
                                 subtext="Awaiting manager"
                             />
                             <SummaryCard
                                 icon={<Wallet className="w-5 h-5 text-green-600" />}
                                 iconBg="bg-green-50"
                                 label="Paid to Me"
-                                value={formatShort(MOCK_PERSONAL_SUMMARY.paid)}
+                                value={formatShort(data.summary.personal.paid)}
                                 subtext="Transferred"
                             />
                         </>
@@ -203,9 +199,27 @@ export default function FinanceOverviewClient() {
                                                 </button>
                                             </div>
                                             <div className="space-y-1">
-                                                {sortAttentionItems(MOCK_GOODS_RECEIVED).slice(0, 5).map(item => (
-                                                    <AttentionItemRow key={item.id} item={item} onClick={() => { }} />
+                                                {data.lists.goodsReceived.map((item: any) => (
+                                                    <AttentionItemRow
+                                                        key={item.id}
+                                                        item={{
+                                                            id: item.id,
+                                                            type: 'goods_received',
+                                                            description: item.description,
+                                                            quantity: `${item.quantity} ${item.unit}`,
+                                                            projectCode: item.project?.project_code || 'N/A',
+                                                            projectName: item.project?.project_name || 'Project',
+                                                            submittedDate: item.date,
+                                                            beneficiary: item.vendor,
+                                                            beneficiaryType: 'vendor',
+                                                            amount: item.amount
+                                                        }}
+                                                        onClick={() => router.push(`/flow/finance/purchasing?view=team&id=${item.id}`)}
+                                                    />
                                                 ))}
+                                                {data.lists.goodsReceived.length === 0 && (
+                                                    <p className="text-sm text-neutral-400 italic pl-2">No pending items found.</p>
+                                                )}
                                             </div>
                                         </div>
                                         {/* INVOICES */}
@@ -222,9 +236,27 @@ export default function FinanceOverviewClient() {
                                                 </button>
                                             </div>
                                             <div className="space-y-1">
-                                                {sortAttentionItems(MOCK_INVOICES).slice(0, 3).map(item => (
-                                                    <AttentionItemRow key={item.id} item={item} onClick={() => { }} />
+                                                {data.lists.invoices.map((item: any) => (
+                                                    <AttentionItemRow
+                                                        key={item.id}
+                                                        item={{
+                                                            id: item.id,
+                                                            type: 'invoice',
+                                                            description: item.description,
+                                                            quantity: `${item.quantity} ${item.unit}`,
+                                                            projectCode: item.project?.project_code || 'N/A',
+                                                            projectName: item.project?.project_name || 'Project',
+                                                            submittedDate: item.date,
+                                                            beneficiary: item.vendor,
+                                                            beneficiaryType: 'vendor',
+                                                            amount: item.amount
+                                                        }}
+                                                        onClick={() => router.push(`/flow/finance/purchasing?view=team&id=${item.id}`)}
+                                                    />
                                                 ))}
+                                                {data.lists.invoices.length === 0 && (
+                                                    <p className="text-sm text-neutral-400 italic pl-2">No pending invoices found.</p>
+                                                )}
                                             </div>
                                         </div>
                                     </>
@@ -243,11 +275,26 @@ export default function FinanceOverviewClient() {
                                             </button>
                                         </div>
                                         <div className="space-y-1">
-                                            {sortAttentionItems(MOCK_STAFF_CLAIMS).slice(0, 10).map(item => (
-                                                <AttentionItemRow key={item.id} item={item} onClick={() => { }} />
+                                            {data.lists.staffClaims.map((item: any) => (
+                                                <AttentionItemRow
+                                                    key={item.id}
+                                                    item={{
+                                                        id: item.id,
+                                                        type: 'staff_claim',
+                                                        description: item.description,
+                                                        quantity: item.qty || '1',
+                                                        projectCode: item.project?.project_code || 'N/A',
+                                                        projectName: item.project?.project_name || 'Project',
+                                                        submittedDate: item.created_at,
+                                                        beneficiary: item.staff_name || 'Staff',
+                                                        beneficiaryType: 'staff',
+                                                        amount: item.amount
+                                                    }}
+                                                    onClick={() => router.push(`/flow/finance/reimburse?view=team&id=${item.id}`)}
+                                                />
                                             ))}
-                                            {MOCK_STAFF_CLAIMS.length === 0 && (
-                                                <div className="py-20 text-center">
+                                            {data.lists.staffClaims.length === 0 && (
+                                                <div className="py-10 text-center">
                                                     <Receipt className="w-12 h-12 text-neutral-200 mx-auto mb-3" />
                                                     <p className="text-neutral-400 text-sm font-medium">No reimbursement requests</p>
                                                 </div>
@@ -273,29 +320,33 @@ export default function FinanceOverviewClient() {
                                             </button>
                                         </div>
                                         <div className="space-y-2">
-                                            {MOCK_MY_PURCHASES.map(p => (
+                                            {data.lists.myPurchaseHistory.map((p: any) => (
                                                 <PersonalPurchaseRow
                                                     key={p.id}
                                                     item={{
                                                         id: p.id,
                                                         description: p.description,
-                                                        quantity: p.quantity,
-                                                        vendor: p.beneficiary,
-                                                        project_name: p.projectName,
-                                                        project_code: p.projectCode,
+                                                        quantity: 1,
+                                                        unit: 'lot',
+                                                        vendor: p.vendor || 'Unknown Vendor',
+                                                        project_name: p.project?.project_name || 'General',
+                                                        project_code: p.project?.project_code || 'GEN',
                                                         amount: p.amount,
-                                                        financial_status: 'UNPAID',
-                                                        approval_status: p.type === 'invoice' ? 'APPROVED' : 'SUBMITTED',
-                                                        purchase_stage: p.type === 'invoice' ? 'INVOICED' : 'RECEIVED',
-                                                        type: 'MATERIAL',
-                                                        date: p.submittedDate,
-                                                        project_id: p.projectCode,
+                                                        financial_status: p.financial_status,
+                                                        approval_status: p.approval_status,
+                                                        purchase_stage: p.purchase_stage,
+                                                        type: p.type || 'MATERIAL',
+                                                        date: p.date || p.created_at,
+                                                        project_id: p.project_id || 'general',
                                                         created_by: "Me",
-                                                        created_at: p.submittedDate,
-                                                        updated_at: p.submittedDate
+                                                        created_at: p.created_at,
+                                                        updated_at: p.updated_at
                                                     }}
                                                 />
                                             ))}
+                                            {data.lists.myPurchaseHistory.length === 0 && (
+                                                <p className="text-sm text-neutral-400 italic">No purchase history found.</p>
+                                            )}
                                         </div>
                                     </div>
                                 ) : (
@@ -312,24 +363,29 @@ export default function FinanceOverviewClient() {
                                             </button>
                                         </div>
                                         <div className="space-y-2">
-                                            {MOCK_MY_REIMBURSE.map(r => (
+                                            {data.lists.myReimburseHistory.map((r: any) => (
                                                 <PersonalReimburseRow
                                                     key={r.id}
                                                     item={{
                                                         id: r.id,
                                                         description: r.description,
-                                                        quantity: r.quantity,
-                                                        project_name: r.projectName,
+                                                        quantity: r.quantity || '1',
+                                                        project_name: r.project?.project_name || 'General',
                                                         amount: r.amount,
-                                                        status: 'PENDING',
-                                                        created_at: r.submittedDate,
+                                                        status: r.status,
+                                                        created_at: r.created_at,
                                                         staff_id: 'me',
                                                         staff_name: 'You',
-                                                        project_id: r.projectCode,
-                                                        updated_at: r.submittedDate
+                                                        project_id: r.project_id || 'general',
+                                                        project_code: r.project?.project_code || 'GEN',
+                                                        updated_at: r.updated_at,
+                                                        category: r.category || 'General'
                                                     }}
                                                 />
                                             ))}
+                                            {data.lists.myReimburseHistory.length === 0 && (
+                                                <p className="text-sm text-neutral-400 italic">No reimbursement history found.</p>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -352,7 +408,13 @@ export default function FinanceOverviewClient() {
                         </div>
 
                         <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl shadow-sm px-6 py-5">
-                            <RecentActivityList activities={MOCK_RECENT_ACTIVITY} />
+                            <RecentActivityList activities={data.lists.recentActivity.map((a: any) => ({
+                                id: a.id,
+                                action: a.type === 'PURCHASE' ? (a.approval_status === 'APPROVED' ? 'Purchase Approved' : 'New Purchase Request') : (a.status === 'APPROVED' ? 'Reimbursement Approved' : 'New Reimbursement'),
+                                description: `${a.description} - ${formatShort(a.amount)}`,
+                                user: cleanEntityName(a.created_by_name || a.staff_name || 'Unknown User'),
+                                timestamp: a.updated_at
+                            }))} />
                         </div>
                     </div>
                 )}
@@ -362,6 +424,11 @@ export default function FinanceOverviewClient() {
             <NewRequestDrawer
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
+                onSuccess={() => {
+                    if (userId) {
+                        fetchFinanceDashboardData(userId).then(setData);
+                    }
+                }}
             />
         </FinancePageWrapper>
     );

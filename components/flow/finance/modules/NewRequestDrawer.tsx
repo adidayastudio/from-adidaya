@@ -10,12 +10,16 @@ export function NewRequestDrawer({
     isOpen,
     onClose,
     initialType = "PURCHASE",
-    hideSwitcher = false
+    hideSwitcher = false,
+    initialData,
+    onSuccess
 }: {
     isOpen: boolean;
     onClose: () => void;
     initialType?: RequestType;
     hideSwitcher?: boolean;
+    initialData?: any;
+    onSuccess?: () => void;
 }) {
     const [requestType, setRequestType] = useState<RequestType>(initialType);
 
@@ -93,9 +97,9 @@ export function NewRequestDrawer({
                 {/* Form Container (Scrollable) */}
                 <div className="flex-1 overflow-y-auto scrollbar-hide pb-2">
                     {requestType === "PURCHASE" ? (
-                        <PurchaseRequestForm onClose={onClose} />
+                        <PurchaseRequestForm onClose={onClose} onSuccess={onSuccess} initialData={initialData} />
                     ) : (
-                        <ReimburseRequestForm onClose={onClose} />
+                        <ReimburseRequestForm onClose={onClose} onSuccess={onSuccess} initialData={initialData} />
                     )}
                 </div>
             </div>

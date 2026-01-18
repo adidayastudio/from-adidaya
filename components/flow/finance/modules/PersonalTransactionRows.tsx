@@ -92,7 +92,7 @@ export function PersonalReimburseRow({ item }: PersonalReimburseRowProps) {
             <div>
                 <div className="flex flex-col gap-1">
                     <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100/60 px-1 py-0.5 rounded border border-neutral-200/30 w-fit tracking-tight">
-                        {item.project_id}
+                        {item.project_code}
                     </span>
                     <span className="text-[12px] font-medium text-neutral-900 truncate max-w-[150px]">
                         {cleanEntityName(item.project_name)}

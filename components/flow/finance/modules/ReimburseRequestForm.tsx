@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { clsx } from "clsx";
 import { Car, Package, Wrench, Utensils, Home, MoreHorizontal, DollarSign, CheckCircle, Upload, X, Plus } from "lucide-react";
 import { Select } from "@/shared/ui/primitives/select/select";
@@ -11,6 +11,11 @@ import {
     TRANSPORT_ROUTES,
     UNIT_OPTIONS
 } from "./constants";
+import { fetchAllProjects } from "@/lib/api/projects";
+import { Project } from "@/types/project";
+import { createReimburseRequest, updateReimburseRequest } from "@/lib/api/finance";
+import { uploadFinanceFile } from "@/lib/api/storage";
+import { useFinance } from "../FinanceContext";
 
 interface LineItem {
     id: string;
@@ -22,12 +27,18 @@ interface LineItem {
 }
 
 export function ReimburseRequestForm({
-    onClose
+    onClose,
+    onSuccess,
+    initialData
 }: {
     onClose: () => void;
+    onSuccess?: () => void;
+    initialData?: any;
 }) {
-    // -- STATE --
-    const [project, setProject] = useState("");
+    // -- CONTEXT & STATE --
+    const { userId } = useFinance();
+    const [projectCode, setProjectCode] = useState("");
+    const [projects, setProjects] = useState<Project[]>([]);
     const [reimbCategory, setReimbCategory] = useState<ReimburseCategory | "">("");
     const [reimbDate, setReimbDate] = useState("");
     const [reimbDescription, setReimbDescription] = useState("");
@@ -35,6 +46,9 @@ export function ReimburseRequestForm({
         { id: Math.random().toString(36).substr(2, 9), name: "", qty: 1, unit: "pcs", unitPrice: 0, total: 0 }
     ]);
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const isReadOnly = initialData && ["APPROVED", "PAID", "REJECTED"].includes(initialData.status);
 
     // Specific states
     const [transType, setTransType] = useState("");
@@ -64,18 +78,78 @@ export function ReimburseRequestForm({
 
     const [otherDetail, setOtherDetail] = useState("");
 
+    // Load Projects
+    useEffect(() => {
+        fetchAllProjects().then(setProjects);
+
+        if (initialData) {
+            setProjectCode(initialData.project_code || initialData.project?.project_code || "");
+            setReimbCategory(initialData.category as ReimburseCategory);
+            setReimbDate(initialData.date?.split("T")[0] || "");
+            setReimbDescription(initialData.description || "");
+
+            // Map items
+            if (initialData.items && initialData.items.length > 0) {
+                setItems(initialData.items.map((i: any) => ({
+                    id: i.id || Math.random().toString(36).substr(2, 9),
+                    name: i.name,
+                    qty: i.qty,
+                    unit: i.unit,
+                    unitPrice: i.unit_price,
+                    total: i.total
+                })));
+            }
+
+            // Map details
+            const d = initialData.details || {};
+            if (d.transType) setTransType(d.transType);
+            if (d.transRoute) setTransRoute(d.transRoute);
+            if (d.transFrom) setTransFrom(d.transFrom);
+            if (d.transTo) setTransTo(d.transTo);
+            if (d.transDist) setTransDist(d.transDist);
+
+            if (d.matPurpose) setMatPurpose(d.matPurpose);
+            if (d.matFor) setMatFor(d.matFor);
+
+            if (d.toolType) setToolType(d.toolType);
+            if (d.toolProject) setToolProject(d.toolProject);
+            if (d.toolCond) setToolCond(d.toolCond);
+            if (d.toolDuration) setToolDuration(d.toolDuration);
+
+            if (d.consType) setConsType(d.consType);
+            if (d.consPax) setConsPax(d.consPax);
+            if (d.consPurpose) setConsPurpose(d.consPurpose);
+            if (d.consLoc) setConsLoc(d.consLoc);
+
+            if (d.accType) setAccType(d.accType);
+            if (d.accLoc) setAccLoc(d.accLoc);
+            if (d.accIn) setAccIn(d.accIn);
+            if (d.accOut) setAccOut(d.accOut);
+            if (d.accPurpose) setAccPurpose(d.accPurpose);
+
+            if (d.otherDetail) setOtherDetail(d.otherDetail);
+        }
+    }, [initialData]);
+
+    const projectOptions = useMemo(() => {
+        return projects.map(p => ({ value: p.projectCode, label: `${p.projectCode} - ${p.projectName}` }));
+    }, [projects]);
+
     // -- ITEM ACTIONS --
     const addItem = () => {
+        if (isReadOnly) return;
         setItems([...items, { id: Math.random().toString(36).substr(2, 9), name: "", qty: 1, unit: "pcs", unitPrice: 0, total: 0 }]);
     };
 
     const removeItem = (id: string) => {
+        if (isReadOnly) return;
         if (items.length > 1) {
             setItems(items.filter(i => i.id !== id));
         }
     };
 
     const updateItem = (id: string, updates: Partial<LineItem>) => {
+        if (isReadOnly) return;
         setItems(items.map(i => {
             if (i.id === id) {
                 const updated = { ...i, ...updates };
@@ -94,16 +168,20 @@ export function ReimburseRequestForm({
     }, [items]);
 
     const transportEstCost = useMemo(() => {
-        if (!transDist) return 0;
-        return parseFloat(transDist) * 2500;
-    }, [transDist]);
+        const dist = parseFloat(transDist) || 0;
+        if (transType === "MOTOR") return dist * 2500;
+        if (transType === "MOBIL") return dist * 15000;
+        if (transType === "PUBLIC") return 5000;
+        if (transType === "ONLINE") return dist * 3000;
+        return 0;
+    }, [transDist, transType]);
 
     // -- VALIDATION --
     const isValid = useMemo(() => {
-        if (!project) return false;
+        if (!projectCode) return false;
         if (!reimbCategory || !reimbDescription || !reimbDate) return false;
         if (items.some(i => !i.name || i.qty <= 0 || i.unitPrice < 0)) return false;
-        if (!invoiceFile) return false; // Always required
+        // if (!invoiceFile) return false; // Temporarily optional until storage
 
         switch (reimbCategory) {
             case "TRANSPORTATION":
@@ -122,7 +200,7 @@ export function ReimburseRequestForm({
                 return false;
         }
     }, [
-        project, reimbCategory, reimbDescription, reimbDate, items, invoiceFile,
+        projectCode, reimbCategory, reimbDescription, reimbDate, items, invoiceFile,
         transType, transFrom, transTo, transRoute, transDist,
         matPurpose, matFor,
         toolType, toolProject, toolCond,
@@ -131,12 +209,75 @@ export function ReimburseRequestForm({
         otherDetail
     ]);
 
-    const handleSave = () => {
-        if (!isValid) return;
-        console.log("Saving Reimburse Request...", {
-            project, reimbCategory, items, totalAmount, invoiceFile
-        });
-        onClose();
+    const handleSave = async () => {
+        if (isReadOnly) return;
+        if (!isValid || isSubmitting) return;
+        setIsSubmitting(true);
+
+        try {
+            const selectedProject = projects.find(p => p.projectCode === projectCode);
+            if (!selectedProject) throw new Error("Invalid project selected");
+
+            let uploadedInvoiceUrl = null;
+            if (invoiceFile) {
+                uploadedInvoiceUrl = await uploadFinanceFile(invoiceFile, "reimburse");
+                if (!uploadedInvoiceUrl) {
+                    alert("Failed to upload proof. Continuing without it.");
+                }
+            }
+
+            let details: Record<string, any> = {};
+
+            // Construct details based on category
+            if (reimbCategory === "TRANSPORTATION") {
+                details = { transType, transRoute, transFrom, transTo, transDist, transportEstCost };
+            } else if (reimbCategory === "MATERIAL") {
+                details = { matPurpose, matFor };
+            } else if (reimbCategory === "TOOLS") {
+                details = { toolType, toolProject, toolCond, toolDuration };
+            } else if (reimbCategory === "CONSUMPTION") {
+                details = { consType, consPax, consPurpose, consLoc };
+            } else if (reimbCategory === "ACCOMMODATION") {
+                details = { accType, accLoc, accIn, accOut, accPurpose };
+            } else if (reimbCategory === "OTHER") {
+                details = { otherDetail };
+            }
+
+            if (!userId) throw new Error("User not authenticated");
+
+            const payload = {
+                project_id: selectedProject.id,
+                date: reimbDate,
+                description: reimbDescription,
+                category: reimbCategory as string,
+                amount: totalAmount,
+                status: initialData ? initialData.status : "PENDING", // Preserve status on edit
+                details,
+                invoice_url: uploadedInvoiceUrl || (initialData?.invoice_url), // Keep existing URL if not replaced
+                created_by: userId,
+                items: items.map(i => ({
+                    name: i.name,
+                    qty: i.qty,
+                    unit: i.unit,
+                    unitPrice: i.unitPrice,
+                    total: i.total
+                }))
+            };
+
+            if (initialData?.id) {
+                await updateReimburseRequest(initialData.id, payload);
+            } else {
+                await createReimburseRequest(payload);
+            }
+
+            if (onSuccess) onSuccess();
+            onClose();
+        } catch (error) {
+            console.error("Error saving reimburse request:", error);
+            alert("Failed to save request.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -150,13 +291,10 @@ export function ReimburseRequestForm({
                     <div className="space-y-4">
                         <Select
                             label="Project *"
-                            value={project}
-                            onChange={setProject}
-                            options={[
-                                { value: "RKM", label: "RKM - Rumah Kemang" },
-                                { value: "VLP", label: "VLP - Villa Puncak" },
-                                { value: "PRG", label: "PRG - Proj Gunawarman" }
-                            ]}
+                            value={projectCode}
+                            onChange={setProjectCode}
+                            options={projectOptions}
+                            placeholder="Select project..."
                         />
                         <div className="grid grid-cols-2 gap-4">
                             <Select
@@ -474,11 +612,11 @@ export function ReimburseRequestForm({
                         Cancel
                     </button>
                     <button
-                        disabled={!isValid}
+                        disabled={!isValid || isSubmitting || isReadOnly}
                         onClick={handleSave}
                         className="flex-[2] h-11 text-sm font-bold text-white bg-red-500 hover:bg-red-600 active:scale-[0.98] rounded-xl transition-all shadow-lg shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
                     >
-                        Save Request
+                        {isSubmitting ? "Saving..." : "Save Request"}
                     </button>
                 </div>
             </div>

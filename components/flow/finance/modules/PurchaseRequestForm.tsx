@@ -1,9 +1,14 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { clsx } from "clsx";
 import { Briefcase, Clock, Package, DollarSign, FileText, CheckCircle, Upload, AlertTriangle, X } from "lucide-react";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Category, PurchaseStage, CATEGORY_OPTIONS, SUBCATEGORY_OPTIONS, UNIT_OPTIONS } from "./constants";
+import { fetchAllProjects } from "@/lib/api/projects";
+import { Project } from "@/types/project";
+import { createPurchasingRequest, updatePurchasingRequest } from "@/lib/api/finance";
+import { uploadFinanceFile } from "@/lib/api/storage";
+import { useFinance } from "../FinanceContext";
 
 interface LineItem {
     id: string;
@@ -15,35 +20,71 @@ interface LineItem {
 }
 
 export function PurchaseRequestForm({
-    onClose
+    onClose,
+    onSuccess,
+    initialData
 }: {
     onClose: () => void;
+    onSuccess?: () => void;
+    initialData?: any;
 }) {
-    // -- STATE --
-    const [project, setProject] = useState("");
-    const [category, setCategory] = useState<Category | "">("");
-    const [subcategory, setSubcategory] = useState("");
-    const [stage, setStage] = useState<PurchaseStage>("PLANNED");
-    const [vendor, setVendor] = useState("");
-    const [items, setItems] = useState<LineItem[]>([
+    // -- CONTEXT & STATE --
+    const { userId } = useFinance();
+    const [projectCode, setProjectCode] = useState(initialData?.project_code || "");
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [category, setCategory] = useState<Category | "">(initialData?.type || "");
+    const [subcategory, setSubcategory] = useState(initialData?.subcategory || "");
+    const [stage, setStage] = useState<PurchaseStage>(initialData?.purchase_stage || "PLANNED");
+    const [vendor, setVendor] = useState(initialData?.vendor || "");
+
+    // Parse items from initialData (which is single item flattened) or default
+    // If initialData is present, it's a single item edit usually, or we need to handle multi-item edit?
+    // The current table structure flattens items. If we edit "a request", we might be editing just that item line?
+    // User expectation: "Edit Request" typically implies editing the whole request.
+    // However, we only passed a single flattened item.
+    // For now, let's assume we are editing the single item as a request with 1 item.
+    const [items, setItems] = useState<LineItem[]>(initialData ? [{
+        id: initialData.id, // PurchasingItem ID (which is the item id)
+        name: initialData.description,
+        qty: initialData.quantity,
+        unit: initialData.unit,
+        unitPrice: (initialData.amount || 0) / (initialData.quantity || 1), // Approximate unit price
+        total: initialData.amount || 0
+    }] : [
         { id: Math.random().toString(36).substr(2, 9), name: "", qty: 1, unit: "pcs", unitPrice: 0, total: 0 }
     ]);
+
     const [priceType, setPriceType] = useState<"ESTIMATION" | "ACTUAL">("ESTIMATION");
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
-    const [notes, setNotes] = useState("");
+    const [notes, setNotes] = useState(initialData?.notes || "");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const isReadOnly = initialData && ["APPROVED", "PAID", "REJECTED"].includes(initialData.approval_status);
+
+    // Load Projects
+    useEffect(() => {
+        fetchAllProjects().then(setProjects);
+    }, []);
+
+    const projectOptions = useMemo(() => {
+        return projects.map(p => ({ value: p.projectCode, label: `${p.projectCode} - ${p.projectName}` }));
+    }, [projects]);
 
     // -- ITEM ACTIONS --
     const addItem = () => {
+        if (isReadOnly) return;
         setItems([...items, { id: Math.random().toString(36).substr(2, 9), name: "", qty: 1, unit: "pcs", unitPrice: 0, total: 0 }]);
     };
 
     const removeItem = (id: string) => {
+        if (isReadOnly) return;
         if (items.length > 1) {
             setItems(items.filter(i => i.id !== id));
         }
     };
 
     const updateItem = (id: string, updates: Partial<LineItem>) => {
+        if (isReadOnly) return;
         setItems(items.map(i => {
             if (i.id === id) {
                 const updated = { ...i, ...updates };
@@ -63,23 +104,82 @@ export function PurchaseRequestForm({
 
     // -- VALIDATION --
     const isValid = useMemo(() => {
-        if (!project) return false;
+        if (!projectCode) return false;
         if (!category || !subcategory) return false;
         if (items.some(i => !i.name || i.qty <= 0 || i.unitPrice < 0)) return false;
 
         if (stage === "INVOICED" || stage === "RECEIVED") {
             if (!vendor) return false;
-            if (!invoiceFile) return false;
+            // if (!invoiceFile) return false; // Temporarily optional
         }
         return true;
-    }, [project, category, subcategory, items, stage, vendor, invoiceFile]);
+    }, [projectCode, category, subcategory, items, stage, vendor, invoiceFile]);
 
-    const handleSave = () => {
-        if (!isValid) return;
-        console.log("Saving Purchase Request...", {
-            project, category, subcategory, stage, vendor, items, totalAmount, priceType, invoiceFile, notes
-        });
-        onClose();
+    const handleSave = async () => {
+        if (isReadOnly) return;
+        if (!isValid || isSubmitting) return;
+        setIsSubmitting(true);
+
+        try {
+            const selectedProject = projects.find(p => p.projectCode === projectCode);
+            if (!selectedProject) throw new Error("Invalid project selected");
+
+            let uploadedInvoiceUrl = null;
+            if (invoiceFile) {
+                uploadedInvoiceUrl = await uploadFinanceFile(invoiceFile, "invoices");
+                if (!uploadedInvoiceUrl) {
+                    const confirmContinue = window.confirm("Failed to upload invoice. Continue without it?");
+                    if (!confirmContinue) throw new Error("Upload failed");
+                }
+            } else if (initialData?.invoice_url) {
+                uploadedInvoiceUrl = initialData.invoice_url;
+            }
+
+            if (!userId) throw new Error("User not authenticated");
+
+            const payload: any = {
+                project_id: selectedProject.id,
+                date: new Date().toISOString().split('T')[0],
+                vendor: vendor || undefined,
+                description: items.length > 1 ? `${items[0].name} + ${items.length - 1} more` : items[0].name,
+                type: category as any,
+                subcategory,
+                amount: totalAmount,
+                purchase_stage: stage,
+                approval_status: initialData ? initialData.approval_status : "SUBMITTED",
+                financial_status: initialData ? initialData.financial_status : "UNPAID",
+                invoice_url: uploadedInvoiceUrl || undefined,
+                created_by: userId,
+                notes: notes,
+                items: items.map(i => ({
+                    name: i.name,
+                    qty: i.qty,
+                    unit: i.unit,
+                    unitPrice: i.unitPrice,
+                    total: i.total
+                }))
+            };
+
+            const requestId = initialData?.request_id || initialData?.id;
+
+            if (requestId && initialData) {
+                // Update
+                if (isReadOnly) return;
+                await updatePurchasingRequest(requestId, payload);
+            } else {
+                // Create
+                await createPurchasingRequest(payload);
+            }
+
+            if (onSuccess) onSuccess();
+            onClose();
+        } catch (error) {
+            console.error("Error saving purchase request:", error);
+            console.error("Error details:", JSON.stringify(error, null, 2));
+            alert(`Failed to save request: ${error instanceof Error ? error.message : "Unknown error"}`);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -93,13 +193,10 @@ export function PurchaseRequestForm({
                     <div className="space-y-4">
                         <Select
                             label="Project *"
-                            value={project}
-                            onChange={setProject}
-                            options={[
-                                { value: "RKM", label: "RKM - Rumah Kemang" },
-                                { value: "VLP", label: "VLP - Villa Puncak" },
-                                { value: "PRG", label: "PRG - Proj Gunawarman" }
-                            ]}
+                            value={projectCode}
+                            onChange={setProjectCode}
+                            options={projectOptions}
+                            placeholder="Select project..."
                         />
                         <div className="grid grid-cols-2 gap-4">
                             <Select
@@ -365,11 +462,11 @@ export function PurchaseRequestForm({
                         Cancel
                     </button>
                     <button
-                        disabled={!isValid}
+                        disabled={!isValid || isSubmitting || isReadOnly}
                         onClick={handleSave}
                         className="flex-[2] h-11 text-sm font-bold text-white bg-red-500 hover:bg-red-600 active:scale-[0.98] rounded-xl transition-all shadow-lg shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
                     >
-                        Save Request
+                        {isSubmitting ? "Saving..." : "Save Request"}
                     </button>
                 </div>
             </div>

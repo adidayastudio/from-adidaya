@@ -154,3 +154,613 @@ function mapDbToFundingSource(row: any): FundingSource {
         updated_at: row.updated_at
     };
 }
+
+// -- PURCHASING --
+
+export interface PurchasingRequestPayload {
+    project_id: string;
+    date: string;
+    vendor?: string;
+    description: string;
+    type: string;
+    subcategory?: string;
+    amount: number;
+    approval_status?: string;
+    purchase_stage?: string;
+    financial_status?: string;
+    source_of_fund_id?: string;
+    payment_date?: string;
+    invoice_url?: string;
+    notes?: string;
+    created_by: string; // Required: user ID
+    items: {
+        name: string;
+        qty: number;
+        unit: string;
+        unitPrice: number;
+        total: number;
+    }[];
+}
+
+export async function createPurchasingRequest(payload: PurchasingRequestPayload) {
+    const { items, created_by, ...requestData } = payload;
+
+    if (!created_by) {
+        throw new Error("User ID is required to create a purchasing request");
+    }
+
+    console.log("[DEBUG] createPurchasingRequest - User:", created_by);
+    console.log("[DEBUG] createPurchasingRequest - Payload:", JSON.stringify(requestData, null, 2));
+
+    // 1. Create Request
+    const { data: request, error: reqError } = await supabase
+        .from("purchasing_requests")
+        .insert([{
+            ...requestData,
+            created_by
+        }])
+        .select()
+        .single();
+
+    if (reqError) {
+        console.error("Error creating purchasing request:", JSON.stringify(reqError, null, 2));
+        console.error("Error details - code:", reqError.code, "message:", reqError.message, "hint:", reqError.hint);
+        throw reqError;
+    }
+
+    // 2. Create Items
+    if (items.length > 0) {
+        const itemsData = items.map(item => ({
+            request_id: request.id,
+            name: item.name,
+            qty: item.qty,
+            unit: item.unit,
+            unit_price: item.unitPrice,
+            total: item.total
+        }));
+
+        const { error: itemsError } = await supabase
+            .from("purchasing_items")
+            .insert(itemsData);
+
+        if (itemsError) {
+            console.error("Error creating purchasing items:", itemsError);
+            // Optional: rollback request creation?
+            throw itemsError;
+        }
+    }
+
+    return request;
+}
+
+export async function updatePurchasingRequest(id: string, payload: Partial<PurchasingRequestPayload>) {
+    const { items, ...requestData } = payload;
+
+    // 1. Update Request
+    const { error: reqError } = await supabase
+        .from("purchasing_requests")
+        .update({
+            ...requestData,
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+    if (reqError) {
+        console.error("Error updating purchasing request:", reqError);
+        console.error("Error details:", JSON.stringify(reqError, null, 2));
+        throw reqError;
+    }
+
+    // 2. Update Items (Delete all and recreate for simplicity, same as reimburse)
+    if (items) {
+        // Delete old
+        const { error: delError } = await supabase
+            .from("purchasing_items")
+            .delete()
+            .eq("request_id", id);
+
+        if (delError) {
+            console.error("Delete items error:", delError);
+            throw delError;
+        }
+
+        // Insert new
+        if (items.length > 0) {
+            const itemsData = items.map(item => ({
+                request_id: id,
+                name: item.name,
+                qty: item.qty,
+                unit: item.unit,
+                unit_price: item.unitPrice,
+                total: item.total
+            }));
+
+            const { error: insError } = await supabase
+                .from("purchasing_items")
+                .insert(itemsData);
+
+            if (insError) {
+                console.error("Insert items error:", insError);
+                console.error("Failed ID:", id);
+                throw insError; // This is where FK error happens 
+            }
+        }
+    }
+
+    return true;
+}
+
+export async function fetchPurchasingRequests() {
+    const { data, error } = await supabase
+        .from("purchasing_requests")
+        .select(`
+            *,
+            project:projects(project_name, project_code),
+            items:purchasing_items(*)
+        `)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching purchasing requests:", JSON.stringify(error, null, 2));
+        console.error("Error details - code:", error.code, "message:", error.message, "hint:", error.hint);
+        return [];
+    }
+
+    // Map to frontend type if needed, or return raw and map in client
+    // We'll return raw data augmented with project info for now, the client mapper needs update
+    return data;
+}
+
+export async function deletePurchasingRequest(requestId: string) {
+    // First delete items (cascade should handle this, but being explicit)
+    await supabase
+        .from("purchasing_items")
+        .delete()
+        .eq("request_id", requestId);
+
+    // Then delete the request
+    const { error } = await supabase
+        .from("purchasing_requests")
+        .delete()
+        .eq("id", requestId);
+
+    if (error) {
+        console.error("Error deleting purchasing request:", error);
+        throw error;
+    }
+
+    return true;
+}
+
+// -- REIMBURSEMENT --
+
+export interface ReimburseRequestPayload {
+    project_id: string;
+    category: string;
+    date: string;
+    description: string;
+    amount: number;
+    status?: string;
+    invoice_url?: string;
+    notes?: string;
+    details?: any; // JSONB
+    created_by: string; // Required: user ID
+    items: {
+        name: string;
+        qty: number;
+        unit: string;
+        unitPrice: number;
+        total: number;
+    }[];
+}
+
+export async function createReimburseRequest(payload: ReimburseRequestPayload) {
+    const { items, created_by, ...requestData } = payload;
+
+    if (!created_by) {
+        throw new Error("User ID is required to create a reimburse request");
+    }
+
+    // 1. Create Request
+    const { data: request, error: reqError } = await supabase
+        .from("reimbursement_requests")
+        .insert([{
+            ...requestData,
+            user_id: created_by,
+            created_by
+        }])
+        .select()
+        .single();
+
+    if (reqError) {
+        console.error("Error creating reimburse request:", reqError);
+        throw reqError;
+    }
+
+    // 2. Create Items
+    if (items.length > 0) {
+        const itemsData = items.map(item => ({
+            reimbursement_id: request.id,
+            name: item.name,
+            qty: item.qty,
+            unit: item.unit,
+            unit_price: item.unitPrice,
+            total: item.total
+        }));
+
+        const { error: itemsError } = await supabase
+            .from("reimbursement_items")
+            .insert(itemsData);
+
+        if (itemsError) {
+            console.error("Error creating reimburse items:", itemsError);
+            throw itemsError;
+        }
+    }
+
+    return request;
+}
+
+export async function fetchReimburseRequests() {
+    const { data, error } = await supabase
+        .from("reimbursement_requests")
+        .select(`
+            *,
+            project:projects(project_name, project_code),
+            items:reimbursement_items(*)
+        `)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching reimburse requests:", JSON.stringify(error, null, 2));
+        console.error("Error details - code:", error.code, "message:", error.message, "hint:", error.hint);
+        return [];
+    }
+    return data;
+}
+
+// -- PROFILES HELPER --
+export async function fetchMyProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Check if we have a table mapping user ids to names if 'profiles' isn't sufficient
+    // For now assuming existing profiles pattern
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    return data;
+}
+
+// -- UPDATES / ACTIONS --
+
+export async function updatePurchasingStatus(id: string, updates: {
+    approval_status?: string;
+    financial_status?: string;
+    purchase_stage?: string;
+    payment_date?: string;
+    source_of_fund_id?: string;
+    notes?: string;
+    rejection_reason?: string;
+    payment_proof_url?: string;
+}) {
+    const { error } = await supabase
+        .from("purchasing_requests")
+        .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+    if (error) {
+        console.error("Error updating purchasing request:", error);
+        return false;
+    }
+    return true;
+}
+
+export async function updateReimburseStatus(id: string, updates: {
+    status?: string;
+    payment_date?: string;
+    invoice_url?: string;
+    approved_amount?: number;
+    notes?: string;
+    rejection_reason?: string;
+    payment_proof_url?: string;
+    source_of_fund_id?: string;
+    details?: any; // Add details support
+}) {
+    console.log("updateReimburseStatus Payload:", { id, updates });
+
+    // Handle approved_amount by moving it to details if column is missing
+    if (updates.approved_amount !== undefined) {
+        const { data: current } = await supabase.from('reimbursement_requests').select('details').eq('id', id).single();
+        const currentDetails = current?.details || {};
+        updates.details = { ...currentDetails, approved_amount: updates.approved_amount };
+        delete updates.approved_amount; // Remove from top-level to avoid schema error
+    }
+
+    const { error } = await supabase
+        .from("reimbursement_requests")
+        .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+    if (error) {
+        console.error("Error updating reimburse status:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        return false;
+    }
+    return true;
+}
+
+export async function updateReimburseRequest(id: string, payload: Partial<ReimburseRequestPayload>) {
+    const { items, ...requestData } = payload;
+
+    // 1. Update Request
+    const { error: reqError } = await supabase
+        .from("reimbursement_requests")
+        .update({
+            ...requestData,
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+    if (reqError) {
+        console.error("Error updating reimburse request:", reqError);
+        throw reqError;
+    }
+
+    // 2. Update Items (Delete all and recreate for simplicity)
+    if (items) {
+        // Delete old
+        const { error: delError } = await supabase
+            .from("reimbursement_items")
+            .delete()
+            .eq("reimbursement_id", id);
+
+        if (delError) throw delError;
+
+        // Insert new
+        if (items.length > 0) {
+            const itemsData = items.map(item => ({
+                reimbursement_id: id,
+                name: item.name,
+                qty: item.qty,
+                unit: item.unit,
+                unit_price: item.unitPrice,
+                total: item.total
+            }));
+
+            const { error: insError } = await supabase
+                .from("reimbursement_items")
+                .insert(itemsData);
+
+            if (insError) throw insError;
+        }
+    }
+
+    return true;
+}
+
+export async function deleteReimburseRequest(requestId: string) {
+    // First delete items (cascade should handle this, but being explicit)
+    await supabase
+        .from("reimbursement_items")
+        .delete()
+        .eq("reimbursement_id", requestId);
+
+    // Then delete the request
+    const { error } = await supabase
+        .from("reimbursement_requests")
+        .delete()
+        .eq("id", requestId);
+
+    if (error) {
+        console.error("Error deleting reimburse request:", error);
+        throw error;
+    }
+
+    return true;
+}
+
+export async function fetchFinanceDashboardData(userId: string) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+
+    // 1. TEAM SUMMARY
+    // Total Paid (Purchasing + Reimburse) in Current Month
+    const { data: paidPurchases } = await supabase
+        .from('purchasing_requests')
+        .select('amount')
+        .eq('financial_status', 'PAID')
+        .gte('payment_date', startOfMonth)
+        .lte('payment_date', endOfMonth);
+
+    const { data: paidReimburse } = await supabase
+        .from('reimbursement_requests')
+        .select('amount')
+        .eq('status', 'PAID')
+        .gte('payment_date', startOfMonth)
+        .lte('payment_date', endOfMonth);
+
+    const totalPaidPurchasing = paidPurchases?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+    const totalPaidReimburse = paidReimburse?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+    const totalPaidThisMonth = totalPaidPurchasing + totalPaidReimburse;
+
+    // Outstanding Bills (Purchasing: Unpaid but Invoiced/Received)
+    const { count: outstandingBills } = await supabase
+        .from('purchasing_requests')
+        .select('*', { count: 'exact', head: true })
+        .neq('financial_status', 'PAID')
+        .in('purchase_stage', ['INVOICED', 'RECEIVED']);
+
+    // Reimburse Pending
+    const { count: reimbursePending } = await supabase
+        .from('reimbursement_requests')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['PENDING']); // Ensure PENDING status is correct
+
+    // Petty Cash Balance
+    const { data: pettyCash } = await supabase
+        .from('funding_sources')
+        .select('balance')
+        .eq('type', 'PETTY_CASH');
+    const pettyCashBalance = pettyCash?.reduce((sum, item) => sum + (item.balance || 0), 0) || 0;
+
+    // 2. PERSONAL SUMMARY
+    // My Purchases (This Month)
+    const { count: myPurchases } = await supabase
+        .from('purchasing_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
+        .gte('created_at', startOfMonth);
+
+    // My Reimbursements (This Month)
+    const { count: myReimburse } = await supabase
+        .from('reimbursement_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
+        .gte('created_at', startOfMonth);
+
+    // Pending Approval (My Submissions)
+    const { count: myPendingPurchases } = await supabase
+        .from('purchasing_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
+        .eq('approval_status', 'SUBMITTED');
+
+    const { count: myPendingReimburse } = await supabase
+        .from('reimbursement_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
+        .eq('status', 'PENDING');
+
+    const pendingApproval = (myPendingPurchases || 0) + (myPendingReimburse || 0);
+
+    // Paid to Me (This Month)
+    const { data: myPaidReimburse } = await supabase
+        .from('reimbursement_requests')
+        .select('amount')
+        .eq('created_by', userId)
+        .eq('status', 'PAID')
+        .gte('payment_date', startOfMonth)
+        .lte('payment_date', endOfMonth);
+    const paidToMe = myPaidReimburse?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+
+    // 3. ATTENTION ITEMS (TEAM VIEW) / LISTS
+    // Goods Received (Unpaid)
+    const { data: goodsReceived } = await supabase
+        .from('purchasing_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('purchase_stage', 'RECEIVED')
+        .neq('financial_status', 'PAID')
+        .order('date', { ascending: true })
+        .limit(5);
+
+    // Invoices Pending
+    const { data: invoices } = await supabase
+        .from('purchasing_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('purchase_stage', 'INVOICED')
+        .neq('financial_status', 'PAID')
+        .order('date', { ascending: true })
+        .limit(5);
+
+    // Reimburse Approval
+    const { data: staffClaims } = await supabase
+        .from('reimbursement_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('status', 'PENDING')
+        .order('date', { ascending: true })
+        .limit(10);
+
+    // 4. MY HISTORY (PERSONAL VIEW)
+    const { data: myPurchaseHistory } = await supabase
+        .from('purchasing_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+    const { data: myReimburseHistory } = await supabase
+        .from('reimbursement_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+    // 5. RECENT ACTIVITY (TEAM VIEW)
+    const { data: recentPurchases } = await supabase
+        .from('purchasing_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .order('updated_at', { ascending: false })
+        .limit(10);
+
+    const { data: recentReimburse } = await supabase
+        .from('reimbursement_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .order('updated_at', { ascending: false })
+        .limit(10);
+
+    // Fetch profiles manually to avoid join errors
+    const userIds = new Set<string>();
+    recentPurchases?.forEach(p => { if (p.created_by) userIds.add(p.created_by); });
+    recentReimburse?.forEach(r => { if (r.created_by) userIds.add(r.created_by); });
+
+    // If we have userIds, fetch profiles
+    let profileMap = new Map<string, string>();
+    if (userIds.size > 0) {
+        const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, username, full_name')
+            .in('id', Array.from(userIds));
+        if (profiles) {
+            profiles.forEach(p => {
+                // Use full_name if available, otherwise username
+                profileMap.set(p.id, p.full_name || p.username || 'Unknown User');
+            });
+        }
+    }
+
+    // Merge and sort
+    const allActivity = [
+        ...(recentPurchases || []).map(p => ({
+            ...p,
+            type: 'PURCHASE',
+            created_by_name: profileMap.get(p.created_by) || p.created_by_name || 'Unknown User'
+        })),
+        ...(recentReimburse || []).map(r => ({
+            ...r,
+            type: 'REIMBURSE',
+            staff_name: profileMap.get(r.created_by) || r.staff_name || 'Unknown Staff'
+        }))
+    ].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 10);
+
+    return {
+        summary: {
+            team: {
+                totalPaidThisMonth,
+                outstanding: outstandingBills || 0,
+                reimbursePending: reimbursePending || 0,
+                pettyCashBalance
+            },
+            personal: {
+                myPurchases: myPurchases || 0,
+                myReimburse: myReimburse || 0,
+                pendingApproval,
+                paid: paidToMe
+            }
+        },
+        lists: {
+            goodsReceived: goodsReceived || [],
+            invoices: invoices || [],
+            staffClaims: staffClaims || [],
+            myPurchaseHistory: myPurchaseHistory || [],
+            myReimburseHistory: myReimburseHistory || [],
+            recentActivity: allActivity
+        }
+    };
+}

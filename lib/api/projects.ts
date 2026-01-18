@@ -45,6 +45,16 @@ export async function fetchProjectsByWorkspace(workspaceId: string): Promise<Pro
     return data.map(mapDbToProject);
 }
 
+export async function fetchAllProjects(): Promise<Project[]> {
+    const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .order("project_number", { ascending: true });
+
+    if (error || !data) return [];
+    return data.map(mapDbToProject);
+}
+
 export async function createProject(
     workspaceId: string,
     project: Omit<Project, "id" | "workspaceId" | "createdAt" | "updatedAt">
