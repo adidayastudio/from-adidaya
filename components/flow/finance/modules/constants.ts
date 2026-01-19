@@ -44,16 +44,20 @@ export const UNIT_OPTIONS = [
     { value: "bulan", label: "bulan" }
 ];
 
-export type ReimburseCategory = "TRANSPORTATION" | "MATERIAL" | "TOOLS" | "CONSUMPTION" | "ACCOMMODATION" | "OTHER";
+// -- REIMBURSE MASTER DATA --
 
-export const REIMBURSE_CATEGORY_OPTIONS = [
-    { value: "TRANSPORTATION", label: "Transportation" },
-    { value: "MATERIAL", label: "Material" },
-    { value: "TOOLS", label: "Tools (Alat Kerja)" },
-    { value: "CONSUMPTION", label: "Consumption (Makan/Minum)" },
-    { value: "ACCOMMODATION", label: "Accommodation" },
-    { value: "OTHER", label: "Other" }
-];
+export type ReimburseCategory =
+    | "TRANSPORTATION"
+    | "CONSUMPTION"
+    | "ACCOMMODATION"
+    | "PURCHASE_PROJECT"
+    | "OPERATIONS_PROJECT"
+    | "SUPPORT_OFFICE"
+    | "COMMUNICATION"
+    | "HEALTH_SAFETY"
+    | "TRAVEL_DUTY"
+    | "EMERGENCY"
+    | "OTHER";
 
 export const TRANSPORT_TYPES = [
     { value: "MOTOR", label: "Motor Pribadi" },
@@ -68,3 +72,81 @@ export const TRANSPORT_ROUTES = [
     { value: "PROJECT_PROJECT", label: "Proyek → Proyek" },
     { value: "OTHER", label: "Lainnya" }
 ];
+
+export const REIMBURSE_CATEGORY_OPTIONS = [
+    { value: "TRANSPORTATION", label: "Transportation (Transportasi)" },
+    { value: "CONSUMPTION", label: "Meals & Consumption (Konsumsi)" },
+    { value: "ACCOMMODATION", label: "Accommodation (Akomodasi)" },
+    { value: "PURCHASE_PROJECT", label: "Project Purchase (Belanja Proyek - Reimbursable)" },
+    { value: "OPERATIONS_PROJECT", label: "Project Operations (Operasional Proyek)" },
+    { value: "SUPPORT_OFFICE", label: "Office & Work Support (Pendukung Kerja)" },
+    { value: "COMMUNICATION", label: "Communication (Komunikasi)" },
+    { value: "HEALTH_SAFETY", label: "Health, Safety & Wellbeing (Kesehatan & Keselamatan)" },
+    { value: "TRAVEL_DUTY", label: "Travel & Duty Expense (Perjalanan Dinas)" },
+    { value: "EMERGENCY", label: "Emergency & Incidental (Darurat & Insidental)" },
+    { value: "OTHER", label: "Other / Non-Standard (Lainnya / Non-Standar)" }
+];
+
+export const REIMBURSE_SUBCATEGORY_OPTIONS: Record<string, { value: string; label: string }[]> = {
+    TRANSPORTATION: [
+        { value: "MOTOR_PERSONAL", label: "Motorcycle – Personal (Motor Pribadi)" },
+        { value: "CAR_PERSONAL", label: "Car – Personal (Mobil Pribadi)" },
+        { value: "FUEL", label: "Fuel (BBM)" },
+        { value: "PARKING", label: "Parking (Parkir)" },
+        { value: "TOLL", label: "Toll (Tol)" },
+        { value: "MOTOR_ONLINE", label: "Motorcycle Ride-Hailing (Ojol Motor)" },
+        { value: "CAR_ONLINE", label: "Car Ride-Hailing (Ojol Mobil)" },
+        { value: "PUBLIC_TRANSPORT", label: "Public Transportation (Transportasi Umum)" },
+        { value: "TAXI", label: "Taxi (Taksi)" },
+        { value: "RENTAL", label: "Vehicle Rental (Sewa Kendaraan)" },
+        { value: "COURIER", label: "Courier & Delivery (Kurir & Pengiriman)" },
+        { value: "LOGISTICS", label: "Project Logistics (Logistik Proyek)" }
+    ],
+    CONSUMPTION: [
+        { value: "MEALS_DAILY", label: "Daily Meals (Makan Harian)" },
+        { value: "MEALS_SITE", label: "Site Consumption (Konsumsi Lapangan)" },
+        { value: "MEALS_CLIENT", label: "Client Meals (Jamuan Klien)" },
+        { value: "SNACKS", label: "Snacks & Beverages (Snack & Minuman)" }
+    ],
+    ACCOMMODATION: [
+        { value: "HOTEL", label: "Hotel (Hotel)" },
+        { value: "GUESTHOUSE", label: "Guesthouse / Homestay (Penginapan / Homestay)" },
+        { value: "LODGING_TEMP", label: "Temporary Lodging (Akomodasi Sementara)" }
+    ],
+    PURCHASE_PROJECT: [
+        { value: "MATERIAL", label: "Project Materials (Material Proyek)" },
+        { value: "TOOLS", label: "Project Tools & Equipment (Alat & Peralatan Proyek)" },
+        { value: "SUPPLIES_SMALL", label: "Small Project Supplies (Perlengkapan Proyek Kecil)" }
+    ],
+    OPERATIONS_PROJECT: [
+        { value: "SITE_OPS", label: "Site Operations (Operasional Lapangan)" },
+        { value: "UTILITIES", label: "Utilities (Utilitas Proyek)" },
+        { value: "ADMIN_PROJECT", label: "Project Administration (Administrasi Proyek)" }
+    ],
+    SUPPORT_OFFICE: [
+        { value: "STATIONERY", label: "Stationery & Supplies (ATK & Perlengkapan Kerja)" },
+        { value: "PRINTING", label: "Printing & Copying (Print & Fotokopi)" },
+        { value: "ACCESSORIES", label: "Work Accessories (Aksesori Kerja)" }
+    ],
+    COMMUNICATION: [
+        { value: "DATA_PACKAGE", label: "Mobile Data (Paket Data)" },
+        { value: "PHONE_CREDIT", label: "Phone Credit (Pulsa)" },
+        { value: "COMM_COST", label: "Work Communication Cost (Biaya Komunikasi Kerja)" }
+    ],
+    HEALTH_SAFETY: [
+        { value: "MEDICAL", label: "Medical Expense (Biaya Kesehatan)" },
+        { value: "SAFETY_GEAR", label: "Safety Equipment (Perlengkapan Keselamatan)" }
+    ],
+    TRAVEL_DUTY: [
+        { value: "PER_DIEM", label: "Per Diem / Daily Allowance (Uang Harian)" },
+        { value: "TRAVEL_PREP", label: "Travel Preparation (Persiapan Perjalanan)" }
+    ],
+    EMERGENCY: [
+        { value: "EMERGENCY_COST", label: "Emergency Expense (Biaya Darurat)" },
+        { value: "UNPLANNED_COST", label: "Unplanned Work Expense (Biaya Kerja Tak Terduga)" }
+    ],
+    OTHER: [
+        { value: "MISC", label: "Miscellaneous (Lain-lain)" },
+        { value: "NON_PROJECT", label: "Non-Project Related (Non-Proyek)" }
+    ]
+};

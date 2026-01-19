@@ -32,7 +32,7 @@ export function formatDate(dateStr: string) {
 
 // Convert STATUS_NAME to Status Name (Title Case)
 export function formatStatus(status: string) {
-    return status.split(/_|\s/)
+    return status.replace(/_/g, ' ').split(/\s/)
         .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
         .join(' ');
 }

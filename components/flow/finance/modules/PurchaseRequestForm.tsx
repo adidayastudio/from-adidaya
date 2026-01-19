@@ -6,9 +6,10 @@ import { Select } from "@/shared/ui/primitives/select/select";
 import { Category, PurchaseStage, CATEGORY_OPTIONS, SUBCATEGORY_OPTIONS, UNIT_OPTIONS } from "./constants";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { Project } from "@/types/project";
-import { createPurchasingRequest, updatePurchasingRequest } from "@/lib/api/finance";
+import { createPurchasingRequest, updatePurchasingRequest, fetchBeneficiaryAccounts, saveBeneficiaryAccount, BeneficiaryAccount } from "@/lib/api/finance";
 import { uploadFinanceFile } from "@/lib/api/storage";
 import { useFinance } from "../FinanceContext";
+import { CreditCard, Save } from "lucide-react";
 
 interface LineItem {
     id: string;
@@ -37,6 +38,13 @@ export function PurchaseRequestForm({
     const [stage, setStage] = useState<PurchaseStage>(initialData?.purchase_stage || "PLANNED");
     const [vendor, setVendor] = useState(initialData?.vendor || "");
 
+    // Beneficiary State
+    const [bankName, setBankName] = useState(initialData?.beneficiary_bank || "");
+    const [accountNumber, setAccountNumber] = useState(initialData?.beneficiary_number || "");
+    const [accountName, setAccountName] = useState(initialData?.beneficiary_name || "");
+    const [savedAccounts, setSavedAccounts] = useState<BeneficiaryAccount[]>([]);
+    const [saveToSaved, setSaveToSaved] = useState(false);
+
     // Parse items from initialData (which is single item flattened) or default
     // If initialData is present, it's a single item edit usually, or we need to handle multi-item edit?
     // The current table structure flattens items. If we edit "a request", we might be editing just that item line?
@@ -61,9 +69,10 @@ export function PurchaseRequestForm({
 
     const isReadOnly = initialData && ["APPROVED", "PAID", "REJECTED"].includes(initialData.approval_status);
 
-    // Load Projects
+    // Load Projects & Accounts
     useEffect(() => {
         fetchAllProjects().then(setProjects);
+        fetchBeneficiaryAccounts().then(setSavedAccounts);
     }, []);
 
     const projectOptions = useMemo(() => {
@@ -112,6 +121,11 @@ export function PurchaseRequestForm({
             if (!vendor) return false;
             // if (!invoiceFile) return false; // Temporarily optional
         }
+
+        // Beneficiary is optional but good to have. 
+        // If user selects "INVOICED" usually they know who to pay.
+        // Let's make it optional for now as requested "should be there", not "must be there"
+
         return true;
     }, [projectCode, category, subcategory, items, stage, vendor, invoiceFile]);
 
@@ -141,6 +155,9 @@ export function PurchaseRequestForm({
                 project_id: selectedProject.id,
                 date: new Date().toISOString().split('T')[0],
                 vendor: vendor || undefined,
+                beneficiary_bank: bankName,
+                beneficiary_number: accountNumber,
+                beneficiary_name: accountName,
                 description: items.length > 1 ? `${items[0].name} + ${items.length - 1} more` : items[0].name,
                 type: category as any,
                 subcategory,
@@ -169,6 +186,17 @@ export function PurchaseRequestForm({
             } else {
                 // Create
                 await createPurchasingRequest(payload);
+            }
+
+            // Handle Save Account
+            if (saveToSaved && bankName && accountNumber && userId) {
+                await saveBeneficiaryAccount({
+                    bank_name: bankName,
+                    account_number: accountNumber,
+                    account_name: accountName,
+                    alias: `${bankName} - ${accountName}`,
+                    created_by: userId
+                });
             }
 
             if (onSuccess) onSuccess();
@@ -356,6 +384,91 @@ export function PurchaseRequestForm({
                         />
                     </div>
 
+                    {/* BENEFICIARY ACCOUNT */}
+                    <div className="pt-4 border-t border-neutral-100 mt-4 space-y-4">
+                        <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                            <CreditCard className="w-3.5 h-3.5" strokeWidth={1.5} /> Vendor Account Details
+                        </h3>
+
+                        {/* Saved Account Selector */}
+                        {savedAccounts.length > 0 && (
+                            <Select
+                                label="Quick Select (Saved Accounts)"
+                                value=""
+                                onChange={(val) => {
+                                    const acc = savedAccounts.find(a => a.id === val);
+                                    if (acc) {
+                                        setBankName(acc.bank_name);
+                                        setAccountNumber(acc.account_number);
+                                        setAccountName(acc.account_name);
+                                    }
+                                }}
+                                options={[
+                                    { value: "", label: "Select from saved..." },
+                                    ...savedAccounts.map(a => ({ value: a.id, label: `${a.bank_name} - ${a.account_number} (${a.account_name})` }))
+                                ]}
+                            />
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Bank Name</label>
+                                <input
+                                    type="text"
+                                    value={bankName}
+                                    onChange={e => setBankName(e.target.value)}
+                                    disabled={isReadOnly}
+                                    placeholder="e.g. BCA"
+                                    className={clsx(
+                                        "w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                        isReadOnly && "bg-neutral-50 text-neutral-500"
+                                    )}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Account Number</label>
+                                <input
+                                    type="text"
+                                    value={accountNumber}
+                                    onChange={e => setAccountNumber(e.target.value)}
+                                    disabled={isReadOnly}
+                                    placeholder="e.g. 1234567890"
+                                    className={clsx(
+                                        "w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                        isReadOnly && "bg-neutral-50 text-neutral-500"
+                                    )}
+                                />
+                            </div>
+                            <div className="col-span-2">
+                                <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Account Name</label>
+                                <input
+                                    type="text"
+                                    value={accountName}
+                                    onChange={e => setAccountName(e.target.value)}
+                                    disabled={isReadOnly}
+                                    placeholder="e.g. PT Vendor Maju Jaya"
+                                    className={clsx(
+                                        "w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                        isReadOnly && "bg-neutral-50 text-neutral-500"
+                                    )}
+                                />
+                            </div>
+                        </div>
+
+                        {!isReadOnly && bankName && accountNumber && (
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                                <div className={clsx(
+                                    "w-5 h-5 rounded-lg border flex items-center justify-center transition-all",
+                                    saveToSaved ? "bg-red-500 border-red-500 text-white" : "border-neutral-300 bg-white group-hover:border-red-400"
+                                )}>
+                                    {saveToSaved && <Save className="w-3 h-3" />}
+                                </div>
+                                <input type="checkbox" className="hidden" checked={saveToSaved} onChange={() => setSaveToSaved(!saveToSaved)} />
+                                <span className="text-xs font-bold text-neutral-600 group-hover:text-red-600 transition-colors">Save to my saved accounts</span>
+                            </label>
+                        )}
+                    </div>
+
                     {/* PRICE TYPE & TOTAL SUMMARY */}
                     <div className="bg-red-50/50 rounded-2xl p-5 space-y-4 border border-red-100">
                         <div className="flex items-center justify-between text-red-900">
@@ -386,7 +499,7 @@ export function PurchaseRequestForm({
                             <span className="text-xl font-black text-red-600 tracking-tight">Rp {totalAmount.toLocaleString("id-ID")}</span>
                         </div>
                     </div>
-                </section>
+                </section >
 
                 <hr className="border-neutral-100" />
 
@@ -450,10 +563,10 @@ export function PurchaseRequestForm({
                         className="w-full px-4 py-3 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium min-h-[80px]"
                     />
                 </section>
-            </div>
+            </div >
 
             {/* BOTTOM ACTIONS */}
-            <div className="sticky bottom-0 w-full p-5 bg-white/20 backdrop-blur-3xl border-t border-white/30 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.06)] mt-auto">
+            < div className="sticky bottom-0 w-full p-5 bg-white/20 backdrop-blur-3xl border-t border-white/30 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.06)] mt-auto" >
                 <div className="flex items-center gap-3">
                     <button
                         onClick={onClose}
@@ -469,7 +582,7 @@ export function PurchaseRequestForm({
                         {isSubmitting ? "Saving..." : "Save Request"}
                     </button>
                 </div>
-            </div>
+            </div >
         </>
     );
 }

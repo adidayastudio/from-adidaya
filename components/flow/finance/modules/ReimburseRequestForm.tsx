@@ -1,21 +1,27 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { clsx } from "clsx";
-import { Car, Package, Wrench, Utensils, Home, MoreHorizontal, DollarSign, CheckCircle, Upload, X, Plus } from "lucide-react";
+import { MapPin, Car, Package, Wrench, Utensils, Home, MoreHorizontal, DollarSign, CheckCircle, Upload, X, Plus } from "lucide-react";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { formatCurrency } from "./utils";
 import {
     ReimburseCategory,
     REIMBURSE_CATEGORY_OPTIONS,
-    TRANSPORT_TYPES,
-    TRANSPORT_ROUTES,
+    REIMBURSE_SUBCATEGORY_OPTIONS,
     UNIT_OPTIONS
 } from "./constants";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { Project } from "@/types/project";
-import { createReimburseRequest, updateReimburseRequest } from "@/lib/api/finance";
-import { uploadFinanceFile } from "@/lib/api/storage";
+import { createReimburseRequest, updateReimburseRequest, fetchBeneficiaryAccounts, saveBeneficiaryAccount, BeneficiaryAccount } from "@/lib/api/finance";
+import { uploadFinanceFile, getFinanceFileUrl } from "@/lib/api/storage";
 import { useFinance } from "../FinanceContext";
+import { CreditCard, Save, FileText, Send } from "lucide-react";
+
+// Standard Mileage Rates (can be adjusted)
+const MILEAGE_RATES: Record<string, number> = {
+    MOTOR_PERSONAL: 3000, // Rp 3.000 / km
+    CAR_PERSONAL: 6000    // Rp 6.000 / km
+};
 
 interface LineItem {
     id: string;
@@ -39,54 +45,73 @@ export function ReimburseRequestForm({
     const { userId } = useFinance();
     const [projectCode, setProjectCode] = useState("");
     const [projects, setProjects] = useState<Project[]>([]);
-    const [reimbCategory, setReimbCategory] = useState<ReimburseCategory | "">("");
+
+    // Core Fields
+    const [reimbCategory, setReimbCategory] = useState<string>("");
+    const [reimbSubcategory, setReimbSubcategory] = useState<string>("");
     const [reimbDate, setReimbDate] = useState("");
     const [reimbDescription, setReimbDescription] = useState("");
+
+    // Transport Specific
+    const [transOrigin, setTransOrigin] = useState("");
+    const [transDestination, setTransDestination] = useState("");
+    const [transDistance, setTransDistance] = useState<number | "">("");
+
     const [items, setItems] = useState<LineItem[]>([
         { id: Math.random().toString(36).substr(2, 9), name: "", qty: 1, unit: "pcs", unitPrice: 0, total: 0 }
     ]);
     const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const isReadOnly = initialData && ["APPROVED", "PAID", "REJECTED"].includes(initialData.status);
+    // Beneficiary State
+    const [bankName, setBankName] = useState(initialData?.beneficiary_bank || "");
+    const [accountNumber, setAccountNumber] = useState(initialData?.beneficiary_number || "");
+    const [accountName, setAccountName] = useState(initialData?.beneficiary_name || "");
+    const [savedAccounts, setSavedAccounts] = useState<BeneficiaryAccount[]>([]);
+    const [saveToSaved, setSaveToSaved] = useState(false);
 
-    // Specific states
-    const [transType, setTransType] = useState("");
-    const [transRoute, setTransRoute] = useState("");
-    const [transFrom, setTransFrom] = useState("");
-    const [transTo, setTransTo] = useState("");
-    const [transDist, setTransDist] = useState("");
+    const isReadOnly = initialData && ["APPROVED", "PAID", "REJECTED", "CANCELLED"].includes(initialData.status);
+    const isEditMode = !!initialData;
+    const canEdit = !isReadOnly || (initialData?.status === "DRAFT" || initialData?.status === "NEED_REVISION");
 
-    const [matPurpose, setMatPurpose] = useState("");
-    const [matFor, setMatFor] = useState("");
-
-    const [toolType, setToolType] = useState("");
-    const [toolProject, setToolProject] = useState("");
-    const [toolCond, setToolCond] = useState("");
-    const [toolDuration, setToolDuration] = useState("");
-
-    const [consType, setConsType] = useState("");
-    const [consPax, setConsPax] = useState("");
-    const [consPurpose, setConsPurpose] = useState("");
-    const [consLoc, setConsLoc] = useState("");
-
-    const [accType, setAccType] = useState("");
-    const [accLoc, setAccLoc] = useState("");
-    const [accIn, setAccIn] = useState("");
-    const [accOut, setAccOut] = useState("");
-    const [accPurpose, setAccPurpose] = useState("");
-
-    const [otherDetail, setOtherDetail] = useState("");
+    // Load Preview URL
+    useEffect(() => {
+        const loadPreview = async () => {
+            if (initialData?.invoice_url && !invoiceFile) {
+                if (initialData.invoice_url.startsWith('http')) {
+                    setPreviewUrl(initialData.invoice_url);
+                } else {
+                    const url = await getFinanceFileUrl(initialData.invoice_url);
+                    setPreviewUrl(url);
+                }
+            }
+        };
+        loadPreview();
+    }, [initialData?.invoice_url, invoiceFile]);
 
     // Load Projects
     useEffect(() => {
         fetchAllProjects().then(setProjects);
+        fetchBeneficiaryAccounts().then(setSavedAccounts);
 
         if (initialData) {
+            console.log("Debug Load - Initial Data:", initialData);
             setProjectCode(initialData.project_code || initialData.project?.project_code || "");
-            setReimbCategory(initialData.category as ReimburseCategory);
+            setReimbCategory(initialData.category || "");
+            setReimbSubcategory(initialData.subcategory || "");
             setReimbDate(initialData.date?.split("T")[0] || "");
             setReimbDescription(initialData.description || "");
+
+            // Restore Transport Details if available
+            if (initialData.details) {
+                console.log("Debug Load - Restoring Details:", initialData.details);
+                setTransOrigin(initialData.details.origin || "");
+                setTransDestination(initialData.details.destination || "");
+                setTransDistance(initialData.details.distance || "");
+            } else {
+                console.log("Debug Load - No details found in initialData");
+            }
 
             // Map items
             if (initialData.items && initialData.items.length > 0) {
@@ -99,35 +124,6 @@ export function ReimburseRequestForm({
                     total: i.total
                 })));
             }
-
-            // Map details
-            const d = initialData.details || {};
-            if (d.transType) setTransType(d.transType);
-            if (d.transRoute) setTransRoute(d.transRoute);
-            if (d.transFrom) setTransFrom(d.transFrom);
-            if (d.transTo) setTransTo(d.transTo);
-            if (d.transDist) setTransDist(d.transDist);
-
-            if (d.matPurpose) setMatPurpose(d.matPurpose);
-            if (d.matFor) setMatFor(d.matFor);
-
-            if (d.toolType) setToolType(d.toolType);
-            if (d.toolProject) setToolProject(d.toolProject);
-            if (d.toolCond) setToolCond(d.toolCond);
-            if (d.toolDuration) setToolDuration(d.toolDuration);
-
-            if (d.consType) setConsType(d.consType);
-            if (d.consPax) setConsPax(d.consPax);
-            if (d.consPurpose) setConsPurpose(d.consPurpose);
-            if (d.consLoc) setConsLoc(d.consLoc);
-
-            if (d.accType) setAccType(d.accType);
-            if (d.accLoc) setAccLoc(d.accLoc);
-            if (d.accIn) setAccIn(d.accIn);
-            if (d.accOut) setAccOut(d.accOut);
-            if (d.accPurpose) setAccPurpose(d.accPurpose);
-
-            if (d.otherDetail) setOtherDetail(d.otherDetail);
         }
     }, [initialData]);
 
@@ -135,21 +131,37 @@ export function ReimburseRequestForm({
         return projects.map(p => ({ value: p.projectCode, label: `${p.projectCode} - ${p.projectName}` }));
     }, [projects]);
 
+    const subcategoryOptions = useMemo(() => {
+        if (!reimbCategory) return [];
+        return REIMBURSE_SUBCATEGORY_OPTIONS[reimbCategory] || [];
+    }, [reimbCategory]);
+
+    // -- CALCULATE ESTIMATED TRANSPORT COST (SYSTEM) --
+    const transportEstCost = useMemo(() => {
+        if (reimbCategory === "TRANSPORTATION" && ["MOTOR_PERSONAL", "CAR_PERSONAL"].includes(reimbSubcategory)) {
+            const rate = MILEAGE_RATES[reimbSubcategory] || 0;
+            const dist = typeof transDistance === 'number' ? transDistance : parseFloat(transDistance) || 0;
+            return dist * rate;
+        }
+        return 0;
+    }, [reimbCategory, reimbSubcategory, transDistance]);
+
+
     // -- ITEM ACTIONS --
     const addItem = () => {
-        if (isReadOnly) return;
+        if (!canEdit) return;
         setItems([...items, { id: Math.random().toString(36).substr(2, 9), name: "", qty: 1, unit: "pcs", unitPrice: 0, total: 0 }]);
     };
 
     const removeItem = (id: string) => {
-        if (isReadOnly) return;
+        if (!canEdit) return;
         if (items.length > 1) {
             setItems(items.filter(i => i.id !== id));
         }
     };
 
     const updateItem = (id: string, updates: Partial<LineItem>) => {
-        if (isReadOnly) return;
+        if (!canEdit) return;
         setItems(items.map(i => {
             if (i.id === id) {
                 const updated = { ...i, ...updates };
@@ -167,56 +179,54 @@ export function ReimburseRequestForm({
         return items.reduce((sum, item) => sum + item.total, 0);
     }, [items]);
 
-    const transportEstCost = useMemo(() => {
-        const dist = parseFloat(transDist) || 0;
-        if (transType === "MOTOR") return dist * 2500;
-        if (transType === "MOBIL") return dist * 15000;
-        if (transType === "PUBLIC") return 5000;
-        if (transType === "ONLINE") return dist * 3000;
-        return 0;
-    }, [transDist, transType]);
-
     // -- VALIDATION --
     const isValid = useMemo(() => {
         if (!projectCode) return false;
-        if (!reimbCategory || !reimbDescription || !reimbDate) return false;
+        if (!reimbCategory || !reimbSubcategory || !reimbDescription || !reimbDate) return false;
         if (items.some(i => !i.name || i.qty <= 0 || i.unitPrice < 0)) return false;
-        // if (!invoiceFile) return false; // Temporarily optional until storage
 
-        switch (reimbCategory) {
-            case "TRANSPORTATION":
-                return !!(transType && transFrom && transTo && transRoute && transDist);
-            case "MATERIAL":
-                return !!(matPurpose && matFor);
-            case "TOOLS":
-                return !!(toolType && toolProject && toolCond);
-            case "CONSUMPTION":
-                return !!(consType && consPax && consPurpose);
-            case "ACCOMMODATION":
-                return !!(accType && accLoc && accIn && accOut);
-            case "OTHER":
-                return !!(otherDetail);
-            default:
-                return false;
+        // Strict check for Transport
+        // Strict check for Transport
+        const REQUIRE_TRIP_DETAILS = [
+            "MOTOR_PERSONAL", "CAR_PERSONAL", "FUEL_PERSONAL",
+            "MOTOR_ONLINE", "CAR_ONLINE", "PUBLIC_TRANSPORT",
+            "TAXI", "RENTAL", "COURIER", "LOGISTICS"
+        ];
+
+        if (reimbCategory === "TRANSPORTATION" && REQUIRE_TRIP_DETAILS.includes(reimbSubcategory)) {
+            if (!transOrigin || !transDestination || !transDistance) return false;
         }
-    }, [
-        projectCode, reimbCategory, reimbDescription, reimbDate, items, invoiceFile,
-        transType, transFrom, transTo, transRoute, transDist,
-        matPurpose, matFor,
-        toolType, toolProject, toolCond,
-        consType, consPax, consPurpose,
-        accType, accLoc, accIn, accOut,
-        otherDetail
-    ]);
 
-    const handleSave = async () => {
-        if (isReadOnly) return;
-        if (!isValid || isSubmitting) return;
+        return true;
+    }, [projectCode, reimbCategory, reimbSubcategory, reimbDescription, reimbDate, items, transOrigin, transDestination, transDistance]);
+
+    const handleSave = async (asDraft: boolean = false) => {
+        if (!canEdit) return;
+        if ((!isValid && !asDraft) || isSubmitting) return;
+
+        if (!isValid) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
-            const selectedProject = projects.find(p => p.projectCode === projectCode);
-            if (!selectedProject) throw new Error("Invalid project selected");
+            console.log("Debug Save - Projects Count:", projects.length);
+            console.log("Debug Save - Project Code:", projectCode);
+            // Debug: Dump first project to see structure
+            if (projects.length > 0) {
+                console.log("Debug Save - First Project:", projects[0]);
+            }
+
+            // Find project exactly matching the code
+            const selectedProject = projects.find(p => p.projectCode === projectCode) ||
+                projects.find(p => p.projectCode?.trim() === projectCode?.trim());
+
+            if (!selectedProject) {
+                console.error("Invalid project selected. Available:", projects.map(p => p.projectCode));
+                throw new Error(`Invalid project selected: '${projectCode}' not found in ${projects.length} loaded projects.`);
+            }
 
             let uploadedInvoiceUrl = null;
             if (invoiceFile) {
@@ -226,42 +236,50 @@ export function ReimburseRequestForm({
                 }
             }
 
-            let details: Record<string, any> = {};
+            if (!userId) throw new Error("User not authenticated");
 
-            // Construct details based on category
-            if (reimbCategory === "TRANSPORTATION") {
-                details = { transType, transRoute, transFrom, transTo, transDist, transportEstCost };
-            } else if (reimbCategory === "MATERIAL") {
-                details = { matPurpose, matFor };
-            } else if (reimbCategory === "TOOLS") {
-                details = { toolType, toolProject, toolCond, toolDuration };
-            } else if (reimbCategory === "CONSUMPTION") {
-                details = { consType, consPax, consPurpose, consLoc };
-            } else if (reimbCategory === "ACCOMMODATION") {
-                details = { accType, accLoc, accIn, accOut, accPurpose };
-            } else if (reimbCategory === "OTHER") {
-                details = { otherDetail };
+            // Construct Details JSON
+            const details: any = {};
+            const SAVE_TRIP_DETAILS = [
+                "MOTOR_PERSONAL", "CAR_PERSONAL", "FUEL_PERSONAL",
+                "MOTOR_ONLINE", "CAR_ONLINE", "PUBLIC_TRANSPORT",
+                "TAXI", "RENTAL", "COURIER", "LOGISTICS"
+            ];
+
+            if (reimbCategory === "TRANSPORTATION" && SAVE_TRIP_DETAILS.includes(reimbSubcategory)) {
+                details.origin = transOrigin;
+                details.destination = transDestination;
+                details.distance = (typeof transDistance === "number" ? transDistance : parseFloat(transDistance) || 0);
+
+                // Only save est cost for personal
+                if (["MOTOR_PERSONAL", "CAR_PERSONAL"].includes(reimbSubcategory)) {
+                    details.transportEstCost = transportEstCost;
+                }
             }
 
-            if (!userId) throw new Error("User not authenticated");
+            console.log("Debug Save - Constructed Details:", details);
 
             const payload = {
                 project_id: selectedProject.id,
                 date: reimbDate,
                 description: reimbDescription,
-                category: reimbCategory as string,
+                category: reimbCategory,
+                subcategory: reimbSubcategory,
                 amount: totalAmount,
-                status: initialData ? initialData.status : "PENDING", // Preserve status on edit
-                details,
-                invoice_url: uploadedInvoiceUrl || (initialData?.invoice_url), // Keep existing URL if not replaced
+                status: asDraft ? "DRAFT" : "PENDING",
+                invoice_url: uploadedInvoiceUrl || (initialData?.invoice_url),
                 created_by: userId,
+                details: details,
                 items: items.map(i => ({
                     name: i.name,
                     qty: i.qty,
                     unit: i.unit,
                     unitPrice: i.unitPrice,
                     total: i.total
-                }))
+                })),
+                beneficiary_bank: bankName,
+                beneficiary_number: accountNumber,
+                beneficiary_name: accountName
             };
 
             if (initialData?.id) {
@@ -270,12 +288,22 @@ export function ReimburseRequestForm({
                 await createReimburseRequest(payload);
             }
 
+            // Handle Save Account
+            if (saveToSaved && bankName && accountNumber && userId) {
+                await saveBeneficiaryAccount({
+                    bank_name: bankName,
+                    account_number: accountNumber,
+                    account_name: accountName,
+                    alias: `${bankName} - ${accountName} (Employee)`,
+                    created_by: userId
+                });
+            }
+
             if (onSuccess) onSuccess();
             onClose();
         } catch (error) {
             console.error("Error saving reimburse request:", error);
             alert("Failed to save request.");
-        } finally {
             setIsSubmitting(false);
         }
     };
@@ -295,186 +323,214 @@ export function ReimburseRequestForm({
                             onChange={setProjectCode}
                             options={projectOptions}
                             placeholder="Select project..."
+                            disabled={!canEdit}
                         />
                         <div className="grid grid-cols-2 gap-4">
                             <Select
                                 label="Category *"
                                 value={reimbCategory}
-                                onChange={(v) => { setReimbCategory(v as ReimburseCategory); }}
+                                onChange={(val) => {
+                                    setReimbCategory(val as string);
+                                    setReimbSubcategory("");
+                                }}
                                 options={REIMBURSE_CATEGORY_OPTIONS}
+                                disabled={!canEdit}
+                                placeholder="Select Category..."
                             />
-                            <div>
-                                <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Date *</label>
-                                <input
-                                    type="date"
-                                    value={reimbDate}
-                                    onChange={e => setReimbDate(e.target.value)}
-                                    className="w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium"
-                                />
-                            </div>
+                            <Select
+                                label="Subcategory *"
+                                value={reimbSubcategory}
+                                onChange={(val) => setReimbSubcategory(val as string)}
+                                options={subcategoryOptions}
+                                disabled={!canEdit || !reimbCategory}
+                                placeholder={!reimbCategory ? "Select Category first" : "Select Subcategory..."}
+                            />
                         </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Date *</label>
+                            <input
+                                type="date"
+                                value={reimbDate}
+                                onChange={e => setReimbDate(e.target.value)}
+                                disabled={!canEdit}
+                                className={clsx(
+                                    "w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                    !canEdit && "bg-neutral-50 text-neutral-500"
+                                )}
+                            />
+                        </div>
+
+                        {/* TRANSPORT DETAILS */}
+                        {reimbCategory === "TRANSPORTATION" && [
+                            "MOTOR_PERSONAL", "CAR_PERSONAL", "FUEL_PERSONAL",
+                            "MOTOR_ONLINE", "CAR_ONLINE", "PUBLIC_TRANSPORT",
+                            "TAXI", "RENTAL", "COURIER", "LOGISTICS"
+                        ].includes(reimbSubcategory) && (
+                                <div className="bg-red-50/50 border border-red-100 rounded-2xl p-4 space-y-4">
+                                    <h4 className="text-xs font-bold text-red-800 uppercase tracking-wider flex items-center gap-2">
+                                        <MapPin className="w-3.5 h-3.5" /> Trip Details
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="col-span-1">
+                                            <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">From (Origin)</label>
+                                            <input
+                                                type="text"
+                                                value={transOrigin}
+                                                onChange={e => setTransOrigin(e.target.value)}
+                                                disabled={!canEdit}
+                                                placeholder="e.g. Office"
+                                                className="w-full h-9 px-3 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500/40"
+                                            />
+                                        </div>
+                                        <div className="col-span-1">
+                                            <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">To (Destination)</label>
+                                            <input
+                                                type="text"
+                                                value={transDestination}
+                                                onChange={e => setTransDestination(e.target.value)}
+                                                disabled={!canEdit}
+                                                placeholder="e.g. Project Site A"
+                                                className="w-full h-9 px-3 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500/40"
+                                            />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1.5">Distance (km)</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    value={transDistance}
+                                                    onChange={e => setTransDistance(parseFloat(e.target.value) || "")}
+                                                    disabled={!canEdit}
+                                                    placeholder="0"
+                                                    className="w-full h-9 px-3 text-sm border border-neutral-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500/40"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 pointer-events-none">km</span>
+                                            </div>
+                                        </div>
+
+                                        {/* ESTIMATED COST DISPLAY (Only for Personal Vehicles) */}
+                                        {["MOTOR_PERSONAL", "CAR_PERSONAL"].includes(reimbSubcategory) && (
+                                            <div className="col-span-2 bg-white rounded-xl p-3 border border-red-100 flex justify-between items-center shadow-sm">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest">System Estimation</span>
+                                                    <span className="text-[10px] text-neutral-400 font-medium">
+                                                        {reimbSubcategory === "MOTOR_PERSONAL" ? "Rp 2.500" : "Rp 4.500"} x {typeof transDistance === "number" ? transDistance : 0} km
+                                                    </span>
+                                                </div>
+                                                <span className="text-sm font-bold text-red-600">{formatCurrency(transportEstCost)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                         <div>
                             <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Description *</label>
-                            <input
-                                type="text"
-                                value={reimbDescription}
-                                onChange={e => setReimbDescription(e.target.value)}
-                                placeholder="Overview of the expense..."
-                                className="w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium"
-                            />
+                            <div className="relative">
+                                <textarea
+                                    value={reimbDescription}
+                                    onChange={(e) => setReimbDescription(e.target.value)}
+                                    disabled={!canEdit}
+                                    className={clsx(
+                                        "w-full min-h-[100px] px-4 py-3 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium resize-none",
+                                        !canEdit && "bg-neutral-50 text-neutral-500"
+                                    )}
+                                    placeholder="Describe clearly what this reimbursement is for..."
+                                />
+                                <div className="absolute top-3 right-3 pointer-events-none text-neutral-400">
+                                    <FileText className="w-4 h-4 opacity-50" />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* BENEFICIARY ACCOUNT (Optional but recommended) */}
+                        <div className="pt-2 border-t border-neutral-100 mt-2 space-y-3">
+                            <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
+                                <CreditCard className="w-3.5 h-3.5" strokeWidth={1.5} /> Transfer Destination (Your Account)
+                            </h3>
+
+                            {/* Saved Account Selector */}
+                            {canEdit && savedAccounts.length > 0 && (
+                                <Select
+                                    label="Quick Select (Saved Accounts)"
+                                    value=""
+                                    onChange={(val) => {
+                                        const acc = savedAccounts.find(a => a.id === val);
+                                        if (acc) {
+                                            setBankName(acc.bank_name);
+                                            setAccountNumber(acc.account_number);
+                                            setAccountName(acc.account_name);
+                                        }
+                                    }}
+                                    options={[
+                                        { value: "", label: "Select from saved..." },
+                                        ...savedAccounts.map(a => ({ value: a.id, label: `${a.bank_name} - ${a.account_number} (${a.account_name})` }))
+                                    ]}
+                                />
+                            )}
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Bank Name</label>
+                                    <input
+                                        type="text"
+                                        value={bankName}
+                                        onChange={e => setBankName(e.target.value)}
+                                        disabled={!canEdit}
+                                        placeholder="e.g. BCA"
+                                        className={clsx(
+                                            "w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                            !canEdit && "bg-neutral-50 text-neutral-500"
+                                        )}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Account Number</label>
+                                    <input
+                                        type="text"
+                                        value={accountNumber}
+                                        onChange={e => setAccountNumber(e.target.value)}
+                                        disabled={!canEdit}
+                                        placeholder="e.g. 1234567890"
+                                        className={clsx(
+                                            "w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                            !canEdit && "bg-neutral-50 text-neutral-500"
+                                        )}
+                                    />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Account Name</label>
+                                    <input
+                                        type="text"
+                                        value={accountName}
+                                        onChange={e => setAccountName(e.target.value)}
+                                        disabled={!canEdit}
+                                        placeholder="e.g. Adidaya Studio"
+                                        className={clsx(
+                                            "w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                            !canEdit && "bg-neutral-50 text-neutral-500"
+                                        )}
+                                    />
+                                </div>
+                            </div>
+                            {canEdit && bankName && accountNumber && (
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <div className={clsx(
+                                        "w-5 h-5 rounded-lg border flex items-center justify-center transition-all",
+                                        saveToSaved ? "bg-red-500 border-red-500 text-white" : "border-neutral-300 bg-white group-hover:border-red-400"
+                                    )}>
+                                        {saveToSaved && <Save className="w-3 h-3" />}
+                                    </div>
+                                    <input type="checkbox" className="hidden" checked={saveToSaved} onChange={() => setSaveToSaved(!saveToSaved)} />
+                                    <span className="text-xs font-bold text-neutral-600 group-hover:text-red-600 transition-colors">Save to my saved accounts</span>
+                                </label>
+                            )}
                         </div>
                     </div>
                 </section>
 
                 <hr className="border-neutral-100" />
-
-                {/* SECTION 2: CATEGORY SPECIFIC */}
-                {reimbCategory && (
-                    <>
-                        <section className="space-y-4">
-                            <h3 className="text-xs font-bold text-red-500 uppercase tracking-wider flex items-center gap-2">
-                                {reimbCategory === "TRANSPORTATION" && <Car className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                                {reimbCategory === "MATERIAL" && <Package className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                                {reimbCategory === "TOOLS" && <Wrench className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                                {reimbCategory === "CONSUMPTION" && <Utensils className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                                {reimbCategory === "ACCOMMODATION" && <Home className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                                {reimbCategory === "OTHER" && <MoreHorizontal className="w-3.5 h-3.5" strokeWidth={1.5} />}
-                                Detail {REIMBURSE_CATEGORY_OPTIONS.find(c => c.value === reimbCategory)?.label}
-                            </h3>
-
-                            {reimbCategory === "TRANSPORTATION" && (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <Select label="Type" value={transType} onChange={setTransType} options={TRANSPORT_TYPES} />
-                                        <Select label="Route Context" value={transRoute} onChange={setTransRoute} options={TRANSPORT_ROUTES} />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">From</label>
-                                            <input type="text" value={transFrom} onChange={e => setTransFrom(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="Origin" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">To</label>
-                                            <input type="text" value={transTo} onChange={e => setTransTo(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="Destination" />
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex-1">
-                                            <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Distance (km)</label>
-                                            <input type="number" value={transDist} onChange={e => setTransDist(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="0" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">Est. Cost (Auto)</label>
-                                            <div className="w-full px-4 py-2.5 text-sm bg-neutral-50 border border-neutral-200 rounded-xl font-bold text-neutral-700">
-                                                {formatCurrency(transportEstCost)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {reimbCategory === "MATERIAL" && (
-                                <div className="space-y-4 text-xs italic text-neutral-500 bg-neutral-50 p-3 rounded-lg border border-neutral-100">
-                                    Detail material (Qty, Unit, Name) sekarang diinput langsung di tabel "Item Details" di bawah.
-                                    Gunakan kolom ini untuk detail alokasi tambahan.
-                                    <div className="grid grid-cols-2 gap-4 mt-3 not-italic">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-1.5">Purpose / Usage</label>
-                                            <input type="text" value={matPurpose} onChange={e => setMatPurpose(e.target.value)} className="w-full h-10 px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="e.g. For wall plastering" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-neutral-600 uppercase tracking-widest mb-1.5">For (Allocation)</label>
-                                            <input type="text" value={matFor} onChange={e => setMatFor(e.target.value)} className="w-full h-10 px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="e.g. Lantai 2 Bedroom" />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {reimbCategory === "TOOLS" && (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="text-xs italic text-neutral-500 bg-neutral-50 p-3 rounded-lg border border-neutral-100 flex items-center">
-                                            Nama alat diinput di tabel items di bawah.
-                                        </div>
-                                        <Select label="Type" value={toolType} onChange={setToolType} options={[{ value: "BUY", label: "Buy (Beli)" }, { value: "RENT", label: "Rent (Sewa)" }, { value: "SERVICE", label: "Service/Repair" }]} />
-                                    </div>
-                                    {toolType === "RENT" && (
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5">Duration (Days)</label>
-                                            <input type="number" value={toolDuration} onChange={e => setToolDuration(e.target.value)} className="w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="0" />
-                                        </div>
-                                    )}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5">For Project</label>
-                                            <input type="text" value={toolProject} onChange={e => setToolProject(e.target.value)} className="w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="Project Name" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1.5">Condition</label>
-                                            <input type="text" value={toolCond} onChange={e => setToolCond(e.target.value)} className="w-full h-10 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="New / Used" />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {reimbCategory === "CONSUMPTION" && (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <Select label="Type" value={consType} onChange={setConsType} options={[{ value: "MEETING", label: "Meeting (Internal/Client)" }, { value: "OVERTIME", label: "Overtime Meal" }, { value: "GUEST", label: "Guest Entertainment" }]} />
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Pax (People)</label>
-                                            <input type="number" value={consPax} onChange={e => setConsPax(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="0" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Purpose / Event</label>
-                                        <input type="text" value={consPurpose} onChange={e => setConsPurpose(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="e.g. Weekly Coordination Meeting" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Location / Restaurant</label>
-                                        <input type="text" value={consLoc} onChange={e => setConsLoc(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="Resto Name" />
-                                    </div>
-                                </div>
-                            )}
-
-                            {reimbCategory === "ACCOMMODATION" && (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <Select label="Type" value={accType} onChange={setAccType} options={[{ value: "HOTEL", label: "Hotel / Penginapan" }, { value: "KOST", label: "Kost (Project)" }]} />
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">LocationName</label>
-                                            <input type="text" value={accLoc} onChange={e => setAccLoc(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="Hotel Name" />
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Check In</label>
-                                            <input type="date" value={accIn} onChange={e => setAccIn(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Check Out</label>
-                                            <input type="date" value={accOut} onChange={e => setAccOut(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Purpose</label>
-                                        <input type="text" value={accPurpose} onChange={e => setAccPurpose(e.target.value)} className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="Reason for stay" />
-                                    </div>
-                                </div>
-                            )}
-
-                            {reimbCategory === "OTHER" && (
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">Detail Description</label>
-                                        <textarea value={otherDetail} onChange={e => setOtherDetail(e.target.value)} className="w-full px-4 py-3 text-sm border border-neutral-200 rounded-xl min-h-[80px] focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium" placeholder="Explain clearly..." />
-                                    </div>
-                                </div>
-                            )}
-                        </section>
-                        <hr className="border-neutral-100" />
-                    </>
-                )}
 
 
                 {/* SECTION 3: ITEMS TABLE */}
@@ -591,6 +647,21 @@ export function ReimburseRequestForm({
                                 <p className="text-sm font-bold text-emerald-700">{invoiceFile.name}</p>
                                 <p className="text-xs text-emerald-600 mt-1">Proof uploaded</p>
                             </div>
+                        ) : initialData?.invoice_url ? (
+                            <div>
+                                <CheckCircle className="w-8 h-8 mx-auto text-blue-600 mb-2" strokeWidth={1.5} />
+                                <p className="text-sm font-bold text-blue-700">Existing Proof Attached</p>
+                                <a
+                                    href={previewUrl || "#"}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 mt-1 hover:underline z-20 relative"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    View File
+                                </a>
+                                <p className="text-[10px] text-neutral-400 mt-2">Click box to replace</p>
+                            </div>
                         ) : (
                             <div>
                                 <Upload className="w-8 h-8 mx-auto text-neutral-400 mb-2 group-hover:text-red-500 transition-colors" strokeWidth={1.5} />
@@ -611,13 +682,24 @@ export function ReimburseRequestForm({
                     >
                         Cancel
                     </button>
-                    <button
-                        disabled={!isValid || isSubmitting || isReadOnly}
-                        onClick={handleSave}
-                        className="flex-[2] h-11 text-sm font-bold text-white bg-red-500 hover:bg-red-600 active:scale-[0.98] rounded-xl transition-all shadow-lg shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
-                    >
-                        {isSubmitting ? "Saving..." : "Save Request"}
-                    </button>
+                    {canEdit && (
+                        <>
+                            <button
+                                disabled={isSubmitting} // Drafts might be less strict, but for now kept same
+                                onClick={() => handleSave(true)}
+                                className="flex-1 h-11 text-sm font-bold text-neutral-600 bg-white border border-neutral-200 hover:bg-neutral-50 active:scale-[0.98] rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                <Save className="w-4 h-4" /> Save Draft
+                            </button>
+                            <button
+                                disabled={!isValid || isSubmitting}
+                                onClick={() => handleSave(false)}
+                                className="flex-[2] h-11 text-sm font-bold text-white bg-red-500 hover:bg-red-600 active:scale-[0.98] rounded-xl transition-all shadow-lg shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+                            >
+                                <Send className="w-4 h-4" /> Submit Request
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         </>

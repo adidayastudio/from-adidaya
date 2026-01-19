@@ -1,5 +1,17 @@
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { FundingSource, FundingSourceType, BankProvider } from "@/lib/types/finance-types";
+
+const supabase = createClient();
+
+export interface BeneficiaryAccount {
+    id: string;
+    bank_name: string;
+    account_number: string;
+    account_name: string;
+    alias?: string;
+    is_global: boolean;
+    created_by: string;
+}
 
 // -- FETCHING --
 
@@ -135,6 +147,56 @@ export async function toggleFundingSourceActive(id: string, isActive: boolean): 
     return true;
 }
 
+
+// -- BENEFICIARY ACCOUNTS --
+
+export async function fetchBeneficiaryAccounts(): Promise<BeneficiaryAccount[]> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+        .from("finance_beneficiary_accounts")
+        .select("*")
+        .or(`is_global.eq.true,created_by.eq.${user.id}`)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching beneficiary accounts:", error);
+        return [];
+    }
+
+    return (data || []).map((row: any) => ({
+        id: row.id,
+        bank_name: row.bank_name,
+        account_number: row.account_number,
+        account_name: row.account_name,
+        alias: row.alias,
+        is_global: row.is_global,
+        created_by: row.created_by
+    }));
+}
+
+export async function saveBeneficiaryAccount(account: {
+    bank_name: string;
+    account_number: string;
+    account_name: string;
+    alias?: string;
+    created_by: string;
+}): Promise<BeneficiaryAccount | null> {
+    const { data, error } = await supabase
+        .from("finance_beneficiary_accounts")
+        .insert([account])
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error saving beneficiary account:", JSON.stringify(error, null, 2));
+        return null;
+    }
+
+    return data;
+}
+
 // -- MAPPER --
 
 function mapDbToFundingSource(row: any): FundingSource {
@@ -172,6 +234,9 @@ export interface PurchasingRequestPayload {
     payment_date?: string;
     invoice_url?: string;
     notes?: string;
+    beneficiary_bank?: string;
+    beneficiary_number?: string;
+    beneficiary_name?: string;
     created_by: string; // Required: user ID
     items: {
         name: string;
@@ -337,6 +402,7 @@ export async function deletePurchasingRequest(requestId: string) {
 export interface ReimburseRequestPayload {
     project_id: string;
     category: string;
+    subcategory?: string;
     date: string;
     description: string;
     amount: number;
@@ -344,6 +410,12 @@ export interface ReimburseRequestPayload {
     invoice_url?: string;
     notes?: string;
     details?: any; // JSONB
+    beneficiary_bank?: string;
+    beneficiary_number?: string;
+    beneficiary_name?: string;
+    revision_reason?: string;
+    rejection_reason?: string;
+    approved_amount?: number;
     created_by: string; // Required: user ID
     items: {
         name: string;
@@ -463,6 +535,7 @@ export async function updateReimburseStatus(id: string, updates: {
     invoice_url?: string;
     approved_amount?: number;
     notes?: string;
+    revision_reason?: string;
     rejection_reason?: string;
     payment_proof_url?: string;
     source_of_fund_id?: string;
@@ -471,12 +544,7 @@ export async function updateReimburseStatus(id: string, updates: {
     console.log("updateReimburseStatus Payload:", { id, updates });
 
     // Handle approved_amount by moving it to details if column is missing
-    if (updates.approved_amount !== undefined) {
-        const { data: current } = await supabase.from('reimbursement_requests').select('details').eq('id', id).single();
-        const currentDetails = current?.details || {};
-        updates.details = { ...currentDetails, approved_amount: updates.approved_amount };
-        delete updates.approved_amount; // Remove from top-level to avoid schema error
-    }
+
 
     const { error } = await supabase
         .from("reimbursement_requests")
@@ -507,7 +575,7 @@ export async function updateReimburseRequest(id: string, payload: Partial<Reimbu
         .eq("id", id);
 
     if (reqError) {
-        console.error("Error updating reimburse request:", reqError);
+        console.error("Error updating reimburse request:", JSON.stringify(reqError, null, 2));
         throw reqError;
     }
 

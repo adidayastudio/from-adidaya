@@ -16,6 +16,7 @@ import {
     Pencil,
     Trash2,
     Ban,
+    AlertCircle,
     ChevronUp,
     ChevronDown,
     CheckCircle2,
@@ -29,7 +30,10 @@ import {
     Wrench,
     Utensils,
     MoreHorizontal,
-    Upload
+    Upload,
+    MapPin,
+    Copy,
+    Check
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,6 +51,22 @@ import { uploadFinanceFileExact, getFinanceFileUrl } from "@/lib/api/storage";
 
 // -- MODALS --
 // (kept as is)
+
+// Copy Button Helper
+const CopyButton = ({ text, className }: { text: string, className?: string }) => {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+    return (
+        <button onClick={handleCopy} className={clsx("p-1 hover:bg-neutral-100 rounded-full transition-all text-neutral-400 hover:text-neutral-600", className)} title="Copy to clipboard">
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
+    );
+};
 
 function RejectModal({ item, onClose, onReject }: { item: any, onClose: () => void, onReject: (reason: string) => void }) {
     const [reason, setReason] = useState("");
@@ -66,6 +86,32 @@ function RejectModal({ item, onClose, onReject }: { item: any, onClose: () => vo
                 <div className="flex gap-3">
                     <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
                     <button onClick={() => { if (reason) onReject(reason); }} disabled={!reason} className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all disabled:opacity-50">Reject</button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+function ReviseModal({ item, onClose, onRevise }: { item: any, onClose: () => void, onRevise: (reason: string) => void }) {
+    const [reason, setReason] = useState("");
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden">
+                <h3 className="text-lg font-bold text-neutral-900 mb-2 flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-orange-500" /> Request Revision
+                </h3>
+                <p className="text-sm text-neutral-500 mb-6 font-medium">Please provide instructions for what needs to be revised.</p>
+                <textarea
+                    autoFocus
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Revision instructions..."
+                    className="w-full h-32 p-4 text-sm border border-neutral-200 rounded-xl bg-neutral-50 mb-6 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                />
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
+                    <button onClick={() => { if (reason) onRevise(reason); }} disabled={!reason} className="flex-1 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all disabled:opacity-50">Request Revision</button>
                 </div>
             </motion.div>
         </div>
@@ -102,20 +148,45 @@ function PayModal({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                 </h3>
 
                 <div className="space-y-4 mb-8">
-                    <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-100 space-y-2">
-                        <div className="flex justify-between text-xs">
-                            <span className="text-neutral-500">Amount to Pay</span>
-                            <span className="font-bold text-neutral-900">{formatCurrency(item.approved_amount || item.amount)}</span>
-                        </div>
-                        {item.approved_amount && item.approved_amount !== item.amount && (
-                            <div className="flex justify-between text-[10px] text-orange-600 bg-orange-50 px-2 py-1 rounded">
-                                <span>Corrected from</span>
-                                <span className="line-through opacity-75">{formatCurrency(item.amount)}</span>
+                    <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-100 space-y-3">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-neutral-500 font-medium">Amount to Pay</span>
+                            <div className="flex items-center gap-1">
+                                <div className="text-right">
+                                    <div className="font-bold text-neutral-900 text-sm">{formatCurrency(item.approved_amount || item.details?.approved_amount || item.amount)}</div>
+                                    {(item.approved_amount || item.details?.approved_amount) && (item.approved_amount || item.details?.approved_amount) !== item.amount && (
+                                        <div className="text-[10px] text-orange-600 line-through opacity-75">{formatCurrency(item.amount)}</div>
+                                    )}
+                                </div>
+                                <CopyButton text={String(item.approved_amount || item.details?.approved_amount || item.amount)} />
                             </div>
-                        )}
-                        <div className="flex justify-between text-xs">
-                            <span className="text-neutral-500">Recipient</span>
-                            <span className="font-bold text-neutral-900">{item.staff_name}</span>
+                        </div>
+
+                        <hr className="border-neutral-200/50" />
+
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-neutral-500 font-medium">Submitter</span>
+                            <div className="flex items-center gap-1">
+                                <span className="font-bold text-neutral-900">{item.staff_name}</span>
+                                <div className="w-6" /> {/* Spacer for alignment with copy buttons */}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-start text-xs">
+                            <span className="text-neutral-500 font-medium mt-0.5">Beneficiary Account</span>
+                            <div className="flex items-center gap-1">
+                                {(item.beneficiary_bank || item.beneficiary_number) ? (
+                                    <div className="text-right">
+                                        <div className="font-bold text-neutral-900">{item.beneficiary_name || item.staff_name}</div>
+                                        <div className="text-[10px] text-neutral-500 font-mono bg-white px-1.5 py-0.5 rounded border border-neutral-200 mt-1 inline-block">
+                                            {item.beneficiary_bank} • {item.beneficiary_number}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <span className="italic text-neutral-400">Not specified</span>
+                                )}
+                                {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
+                            </div>
                         </div>
                     </div>
 
@@ -124,31 +195,40 @@ function PayModal({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                         {isLoadingSources ? (
                             <div className="h-10 w-full bg-neutral-100 rounded-xl animate-pulse" />
                         ) : (
-                            <select value={source} onChange={(e) => setSource(e.target.value)} className="w-full h-10 px-3 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20">
-                                <option value="">Select Source...</option>
-                                {fundingSources.map(s => (
-                                    <option key={s.id} value={s.id}>{s.name} ({s.currency})</option>
-                                ))}
-                            </select>
+                            <div className="relative group">
+                                <select
+                                    value={source}
+                                    onChange={(e) => setSource(e.target.value)}
+                                    className="w-full h-11 pl-4 pr-10 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-medium appearance-none cursor-pointer hover:border-emerald-500/30"
+                                >
+                                    <option value="">Select Source...</option>
+                                    {fundingSources.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name} ({s.currency})</option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 group-hover:text-emerald-600 transition-colors">
+                                    <ChevronDown className="w-4 h-4" />
+                                </div>
+                            </div>
                         )}
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Payment Date</label>
-                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-10 px-3 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20" />
+                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-11 px-3 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-medium" />
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Proof of Transfer (Optional)</label>
                         <div className={clsx(
-                            "border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer relative",
-                            proofFile ? "border-emerald-500/40 bg-emerald-50/50" : "border-neutral-200 hover:border-red-500/30 hover:bg-neutral-50"
+                            "border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer relative group",
+                            proofFile ? "border-emerald-500/40 bg-emerald-50/50" : "border-neutral-200 hover:border-emerald-500/30 hover:bg-emerald-50/20"
                         )}>
-                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => { if (e.target.files?.[0]) setProofFile(e.target.files[0]); }} />
+                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={(e) => { if (e.target.files?.[0]) setProofFile(e.target.files[0]); }} />
                             {proofFile ? (
-                                <div className="flex items-center justify-center gap-2 text-emerald-700 text-sm font-bold">
+                                <div className="flex items-center justify-center gap-2 text-emerald-700 text-sm font-bold animate-in fade-in zoom-in-95">
                                     <CheckCircle2 className="w-4 h-4" /> {proofFile.name}
                                 </div>
                             ) : (
-                                <div className="flex items-center justify-center gap-2 text-neutral-400 text-sm">
+                                <div className="flex items-center justify-center gap-2 text-neutral-400 text-sm group-hover:text-emerald-600 transition-colors">
                                     <Upload className="w-4 h-4" /> Upload Image/PDF
                                 </div>
                             )}
@@ -156,18 +236,18 @@ function PayModal({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Notes</label>
-                        <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional transaction notes" className="w-full h-10 px-3 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-red-500/20" />
+                        <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional transaction notes" className="w-full h-11 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-medium placeholder:text-neutral-400" />
                     </div>
                 </div>
 
-                <div className="flex gap-3">
-                    <button onClick={onClose} disabled={isSubmitting} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
+                <div className="flex gap-3 pt-2">
+                    <button onClick={onClose} disabled={isSubmitting} className="flex-1 py-3 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
                     <button
                         onClick={handleConfirm}
                         disabled={!source || !date || isSubmitting}
-                        className="flex-1 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="flex-1 py-3 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
                     >
-                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm Payment"}
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Process Payment"}
                     </button>
                 </div>
             </motion.div>
@@ -237,7 +317,7 @@ function StatusBadge({ status }: { status: any }) {
     const theme = STATUS_THEMES[status as keyof typeof STATUS_THEMES] || STATUS_THEMES.DRAFT;
     return (
         <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", theme.bg, theme.text, theme.border)}>
-            {status}
+            {formatStatus(status)}
         </span>
     );
 }
@@ -446,7 +526,46 @@ function ViewModal({
                             </div>
                             <div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Project</div>
-                                <div className="text-sm font-medium text-neutral-900">{item.project?.project_name || item.project?.project_code || "-"}</div>
+                                <div className="text-sm font-medium text-neutral-900 flex items-center flex-wrap">
+                                    {item.project ? (
+                                        <>
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-100 text-neutral-600 mr-2 border border-neutral-200 shrink-0">
+                                                {item.project.project_code}
+                                            </span>
+                                            <span>{item.project.project_name}</span>
+                                        </>
+                                    ) : "-"}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* REVISION/REJECTION REASON */}
+                        {((item.status === "NEED_REVISION") || (item.status === "DRAFT" && item.revision_reason)) && item.revision_reason && (
+                            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-6 animate-in fade-in slide-in-from-top-2">
+                                <h4 className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                    <AlertCircle className="w-3.5 h-3.5" /> Revision Requested
+                                </h4>
+                                <p className="text-sm font-medium text-orange-900">{item.revision_reason}</p>
+                            </div>
+                        )}
+
+                        {(item.status === "REJECTED" || item.rejection_reason) && item.rejection_reason && (
+                            <div className="bg-red-50 p-4 rounded-xl border border-red-100 mb-6 animate-in fade-in slide-in-from-top-2">
+                                <h4 className="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                    <Ban className="w-3.5 h-3.5" /> Rejection Reason
+                                </h4>
+                                <p className="text-sm font-medium text-red-900">{item.rejection_reason}</p>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Category</div>
+                                <div className="text-sm font-medium text-neutral-900 capitalize">{category?.toLowerCase().replace(/_/g, " ")}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Subcategory</div>
+                                <div className="text-sm font-medium text-neutral-900 capitalize">{item.subcategory ? item.subcategory.toLowerCase().replace(/_/g, " ") : "-"}</div>
                             </div>
                         </div>
 
@@ -458,7 +577,15 @@ function ViewModal({
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Amount</div>
-                                <div className="text-lg font-bold text-neutral-900">{formatCurrency(displayAmount)}</div>
+                                <div className="flex items-center gap-1">
+                                    <span className="text-lg font-bold text-neutral-900">{formatCurrency(item.approved_amount || item.details?.approved_amount || item.amount)}</span>
+                                    <CopyButton text={String(item.approved_amount || item.details?.approved_amount || item.amount)} />
+                                </div>
+                                {(item.approved_amount || item.details?.approved_amount) && (item.approved_amount || item.details?.approved_amount) !== item.amount && (
+                                    <div className="text-[10px] text-orange-600 line-through opacity-75 mt-0.5 font-medium">
+                                        {formatCurrency(item.amount)}
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Status</div>
@@ -466,88 +593,169 @@ function ViewModal({
                             </div>
                         </div>
 
-                        {category === "TRANSPORTATION" && item.details?.transportEstCost && (
-                            <div className="bg-blue-50 p-3 rounded-xl border border-blue-100">
-                                <div className="flex justify-between items-center">
-                                    <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">System Estimation</div>
-                                    <div className="text-sm font-bold text-blue-700">{formatCurrency(item.details.transportEstCost)}</div>
+                        {/* Items Breakdown */}
+                        {item.items && item.items.length > 0 && (
+                            <div className="space-y-1.5 pt-1">
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Details Breakdown</div>
+                                <div className="border border-neutral-100 rounded-xl overflow-hidden">
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-neutral-50 text-[10px] uppercase font-bold text-neutral-400 border-b border-neutral-50">
+                                            <tr>
+                                                <th className="py-2 px-3 text-left font-semibold">Item</th>
+                                                <th className="py-2 px-3 text-center font-semibold w-[15%]">Qty</th>
+                                                <th className="py-2 px-3 text-right font-semibold w-[20%]">Price</th>
+                                                <th className="py-2 px-3 text-right font-semibold w-[20%]">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-50">
+                                            {item.items.map((it: any, idx: number) => (
+                                                <tr key={idx} className="bg-white hover:bg-neutral-50/50 transition-colors">
+                                                    <td className="py-2 px-3 font-medium text-neutral-800">{it.name}</td>
+                                                    <td className="py-2 px-3 text-center text-neutral-500">
+                                                        {it.qty} <span className="text-[9px] text-neutral-400 uppercase">{it.unit}</span>
+                                                    </td>
+                                                    <td className="py-2 px-3 text-right text-neutral-500 tabular-nums">{formatCurrency(it.unit_price)}</td>
+                                                    <td className="py-2 px-3 text-right font-bold text-neutral-900 tabular-nums">{formatCurrency(it.total)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div className="text-[10px] text-blue-400 mt-1">Based on {item.details?.transDist}km x Rate</div>
                             </div>
                         )}
 
-                        <div>
-                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Category</div>
-                            <div className="text-sm font-medium text-neutral-900">{category}</div>
-                        </div>
-
-                        <div>
-                            <div className="flex p-1 bg-neutral-100 rounded-xl mb-4">
-                                <button onClick={() => setActiveTab('invoice')} className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all", activeTab === 'invoice' ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}>Invoice / Receipt</button>
-                                <button onClick={() => setActiveTab('proof')} className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all", activeTab === 'proof' ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}>Proof of Transfer</button>
-                            </div>
-
-                            {activeTab === 'invoice' && (
-                                <div className="space-y-2">
-                                    {item.invoice_url ? (
-                                        <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
-                                            {item.invoice_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                                <button onClick={() => onPreview('invoice')} className="w-full text-left cursor-zoom-in relative block">
-                                                    {invoiceUrl ? <img src={invoiceUrl} alt="Invoice" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                        <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
-                                                    </div>
-                                                </button>
-                                            ) : (
-                                                <div className="p-4 flex items-center justify-between">
-                                                    <span className="text-sm text-neutral-600">Attached file</span>
-                                                    <a href={invoiceUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">Open File</a>
-                                                </div>
-                                            )}
+                        {category === "TRANSPORTATION" && item.details && (item.details.origin || item.details.destination || item.details.distance) && (
+                            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                                {/* Only show estimation for Motor/Mobil Pribadi */}
+                                {["MOTOR_PERSONAL", "CAR_PERSONAL"].includes(item.subcategory) && item.details.transportEstCost ? (
+                                    <>
+                                        <h4 className="text-[10px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5">
+                                            <MapPin className="w-3.5 h-3.5" /> System Estimation
+                                        </h4>
+                                        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 text-xs items-center text-blue-900/80 font-medium border-b border-blue-100 pb-2 mb-2">
+                                            <span>Trip: {item.details.origin || "?"} <span className="text-blue-300 mx-1">→</span> {item.details.destination || "?"}</span>
+                                            <span className="tabular-nums">{item.details.distance} km</span>
+                                            <span className="text-blue-400">× rate</span>
+                                            <span className="font-bold tabular-nums">{formatCurrency(item.details.transportEstCost)}</span>
                                         </div>
-                                    ) : (
-                                        <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200"><p className="text-xs text-neutral-400">No invoice attached</p></div>
-                                    )}
-                                </div>
-                            )}
-
-                            {activeTab === 'proof' && (
-                                <div className="space-y-2">
-                                    {item.payment_proof_url ? (
-                                        <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
-                                            {item.payment_proof_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                                <button onClick={() => onPreview('proof')} className="w-full text-left cursor-zoom-in relative block">
-                                                    {proofUrl ? <img src={proofUrl} alt="Proof" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                        <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
-                                                    </div>
-                                                </button>
-                                            ) : (
-                                                <div className="p-4 flex items-center justify-between">
-                                                    <span className="text-sm text-neutral-600">Attached proof</span>
-                                                    <a href={proofUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">Open File</a>
-                                                </div>
-                                            )}
+                                        <div className="flex justify-between items-center text-xs">
+                                            <span className="text-blue-400 font-medium">Claim Amount vs System Est.</span>
+                                            <div className="flex gap-2">
+                                                <span className={clsx("font-bold", (item.amount > (item.details.transportEstCost || 0)) ? "text-red-500" : "text-emerald-600")}>
+                                                    {formatCurrency(item.amount)}
+                                                </span>
+                                                <span className="text-blue-300">/</span>
+                                                <span className="text-blue-700 font-bold">{formatCurrency(item.details.transportEstCost || 0)}</span>
+                                            </div>
                                         </div>
-                                    ) : (
-                                        <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200"><p className="text-xs text-neutral-400">No payment proof uploaded</p></div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {notes && (
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Notes</div>
-                                <div className="text-sm text-neutral-700 bg-neutral-50 p-3 rounded-lg">{notes}</div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h4 className="text-[10px] font-bold text-blue-500 uppercase tracking-widest flex items-center gap-1.5">
+                                            <MapPin className="w-3.5 h-3.5" /> Trip Details
+                                        </h4>
+                                        <div className="grid grid-cols-[1fr_auto] gap-4 text-xs items-center text-blue-900/80 font-medium">
+                                            <span>Trip: {item.details.origin || "?"} <span className="text-blue-300 mx-1">→</span> {item.details.destination || "?"}</span>
+                                            <span className="tabular-nums">{item.details.distance} km</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>
 
-                    <button onClick={onClose} className="w-full h-12 mt-6 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl font-medium transition-all">Close</button>
+                    {/* Beneficiary Details - Compact Card */}
+                    {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
+                        <div className="my-6 bg-white p-3.5 rounded-xl border border-dashed border-neutral-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:border-red-200 transition-colors">
+                            <div className="absolute top-0 right-0 p-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
+                                <CreditCard className="w-16 h-16 rotate-12" />
+                            </div>
+
+                            <div className="flex items-center gap-2 mb-2.5">
+                                <div className="w-5 h-5 rounded-md bg-red-50 flex items-center justify-center">
+                                    <CreditCard className="w-2.5 h-2.5 text-red-500" />
+                                </div>
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Beneficiary Account</span>
+                            </div>
+
+                            <div className="flex flex-col gap-0.5 relative z-10 pl-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-neutral-900">{item.beneficiary_bank || "Unknown Bank"}</span>
+                                    <span className="text-sm font-mono font-medium text-neutral-500 tracking-tight bg-neutral-50 px-1.5 py-0.5 rounded border border-neutral-100">{item.beneficiary_number || "-"}</span>
+                                    {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
+                                </div>
+                                <div className="text-xs font-medium text-neutral-500">{item.beneficiary_name || "-"}</div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <div className="flex p-1 bg-neutral-100 rounded-xl mb-4">
+                            <button onClick={() => setActiveTab('invoice')} className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all", activeTab === 'invoice' ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}>Invoice / Receipt</button>
+                            <button onClick={() => setActiveTab('proof')} className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all", activeTab === 'proof' ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}>Proof of Transfer</button>
+                        </div>
+
+                        {activeTab === 'invoice' && (
+                            <div className="space-y-2">
+                                {item.invoice_url ? (
+                                    <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
+                                        {item.invoice_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                            <button onClick={() => onPreview('invoice')} className="w-full text-left cursor-zoom-in relative block">
+                                                {invoiceUrl ? <img src={invoiceUrl} alt="Invoice" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                    <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
+                                                </div>
+                                            </button>
+                                        ) : (
+                                            <div className="p-4 flex items-center justify-between">
+                                                <span className="text-sm text-neutral-600">Attached file</span>
+                                                <a href={invoiceUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">Open File</a>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200"><p className="text-xs text-neutral-400">No invoice attached</p></div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'proof' && (
+                            <div className="space-y-2">
+                                {item.payment_proof_url ? (
+                                    <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
+                                        {item.payment_proof_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                            <button onClick={() => onPreview('proof')} className="w-full text-left cursor-zoom-in relative block">
+                                                {proofUrl ? <img src={proofUrl} alt="Proof" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                    <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
+                                                </div>
+                                            </button>
+                                        ) : (
+                                            <div className="p-4 flex items-center justify-between">
+                                                <span className="text-sm text-neutral-600">Attached proof</span>
+                                                <a href={proofUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">Open File</a>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200"><p className="text-xs text-neutral-400">No payment proof uploaded</p></div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {notes && (
+                        <div className="mt-6">
+                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Notes</div>
+                            <div className="text-sm text-neutral-700 bg-neutral-50 p-3 rounded-lg">{notes}</div>
+                        </div>
+                    )}
                 </div>
+
+                <button onClick={onClose} className="w-full h-12 mt-6 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl font-medium transition-all">Close</button>
             </div>
-        </div>
+        </div >
+
     );
 }
 
@@ -575,6 +783,7 @@ export default function ReimburseClient() {
     // States
     const [editingItem, setEditingItem] = useState<any | null>(null);
     const [approvingItem, setApprovingItem] = useState<any | null>(null);
+    const [revisingItem, setRevisingItem] = useState<any | null>(null);
     const [rejectingItem, setRejectingItem] = useState<any | null>(null);
     const [payingItem, setPayingItem] = useState<any | null>(null);
     const [viewingItem, setViewingItem] = useState<any | null>(null);
@@ -964,7 +1173,15 @@ export default function ReimburseClient() {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="text-xs font-semibold text-neutral-900">{item.description}</div>
-                                                <span className="text-[10px] text-neutral-400 uppercase font-bold tracking-wider">{item.category}</span>
+                                                <span className="text-[10px] text-neutral-400 uppercase font-bold tracking-wider flex items-center gap-1">
+                                                    {item.category?.replace(/_/g, " ")}
+                                                    {item.subcategory && (
+                                                        <>
+                                                            <span className="text-neutral-300">•</span>
+                                                            <span className="text-neutral-500">{item.subcategory?.replace(/_/g, " ")}</span>
+                                                        </>
+                                                    )}
+                                                </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <div className="flex flex-col items-end">
@@ -988,7 +1205,7 @@ export default function ReimburseClient() {
                                             <td className="px-6 py-4 text-center">
                                                 {(() => {
                                                     const theme = STATUS_THEMES[item.status as keyof typeof STATUS_THEMES] || STATUS_THEMES.DRAFT;
-                                                    return <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", theme.bg, theme.text, theme.border)}>{item.status}</span>
+                                                    return <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", theme.bg, theme.text, theme.border)}>{formatStatus(item.status)}</span>
                                                 })()}
                                             </td>
                                             <td className="px-6 py-4">
@@ -1004,6 +1221,7 @@ export default function ReimburseClient() {
                                                     {isTeamView && item.status === "PENDING" && (
                                                         <>
                                                             <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1.5 hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 rounded-full" title="Approve"><CheckCircle2 className="w-4 h-4" /></button>
+                                                            <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="p-1.5 hover:bg-orange-50 text-neutral-400 hover:text-orange-600 rounded-full" title="Request Revision"><AlertCircle className="w-4 h-4" /></button>
                                                             <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1.5 hover:bg-rose-50 text-neutral-400 hover:text-rose-600 rounded-full" title="Reject"><Ban className="w-4 h-4" /></button>
                                                         </>
                                                     )}
@@ -1012,7 +1230,7 @@ export default function ReimburseClient() {
                                                         <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1.5 hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 rounded-full" title="Pay"><CreditCard className="w-4 h-4" /></button>
                                                     )}
 
-                                                    {!isTeamView && (item.status === "PENDING" || item.status === "REJECTED") && (
+                                                    {!isTeamView && (item.status === "PENDING" || item.status === "REJECTED" || item.status === "DRAFT" || item.status === "NEED_REVISION") && (
                                                         <>
                                                             <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-full"><Pencil className="w-4 h-4" /></button>
                                                             <button onClick={(e) => {
@@ -1069,6 +1287,18 @@ export default function ReimburseClient() {
                     onReject={async (reason) => {
                         await updateReimburseStatus(rejectingItem.id, { status: "REJECTED", rejection_reason: reason });
                         setRejectingItem(null);
+                        loadData();
+                    }}
+                />
+            )}
+
+            {revisingItem && (
+                <ReviseModal
+                    item={revisingItem}
+                    onClose={() => setRevisingItem(null)}
+                    onRevise={async (reason) => {
+                        await updateReimburseStatus(revisingItem.id, { status: "NEED_REVISION", revision_reason: reason });
+                        setRevisingItem(null);
                         loadData();
                     }}
                 />

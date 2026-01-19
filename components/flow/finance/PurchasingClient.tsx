@@ -302,7 +302,12 @@ function ViewModal({
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Amount</div>
-                                <div className="text-lg font-bold text-neutral-900">{formatCurrency(item.amount)}</div>
+                                <div className="text-lg font-bold text-neutral-900">{formatCurrency((item as any).approved_amount || item.amount)}</div>
+                                {(item as any).approved_amount && (item as any).approved_amount !== item.amount && (
+                                    <div className="text-[10px] text-orange-600 line-through opacity-75 mt-0.5 font-medium">
+                                        {formatCurrency(item.amount)}
+                                    </div>
+                                )}
                             </div>
                             <div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Status</div>
@@ -321,6 +326,29 @@ function ViewModal({
                                 <div className="text-sm font-medium text-neutral-900">{item.subcategory || "-"}</div>
                             </div>
                         </div>
+
+                        {/* Beneficiary Details */}
+                        {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
+                            <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-100 space-y-2">
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                                    <CreditCard className="w-3 h-3" /> Beneficiary Info
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider mb-0.5">Bank</div>
+                                        <div className="text-sm font-bold text-neutral-900">{item.beneficiary_bank || "-"}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider mb-0.5">Number</div>
+                                        <div className="text-sm font-bold text-neutral-900 font-mono tracking-tight">{item.beneficiary_number || "-"}</div>
+                                    </div>
+                                    <div className="col-span-2">
+                                        <div className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider mb-0.5">Account Name</div>
+                                        <div className="text-sm font-bold text-neutral-900">{item.beneficiary_name || "-"}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Documents Tabs */}
                         <div>
@@ -709,7 +737,10 @@ export default function PurchasingClient() {
                         created_by_role: creatorRole,
                         submitted_by_name: creatorName,
                         created_at: req.created_at,
-                        updated_at: req.updated_at
+                        updated_at: req.updated_at,
+                        beneficiary_bank: req.beneficiary_bank,
+                        beneficiary_number: req.beneficiary_number,
+                        beneficiary_name: req.beneficiary_name
                     });
                 } else {
                     req.items.forEach((item: any) => {
@@ -740,7 +771,10 @@ export default function PurchasingClient() {
                             created_by_role: creatorRole,
                             submitted_by_name: creatorName,
                             created_at: req.created_at,
-                            updated_at: req.updated_at
+                            updated_at: req.updated_at,
+                            beneficiary_bank: req.beneficiary_bank,
+                            beneficiary_number: req.beneficiary_number,
+                            beneficiary_name: req.beneficiary_name
                         });
                     });
                 }

@@ -23,7 +23,7 @@ export type BankProvider =
 
 export type PurchaseType = "MATERIAL" | "TOOL" | "SERVICE";
 
-export type ReimburseStatus = "DRAFT" | "PENDING" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED";
+export type ReimburseStatus = "DRAFT" | "PENDING" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED" | "NEED_REVISION";
 
 export interface FundingSource {
     id: string;
@@ -65,6 +65,9 @@ export interface PurchasingItem {
     payment_proof_url?: string;
     notes?: string;
     rejection_reason?: string;
+    beneficiary_bank?: string;
+    beneficiary_number?: string;
+    beneficiary_name?: string;
     created_by: string;
     created_by_name?: string;
     created_by_role?: string;
@@ -82,6 +85,7 @@ export interface ReimburseRequest {
     project_code?: string;
     project_name: string;
     category: string;
+    subcategory?: string;
     description: string;
     quantity?: string;
     amount: number;
@@ -92,7 +96,20 @@ export interface ReimburseRequest {
     payment_date?: string;
     source_of_fund_id?: string;
     details?: any;
+    beneficiary_bank?: string;
+    beneficiary_number?: string;
+    beneficiary_name?: string;
+    items?: {
+        id: string;
+        name: string;
+        qty: number;
+        unit: string;
+        unit_price: number;
+        total: number;
+    }[];
     notes?: string;
+    revision_reason?: string;
+    rejection_reason?: string;
     created_at: string;
     updated_at: string;
 }

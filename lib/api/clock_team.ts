@@ -11,20 +11,19 @@ export interface TeamMemberProfile {
 }
 
 export async function fetchTeamMembers(): Promise<TeamMemberProfile[]> {
-    // Fetch profiles
-    const { data: profiles, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, username, full_name, avatar_url, department");
+    // Parallel fetch for speed
+    const [profilesResult, rolesResult] = await Promise.all([
+        supabase.from("profiles").select("id, username, full_name, avatar_url, department"),
+        supabase.from("user_roles").select("user_id, role")
+    ]);
+
+    const { data: profiles, error: profileError } = profilesResult;
+    const { data: roles, error: roleError } = rolesResult;
 
     if (profileError) {
         console.error("Error fetching profiles:", profileError);
         return [];
     }
-
-    // Fetch roles
-    const { data: roles, error: roleError } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
 
     if (roleError) {
         console.error("Error fetching roles:", roleError);
