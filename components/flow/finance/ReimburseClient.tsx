@@ -789,6 +789,21 @@ export default function ReimburseClient() {
     const [viewingItem, setViewingItem] = useState<any | null>(null);
     const [previewingDocument, setPreviewingDocument] = useState<{ item: any, initialTab: 'invoice' | 'proof' } | null>(null);
 
+    // Sorting
+    const [sortColumn, setSortColumn] = useState<'date' | 'project' | 'amount' | 'status' | 'submitter' | null>('date');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+    const STATUS_ORDER = ['DRAFT', 'PENDING', 'NEED_REVISION', 'APPROVED', 'PAID', 'REJECTED'];
+
+    const handleSort = (column: 'date' | 'project' | 'amount' | 'status' | 'submitter') => {
+        if (sortColumn === column) {
+            setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortColumn(column);
+            setSortDirection('asc');
+        }
+    };
+
     const isTeamView = viewMode === "team";
     const initialStatus = searchParams.get("status") as ReimburseStatus | "ALL" | null;
 
@@ -863,7 +878,7 @@ export default function ReimburseClient() {
         const start = startOfMonth(currentMonth);
         const end = endOfMonth(currentMonth);
 
-        return items.filter(item => {
+        let result = items.filter(item => {
             const matchesSearch =
                 item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 item.staff_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -880,7 +895,34 @@ export default function ReimburseClient() {
 
             return matchesSearch && matchesStatus && matchesProject && matchesDate;
         });
-    }, [items, searchTerm, statusFilter, selectedProject, currentMonth]);
+
+        // Apply sorting
+        if (sortColumn) {
+            result = [...result].sort((a, b) => {
+                let comparison = 0;
+                switch (sortColumn) {
+                    case 'date':
+                        comparison = new Date(a.date || a.created_at).getTime() - new Date(b.date || b.created_at).getTime();
+                        break;
+                    case 'project':
+                        comparison = (a.project?.project_name || '').localeCompare(b.project?.project_name || '');
+                        break;
+                    case 'amount':
+                        comparison = (a.amount || 0) - (b.amount || 0);
+                        break;
+                    case 'status':
+                        comparison = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
+                        break;
+                    case 'submitter':
+                        comparison = (a.staff_name || '').localeCompare(b.staff_name || '');
+                        break;
+                }
+                return sortDirection === 'asc' ? comparison : -comparison;
+            });
+        }
+
+        return result;
+    }, [items, searchTerm, statusFilter, selectedProject, currentMonth, sortColumn, sortDirection, STATUS_ORDER]);
 
     const handleExport = async () => {
         if (filteredItems.length === 0) return;
@@ -1138,12 +1180,37 @@ export default function ReimburseClient() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-neutral-100 bg-white/20">
-                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Date</th>
-                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Project</th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('date')}>
+                                        <span className="flex items-center gap-1">
+                                            Date
+                                            {sortColumn === 'date' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                        </span>
+                                    </th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('project')}>
+                                        <span className="flex items-center gap-1">
+                                            Project
+                                            {sortColumn === 'project' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                        </span>
+                                    </th>
                                     <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Description</th>
-                                    <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Amount</th>
-                                    <th className="px-6 py-4 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Status</th>
-                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Submitter</th>
+                                    <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('amount')}>
+                                        <span className="flex items-center justify-end gap-1">
+                                            Amount
+                                            {sortColumn === 'amount' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                        </span>
+                                    </th>
+                                    <th className="px-6 py-4 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('status')}>
+                                        <span className="flex items-center justify-center gap-1">
+                                            Status
+                                            {sortColumn === 'status' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                        </span>
+                                    </th>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('submitter')}>
+                                        <span className="flex items-center gap-1">
+                                            Submitter
+                                            {sortColumn === 'submitter' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                        </span>
+                                    </th>
                                     <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Actions</th>
                                 </tr>
                             </thead>
