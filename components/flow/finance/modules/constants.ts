@@ -1,32 +1,92 @@
 
 export type PurchaseStage = "PLANNED" | "INVOICED" | "RECEIVED";
-export type Category = "MATERIAL" | "TOOL" | "SERVICE" | "SUPPORT";
+export type Category =
+    | "MATERIAL"
+    | "TOOLS_EQUIPMENT"
+    | "SERVICES"
+    | "PROJECT_OPERATIONS"
+    | "OFFICE_OPERATIONS"
+    | "ASSETS_INVENTORY"
+    | "FINANCIAL_LEGAL"
+    | "SPECIAL";
 
 export const CATEGORY_OPTIONS = [
-    { value: "MATERIAL", label: "Material" },
-    { value: "TOOL", label: "Tool (Alat)" },
-    { value: "SERVICE", label: "Service (Jasa)" },
-    { value: "SUPPORT", label: "Support (Operasional)" }
+    { value: "MATERIAL", label: "Material (Material)" },
+    { value: "TOOLS_EQUIPMENT", label: "Tools & Equipment (Alat & Peralatan)" },
+    { value: "SERVICES", label: "Services (Jasa)" },
+    { value: "PROJECT_OPERATIONS", label: "Project Operations (Operasional Proyek)" },
+    { value: "OFFICE_OPERATIONS", label: "Office / Studio Operations (Operasional Kantor / Studio)" },
+    { value: "ASSETS_INVENTORY", label: "Assets & Inventory (Aset & Inventaris)" },
+    { value: "FINANCIAL_LEGAL", label: "Financial & Legal (Keuangan & Legal)" },
+    { value: "SPECIAL", label: "Special / Non-Standard (Khusus / Non-Standar)" }
 ];
 
 export const SUBCATEGORY_OPTIONS: Record<Category, { value: string; label: string }[]> = {
     MATERIAL: [
-        { value: "STRUCTURAL", label: "Material Struktur" },
-        { value: "ARCHITECTURAL", label: "Material Arsitektur" },
-        { value: "MEP", label: "Material MEP" }
+        { value: "STRUCTURAL", label: "Structural Material (Material Struktur)" },
+        { value: "ARCHITECTURAL", label: "Architectural Material (Material Arsitektur)" },
+        { value: "FINISHING", label: "Finishing Material (Material Finishing)" },
+        { value: "ROOFING_CLADDING", label: "Roofing & Cladding Material (Material Atap & Penutup)" },
+        { value: "MEP", label: "MEP Material (Material MEP)" },
+        { value: "INTERIOR", label: "Interior Material (Material Interior)" },
+        { value: "LANDSCAPE", label: "Landscape Material (Material Lanskap)" },
+        { value: "INFRASTRUCTURE", label: "Infrastructure / Civil Material (Material Infrastruktur / Sipil)" },
+        { value: "SPECIAL_CUSTOM", label: "Special / Custom Material (Material Khusus / Custom)" }
     ],
-    TOOL: [
-        { value: "PURCHASE", label: "Alat Beli" },
-        { value: "RENTAL", label: "Alat Sewa" }
+    TOOLS_EQUIPMENT: [
+        { value: "HAND_TOOLS", label: "Hand Tools (Alat Kerja Manual)" },
+        { value: "POWER_TOOLS", label: "Power Tools (Alat Kerja Listrik)" },
+        { value: "HEAVY_EQUIPMENT", label: "Heavy Equipment (Alat Berat)" },
+        { value: "PROJECT_EQUIPMENT", label: "Project Equipment (Peralatan Proyek)" },
+        { value: "SAFETY_EQUIPMENT", label: "Safety Equipment (Peralatan Keselamatan)" },
+        { value: "OFFICE_EQUIPMENT", label: "Office Equipment (Peralatan Kantor)" },
+        { value: "IT_EQUIPMENT", label: "IT & Electronic Equipment (Peralatan IT & Elektronik)" }
     ],
-    SERVICE: [
-        { value: "SURVEY", label: "Jasa Ukur" },
-        { value: "INSTALLATION", label: "Jasa Pasang" },
-        { value: "LOGISTICS", label: "Pengiriman" }
+    SERVICES: [
+        { value: "CONSTRUCTION", label: "Construction Services (Jasa Konstruksi)" },
+        { value: "SUBCONTRACTOR", label: "Subcontractor Services (Jasa Subkontraktor)" },
+        { value: "PROFESSIONAL", label: "Professional / Consultancy Services (Jasa Profesional / Konsultan)" },
+        { value: "FABRICATION", label: "Fabrication Services (Jasa Fabrikasi)" },
+        { value: "TRANSPORT_LOGISTICS", label: "Transportation & Logistics Services (Jasa Transportasi & Logistik)" },
+        { value: "MAINTENANCE", label: "Maintenance & Repair Services (Jasa Perawatan & Perbaikan)" },
+        { value: "CLEANING_SECURITY", label: "Cleaning & Security Services (Jasa Cleaning & Security)" },
+        { value: "OTHER_SERVICES", label: "Other Services (Jasa Lainnya)" }
     ],
-    SUPPORT: [
-        { value: "PERMIT", label: "Biaya Perizinan" },
-        { value: "CONSUMABLES", label: "Konsumsi / ATK" }
+    PROJECT_OPERATIONS: [
+        { value: "SITE_OPS", label: "Site Operations (Operasional Lapangan)" },
+        { value: "PROJECT_UTILITIES", label: "Project Utilities (Utilitas Proyek)" },
+        { value: "CONSUMPTION_ACCOMMODATION", label: "Consumption & Accommodation (Konsumsi & Akomodasi)" },
+        { value: "PROJECT_TRANSPORT", label: "Project Transportation (Transportasi Proyek)" },
+        { value: "HSE", label: "Health & Safety / HSE (Kesehatan & Keselamatan Kerja)" },
+        { value: "PROJECT_ADMIN", label: "Project Administration (Administrasi Proyek)" },
+        { value: "RENTAL_FACILITIES", label: "Rental & Site Facilities (Sewa & Fasilitas Proyek)" }
+    ],
+    OFFICE_OPERATIONS: [
+        { value: "OFFICE_OPS", label: "Office Operations (Operasional Kantor)" },
+        { value: "OFFICE_UTILITIES", label: "Office Utilities (Utilitas Kantor)" },
+        { value: "HR", label: "Human Resources (Sumber Daya Manusia)" },
+        { value: "IT_SOFTWARE", label: "IT & Software (IT & Perangkat Lunak)" },
+        { value: "MARKETING", label: "Marketing & Branding (Pemasaran & Branding)" },
+        { value: "GENERAL_ADMIN", label: "General Administration (Administrasi Umum)" }
+    ],
+    ASSETS_INVENTORY: [
+        { value: "PROJECT_ASSETS", label: "Project Assets (Aset Proyek)" },
+        { value: "OFFICE_ASSETS", label: "Office Assets (Aset Kantor)" },
+        { value: "PROJECT_INVENTORY", label: "Project Inventory (Inventaris Proyek)" },
+        { value: "OFFICE_INVENTORY", label: "Office Inventory (Inventaris Kantor)" }
+    ],
+    FINANCIAL_LEGAL: [
+        { value: "TAXES", label: "Taxes (Pajak)" },
+        { value: "LICENSING_LEGAL", label: "Licensing & Legal (Perizinan & Legal)" },
+        { value: "BANKING_FEES", label: "Banking & Transaction Fees (Perbankan & Biaya Transaksi)" },
+        { value: "INSURANCE", label: "Insurance (Asuransi)" },
+        { value: "PENALTIES", label: "Penalties & Fines (Denda & Penalti)" }
+    ],
+    SPECIAL: [
+        { value: "TRIAL_SAMPLES", label: "Trial & Samples (Trial & Sampel)" },
+        { value: "EMERGENCY", label: "Emergency Purchase (Pembelian Darurat)" },
+        { value: "CONTINGENCY", label: "Contingency (Kontinjensi / Cadangan)" },
+        { value: "NON_PROJECT", label: "Non-Project / General (Non-Proyek / Umum)" }
     ]
 };
 

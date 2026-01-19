@@ -1,7 +1,6 @@
-
 import { useState, useMemo, useEffect } from "react";
 import { clsx } from "clsx";
-import { Briefcase, Clock, Package, DollarSign, FileText, CheckCircle, Upload, AlertTriangle, X } from "lucide-react";
+import { Briefcase, Clock, Package, DollarSign, FileText, CheckCircle, Upload, AlertTriangle, X, AlertCircle } from "lucide-react";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Category, PurchaseStage, CATEGORY_OPTIONS, SUBCATEGORY_OPTIONS, UNIT_OPTIONS } from "./constants";
 import { fetchAllProjects } from "@/lib/api/projects";
@@ -37,6 +36,7 @@ export function PurchaseRequestForm({
     const [subcategory, setSubcategory] = useState(initialData?.subcategory || "");
     const [stage, setStage] = useState<PurchaseStage>(initialData?.purchase_stage || "PLANNED");
     const [vendor, setVendor] = useState(initialData?.vendor || "");
+    const [purchaseDate, setPurchaseDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
 
     // Beneficiary State
     const [bankName, setBankName] = useState(initialData?.beneficiary_bank || "");
@@ -67,7 +67,8 @@ export function PurchaseRequestForm({
     const [notes, setNotes] = useState(initialData?.notes || "");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const isReadOnly = initialData && ["APPROVED", "PAID", "REJECTED"].includes(initialData.approval_status);
+    // Allow editing even if APPROVED, so they can add missing invoice/beneficiary info
+    const isReadOnly = initialData && ["PAID", "REJECTED", "CANCELLED"].includes(initialData.approval_status);
 
     // Load Projects & Accounts
     useEffect(() => {
@@ -115,21 +116,21 @@ export function PurchaseRequestForm({
     const isValid = useMemo(() => {
         if (!projectCode) return false;
         if (!category || !subcategory) return false;
-        if (items.some(i => !i.name || i.qty <= 0 || i.unitPrice < 0)) return false;
+        if (items.some(i => !i.name || i.qty <= 0)) return false; // qty must be > 0
 
+        // Invoiced or Received stages MUST have an invoice if not just a draft or already approved
+        // Actually, as per request: "INTINYA semuanya baru bisa dibayar klo udah ada invoice yahh"
+        // But for submitted, if stage is INVOICED or RECEIVED, we should ideally have it.
         if (stage === "INVOICED" || stage === "RECEIVED") {
             if (!vendor) return false;
-            // if (!invoiceFile) return false; // Temporarily optional
+            // Invoice is mandatory for Invoiced/Received stages when submitting
+            if (!invoiceFile && !initialData?.invoice_url) return false;
         }
 
-        // Beneficiary is optional but good to have. 
-        // If user selects "INVOICED" usually they know who to pay.
-        // Let's make it optional for now as requested "should be there", not "must be there"
-
         return true;
-    }, [projectCode, category, subcategory, items, stage, vendor, invoiceFile]);
+    }, [projectCode, category, subcategory, items, stage, vendor, invoiceFile, initialData]);
 
-    const handleSave = async () => {
+    const handleSave = async (asDraft: boolean = false) => {
         if (isReadOnly) return;
         if (!isValid || isSubmitting) return;
         setIsSubmitting(true);
@@ -153,7 +154,7 @@ export function PurchaseRequestForm({
 
             const payload: any = {
                 project_id: selectedProject.id,
-                date: new Date().toISOString().split('T')[0],
+                date: purchaseDate,
                 vendor: vendor || undefined,
                 beneficiary_bank: bankName,
                 beneficiary_number: accountNumber,
@@ -163,7 +164,7 @@ export function PurchaseRequestForm({
                 subcategory,
                 amount: totalAmount,
                 purchase_stage: stage,
-                approval_status: initialData ? initialData.approval_status : "SUBMITTED",
+                approval_status: asDraft ? "DRAFT" : "SUBMITTED",
                 financial_status: initialData ? initialData.financial_status : "UNPAID",
                 invoice_url: uploadedInvoiceUrl || undefined,
                 created_by: userId,
@@ -213,19 +214,45 @@ export function PurchaseRequestForm({
     return (
         <>
             <div className="p-6 space-y-8 pb-32">
+                {/* REVISION ALERT */}
+                {initialData?.approval_status === "NEED_REVISION" && initialData?.revision_reason && (
+                    <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl flex gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                        <div>
+                            <div className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-1">Revision Requested</div>
+                            <p className="text-sm text-orange-700 font-medium leading-relaxed">
+                                {initialData.revision_reason}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* SECTION 1: CLASSIFICATION */}
                 <section className="space-y-4">
                     <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
                         <Briefcase className="w-3.5 h-3.5" strokeWidth={1.5} /> Classification
                     </h3>
                     <div className="space-y-4">
-                        <Select
-                            label="Project *"
-                            value={projectCode}
-                            onChange={setProjectCode}
-                            options={projectOptions}
-                            placeholder="Select project..."
-                        />
+                        <div className="grid grid-cols-2 gap-4">
+                            <Select
+                                label="Project *"
+                                value={projectCode}
+                                onChange={setProjectCode}
+                                options={projectOptions}
+                                placeholder="Select project..."
+                            />
+                            <div>
+                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1 mb-2 block">
+                                    Date *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={purchaseDate}
+                                    onChange={(e) => setPurchaseDate(e.target.value)}
+                                    className="w-full px-4 py-3 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium"
+                                />
+                            </div>
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                             <Select
                                 label="Category *"
@@ -516,14 +543,12 @@ export function PurchaseRequestForm({
                     <div
                         className={clsx(
                             "border-2 border-dashed rounded-xl p-8 text-center transition-all group relative",
-                            invoiceFile ? "border-emerald-500/40 bg-emerald-50/50" :
-                                stage === "PLANNED" ? "border-neutral-100 bg-neutral-50 opacity-60 cursor-not-allowed" : "border-neutral-200 hover:border-red-500/30 hover:bg-red-50/20 cursor-pointer"
+                            invoiceFile ? "border-emerald-500/40 bg-emerald-50/50 cursor-pointer" : "border-neutral-200 hover:border-red-500/30 hover:bg-red-50/20 cursor-pointer"
                         )}
                     >
                         <input
                             type="file"
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
-                            disabled={stage === "PLANNED"}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                             onChange={e => {
                                 if (e.target.files && e.target.files[0]) setInvoiceFile(e.target.files[0]);
                             }}
@@ -536,11 +561,11 @@ export function PurchaseRequestForm({
                             </div>
                         ) : (
                             <div>
-                                <Upload className={clsx("w-8 h-8 mx-auto mb-2 transition-colors", stage === "PLANNED" ? "text-neutral-300" : "text-neutral-400 group-hover:text-red-500")} strokeWidth={1.5} />
-                                <p className={clsx("text-sm font-medium", stage === "PLANNED" ? "text-neutral-400" : "text-neutral-600 group-hover:text-neutral-900")}>
-                                    {stage === "PLANNED" ? "Upload disabled" : "Upload Invoice / Nota"}
+                                <Upload className="w-8 h-8 mx-auto mb-2 text-neutral-400 group-hover:text-red-500 transition-colors" strokeWidth={1.5} />
+                                <p className="text-sm font-medium text-neutral-600 group-hover:text-neutral-900">
+                                    Upload Invoice / Nota
                                 </p>
-                                {stage !== "PLANNED" && <p className="text-xs text-neutral-400 mt-1">JPG, PNG, PDF</p>}
+                                <p className="text-xs text-neutral-400 mt-1">JPG, PNG, PDF {stage === "PLANNED" && "(Optional for now)"}</p>
                             </div>
                         )}
                     </div>
@@ -566,23 +591,35 @@ export function PurchaseRequestForm({
             </div >
 
             {/* BOTTOM ACTIONS */}
-            < div className="sticky bottom-0 w-full p-5 bg-white/20 backdrop-blur-3xl border-t border-white/30 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.06)] mt-auto" >
+            <div className="sticky bottom-0 w-full p-5 bg-white/20 backdrop-blur-3xl border-t border-white/30 z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.06)] mt-auto">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 h-11 text-sm font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all"
+                        className="h-11 px-5 text-sm font-semibold text-neutral-600 hover:text-neutral-900 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all"
                     >
                         Cancel
                     </button>
+
+                    {/* Save as Draft */}
+                    <button
+                        disabled={isSubmitting || isReadOnly}
+                        onClick={() => handleSave(true)}
+                        className="flex-1 h-11 text-sm font-bold text-neutral-700 bg-white border border-neutral-200 hover:bg-neutral-50 active:scale-[0.98] rounded-xl transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        <Save className="w-4 h-4" />
+                        {isSubmitting ? "Saving..." : "Save as Draft"}
+                    </button>
+
+                    {/* Submit Request */}
                     <button
                         disabled={!isValid || isSubmitting || isReadOnly}
-                        onClick={handleSave}
-                        className="flex-[2] h-11 text-sm font-bold text-white bg-red-500 hover:bg-red-600 active:scale-[0.98] rounded-xl transition-all shadow-lg shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+                        onClick={() => handleSave(false)}
+                        className="flex-1 h-11 text-sm font-bold text-white bg-red-500 hover:bg-red-600 active:scale-[0.98] rounded-xl transition-all shadow-lg shadow-red-500/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
                     >
-                        {isSubmitting ? "Saving..." : "Save Request"}
+                        {isSubmitting ? "Submitting..." : "Submit Request"}
                     </button>
                 </div>
-            </div >
+            </div>
         </>
     );
 }

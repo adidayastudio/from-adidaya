@@ -9,28 +9,19 @@ import {
     Eye,
     CreditCard,
     X,
-    Plus,
-    ChevronLeft,
-    ChevronRight,
-    Loader2,
-    Download,
-    Pencil,
-    Trash2,
-    Ban,
-    ChevronUp,
-    ChevronDown,
-    CheckCircle2,
+    Plus, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, Pencil, Trash2, CheckCircle2, AlertCircle, Ban, Clock, AlertTriangle,
     Send,
     XCircle,
     Package,
     ExternalLink,
     Copy,
-    Check
+    Check,
+    Upload
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfMonth, endOfMonth } from "date-fns";
-import { PurchasingItem, ApprovalStatus, FundingSource, PurchaseType } from "@/lib/types/finance-types";
+import { PurchasingItem, ApprovalStatus, FundingSource, PurchaseType, PurchaseStage } from "@/lib/types/finance-types";
 import { Project } from "@/types/project";
 import { formatCurrency, getPrimaryStatus, STATUS_THEMES, formatStatus, cleanEntityName } from "./modules/utils";
 import { useSearchParams } from "next/navigation";
@@ -40,6 +31,16 @@ import { fetchTeamMembers } from "@/lib/api/clock_team";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 import { getFinanceFileUrl, uploadFinanceFile, uploadFinanceFileExact } from "@/lib/api/storage";
+
+// Status Badge Helper
+function StatusBadge({ status }: { status: any }) {
+    const theme = STATUS_THEMES[status as keyof typeof STATUS_THEMES] || STATUS_THEMES.DRAFT;
+    return (
+        <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", theme.bg, theme.text, theme.border)}>
+            {formatStatus(status)}
+        </span>
+    );
+}
 
 // Copy Button Helper
 const CopyButton = ({ text, className }: { text: string, className?: string }) => {
@@ -57,175 +58,211 @@ const CopyButton = ({ text, className }: { text: string, className?: string }) =
     );
 };
 
-function PayModal({
-    item,
-    onClose,
-    onPay,
-    fundingSources,
-    isLoadingSources
-}: {
-    item: PurchasingItem;
-    onClose: () => void;
-    onPay: (source: string, date: string, notes: string, proofFile: File | null) => void;
-    fundingSources: FundingSource[];
-    isLoadingSources: boolean;
+// Revise Modal
+function ReviseModal({ item, onClose, onRevise }: { item: PurchasingItem, onClose: () => void, onRevise: (reason: string) => void }) {
+    const [reason, setReason] = useState("");
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden">
+                <h3 className="text-lg font-bold text-neutral-900 mb-2 flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-orange-500" /> Request Revision
+                </h3>
+                <p className="text-sm text-neutral-500 mb-6 font-medium">Please provide instructions for what needs to be revised.</p>
+                <textarea
+                    autoFocus
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Revision instructions..."
+                    className="w-full h-32 p-4 text-sm border border-neutral-200 rounded-xl bg-neutral-50 mb-6 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
+                />
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
+                    <button onClick={() => { if (reason) onRevise(reason); }} disabled={!reason} className="flex-1 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all disabled:opacity-50">Request Revision</button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+function PayModal({ item, onClose, onPay, fundingSources, isLoadingSources }: {
+    item: PurchasingItem,
+    onClose: () => void,
+    onPay: (sourceId: string, date: string, notes: string, proofFile: File | null) => Promise<void>,
+    fundingSources: FundingSource[],
+    isLoadingSources: boolean
 }) {
-    const [selectedSource, setSelectedSource] = useState("");
-    const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
+    const [source, setSource] = useState("");
+    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState("");
     const [proofFile, setProofFile] = useState<File | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const activeSources = fundingSources.filter(s => !s.is_archived && s.is_active);
+    const handleConfirm = async () => {
+        if (!source || !date) return;
+        setIsSubmitting(true);
+        await onPay(source, date, notes, proofFile);
+        setIsSubmitting(false);
+    };
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-md" onClick={onClose} />
-            <div className="relative w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 overflow-hidden animate-in fade-in zoom-in duration-300">
-                <div className="p-8">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold text-neutral-900">Process Payment</h3>
-                        <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors">
-                            <X className="w-5 h-5 text-neutral-400" />
-                        </button>
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl overflow-hidden">
+                <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-emerald-600" />
+                    Process Payment
+                </h3>
+
+                <div className="space-y-4 mb-8">
+                    <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-100 space-y-3">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-neutral-500 font-medium">Amount to Pay</span>
+                            <div className="flex items-center gap-1">
+                                <div className="text-right">
+                                    <div className="font-bold text-neutral-900 text-sm">{formatCurrency(item.amount)}</div>
+                                </div>
+                                <CopyButton text={String(item.amount)} />
+                            </div>
+                        </div>
+
+                        <hr className="border-neutral-200/50" />
+
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-neutral-500 font-medium">Submitter</span>
+                            <div className="flex items-center gap-1">
+                                <span className="font-bold text-neutral-900">{item.submitted_by_name || "-"}</span>
+                                <div className="w-6" />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-start text-xs">
+                            <span className="text-neutral-500 font-medium mt-0.5">Beneficiary Account</span>
+                            <div className="flex items-center gap-1">
+                                {(item.beneficiary_bank || item.beneficiary_number) ? (
+                                    <div className="text-right">
+                                        <div className="font-bold text-neutral-900">{item.beneficiary_name}</div>
+                                        <div className="text-[10px] text-neutral-500 font-mono bg-white px-1.5 py-0.5 rounded border border-neutral-200 mt-1 inline-block">
+                                            {item.beneficiary_bank} • {item.beneficiary_number}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <span className="italic text-neutral-400">Not specified</span>
+                                )}
+                                {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="space-y-6">
-                        <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-100 space-y-3">
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-neutral-500 font-medium">Amount to Pay</span>
-                                <div className="flex items-center gap-1">
-                                    <div className="text-right">
-                                        <div className="font-bold text-neutral-900 text-sm">{formatCurrency((item as any).approved_amount || (item as any).details?.approved_amount || item.amount)}</div>
-                                        {((item as any).approved_amount || (item as any).details?.approved_amount) && ((item as any).approved_amount || (item as any).details?.approved_amount) !== item.amount && (
-                                            <div className="text-[10px] text-orange-600 line-through opacity-75">{formatCurrency(item.amount)}</div>
-                                        )}
-                                    </div>
-                                    <CopyButton text={String((item as any).approved_amount || (item as any).details?.approved_amount || item.amount)} />
-                                </div>
-                            </div>
-
-                            <hr className="border-neutral-200/50" />
-
-                            <div className="flex justify-between items-center text-xs">
-                                <span className="text-neutral-500 font-medium">Submitter</span>
-                                <div className="flex items-center gap-1">
-                                    <span className="font-bold text-neutral-900">{item.created_by_name}</span>
-                                    <div className="w-6" /> {/* Spacer for alignment */}
-                                </div>
-                            </div>
-
-                            <div className="flex justify-between items-start text-xs">
-                                <span className="text-neutral-500 font-medium mt-0.5">Beneficiary Account</span>
-                                <div className="flex items-center gap-1">
-                                    {(item.beneficiary_bank || item.beneficiary_number) ? (
-                                        <div className="text-right">
-                                            <div className="font-bold text-neutral-900">{item.beneficiary_name || item.created_by_name}</div>
-                                            <div className="text-[10px] text-neutral-500 font-mono bg-white px-1.5 py-0.5 rounded border border-neutral-200 mt-1 inline-block">
-                                                {item.beneficiary_bank} • {item.beneficiary_number}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <span className="italic text-neutral-400">Not specified</span>
-                                    )}
-                                    {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
-                                </div>
+                    {(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) && (
+                        <div className="p-4 rounded-xl bg-red-50 border border-red-100 flex gap-3 animate-in fade-in slide-in-from-top-1">
+                            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                            <div>
+                                <h4 className="text-[11px] font-bold text-red-700 uppercase tracking-wider mb-1">Missing Requirements</h4>
+                                <p className="text-[11px] text-red-600 font-medium tracking-tight">
+                                    Invoice and complete beneficiary details are mandatory before you can process this payment.
+                                </p>
                             </div>
                         </div>
+                    )}
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1 mb-2 block">Source of Fund</label>
-                                <div className="relative group">
-                                    <select
-                                        value={selectedSource || ""}
-                                        onChange={(e) => setSelectedSource(e.target.value)}
-                                        disabled={isLoadingSources}
-                                        className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-500/50 appearance-none transition-all disabled:opacity-50"
-                                    >
-                                        <option value="">Select funding source...</option>
-                                        {activeSources.map(source => (
-                                            <option key={source.id} value={source.id}>
-                                                {source.name} ({source.type === 'BANK' ? source.provider : 'Cash'})
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {isLoadingSources && (
-                                        <div className="absolute right-10 top-1/2 -translate-y-1/2">
-                                            <Loader2 className="w-4 h-4 animate-spin text-neutral-400" />
-                                        </div>
-                                    )}
-                                    <ChevronDown className="w-4 h-4 text-neutral-400 absolute right-4 top-1/2 -translate-y-1/2 group-focus-within:text-red-500 transition-colors pointer-events-none" />
+                    <div>
+                        <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Source of Fund</label>
+                        {isLoadingSources ? (
+                            <div className="h-10 w-full bg-neutral-100 rounded-xl animate-pulse" />
+                        ) : (
+                            <div className="relative group">
+                                <select
+                                    value={source}
+                                    onChange={(e) => setSource(e.target.value)}
+                                    className="w-full h-11 pl-4 pr-10 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-medium appearance-none cursor-pointer hover:border-emerald-500/30"
+                                >
+                                    <option value="">Select source...</option>
+                                    {fundingSources.filter(s => !s.is_archived && s.is_active).map(s => (
+                                        <option key={s.id} value={s.id}>{s.name} ({s.currency})</option>
+                                    ))}
+                                </select>
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 group-hover:text-emerald-600 transition-colors">
+                                    <ChevronDown className="w-4 h-4" />
                                 </div>
                             </div>
-
-                            <div>
-                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1 mb-2 block">Payment Date</label>
-                                <input
-                                    type="date"
-                                    value={paymentDate}
-                                    onChange={(e) => setPaymentDate(e.target.value)}
-                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-500/50 transition-all font-medium"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1 mb-2 block">Proof of Transfer</label>
-                                <div className="relative">
-                                    <input
-                                        type="file"
-                                        accept="image/*,.pdf"
-                                        onChange={(e) => setProofFile(e.target.files?.[0] || null)}
-                                        className="hidden"
-                                        id="proof-upload"
-                                    />
-                                    <label
-                                        htmlFor="proof-upload"
-                                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-dashed transition-all cursor-pointer ${proofFile
-                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                                            : 'bg-neutral-50 border-neutral-300 hover:bg-neutral-100 text-neutral-500'
-                                            }`}
-                                    >
-                                        <div className={`p-2 rounded-lg ${proofFile ? 'bg-emerald-100' : 'bg-neutral-200'}`}>
-                                            {proofFile ? <CheckCircle2 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                                        </div>
-                                        <div className="flex-1 truncate text-sm font-medium">
-                                            {proofFile ? proofFile.name : "Upload image or PDF..."}
-                                        </div>
-                                    </label>
-                                    {proofFile && (
-                                        <button
-                                            onClick={(e) => { e.preventDefault(); setProofFile(null); }}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-black/5 rounded-full text-neutral-400 hover:text-rose-500 transition-colors"
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </button>
-                                    )}
+                        )}
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Payment Date</label>
+                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-11 px-3 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-medium" />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Proof of Transfer (Optional)</label>
+                        <div className={clsx(
+                            "border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer relative group",
+                            proofFile ? "border-emerald-500/40 bg-emerald-50/50" : "border-neutral-200 hover:border-emerald-500/30 hover:bg-emerald-50/20"
+                        )}>
+                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={(e) => { if (e.target.files?.[0]) setProofFile(e.target.files[0]); }} />
+                            {proofFile ? (
+                                <div className="flex items-center justify-center gap-2 text-emerald-700 text-sm font-bold animate-in fade-in zoom-in-95">
+                                    <CheckCircle2 className="w-4 h-4" /> {proofFile.name}
                                 </div>
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1 mb-2 block">Notes</label>
-                                <textarea
-                                    rows={2}
-                                    value={notes}
-                                    onChange={(e) => setNotes(e.target.value)}
-                                    placeholder="Add payment notes..."
-                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-red-500/10 focus:border-red-500/50 transition-all resize-none"
-                                />
-                            </div>
+                            ) : (
+                                <div className="flex items-center justify-center gap-2 text-neutral-400 text-sm group-hover:text-emerald-600 transition-colors">
+                                    <Upload className="w-4 h-4" /> Upload Image/PDF
+                                </div>
+                            )}
                         </div>
-
-                        <button
-                            onClick={() => onPay(selectedSource, paymentDate, notes, proofFile)}
-                            disabled={!selectedSource}
-                            className="w-full h-12 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-lg shadow-red-200 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                            <CreditCard className="w-4 h-4" />
-                            Confirm Payment
-                        </button>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Notes</label>
+                        <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add payment notes..." className="w-full h-11 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-medium placeholder:text-neutral-400" />
                     </div>
                 </div>
-            </div>
+
+                <div className="flex gap-3 pt-2">
+                    <button onClick={onClose} disabled={isSubmitting} className="flex-1 py-3 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
+                    <button
+                        onClick={handleConfirm}
+                        disabled={!source || !date || isSubmitting || !item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
+                        className="flex-1 py-3 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
+                    >
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : "Confirm Payment"}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => void, onApprove: (amount: number) => void }) {
+    const [amountStr, setAmountStr] = useState(item.amount.toString());
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden">
+                <h3 className="text-lg font-bold text-neutral-900 mb-2 flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    Approve Request
+                </h3>
+                <p className="text-sm text-neutral-500 mb-6 font-medium">Please confirm the approved amount.</p>
+
+                <div className="mb-6">
+                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Approved Amount</label>
+                    <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold">Rp</span>
+                        <input
+                            type="number"
+                            autoFocus
+                            value={amountStr}
+                            onChange={(e) => setAmountStr(e.target.value)}
+                            className="w-full h-12 pl-10 pr-4 text-lg border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-bold text-neutral-900"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
+                    <button onClick={() => onApprove(parseFloat(amountStr))} className="flex-1 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-lg shadow-emerald-200">Approve</button>
+                </div>
+            </motion.div>
         </div>
     );
 }
@@ -243,47 +280,25 @@ function RejectModal({
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-md" onClick={onClose} />
-            <div className="relative w-full max-w-md bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 overflow-hidden animate-in fade-in zoom-in duration-300">
-                <div className="p-8">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold text-neutral-900">Reject Request</h3>
-                        <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors">
-                            <X className="w-5 h-5 text-neutral-400" />
-                        </button>
-                    </div>
-
-                    <div className="space-y-6">
-                        <div className="bg-neutral-50 p-4 rounded-2xl border border-neutral-100">
-                            <div className="text-sm font-semibold text-neutral-900">{item.description}</div>
-                            <div className="text-xs text-neutral-500 mt-1">{item.vendor} • {item.project_name}</div>
-                            <div className="text-lg font-bold text-neutral-900 mt-2">{formatCurrency(item.amount)}</div>
-                        </div>
-
-                        <div>
-                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1 mb-2 block">
-                                Rejection Reason <span className="text-rose-500">*</span>
-                            </label>
-                            <textarea
-                                rows={4}
-                                value={reason}
-                                onChange={(e) => setReason(e.target.value)}
-                                placeholder="Please provide a reason for rejection..."
-                                className="w-full bg-neutral-50 border border-neutral-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500/50 transition-all resize-none"
-                            />
-                        </div>
-
-                        <button
-                            onClick={() => onReject(reason)}
-                            disabled={!reason.trim()}
-                            className="w-full h-12 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold shadow-lg shadow-rose-200 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                            <Ban className="w-4 h-4" />
-                            Confirm Rejection
-                        </button>
-                    </div>
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden">
+                <h3 className="text-lg font-bold text-neutral-900 mb-2 flex items-center gap-2">
+                    <Ban className="w-5 h-5 text-rose-500" />
+                    Reject Request
+                </h3>
+                <p className="text-sm text-neutral-500 mb-6 font-medium">Please provide a reason for rejection.</p>
+                <textarea
+                    autoFocus
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="Rejection reason..."
+                    className="w-full h-32 p-4 text-sm border border-neutral-200 rounded-xl bg-neutral-50 mb-6 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                />
+                <div className="flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
+                    <button onClick={() => { if (reason) onReject(reason); }} disabled={!reason} className="flex-1 py-2.5 text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition-all disabled:opacity-50">Confirm Rejection</button>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }
@@ -315,10 +330,14 @@ function ViewModal({
         fetchUrls();
     }, [item.invoice_url, item.payment_proof_url]);
 
-    // Auto-switch tab if only one exists
     useEffect(() => {
         if (!item.invoice_url && item.payment_proof_url) setActiveTab('proof');
     }, [item.invoice_url, item.payment_proof_url]);
+
+    const displayAmount = item.amount || 0;
+    const notes = item.rejection_reason || item.notes || "";
+    const category = item.type || "-";
+    const status = getPrimaryStatus(item.approval_status, item.purchase_stage, item.financial_status);
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -333,7 +352,6 @@ function ViewModal({
                     </div>
 
                     <div className="space-y-4">
-                        {/* Basic Info */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Date</div>
@@ -341,200 +359,228 @@ function ViewModal({
                             </div>
                             <div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Project</div>
-                                <div className="text-sm font-medium text-neutral-900">{item.project_name}</div>
+                                <div className="text-sm font-medium text-neutral-900 flex items-center flex-wrap">
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-100 text-neutral-600 mr-2 border border-neutral-200 shrink-0">
+                                        {item.project_code}
+                                    </span>
+                                    <span>{item.project_name}</span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Description */}
+                        {/* REVISION/REJECTION REASON */}
+                        {(item.approval_status === "NEED_REVISION" || (item.approval_status === "DRAFT" && item.revision_reason)) && item.revision_reason && (
+                            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-6 animate-in fade-in slide-in-from-top-2">
+                                <h4 className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                    <AlertCircle className="w-3.5 h-3.5" /> Revision Requested
+                                </h4>
+                                <p className="text-sm font-medium text-orange-900">{item.revision_reason}</p>
+                            </div>
+                        )}
+
+                        {(item.approval_status === "REJECTED" || item.rejection_reason) && item.rejection_reason && (
+                            <div className="bg-red-50 p-4 rounded-xl border border-red-100 mb-6 animate-in fade-in slide-in-from-top-2">
+                                <h4 className="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                                    <Ban className="w-3.5 h-3.5" /> Rejection Reason
+                                </h4>
+                                <p className="text-sm font-medium text-red-900">{item.rejection_reason}</p>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Category</div>
+                                <div className="text-sm font-medium text-neutral-900 capitalize">{formatStatus(category)}</div>
+                            </div>
+                            <div>
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Subcategory</div>
+                                <div className="text-sm font-medium text-neutral-900 capitalize">{item.subcategory ? formatStatus(item.subcategory) : "-"}</div>
+                            </div>
+                        </div>
+
                         <div>
                             <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Description</div>
                             <div className="text-sm font-medium text-neutral-900">{item.description}</div>
-                            <div className="text-xs text-neutral-500 mt-1">{item.quantity} {item.unit} • {item.vendor}</div>
+                            {item.vendor && <div className="text-[10px] text-neutral-400 font-medium mt-1">Vendor: {item.vendor}</div>}
                         </div>
 
-                        {/* Amount & Status */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Amount</div>
                                 <div className="flex items-center gap-1">
-                                    <span className="text-lg font-bold text-neutral-900">{formatCurrency((item as any).approved_amount || (item as any).details?.approved_amount || item.amount)}</span>
-                                    <CopyButton text={String((item as any).approved_amount || (item as any).details?.approved_amount || item.amount)} />
+                                    <span className="text-lg font-bold text-neutral-900">{formatCurrency(item.amount)}</span>
+                                    <CopyButton text={String(item.amount)} />
                                 </div>
-                                {((item as any).approved_amount || (item as any).details?.approved_amount) && ((item as any).approved_amount || (item as any).details?.approved_amount) !== item.amount && (
-                                    <div className="text-[10px] text-orange-600 line-through opacity-75 mt-0.5 font-medium">
-                                        {formatCurrency(item.amount)}
-                                    </div>
-                                )}
                             </div>
                             <div>
                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Status</div>
-                                <div className="text-sm font-medium text-neutral-900">{item.approval_status} / {item.financial_status}</div>
-                            </div>
-                        </div>
-
-                        {/* Category */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Category</div>
-                                <div className="text-sm font-medium text-neutral-900">{item.type}</div>
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Subcategory</div>
-                                <div className="text-sm font-medium text-neutral-900">{item.subcategory || "-"}</div>
-                            </div>
-                        </div>
-
-                        {/* Beneficiary Details */}
-                        {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
-                            <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-100 space-y-2">
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest flex items-center gap-2">
-                                    <CreditCard className="w-3 h-3" /> Beneficiary Info
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <div className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider mb-0.5">Bank</div>
-                                        <div className="text-sm font-bold text-neutral-900">{item.beneficiary_bank || "-"}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider mb-0.5">Number</div>
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-sm font-bold text-neutral-900 font-mono tracking-tight">{item.beneficiary_number || "-"}</span>
-                                            {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
-                                        </div>
-                                    </div>
-                                    <div className="col-span-2">
-                                        <div className="text-[10px] text-neutral-500 font-semibold uppercase tracking-wider mb-0.5">Account Name</div>
-                                        <div className="text-sm font-bold text-neutral-900">{item.beneficiary_name || "-"}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Documents Tabs */}
-                        <div>
-                            <div className="flex p-1 bg-neutral-100 rounded-xl mb-4">
-                                <button
-                                    onClick={() => setActiveTab('invoice')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'invoice'
-                                        ? 'bg-white text-neutral-900 shadow-sm'
-                                        : 'text-neutral-500 hover:text-neutral-700'
-                                        }`}
-                                >
-                                    Invoice
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('proof')}
-                                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === 'proof'
-                                        ? 'bg-white text-neutral-900 shadow-sm'
-                                        : 'text-neutral-500 hover:text-neutral-700'
-                                        }`}
-                                >
-                                    Proof of Transfer
-                                </button>
-                            </div>
-
-                            {activeTab === 'invoice' && (
-                                <div className="space-y-2">
-                                    {item.invoice_url ? (
-                                        <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
-                                            {item.invoice_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                                <button
-                                                    onClick={() => onPreview('invoice')}
-                                                    className="w-full text-left cursor-zoom-in relative block"
-                                                >
-                                                    {invoiceUrl ? (
-                                                        <img src={invoiceUrl} alt="Invoice" className="w-full max-h-48 object-contain" />
-                                                    ) : (
-                                                        <div className="h-48 flex items-center justify-center bg-neutral-100/50">
-                                                            <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
-                                                        </div>
-                                                    )}
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                        <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
-                                                    </div>
-                                                </button>
-                                            ) : (
-                                                <div className="p-4 flex items-center justify-between">
-                                                    <span className="text-sm text-neutral-600">Attached file</span>
-                                                    <a
-                                                        href={invoiceUrl || '#'}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                                                    >
-                                                        Open File
-                                                    </a>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
-                                            <p className="text-xs text-neutral-400">No invoice attached</p>
-                                        </div>
+                                <div className="flex flex-col gap-1">
+                                    <StatusBadge status={status} />
+                                    {item.financial_status === "PAID" && item.purchase_stage === "INVOICED" && (
+                                        <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">Paid, Goods Pending</span>
+                                    )}
+                                    {item.financial_status === "PAID" && item.purchase_stage === "RECEIVED" && (
+                                        <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">Paid & Received</span>
                                     )}
                                 </div>
-                            )}
-
-                            {activeTab === 'proof' && (
-                                <div className="space-y-2">
-                                    {item.payment_proof_url ? (
-                                        <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
-                                            {item.payment_proof_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                                <button
-                                                    onClick={() => onPreview('proof')}
-                                                    className="w-full text-left cursor-zoom-in relative block"
-                                                >
-                                                    {proofUrl ? (
-                                                        <img src={proofUrl} alt="Proof" className="w-full max-h-48 object-contain" />
-                                                    ) : (
-                                                        <div className="h-48 flex items-center justify-center bg-neutral-100/50">
-                                                            <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
-                                                        </div>
-                                                    )}
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                        <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
-                                                    </div>
-                                                </button>
-                                            ) : (
-                                                <div className="p-4 flex items-center justify-between">
-                                                    <span className="text-sm text-neutral-600">Attached proof</span>
-                                                    <a
-                                                        href={proofUrl || '#'}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-                                                    >
-                                                        Open File
-                                                    </a>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
-                                            <p className="text-xs text-neutral-400">No payment proof uploaded</p>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
+                            </div>
                         </div>
 
-                        {/* Notes */}
-                        {(item.notes || item.rejection_reason) && (
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Notes ({item.approval_status === "REJECTED" ? "Rejection Reason" : "Payment Notes"})</div>
-                                <div className="text-sm text-neutral-700 bg-neutral-50 p-3 rounded-lg">
-                                    {item.approval_status === "REJECTED" && item.rejection_reason ? item.rejection_reason : item.notes || "-"}
+                        {/* PURCHASE STAGE */}
+                        <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-100 mb-2">
+                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <Clock className="w-3.5 h-3.5" /> Purchase Stage
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {(["PLANNED", "INVOICED", "RECEIVED"] as PurchaseStage[]).map((s) => (
+                                    <div
+                                        key={s}
+                                        className={clsx(
+                                            "flex-1 py-1.5 px-2 rounded-lg text-center text-[10px] font-bold border transition-all",
+                                            item.purchase_stage === s
+                                                ? "bg-red-500 border-red-500 text-white shadow-sm"
+                                                : "bg-white border-neutral-200 text-neutral-400 opacity-50"
+                                        )}
+                                    >
+                                        {formatStatus(s)}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Items Breakdown */}
+                        {item.items && item.items.length > 0 && (
+                            <div className="space-y-1.5 pt-1">
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1">Details Breakdown</div>
+                                <div className="border border-neutral-100 rounded-xl overflow-hidden bg-neutral-50/30">
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-neutral-50 text-[10px] uppercase font-bold text-neutral-400 border-b border-neutral-50">
+                                            <tr>
+                                                <th className="py-2 px-3 text-left font-semibold">Item</th>
+                                                <th className="py-2 px-3 text-center font-semibold w-[15%]">Qty</th>
+                                                <th className="py-2 px-3 text-right font-semibold w-[20%]">Price</th>
+                                                <th className="py-2 px-3 text-right font-semibold w-[20%]">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-50">
+                                            {item.items.map((it: any, idx: number) => (
+                                                <tr key={idx} className="bg-white hover:bg-neutral-50/50 transition-colors">
+                                                    <td className="py-2 px-3 font-medium text-neutral-800">{it.name}</td>
+                                                    <td className="py-2 px-3 text-center text-neutral-500">
+                                                        {it.qty} <span className="text-[9px] text-neutral-400 uppercase">{it.unit}</span>
+                                                    </td>
+                                                    <td className="py-2 px-3 text-right text-neutral-500 tabular-nums">{formatCurrency(it.unit_price)}</td>
+                                                    <td className="py-2 px-3 text-right font-bold text-neutral-900 tabular-nums">{formatCurrency(it.total)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <button
-                        onClick={onClose}
-                        className="w-full h-12 mt-6 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl font-medium transition-all"
-                    >
-                        Close
-                    </button>
+                    {/* Missing Info Warning */}
+                    {item.approval_status === "APPROVED" && (!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) && (
+                        <div className="my-6 p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3 animate-in fade-in slide-in-from-top-1">
+                            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                            <div>
+                                <h4 className="text-[11px] font-bold text-red-700 uppercase tracking-wider mb-1">Action Required Before Payment</h4>
+                                <p className="text-xs text-red-600 font-medium"> Please upload the invoice and complete the beneficiary details by editing this request. </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Beneficiary Details - Compact Card */}
+                    {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
+                        <div className="my-6 bg-white p-3.5 rounded-xl border border-dashed border-neutral-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:border-red-200 transition-colors">
+                            <div className="absolute top-0 right-0 p-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
+                                <CreditCard className="w-16 h-16 rotate-12" />
+                            </div>
+
+                            <div className="flex items-center gap-2 mb-2.5">
+                                <div className="w-5 h-5 rounded-md bg-red-50 flex items-center justify-center">
+                                    <CreditCard className="w-2.5 h-2.5 text-red-500" />
+                                </div>
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Beneficiary Account</span>
+                            </div>
+
+                            <div className="flex flex-col gap-0.5 relative z-10 pl-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-bold text-neutral-900">{item.beneficiary_bank || "Unknown Bank"}</span>
+                                    <span className="text-sm font-mono font-medium text-neutral-500 tracking-tight bg-neutral-50 px-1.5 py-0.5 rounded border border-neutral-100">{item.beneficiary_number || "-"}</span>
+                                    {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
+                                </div>
+                                <div className="text-xs font-medium text-neutral-500">{item.beneficiary_name || "-"}</div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <div className="flex p-1 bg-neutral-100 rounded-xl mb-4">
+                            <button onClick={() => setActiveTab('invoice')} className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all", activeTab === 'invoice' ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}>Invoice</button>
+                            <button onClick={() => setActiveTab('proof')} className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all", activeTab === 'proof' ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}>Proof of Transfer</button>
+                        </div>
+
+                        {activeTab === 'invoice' && (
+                            <div className="space-y-2">
+                                {item.invoice_url ? (
+                                    <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
+                                        {item.invoice_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                            <button onClick={() => onPreview('invoice')} className="w-full text-left cursor-zoom-in relative block">
+                                                {invoiceUrl ? <img src={invoiceUrl} alt="Invoice" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                    <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
+                                                </div>
+                                            </button>
+                                        ) : (
+                                            <div className="p-4 flex items-center justify-between">
+                                                <span className="text-sm text-neutral-600">Attached file</span>
+                                                <a href={invoiceUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">Open File</a>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200"><p className="text-xs text-neutral-400">No invoice attached</p></div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'proof' && (
+                            <div className="space-y-2">
+                                {item.payment_proof_url ? (
+                                    <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
+                                        {item.payment_proof_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                            <button onClick={() => onPreview('proof')} className="w-full text-left cursor-zoom-in relative block">
+                                                {proofUrl ? <img src={proofUrl} alt="Proof" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                    <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
+                                                </div>
+                                            </button>
+                                        ) : (
+                                            <div className="p-4 flex items-center justify-between">
+                                                <span className="text-sm text-neutral-600">Attached proof</span>
+                                                <a href={proofUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">Open File</a>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200"><p className="text-xs text-neutral-400">No payment proof uploaded</p></div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {item.notes && (
+                        <div className="mt-6">
+                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Notes</div>
+                            <div className="text-sm text-neutral-700 bg-neutral-50 p-3 rounded-lg">{item.notes}</div>
+                        </div>
+                    )}
+
+                    <div className="mt-8">
+                        <button onClick={onClose} className="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-2xl text-sm font-bold transition-all">Close</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -762,82 +808,51 @@ export default function PurchasingClient() {
             ]);
 
             const profileMap = new Map(profiles.map(p => [p.id, p]));
-            const flattened: PurchasingItem[] = [];
-
-            requests.forEach((req: any) => {
+            const flattened: PurchasingItem[] = requests.map((req: any) => {
                 const creatorName = profileMap.get(req.created_by)?.username || "Unknown";
                 const creatorRole = profileMap.get(req.created_by)?.role || "Unknown Role";
 
-                // Handle requests without items - create a single entry for the request
-                if (!req.items || req.items.length === 0) {
-                    flattened.push({
-                        id: req.id,
-                        request_id: req.id,
-                        date: req.date,
-                        project_id: req.project_id,
-                        project_code: req.project?.project_code || "N/A",
-                        project_name: req.project?.project_name || "Unknown",
-                        vendor: req.vendor || "",
-                        description: req.description || "No description",
-                        quantity: 1,
-                        unit: "pcs",
-                        type: req.type,
-                        subcategory: req.subcategory || "",
-                        amount: req.amount || 0,
-                        approval_status: req.approval_status,
-                        purchase_stage: req.purchase_stage,
-                        financial_status: req.financial_status,
-                        invoice_url: req.invoice_url,
-                        payment_proof_url: req.payment_proof_url,
-                        payment_date: req.payment_date,
-                        rejection_reason: req.rejection_reason,
-                        notes: req.notes,
-                        created_by: req.created_by,
-                        created_by_name: creatorName,
-                        created_by_role: creatorRole,
-                        submitted_by_name: creatorName,
-                        created_at: req.created_at,
-                        updated_at: req.updated_at,
-                        beneficiary_bank: req.beneficiary_bank,
-                        beneficiary_number: req.beneficiary_number,
-                        beneficiary_name: req.beneficiary_name
-                    });
-                } else {
-                    req.items.forEach((item: any) => {
-                        flattened.push({
-                            id: item.id,
-                            request_id: req.id,
-                            date: req.date,
-                            project_id: req.project_id,
-                            project_code: req.project?.project_code || "N/A",
-                            project_name: req.project?.project_name || "Unknown",
-                            vendor: req.vendor || "",
-                            description: item.name,
-                            quantity: item.qty,
-                            unit: item.unit,
-                            type: req.type,
-                            subcategory: req.subcategory || "",
-                            amount: item.total,
-                            approval_status: req.approval_status,
-                            purchase_stage: req.purchase_stage,
-                            financial_status: req.financial_status,
-                            invoice_url: req.invoice_url,
-                            payment_proof_url: req.payment_proof_url,
-                            payment_date: req.payment_date,
-                            rejection_reason: req.rejection_reason,
-                            notes: req.notes,
-                            created_by: req.created_by,
-                            created_by_name: creatorName,
-                            created_by_role: creatorRole,
-                            submitted_by_name: creatorName,
-                            created_at: req.created_at,
-                            updated_at: req.updated_at,
-                            beneficiary_bank: req.beneficiary_bank,
-                            beneficiary_number: req.beneficiary_number,
-                            beneficiary_name: req.beneficiary_name
-                        });
-                    });
-                }
+                return {
+                    id: req.id,
+                    request_id: req.id,
+                    date: req.date,
+                    project_id: req.project_id,
+                    project_code: req.project?.project_code || "N/A",
+                    project_name: req.project?.project_name || "Unknown",
+                    vendor: req.vendor || "",
+                    description: req.description || (req.items?.[0]?.name || "No description"),
+                    quantity: req.items?.[0]?.qty || 1,
+                    unit: req.items?.[0]?.unit || "pcs",
+                    type: req.type,
+                    subcategory: req.subcategory || "",
+                    amount: req.amount || 0,
+                    approval_status: req.approval_status,
+                    purchase_stage: req.purchase_stage,
+                    financial_status: req.financial_status,
+                    invoice_url: req.invoice_url,
+                    payment_proof_url: req.payment_proof_url,
+                    payment_date: req.payment_date,
+                    rejection_reason: req.rejection_reason,
+                    revision_reason: req.revision_reason,
+                    notes: req.notes,
+                    created_by: req.created_by,
+                    created_by_name: creatorName,
+                    created_by_role: creatorRole,
+                    submitted_by_name: creatorName,
+                    created_at: req.created_at,
+                    updated_at: req.updated_at,
+                    beneficiary_bank: req.beneficiary_bank,
+                    beneficiary_number: req.beneficiary_number,
+                    beneficiary_name: req.beneficiary_name,
+                    items: req.items?.map((it: any) => ({
+                        id: it.id,
+                        name: it.name,
+                        qty: it.qty,
+                        unit: it.unit,
+                        unit_price: it.unitPrice || it.unit_price,
+                        total: it.total
+                    })) || []
+                };
             });
             setItems(flattened);
         } catch (e) {
@@ -964,12 +979,17 @@ export default function PurchasingClient() {
         }
     };
 
+    const [approvingItem, setApprovingItem] = useState<PurchasingItem | null>(null);
     const [payingItem, setPayingItem] = useState<PurchasingItem | null>(null);
     const [rejectingItem, setRejectingItem] = useState<PurchasingItem | null>(null);
+    const [revisingItem, setRevisingItem] = useState<PurchasingItem | null>(null);
     const [viewingItem, setViewingItem] = useState<PurchasingItem | null>(null);
     const [sortConfig, setSortConfig] = useState<{ key: keyof PurchasingItem; direction: 'asc' | 'desc' } | null>(
         { key: 'date', direction: 'desc' }
     );
+
+    // Custom status order for sorting (similar to ReimburseClient)
+    const STATUS_ORDER = ['DRAFT', 'SUBMITTED', 'NEED_REVISION', 'APPROVED', 'PAID', 'REJECTED', 'CANCELLED'];
 
     const handleSort = (key: keyof PurchasingItem) => {
         setSortConfig(prev => {
@@ -1012,7 +1032,11 @@ export default function PurchasingClient() {
             let newStatus: ApprovalStatus | undefined;
             if (action === 'cancel') newStatus = 'CANCELLED';
             else if (action === 'submit') newStatus = 'SUBMITTED';
-            else if (action === 'approve') newStatus = 'APPROVED';
+            else if (action === 'approve') {
+                setConfirmModal({ open: false, title: '', message: '', action: null, item: null });
+                setApprovingItem(item);
+                return;
+            }
             else if (action === 'reject') {
                 // For reject, use the reject modal instead
                 setConfirmModal({ open: false, title: '', message: '', action: null, item: null });
@@ -1104,6 +1128,13 @@ export default function PurchasingClient() {
 
         if (sortConfig) {
             current.sort((a, b) => {
+                // Special handling for status sorting with custom order
+                if (sortConfig.key === 'approval_status') {
+                    const aIndex = STATUS_ORDER.indexOf(a.approval_status);
+                    const bIndex = STATUS_ORDER.indexOf(b.approval_status);
+                    return sortConfig.direction === 'asc' ? aIndex - bIndex : bIndex - aIndex;
+                }
+
                 const aValue = a[sortConfig.key];
                 const bValue = b[sortConfig.key];
                 if (aValue === undefined || bValue === undefined) return 0;
@@ -1114,7 +1145,7 @@ export default function PurchasingClient() {
         }
 
         return current;
-    }, [baseItems, statusFilter, sortConfig]);
+    }, [baseItems, statusFilter, sortConfig, STATUS_ORDER]);
 
     if (isAuthLoading || isLoadingData) {
         return (
@@ -1431,12 +1462,8 @@ export default function PurchasingClient() {
                                             key={item.id}
                                             className="group hover:bg-white/60 hover:shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
                                             onClick={() => {
-                                                if (isTeamView) {
-                                                    setViewingItem(item);
-                                                } else {
-                                                    setEditingItem(item);
-                                                    setIsDrawerOpen(true);
-                                                }
+                                                // Both views now open ViewModal (read-only for Personal)
+                                                setViewingItem(item);
                                             }}
                                         >
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -1457,16 +1484,24 @@ export default function PurchasingClient() {
                                                 <div className="text-[10px] font-normal text-neutral-400 flex items-center gap-1.5">
                                                     <span className="text-neutral-500 font-medium">{item.quantity} {item.unit}</span>
                                                     <span className="text-neutral-300">•</span>
-                                                    <span className="hover:text-neutral-600 transition-colors tracking-tight text-[10px]">{cleanEntityName(item.vendor)}</span>
+                                                    <div className="flex items-center gap-1.5 overflow-hidden">
+                                                        <span className="hover:text-neutral-600 transition-colors tracking-tight text-[10px] truncate">{cleanEntityName(item.vendor)}</span>
+                                                        {item.approval_status === "APPROVED" && !item.invoice_url && (
+                                                            <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 rounded border border-red-100 flex-shrink-0 uppercase">NEED INVOICE</span>
+                                                        )}
+                                                        {item.approval_status === "APPROVED" && (!item.beneficiary_bank || !item.beneficiary_number) && (
+                                                            <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 rounded border border-orange-100 flex-shrink-0 uppercase">NEED BENEFICIARY</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col gap-0.5 group/type">
                                                     <span className="inline-flex items-center gap-1 text-[12px] font-medium text-neutral-900 w-fit tracking-tight group-hover/type:text-neutral-600 transition-colors">
-                                                        {item.type}
+                                                        {formatStatus(item.type)}
                                                     </span>
-                                                    <span className="text-[10px] font-medium text-neutral-400 group-hover/type:text-neutral-500 transition-colors">
-                                                        {item.subcategory}
+                                                    <span className="text-[12px] font-bold text-neutral-900 group-hover/type:text-blue-600 transition-colors capitalize">
+                                                        {item.subcategory?.toLowerCase().replace(/_/g, " ")}
                                                     </span>
                                                 </div>
                                             </td>
@@ -1476,22 +1511,16 @@ export default function PurchasingClient() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                {(() => {
-                                                    const primaryStatus = getPrimaryStatus(
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <StatusBadge status={getPrimaryStatus(
                                                         item.approval_status,
                                                         item.purchase_stage,
                                                         item.financial_status
-                                                    );
-                                                    const theme = STATUS_THEMES[primaryStatus];
-                                                    return (
-                                                        <span className={clsx(
-                                                            "px-1.5 py-0.5 rounded-full text-[10px] font-bold w-fit uppercase tracking-widest shadow-sm backdrop-blur-md border border-white/10",
-                                                            theme.bg, theme.text
-                                                        )}>
-                                                            {primaryStatus}
-                                                        </span>
-                                                    );
-                                                })()}
+                                                    )} />
+                                                    {item.financial_status === "PAID" && item.purchase_stage === "INVOICED" && (
+                                                        <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-tight">Goods Pending</span>
+                                                    )}
+                                                </div>
                                             </td>
                                             {isTeamView && (
                                                 <td className="px-6 py-4">
@@ -1511,56 +1540,48 @@ export default function PurchasingClient() {
                                                         <>
                                                             {item.approval_status === "SUBMITTED" && (
                                                                 <>
-                                                                    <button onClick={(e) => { e.stopPropagation(); openConfirmDialog('approve', item); }} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all" title="Approve">
+                                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all" title="Approve">
                                                                         <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
                                                                     </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); openConfirmDialog('reject', item); }} className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all" title="Reject">
+                                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="p-1.5 text-neutral-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all" title="Request Revision">
+                                                                        <AlertCircle className="w-4 h-4" strokeWidth={1.5} />
+                                                                    </button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all" title="Reject">
                                                                         <Ban className="w-4 h-4" strokeWidth={1.5} />
                                                                     </button>
                                                                 </>
                                                             )}
-                                                            {item.approval_status === "APPROVED" && item.financial_status !== "PAID" && (
-                                                                <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all" title="Mark as Paid">
-                                                                    <CreditCard className="w-4 h-4" strokeWidth={1.5} />
+                                                            {(item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION") && (
+                                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Edit Request">
+                                                                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
                                                                 </button>
+                                                            )}
+                                                            {item.approval_status === "APPROVED" && item.financial_status !== "PAID" && (
+                                                                <>
+                                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Add Missing Details">
+                                                                        <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
+                                                                        disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
+                                                                        className={clsx(
+                                                                            "p-1.5 rounded-full transition-all",
+                                                                            (!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number)
+                                                                                ? "text-neutral-200 cursor-not-allowed"
+                                                                                : "text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                                                        )}
+                                                                        title={(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) ? "Invoice & Beneficiary required" : "Mark as Paid"}
+                                                                    >
+                                                                        <CreditCard className="w-4 h-4" strokeWidth={1.5} />
+                                                                    </button>
+                                                                </>
                                                             )}
                                                         </>
                                                     ) : (
                                                         <>
-                                                            {item.approval_status === "DRAFT" && (
-                                                                <>
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setEditingItem(item);
-                                                                            setIsDrawerOpen(true);
-                                                                        }}
-                                                                        className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
-                                                                        title="Edit Request"
-                                                                    >
-                                                                        <Pencil className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); openConfirmDialog('submit', item); }} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all" title="Submit Request">
-                                                                        <Send className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); openConfirmDialog('delete', item); }} className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all" title="Delete Request">
-                                                                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            {item.approval_status === "SUBMITTED" && (
-                                                                <>
-                                                                    <button onClick={(e) => { e.stopPropagation(); openConfirmDialog('cancel', item); }} className="p-1.5 text-neutral-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all" title="Cancel Request">
-                                                                        <XCircle className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); openConfirmDialog('delete', item); }} className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all" title="Delete Request">
-                                                                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            {(item.approval_status === "CANCELLED" || item.approval_status === "REJECTED") && (
-                                                                <button onClick={(e) => { e.stopPropagation(); openConfirmDialog('delete', item); }} className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all" title="Delete Request">
-                                                                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                                                            {(item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION" || item.approval_status === "APPROVED") && (
+                                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Edit Request">
+                                                                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
                                                                 </button>
                                                             )}
                                                         </>
@@ -1698,6 +1719,51 @@ export default function PurchasingClient() {
             />
 
             {/* Confirmation Modal */}
+            {revisingItem && (
+                <ReviseModal
+                    item={revisingItem}
+                    onClose={() => setRevisingItem(null)}
+                    onRevise={async (reason) => {
+                        try {
+                            await updatePurchasingStatus(revisingItem.id, {
+                                approval_status: 'NEED_REVISION',
+                                revision_reason: reason
+                            });
+                            setRevisingItem(null);
+                            loadData();
+                        } catch (error) {
+                            console.error("Error updating revision status:", error);
+                            alert("Failed to request revision.");
+                        }
+                    }}
+                />
+            )}
+
+            {approvingItem && (
+                <ApproveModal
+                    item={approvingItem}
+                    onClose={() => setApprovingItem(null)}
+                    onApprove={async (amount) => {
+                        try {
+                            const requestId = approvingItem.request_id || approvingItem.id;
+                            const success = await updatePurchasingStatus(requestId, {
+                                approval_status: "APPROVED",
+                                approved_amount: amount // Use approved_amount instead of amount
+                            });
+                            if (success) {
+                                setApprovingItem(null);
+                                loadData();
+                            } else {
+                                alert("Failed to approve request.");
+                            }
+                        } catch (error) {
+                            console.error("Error approving request:", error);
+                            alert(`Error: ${error}`);
+                        }
+                    }}
+                />
+            )}
+
             <AnimatePresence>
                 {confirmModal.open && (
                     <motion.div

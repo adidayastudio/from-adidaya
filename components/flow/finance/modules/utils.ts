@@ -57,10 +57,11 @@ export function getPrimaryStatus(
     purchaseStage: PurchaseStage,
     financialStatus: FinancialStatus
 ): string {
-    if (financialStatus === 'PAID') return 'PAID';
-    if (financialStatus === 'UNPAID') return 'UNPAID';
-    if (approvalStatus === 'APPROVED') return 'APPROVED';
+    if (approvalStatus === 'DRAFT') return 'DRAFT';
     if (approvalStatus === 'REJECTED') return 'REJECTED';
+    if (approvalStatus === 'NEED_REVISION') return 'NEED_REVISION';
+    if (financialStatus === 'PAID') return 'PAID';
+    if (approvalStatus === 'APPROVED') return 'UNPAID';
     if (approvalStatus === 'SUBMITTED') return 'SUBMITTED';
     return approvalStatus;
 }
@@ -73,6 +74,7 @@ export const STATUS_THEMES: Record<string, { bg: string; text: string; border?: 
     UNPAID: { bg: "bg-red-50", text: "text-red-700" },
     PENDING: { bg: "bg-orange-50", text: "text-orange-700" },
     REJECTED: { bg: "bg-rose-50", text: "text-rose-700" },
+    NEED_REVISION: { bg: "bg-orange-50", text: "text-orange-700" },
 };
 
 export function cleanEntityName(name: string): string {

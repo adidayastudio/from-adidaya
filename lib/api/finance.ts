@@ -512,7 +512,9 @@ export async function updatePurchasingStatus(id: string, updates: {
     source_of_fund_id?: string;
     notes?: string;
     rejection_reason?: string;
+    revision_reason?: string;
     payment_proof_url?: string;
+    approved_amount?: number;
 }) {
     const { error } = await supabase
         .from("purchasing_requests")

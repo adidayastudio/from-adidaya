@@ -2,7 +2,7 @@
 // Supports construction purchasing workflows: kasbon, post-spend, pre-approval
 
 export type FinancialStatus = "NOT_PAYABLE" | "UNPAID" | "PAID";
-export type ApprovalStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED";
+export type ApprovalStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED" | "NEED_REVISION";
 export type PurchaseStage = "PLANNED" | "INVOICED" | "RECEIVED";
 
 export type FundingSourceType = "BANK" | "CASH" | "PETTY_CASH" | "REIMBURSE";
@@ -65,15 +65,24 @@ export interface PurchasingItem {
     payment_proof_url?: string;
     notes?: string;
     rejection_reason?: string;
+    revision_reason?: string;
     beneficiary_bank?: string;
     beneficiary_number?: string;
     beneficiary_name?: string;
-    created_by: string;
+    submitted_by_name?: string;
+    created_by?: string;
     created_by_name?: string;
     created_by_role?: string;
-    submitted_by_name?: string;
     created_at: string;
     updated_at: string;
+    items?: {
+        id: string;
+        name: string;
+        qty: number;
+        unit: string;
+        unit_price: number;
+        total: number;
+    }[];
 }
 
 export interface ReimburseRequest {
