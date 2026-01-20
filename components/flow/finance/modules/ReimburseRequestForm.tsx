@@ -75,6 +75,10 @@ export function ReimburseRequestForm({
     const isEditMode = !!initialData;
     const canEdit = !isReadOnly || (initialData?.status === "DRAFT" || initialData?.status === "NEED_REVISION");
 
+    useEffect(() => {
+        console.log("[DEBUG] ReimburseRequestForm - savedAccounts length:", savedAccounts.length);
+    }, [savedAccounts]);
+
     // Load Preview URL
     useEffect(() => {
         const loadPreview = async () => {
@@ -93,7 +97,10 @@ export function ReimburseRequestForm({
     // Load Projects
     useEffect(() => {
         fetchAllProjects().then(setProjects);
-        fetchBeneficiaryAccounts().then(setSavedAccounts);
+        fetchBeneficiaryAccounts().then(accounts => {
+            console.log("[DEBUG] ReimburseRequestForm - Loaded accounts:", accounts);
+            setSavedAccounts(accounts);
+        });
 
         if (initialData) {
             console.log("Debug Load - Initial Data:", initialData);
@@ -523,7 +530,7 @@ export function ReimburseRequestForm({
                                         {saveToSaved && <Save className="w-3 h-3" />}
                                     </div>
                                     <input type="checkbox" className="hidden" checked={saveToSaved} onChange={() => setSaveToSaved(!saveToSaved)} />
-                                    <span className="text-xs font-bold text-neutral-600 group-hover:text-red-600 transition-colors">Save to my saved accounts</span>
+                                    <span className="text-xs font-bold text-neutral-600 group-hover:text-red-600 transition-colors">Save to shared accounts</span>
                                 </label>
                             )}
                         </div>

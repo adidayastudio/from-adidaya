@@ -16,12 +16,14 @@ export interface BeneficiaryAccount {
 // -- FETCHING --
 
 export async function fetchFundingSources(workspaceId: string): Promise<FundingSource[]> {
-    const { data, error } = await supabase
+    const result = await (supabase
         .from("funding_sources")
         .select("*")
         .eq("workspace_id", workspaceId)
         .order("position", { ascending: true })
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false }) as any);
+
+    const { data, error } = result;
 
     if (error) {
         console.error("Error fetching funding sources:", error);
@@ -57,12 +59,12 @@ export async function upsertFundingSource(source: Partial<FundingSource> & { wor
 
     if (dbSource.id) {
         // UPDATE
-        const result = await supabase
+        const result = await (supabase
             .from("funding_sources")
             .update(dbSource)
             .eq("id", dbSource.id)
             .select()
-            .single();
+            .single() as any);
         data = result.data;
         error = result.error;
     } else {
@@ -70,11 +72,11 @@ export async function upsertFundingSource(source: Partial<FundingSource> & { wor
         // Remove ID from object if it's undefined to let DB handle generation
         delete dbSource.id;
 
-        const result = await supabase
+        const result = await (supabase
             .from("funding_sources")
             .insert(dbSource)
             .select()
-            .single();
+            .single() as any);
         data = result.data;
         error = result.error;
     }
@@ -94,10 +96,10 @@ export async function updateFundingSourcePositions(items: { id: string; position
         updated_at: new Date().toISOString()
     }));
 
-    // Using upsert for batch update on ID
-    const { error } = await supabase
+    const result = await (supabase
         .from("funding_sources")
-        .upsert(updates as any); // Type assertion needed for partial update
+        .upsert(updates as any) as any);
+    const { error } = result;
 
     if (error) {
         console.error("Error updating positions:", error);
@@ -109,39 +111,39 @@ export async function updateFundingSourcePositions(items: { id: string; position
 // -- ACTIONS --
 
 export async function deleteFundingSource(id: string): Promise<boolean> {
-    const { error } = await supabase
+    const response = await (supabase
         .from("funding_sources")
         .delete()
-        .eq("id", id);
+        .eq("id", id) as any);
 
-    if (error) {
-        console.error("Error deleting funding source:", error);
+    if (response.error) {
+        console.error("Error deleting funding source:", response.error);
         return false;
     }
     return true;
 }
 
 export async function toggleFundingSourceArchive(id: string, isArchived: boolean): Promise<boolean> {
-    const { error } = await supabase
+    const response = await (supabase
         .from("funding_sources")
         .update({ is_archived: isArchived })
-        .eq("id", id);
+        .eq("id", id) as any);
 
-    if (error) {
-        console.error("Error archiving funding source:", error);
+    if (response.error) {
+        console.error("Error archiving funding source:", response.error);
         return false;
     }
     return true;
 }
 
 export async function toggleFundingSourceActive(id: string, isActive: boolean): Promise<boolean> {
-    const { error } = await supabase
+    const response = await (supabase
         .from("funding_sources")
         .update({ is_active: isActive })
-        .eq("id", id);
+        .eq("id", id) as any);
 
-    if (error) {
-        console.error("Error toggling funding source status:", error);
+    if (response.error) {
+        console.error("Error toggling funding source status:", response.error);
         return false;
     }
     return true;
@@ -151,19 +153,19 @@ export async function toggleFundingSourceActive(id: string, isActive: boolean): 
 // -- BENEFICIARY ACCOUNTS --
 
 export async function fetchBeneficiaryAccounts(): Promise<BeneficiaryAccount[]> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
-    const { data, error } = await supabase
+    const result = await (supabase
         .from("finance_beneficiary_accounts")
         .select("*")
-        .or(`is_global.eq.true,created_by.eq.${user.id}`)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false }) as any);
+
+    const { data, error } = result;
 
     if (error) {
         console.error("Error fetching beneficiary accounts:", error);
         return [];
     }
+
+    console.log("[DEBUG] fetchBeneficiaryAccounts returned:", data?.length, "accounts");
 
     return (data || []).map((row: any) => ({
         id: row.id,
@@ -181,11 +183,15 @@ export async function saveBeneficiaryAccount(account: {
     account_number: string;
     account_name: string;
     alias?: string;
+    is_global?: boolean;
     created_by: string;
 }): Promise<BeneficiaryAccount | null> {
     const { data, error } = await supabase
         .from("finance_beneficiary_accounts")
-        .insert([account])
+        .insert([{
+            ...account,
+            is_global: account.is_global ?? true // Default to true for shared
+        }])
         .select()
         .single();
 
@@ -258,14 +264,16 @@ export async function createPurchasingRequest(payload: PurchasingRequestPayload)
     console.log("[DEBUG] createPurchasingRequest - Payload:", JSON.stringify(requestData, null, 2));
 
     // 1. Create Request
-    const { data: request, error: reqError } = await supabase
+    const result = await (supabase
         .from("purchasing_requests")
         .insert([{
             ...requestData,
             created_by
         }])
         .select()
-        .single();
+        .single() as any);
+
+    const { data: request, error: reqError } = result;
 
     if (reqError) {
         console.error("Error creating purchasing request:", JSON.stringify(reqError, null, 2));
@@ -284,9 +292,10 @@ export async function createPurchasingRequest(payload: PurchasingRequestPayload)
             total: item.total
         }));
 
-        const { error: itemsError } = await supabase
+        const result = await (supabase
             .from("purchasing_items")
-            .insert(itemsData);
+            .insert(itemsData) as any);
+        const { error: itemsError } = result;
 
         if (itemsError) {
             console.error("Error creating purchasing items:", itemsError);
@@ -302,13 +311,14 @@ export async function updatePurchasingRequest(id: string, payload: Partial<Purch
     const { items, ...requestData } = payload;
 
     // 1. Update Request
-    const { error: reqError } = await supabase
+    const result = await (supabase
         .from("purchasing_requests")
         .update({
             ...requestData,
             updated_at: new Date().toISOString()
         })
-        .eq("id", id);
+        .eq("id", id) as any);
+    const { error: reqError } = result;
 
     if (reqError) {
         console.error("Error updating purchasing request:", reqError);
@@ -318,11 +328,11 @@ export async function updatePurchasingRequest(id: string, payload: Partial<Purch
 
     // 2. Update Items (Delete all and recreate for simplicity, same as reimburse)
     if (items) {
-        // Delete old
-        const { error: delError } = await supabase
+        const result = await (supabase
             .from("purchasing_items")
             .delete()
-            .eq("request_id", id);
+            .eq("request_id", id) as any);
+        const { error: delError } = result;
 
         if (delError) {
             console.error("Delete items error:", delError);
@@ -340,9 +350,10 @@ export async function updatePurchasingRequest(id: string, payload: Partial<Purch
                 total: item.total
             }));
 
-            const { error: insError } = await supabase
+            const result = await (supabase
                 .from("purchasing_items")
-                .insert(itemsData);
+                .insert(itemsData) as any);
+            const { error: insError } = result;
 
             if (insError) {
                 console.error("Insert items error:", insError);
@@ -356,42 +367,39 @@ export async function updatePurchasingRequest(id: string, payload: Partial<Purch
 }
 
 export async function fetchPurchasingRequests() {
-    const { data, error } = await supabase
+    const response = await (supabase
         .from("purchasing_requests")
         .select(`
             *,
             project:projects(project_name, project_code),
             items:purchasing_items(*)
         `)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false }) as any);
 
-    if (error) {
-        console.error("Error fetching purchasing requests:", JSON.stringify(error, null, 2));
-        console.error("Error details - code:", error.code, "message:", error.message, "hint:", error.hint);
+    if (response.error) {
+        console.error("Error fetching purchasing requests:", JSON.stringify(response.error, null, 2));
+        console.error("Error details - code:", response.error.code, "message:", response.error.message, "hint:", response.error.hint);
         return [];
     }
 
-    // Map to frontend type if needed, or return raw and map in client
-    // We'll return raw data augmented with project info for now, the client mapper needs update
-    return data;
+    return response.data;
 }
 
 export async function deletePurchasingRequest(requestId: string) {
-    // First delete items (cascade should handle this, but being explicit)
-    await supabase
+    await (supabase
         .from("purchasing_items")
         .delete()
-        .eq("request_id", requestId);
+        .eq("request_id", requestId) as any);
 
     // Then delete the request
-    const { error } = await supabase
+    const response = await (supabase
         .from("purchasing_requests")
         .delete()
-        .eq("id", requestId);
+        .eq("id", requestId) as any);
 
-    if (error) {
-        console.error("Error deleting purchasing request:", error);
-        throw error;
+    if (response.error) {
+        console.error("Error deleting purchasing request:", response.error);
+        throw response.error;
     }
 
     return true;
@@ -474,21 +482,21 @@ export async function createReimburseRequest(payload: ReimburseRequestPayload) {
 }
 
 export async function fetchReimburseRequests() {
-    const { data, error } = await supabase
+    const response = await (supabase
         .from("reimbursement_requests")
         .select(`
             *,
             project:projects(project_name, project_code),
             items:reimbursement_items(*)
         `)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false }) as any);
 
-    if (error) {
-        console.error("Error fetching reimburse requests:", JSON.stringify(error, null, 2));
-        console.error("Error details - code:", error.code, "message:", error.message, "hint:", error.hint);
+    if (response.error) {
+        console.error("Error fetching reimburse requests:", JSON.stringify(response.error, null, 2));
+        console.error("Error details - code:", response.error.code, "message:", response.error.message, "hint:", response.error.hint);
         return [];
     }
-    return data;
+    return response.data;
 }
 
 // -- PROFILES HELPER --
@@ -695,19 +703,33 @@ export async function fetchFinanceDashboardData(userId: string) {
         .gte('created_at', startOfMonth);
 
     // Pending Approval (My Submissions)
-    const { count: myPendingPurchases } = await supabase
+    // Updated Pending Logic
+    const purchasesResult = await (supabase
         .from('purchasing_requests')
         .select('*', { count: 'exact', head: true })
         .eq('created_by', userId)
-        .eq('approval_status', 'SUBMITTED');
+        .in('approval_status', ['DRAFT', 'SUBMITTED', 'NEED_REVISION']) as any);
 
-    const { count: myPendingReimburse } = await supabase
+    const myPendingPurchases = purchasesResult.count;
+
+    const reimburseResult = await (supabase
         .from('reimbursement_requests')
         .select('*', { count: 'exact', head: true })
         .eq('created_by', userId)
-        .eq('status', 'PENDING');
+        .in('status', ['DRAFT', 'PENDING', 'NEED_REVISION']) as any);
+
+    const myPendingReimburse = reimburseResult.count;
 
     const pendingApproval = (myPendingPurchases || 0) + (myPendingReimburse || 0);
+
+    console.log("[DEBUG] Dashboard Pending Count details:", {
+        purchasingCount: myPendingPurchases,
+        purchasingError: purchasesResult.error,
+        reimburseCount: myPendingReimburse,
+        reimburseError: reimburseResult.error,
+        total: pendingApproval,
+        userId
+    });
 
     // Paid to Me (This Month)
     const { data: myPaidReimburse } = await supabase

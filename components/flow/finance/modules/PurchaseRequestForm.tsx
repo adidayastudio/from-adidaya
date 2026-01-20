@@ -45,6 +45,10 @@ export function PurchaseRequestForm({
     const [savedAccounts, setSavedAccounts] = useState<BeneficiaryAccount[]>([]);
     const [saveToSaved, setSaveToSaved] = useState(false);
 
+    useEffect(() => {
+        console.log("[DEBUG] PurchaseRequestForm - savedAccounts length:", savedAccounts.length);
+    }, [savedAccounts]);
+
     // Parse items from initialData (which is single item flattened) or default
     // If initialData is present, it's a single item edit usually, or we need to handle multi-item edit?
     // The current table structure flattens items. If we edit "a request", we might be editing just that item line?
@@ -73,7 +77,10 @@ export function PurchaseRequestForm({
     // Load Projects & Accounts
     useEffect(() => {
         fetchAllProjects().then(setProjects);
-        fetchBeneficiaryAccounts().then(setSavedAccounts);
+        fetchBeneficiaryAccounts().then(accounts => {
+            console.log("[DEBUG] PurchaseRequestForm - Loaded accounts:", accounts);
+            setSavedAccounts(accounts);
+        });
     }, []);
 
     const projectOptions = useMemo(() => {
@@ -191,6 +198,7 @@ export function PurchaseRequestForm({
 
             // Handle Save Account
             if (saveToSaved && bankName && accountNumber && userId) {
+                console.log("[DEBUG] PurchaseRequestForm - Saving beneficiary account...");
                 await saveBeneficiaryAccount({
                     bank_name: bankName,
                     account_number: accountNumber,
@@ -491,7 +499,7 @@ export function PurchaseRequestForm({
                                     {saveToSaved && <Save className="w-3 h-3" />}
                                 </div>
                                 <input type="checkbox" className="hidden" checked={saveToSaved} onChange={() => setSaveToSaved(!saveToSaved)} />
-                                <span className="text-xs font-bold text-neutral-600 group-hover:text-red-600 transition-colors">Save to my saved accounts</span>
+                                <span className="text-xs font-bold text-neutral-600 group-hover:text-red-600 transition-colors">Save to shared accounts</span>
                             </label>
                         )}
                     </div>
