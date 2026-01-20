@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import clsx from "clsx";
-import { Plus, Search, ChevronDown, ChevronUp, Check, X, Clock, Download, ArrowUpDown, FileText, Upload, Users, Edit, Trash, Ban, Loader2 } from "lucide-react";
+import { Plus, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Check, X, Clock, Download, ArrowUpDown, FileText, Upload, Users, Edit, Trash, Ban, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import {
@@ -28,9 +28,78 @@ interface CrewRequestsProps { role?: string; triggerOpen?: number; }
 
 type FilterCard = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const getInitials = (n?: string) => { if (!n) return "??"; const w = n.trim().split(/\s+/); return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : w[0].substring(0, 2).toUpperCase(); };
 const formatNum = (n: number) => n.toLocaleString("id-ID");
+
+type ViewMode = "weekly" | "monthly";
+
+// ============================================
+// DATE LOGIC HELPERS
+// ============================================
+
+const getWeeklyPeriod = (anchorDate: Date) => {
+    // anchorDate should be a Sunday
+    const start = new Date(anchorDate);
+    const day = start.getDay();
+    start.setDate(start.getDate() - day); // Ensure Sunday
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6); // Saturday
+    end.setHours(23, 59, 59, 999);
+
+    return { start, end };
+};
+
+const getMonthlyPeriod = (anchorDate: Date) => {
+    // anchorDate is any date in the target month (e.g. 1st)
+    const year = anchorDate.getFullYear();
+    const month = anchorDate.getMonth(); // 0-11
+
+    const belongsToMonth = (sunday: Date, targetMonth: number, targetYear: number) => {
+        let daysInMonth = 0;
+        const d = new Date(sunday);
+        for (let i = 0; i < 7; i++) {
+            if (d.getMonth() === targetMonth && d.getFullYear() === targetYear) {
+                daysInMonth++;
+            }
+            d.setDate(d.getDate() + 1);
+        }
+        return daysInMonth >= 4;
+    };
+
+    const firstOfMonth = new Date(year, month, 1);
+    let startWeek = new Date(firstOfMonth);
+    startWeek.setDate(startWeek.getDate() - startWeek.getDay());
+
+    if (!belongsToMonth(startWeek, month, year)) {
+        startWeek.setDate(startWeek.getDate() + 7);
+    }
+    const start = new Date(startWeek);
+    start.setHours(0, 0, 0, 0);
+
+    let currentWeek = new Date(start);
+    let lastValidSaturday = new Date(currentWeek);
+    lastValidSaturday.setDate(lastValidSaturday.getDate() + 6);
+
+    for (let i = 0; i < 6; i++) {
+        const nextSunday = new Date(currentWeek);
+        nextSunday.setDate(nextSunday.getDate() + 7);
+
+        if (belongsToMonth(nextSunday, month, year)) {
+            currentWeek = nextSunday;
+            lastValidSaturday = new Date(currentWeek);
+            lastValidSaturday.setDate(lastValidSaturday.getDate() + 6);
+        } else {
+            break;
+        }
+    }
+
+    const end = lastValidSaturday;
+    end.setHours(23, 59, 59, 999);
+
+    return { start, end };
+};
 
 const inputClass = "w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all";
 const FormInput = ({ label, type = "text", value, onChange, placeholder }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string }) => (
@@ -61,7 +130,17 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
     const [activeCard, setActiveCard] = useState<FilterCard>("ALL");
     const [selectedType, setSelectedType] = useState<RequestType | "ALL">("ALL");
     const [selectedProject, setSelectedProject] = useState("ALL");
-    const [selectedMonth, setSelectedMonth] = useState(0);
+
+    // Period Selection State
+    const [anchorDate, setAnchorDate] = useState(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        const day = d.getDay();
+        d.setDate(d.getDate() - day);
+        return d;
+    });
+    const [viewMode, setViewMode] = useState<ViewMode>("weekly");
+
     const [sortBy, setSortBy] = useState<"date" | "type" | "status">("date");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const [showDrawer, setShowDrawer] = useState(false);
@@ -77,6 +156,25 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
     const [editingId, setEditingId] = useState<string | null>(null);
 
     const resetForm = () => { setFormType("LEAVE"); setFormCrew(""); setFormProject(""); setFormAmount(""); setFormStartDate(""); setFormEndDate(""); setFormReason(""); setEditingId(null); };
+
+    const formatDateShort = (d: Date) => d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
+
+    // Derived period
+    const period = useMemo(() => {
+        if (viewMode === "weekly") return getWeeklyPeriod(anchorDate);
+        return getMonthlyPeriod(anchorDate);
+    }, [anchorDate, viewMode]);
+
+    const handlePeriodChange = (dir: "prev" | "next") => {
+        const n = new Date(anchorDate);
+        if (viewMode === "weekly") {
+            n.setDate(n.getDate() + (dir === "next" ? 7 : -7));
+        } else {
+            n.setDate(1);
+            n.setMonth(n.getMonth() + (dir === "next" ? 1 : -1));
+        }
+        setAnchorDate(n);
+    };
 
     // Load Data
     useEffect(() => {
@@ -263,9 +361,16 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
         else if (activeCard === "REJECTED") d = d.filter(r => r.status === "REJECTED");
         if (selectedType !== "ALL") d = d.filter(r => r.type === selectedType);
         if (selectedProject !== "ALL") d = d.filter(r => r.projectCode && selectedProject.includes(r.projectCode));
+
+        // Filter by Period
+        d = d.filter(r => {
+            const reqDate = new Date(r.createdAt);
+            return reqDate >= period.start && reqDate <= period.end;
+        });
+
         if (searchQuery) { const q = searchQuery.toLowerCase(); d = d.filter(r => (r.crewName || "").toLowerCase().includes(q) || (r.reason || "").toLowerCase().includes(q)); }
         return [...d].sort((a, b) => { let cmp = 0; if (sortBy === "date") cmp = a.createdAt.localeCompare(b.createdAt); else if (sortBy === "type") cmp = a.type.localeCompare(b.type); else if (sortBy === "status") cmp = a.status.localeCompare(b.status); return sortOrder === "asc" ? cmp : -cmp; });
-    }, [requests, searchQuery, activeCard, selectedType, selectedProject, sortBy, sortOrder]);
+    }, [requests, searchQuery, activeCard, selectedType, selectedProject, period, sortBy, sortOrder]);
 
     const handleSort = (c: "date" | "type" | "status") => { if (sortBy === c) setSortOrder(sortOrder === "asc" ? "desc" : "asc"); else { setSortBy(c); setSortOrder(c === "date" ? "desc" : "asc"); } };
     const SortIcon = ({ c }: { c: "date" | "type" | "status" }) => sortBy !== c ? <ArrowUpDown className="w-3 h-3 text-neutral-400" /> : sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
@@ -277,7 +382,6 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
         if (filtered.length === 0) return;
         setExporting(true);
         try {
-            const currentMonthName = MONTHS[selectedMonth];
             const project = projects.find(p => p.code === selectedProject);
             const projectCode = project
                 ? project.code.includes("-")
@@ -286,7 +390,13 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                 : selectedProject === "ALL" ? "ALL" : selectedProject;
 
             const projectName = selectedProject === "ALL" ? "All Projects" : (project ? project.name : "Selected Project");
-            const periodText = `Month of ${currentMonthName} ${new Date().getFullYear()}`;
+
+            const startStr = formatDateShort(period.start);
+            const endStr = formatDateShort(period.end);
+            const periodText = viewMode === "weekly"
+                ? `Weekly Report (${startStr} – ${endStr})`
+                : `Monthly Report (${startStr} – ${endStr})`;
+
             const generatedAt = new Date().toLocaleString("id-ID");
 
             const totalApproved = filtered.filter(r => r.status === "APPROVED").length;
@@ -370,18 +480,22 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                         />
                     </div>
 
-                    {/* Month & Project - Row on mobile, but might wrap on small screens */}
+                    {/* Period Selector & Project */}
                     <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full lg:w-auto pointer-events-auto z-10">
-                        <div className="relative flex-1 sm:flex-none">
-                            <select
-                                value={selectedMonth}
-                                onChange={e => setSelectedMonth(parseInt(e.target.value))}
-                                className="appearance-none w-full sm:w-auto pl-3 pr-8 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all"
-                            >
-                                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+                        {/* Period Selection */}
+                        <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-0.5 bg-white border border-neutral-200 rounded-full px-1 py-1 shadow-sm flex-shrink-0">
+                                <button onClick={() => handlePeriodChange("prev")} className="p-1.5 rounded-full hover:bg-neutral-50 text-neutral-500"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                                <span className="text-sm font-medium text-neutral-700 text-center select-none px-1 min-w-[120px] whitespace-nowrap">{formatDateShort(period.start)} - {formatDateShort(period.end)}</span>
+                                <button onClick={() => handlePeriodChange("next")} className="p-1.5 rounded-full hover:bg-neutral-50 text-neutral-500"><ChevronRight className="w-3.5 h-3.5" /></button>
+                            </div>
+                            <div className="flex items-center bg-neutral-200/50 rounded-full p-1">
+                                <button onClick={() => setViewMode("weekly")} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-colors", viewMode === "weekly" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}>W</button>
+                                <button onClick={() => setViewMode("monthly")} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-colors", viewMode === "monthly" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}>M</button>
+                            </div>
                         </div>
+
+                        {/* Project Select */}
                         <div className="flex-1 sm:flex-none sm:w-48">
                             <Select
                                 value={selectedProject}
