@@ -104,14 +104,29 @@ export default function NotificationsContent({ section }: { section: Notificatio
 
     // Fetch user for realtime matching
     useEffect(() => {
-        supabase.auth.getUser().then(({ data }) => {
-            setCurrentUserId(data.user?.id || null);
+        const fetchUser = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            setCurrentUserId(user?.id || null);
+            console.log("👤 [User] Initial ID discovered:", user?.id);
+        };
+        fetchUser();
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setCurrentUserId(session?.user?.id || null);
+            console.log("👤 [User] Auth state changed:", session?.user?.id);
         });
+
+        return () => subscription.unsubscribe();
     }, [supabase]);
 
     // Realtime Subscription
     useEffect(() => {
-        if (!currentUserId) return;
+        if (!currentUserId) {
+            console.log("⏳ [Realtime] Waiting for user ID before subscribing...");
+            return;
+        }
+
+        console.log("📡 [Realtime] Subscribing for user:", currentUserId);
 
         const channel = (supabase as any)
             .channel('realtime-notifications')
@@ -123,16 +138,26 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     table: 'notifications',
                 },
                 (payload: any) => {
+                    console.log("📥 [Realtime] Event received:", payload.new);
+
                     if (payload.new && payload.new.user_id === currentUserId) {
+                        console.log("🎯 [Realtime] Match found! Triggering notification.");
                         triggerLocalNotification(payload.new.title, payload.new.description);
                         const mappedItem = mapNotification(payload.new);
                         setNotifications(prev => [mappedItem, ...prev]);
+                    } else {
+                        console.log("⏭️ [Realtime] User ID mismatch:", { payload: payload.new.user_id, current: currentUserId });
                     }
                 }
             )
-            .subscribe();
+            .subscribe((status: string) => {
+                console.log("🔌 [Realtime] Channel status:", status);
+            });
 
-        return () => { (supabase as any).removeChannel(channel); };
+        return () => {
+            console.log("📴 [Realtime] Unsubscribing...");
+            (supabase as any).removeChannel(channel);
+        };
     }, [supabase, currentUserId]);
 
     const triggerLocalNotification = (title: string, body: string) => {
