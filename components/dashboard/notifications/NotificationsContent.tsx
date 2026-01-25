@@ -78,31 +78,26 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     if (payload.new && payload.new.user_id === user?.id) {
                         const newNotif = payload.new;
 
-                        // Try to send push notification via Service Worker (Best for PWA/Mobile)
+                        // Try to send push notification
                         if (Notification.permission === "granted") {
-                            // Check if Service Worker is available
-                            if ('serviceWorker' in navigator) {
-                                navigator.serviceWorker.ready.then(registration => {
-                                    registration.showNotification(newNotif.title, {
-                                        body: newNotif.description,
-                                        icon: '/android-chrome-192x192.png',
-                                        badge: '/android-chrome-192x192.png', // Android badge
-                                        silent: false
-                                    });
-                                }).catch(err => {
-                                    console.error("SW Notification failed, falling back to new Notification()", err);
-                                    // Fallback
-                                    new Notification(newNotif.title, {
-                                        body: newNotif.description,
-                                        icon: '/android-chrome-192x192.png'
-                                    });
-                                });
-                            } else {
-                                // Fallback for non-SW browsers
-                                new Notification(newNotif.title, {
-                                    body: newNotif.description,
-                                    icon: '/android-chrome-192x192.png'
-                                });
+                            const title = newNotif.title;
+                            const options = {
+                                body: newNotif.description,
+                                icon: '/android-chrome-192x192.png',
+                                badge: '/android-chrome-192x192.png',
+                                tag: newNotif.id, // Prevent duplicate alerts for same notification
+                            };
+
+                            try {
+                                // Standard constructor (Best for Desktop Safari/Chrome)
+                                new Notification(title, options);
+                            } catch (e) {
+                                // Service Worker fallback (Required for some Mobile/PWA contexts)
+                                if ('serviceWorker' in navigator) {
+                                    navigator.serviceWorker.ready.then(reg => {
+                                        reg.showNotification(title, options);
+                                    }).catch(err => console.error("SW Notification failed:", err));
+                                }
                             }
                         }
 

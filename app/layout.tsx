@@ -8,7 +8,6 @@ import ServiceWorkerRegister from "@/components/dashboard/shared/ServiceWorkerRe
 export const metadata = {
   title: "Adidaya Studio",
   description: "Architecture • Design • Development",
-  manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
