@@ -3,11 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import PageWrapper from "@/components/layout/PageWrapper";
-import DashboardSidebar, { DashboardView } from "@/components/dashboard/DashboardSidebar";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { DashboardOverview } from "@/components/dashboard/views/DashboardOverview";
-import { DashboardToday } from "@/components/dashboard/views/DashboardToday";
-import { DashboardWeek } from "@/components/dashboard/views/DashboardWeek";
-import { DashboardOverdue } from "@/components/dashboard/views/DashboardOverdue";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -28,18 +25,14 @@ import {
   HardHat,
   Sparkles,
   Calendar,
-  Layers,
-  Zap,
-  Smile,
-  Sun,
-  Moon,
   Sunrise,
   Sunset,
+  Sun,
+  Moon,
   CloudSun
 } from "lucide-react";
 
 export default function DashboardPage() {
-  const [view, setView] = useState<DashboardView>("overview");
   const router = useRouter();
   const supabase = createClient();
   const { profile } = useUserProfile();
@@ -110,7 +103,7 @@ export default function DashboardPage() {
 
       <PageWrapper sidebar={
         <>
-          <DashboardSidebar activeView={view} onChangeView={setView} />
+          <DashboardSidebar />
           {/* Added Logout Button to bottom of sidebar area for MVP convenience */}
           <button
             onClick={handleLogout}
@@ -195,10 +188,7 @@ export default function DashboardPage() {
 
             <div className="h-px bg-neutral-100 my-8" />
 
-            {view === "overview" && <DashboardOverview />}
-            {view === "today" && <DashboardToday />}
-            {view === "week" && <DashboardWeek />}
-            {view === "overdue" && <DashboardOverdue />}
+            <DashboardOverview />
           </div>
         </div>
       </PageWrapper>

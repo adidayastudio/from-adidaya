@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { Filter, ChevronDown, Search, Inbox, ArrowRight, X, ArrowUpDown } from "lucide-react";
-import type { MyTasksSection } from "./MyTasksSidebar";
+import { SummaryFilterCards, FilterItem } from "@/components/dashboard/shared/SummaryFilterCards";
 
-// ==========================================================================
-// MOCK DATA (Proper Code Formats)
-// ==========================================================================
+export type MyTasksSection = "today" | "this-week" | "overdue" | "all-tasks" | "completed";
 
 const ALL_TASKS = [
   { id: "KO-01-01", name: "Review JPF Design", projectId: "JPF", projectName: "JPF House", dueDate: "2026-01-06", status: "in-progress", priority: "high" },
@@ -37,44 +36,47 @@ const ALL_TASKS = [
 ];
 
 // ==========================================================================
-// SECTION CONFIG
-// ==========================================================================
-
-const SECTION_CONFIG: Record<MyTasksSection, { title: string; subtitle: string; emptyText: string }> = {
-  "today": { title: "Today", subtitle: "Tasks due today", emptyText: "No tasks due today 🎉" },
-  "this-week": { title: "This Week", subtitle: "Tasks due this week", emptyText: "No tasks due this week" },
-  "overdue": { title: "Overdue", subtitle: "Tasks past their due date", emptyText: "No overdue tasks. Great job!" },
-  "all-tasks": { title: "All Tasks", subtitle: "All your active tasks", emptyText: "No active tasks" },
-  "completed": { title: "Completed", subtitle: "Tasks you've finished", emptyText: "No completed tasks yet" },
-};
-
-// ==========================================================================
 // MAIN COMPONENT
 // ==========================================================================
 
-interface MyTasksContentProps {
-  section: MyTasksSection;
-}
-
-export default function MyTasksContent({ section }: MyTasksContentProps) {
+export default function MyTasksContent({ section }: { section: MyTasksSection }) {
+  const router = useRouter();
   const [filterProject, setFilterProject] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterPriority, setFilterPriority] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const config = SECTION_CONFIG[section];
-
-  // Filter tasks based on section scope
+  // Date Logic
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - today.getDay() + 1);
+  startOfWeek.setHours(0, 0, 0, 0);
   const endOfWeek = new Date(startOfWeek);
   endOfWeek.setDate(startOfWeek.getDate() + 6);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  endOfWeek.setHours(23, 59, 59, 999);
 
+  // Counts Calculation
+  const counts = {
+    today: ALL_TASKS.filter(t => t.status !== "completed" && new Date(t.dueDate).setHours(0, 0, 0, 0) === today.getTime()).length,
+    week: ALL_TASKS.filter(t => t.status !== "completed" && new Date(t.dueDate) >= startOfWeek && new Date(t.dueDate) <= endOfWeek).length,
+    overdue: ALL_TASKS.filter(t => t.status !== "completed" && new Date(t.dueDate) < today).length,
+    all: ALL_TASKS.filter(t => t.status !== "completed").length,
+    completed: ALL_TASKS.filter(t => t.status === "completed").length
+  };
+
+  const filterItems: FilterItem[] = [
+    { id: "all-tasks", label: "Total Tasks", count: counts.all, color: "neutral" },
+    { id: "today", label: "Today", count: counts.today, color: "blue" },
+    { id: "this-week", label: "This Week", count: counts.week, color: "neutral" },
+    { id: "overdue", label: "Overdue", count: counts.overdue, color: "red" },
+    { id: "completed", label: "Completed", count: counts.completed, color: "green" },
+  ];
+
+  // Logic to filter the MAIN LIST based on the selected section (from URL/Props)
   let filteredTasks = ALL_TASKS.filter(task => {
     const dueDate = new Date(task.dueDate);
     dueDate.setHours(0, 0, 0, 0);
@@ -124,21 +126,25 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
   }));
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
 
-      {/* === PAGE HEADER === */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-neutral-900">{config.title}</h1>
-        <p className="text-sm text-neutral-500">{config.subtitle} · <span className="font-medium text-neutral-700">{filteredTasks.length} tasks</span></p>
+      {/* HEADER & SUMMARY CARDS */}
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold text-neutral-900">My Tasks</h1>
+
+        <SummaryFilterCards
+          items={filterItems}
+          selectedId={section}
+          onSelect={(id) => router.push(`/dashboard/tasks?section=${id}`)}
+        />
       </div>
 
-      <div className="border-b border-neutral-200" />
+      <div className="h-px bg-neutral-100" />
 
-      {/* === TOOLBAR (Responsive - matches Feel Clock) === */}
+      {/* TOOLBAR */}
       <div className="flex items-center justify-between gap-2 w-full">
         {/* LEFT GROUP: Search + Filters */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Search: Icon on mobile, Input on md+ */}
           <button
             onClick={() => setShowSearchInput(!showSearchInput)}
             className="md:hidden p-2 rounded-full border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 transition-colors flex-shrink-0"
@@ -157,7 +163,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
             />
           </div>
 
-          {/* Project Filter: Dropdown on md+ */}
           <div className="relative hidden md:block flex-shrink-0">
             <select
               value={filterProject}
@@ -170,7 +175,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
           </div>
 
-          {/* Status Filter: Dropdown on md+ */}
           <div className="relative hidden md:block flex-shrink-0">
             <select
               value={filterStatus}
@@ -184,7 +188,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
           </div>
 
-          {/* Priority Filter: Dropdown on md+ */}
           <div className="relative hidden md:block flex-shrink-0">
             <select
               value={filterPriority}
@@ -200,7 +203,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
           </div>
 
-          {/* Filter Icon: Mobile only - shows dropdown sheet */}
           <button
             onClick={() => setShowMobileFilters(!showMobileFilters)}
             className={clsx(
@@ -213,7 +215,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
           </button>
         </div>
 
-        {/* RIGHT GROUP: Clear + Sort */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {(filterProject !== "all" || filterStatus !== "all" || filterPriority !== "all" || searchQuery) && (
             <button
@@ -237,7 +238,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
         </div>
       </div>
 
-      {/* Expandable Search Input for mobile */}
       {showSearchInput && (
         <div className="md:hidden relative w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
@@ -252,7 +252,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
         </div>
       )}
 
-      {/* Mobile Filter Sheet */}
       {showMobileFilters && (
         <div className="md:hidden bg-white border border-neutral-200 rounded-xl p-4 space-y-3 animate-in slide-in-from-top-2">
           <div className="flex items-center justify-between">
@@ -261,7 +260,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
               <X className="w-4 h-4" />
             </button>
           </div>
-          {/* Project */}
           <div className="relative">
             <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Project</label>
             <select
@@ -274,7 +272,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
             </select>
             <ChevronDown className="absolute right-3 bottom-3 w-4 h-4 text-neutral-400 pointer-events-none" />
           </div>
-          {/* Status */}
           <div className="relative">
             <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Status</label>
             <select
@@ -288,7 +285,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
             </select>
             <ChevronDown className="absolute right-3 bottom-3 w-4 h-4 text-neutral-400 pointer-events-none" />
           </div>
-          {/* Priority */}
           <div className="relative">
             <label className="text-xs font-medium text-neutral-500 mb-1.5 block">Priority</label>
             <select
@@ -307,7 +303,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
         </div>
       )}
 
-      {/* === TASK LIST === */}
       {filteredTasks.length > 0 ? (
         <div className="rounded-xl border border-neutral-200 bg-white overflow-hidden divide-y divide-neutral-100">
           {filteredTasks.map(task => (
@@ -341,7 +336,7 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
         </div>
       ) : (
         <div className="flex items-center justify-center gap-2 h-40 text-sm text-neutral-400 italic rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50">
-          <Inbox className="w-5 h-5" /> {config.emptyText}
+          <Inbox className="w-5 h-5" /> No tasks found in this section
         </div>
       )}
 
@@ -352,28 +347,6 @@ export default function MyTasksContent({ section }: MyTasksContentProps) {
 // ==========================================================================
 // HELPER COMPONENTS
 // ==========================================================================
-
-function FilterDropdown({ label, value, onChange, options }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="appearance-none pl-3 pr-8 py-2 text-xs font-medium border border-neutral-200 rounded-full bg-white cursor-pointer hover:border-neutral-300 focus:outline-none focus:border-neutral-400"
-      >
-        {options.map(opt => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
-    </div>
-  );
-}
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -394,7 +367,6 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function PriorityBadge({ priority }: { priority: string }) {
-  // Don't show badge for Low priority
   if (priority === "low") return null;
 
   const styles: Record<string, string> = {

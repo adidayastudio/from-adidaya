@@ -48,9 +48,6 @@ const menuItems: MenuSection[] = [
     items: [
       { label: "Search", href: "/search", icon: Search },
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-      { label: "My Tasks", href: "/dashboard/tasks", icon: CheckSquare },
-      { label: "My Projects", href: "/dashboard/projects", icon: FolderKanban },
-      { label: "Notifications", href: "/dashboard/notifications", icon: Bell },
     ],
   },
   {
@@ -176,10 +173,16 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
       >
         {/* HEADER */}
         <div className="px-4 py-5 border-b border-border-light flex items-center justify-between">
-          {open && (
-            <h1 className="text-lg font-semibold text-brand-red tracking-tight">
-              ADIDAYA OS
-            </h1>
+          {open ? (
+            <div className="flex items-center gap-2">
+              <img src="/logo-adidaya-red.svg" alt="Adidaya" className="w-7 h-7" />
+              <h1 className="text-base font-semibold tracking-tight">
+                <span className="text-neutral-500">from:</span>{" "}
+                <span className="text-brand-red">Adidaya</span>
+              </h1>
+            </div>
+          ) : (
+            <img src="/logo-adidaya-red.svg" alt="Adidaya" className="w-7 h-7 mx-auto" />
           )}
           <div className="flex items-center gap-2">
             {/* Close button for mobile */}
@@ -263,7 +266,7 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
         </nav>
 
         <div className="mt-auto border-t border-border-light px-4 py-4">
-          {open && <p className="text-xs text-text-tertiary">© 2025 Adidaya Studio</p>}
+          {open && <p className="text-xs text-text-tertiary">© 2026 Adidaya Studio</p>}
         </div>
       </aside>
 

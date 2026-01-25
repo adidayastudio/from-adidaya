@@ -1,21 +1,18 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import PageWrapper from "@/components/layout/PageWrapper";
-
-import MyTasksSidebar, { MyTasksSection } from "@/components/my-tasks/MyTasksSidebar";
-import MyTasksContent from "@/components/my-tasks/MyTasksContent";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import MyTasksContent, { MyTasksSection } from "@/components/my-tasks/MyTasksContent";
 
 function TasksPageContent() {
   const searchParams = useSearchParams();
-  const initialSection = (searchParams.get("section") as MyTasksSection) || "today";
-  const [section, setSection] = useState<MyTasksSection>(initialSection);
+  const section = (searchParams.get("section") as MyTasksSection) || "today";
 
   // Map section to breadcrumb label
-  const sectionLabels: Record<MyTasksSection, string> = {
+  const sectionLabels: Record<string, string> = {
     "today": "Today",
     "this-week": "This Week",
     "overdue": "Overdue",
@@ -24,16 +21,16 @@ function TasksPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
+    <div className="min-h-screen bg-neutral-50 p-4 md:p-6 relative">
       <Breadcrumb
         items={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "My Tasks", href: "/dashboard/tasks" },
-          { label: sectionLabels[section] }
+          { label: sectionLabels[section] || "Today" }
         ]}
       />
 
-      <PageWrapper sidebar={<MyTasksSidebar activeSection={section} onSectionChange={setSection} />}>
+      <PageWrapper sidebar={<DashboardSidebar />}>
         <MyTasksContent section={section} />
       </PageWrapper>
     </div>

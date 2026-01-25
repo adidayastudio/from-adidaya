@@ -1,41 +1,45 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
-import { CheckCheck } from "lucide-react";
-import { MOCK_NOTIFICATIONS } from "@/components/dashboard/notifications/data";
-import NotificationItem from "@/components/dashboard/notifications/NotificationItem";
-import { EmptyState } from "@/shared/ui/overlays/EmptyState";
-import { Bell } from "lucide-react";
+import PageWrapper from "@/components/layout/PageWrapper";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import NotificationsContent, { NotificationSection } from "@/components/dashboard/notifications/NotificationsContent";
 
-export default function NotificationsAllPage() {
-  const notifications = MOCK_NOTIFICATIONS; // All notifications
+function NotificationsPageContent() {
+  const searchParams = useSearchParams();
+  const section = (searchParams.get("section") as NotificationSection) || "all";
+
+  const labels: Record<string, string> = {
+    "all": "All",
+    "unread": "Unread",
+    "approvals": "Approvals",
+    "mentions": "Mentions",
+    "system": "System"
+  };
 
   return (
-    <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
-      <div className="flex items-center justify-between pb-4 border-b border-neutral-200">
-        <div>
-          <h1 className="text-2xl font-bold text-neutral-900">All Notifications</h1>
-          <p className="text-sm text-neutral-500">Your personal inbox for interrupts and updates.</p>
-        </div>
-        <button className="flex items-center gap-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-colors">
-          <CheckCheck className="w-4 h-4" />
-          Mark all as read
-        </button>
-      </div>
+    <div className="min-h-screen bg-neutral-50 p-4 md:p-6 relative">
+      <Breadcrumb
+        items={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Notifications", href: "/dashboard/notifications" },
+          { label: labels[section] || "All" }
+        ]}
+      />
 
-      <div className="space-y-3">
-        {notifications.length > 0 ? (
-          notifications.map((item) => (
-            <NotificationItem key={item.id} item={item} />
-          ))
-        ) : (
-          <EmptyState
-            icon={Bell}
-            title="No Notifications"
-            description="You're all caught up! Check back later for updates."
-          />
-        )}
-      </div>
+      <PageWrapper sidebar={<DashboardSidebar />}>
+        <NotificationsContent section={section} />
+      </PageWrapper>
     </div>
+  );
+}
+
+export default function NotificationsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-50 p-6 flex items-center justify-center">Loading...</div>}>
+      <NotificationsPageContent />
+    </Suspense>
   );
 }

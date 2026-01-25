@@ -19,7 +19,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="overflow-x-hidden" suppressHydrationWarning>
-      <body className="bg-bg-100 text-text-primary font-sans overflow-x-hidden">
+      <body className="bg-bg-100 text-text-primary font-sans overflow-x-hidden" suppressHydrationWarning>
 
         {/* Tooltip Layer */}
         <div

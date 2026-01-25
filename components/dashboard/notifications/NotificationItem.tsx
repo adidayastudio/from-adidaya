@@ -47,7 +47,7 @@ export default function NotificationItem({ item, onMarkAsRead }: NotificationIte
 
             <div className="flex gap-4">
                 {/* Avatar / Icon */}
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 pt-1">
                     {item.source?.avatar ? (
                         <img src={item.source.avatar} alt={item.source.name} className="w-10 h-10 rounded-full object-cover" />
                     ) : (
@@ -65,48 +65,59 @@ export default function NotificationItem({ item, onMarkAsRead }: NotificationIte
 
                 {/* Content */}
                 <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-neutral-900">{item.source?.name || "System"}</span>
-                            <span className="text-neutral-300">•</span>
-                            <span className="text-xs text-neutral-500">{item.timestamp}</span>
-                        </div>
-                    </div>
+                    {/* Main Description (Actor + Action) */}
+                    <p className={clsx("text-sm leading-relaxed", isUnread ? "font-semibold text-neutral-900" : "font-medium text-neutral-700")}>
+                        {(() => {
+                            const text = item.description || "";
+                            // Define keywords and their colors
+                            const keywords = [
+                                { word: "approved", color: "text-blue-600" },
+                                { word: "rejected", color: "text-red-600" },
+                                { word: "marking as paid:", color: "text-emerald-600" },
+                                { word: "paid", color: "text-emerald-600" },
+                                { word: "submitted", color: "text-neutral-900" }
+                            ];
 
-                    <h4 className={clsx("text-sm font-medium", isUnread ? "text-neutral-900" : "text-neutral-700")}>
-                        {item.title}
-                    </h4>
-                    <p className="text-sm text-neutral-600 leading-relaxed">
-                        {item.description}
+                            // Find the keyword present in the text
+                            // We split by the first occurrence of a keyword to style it
+                            // Simplistic approach: split by space implies word matching, but "marking as paid:" is multi-word.
+                            // Better approach: Regex replacement with component
+
+                            // Let's use a robust regex
+                            const pattern = new RegExp(`(${keywords.map(k => k.word).join("|")})`, "i");
+                            const parts = text.split(pattern);
+
+                            return parts.map((part, i) => {
+                                const keywordMatch = keywords.find(k => k.word.toLowerCase() === part.toLowerCase());
+                                if (keywordMatch) {
+                                    return <span key={i} className={keywordMatch.color}>{part}</span>;
+                                }
+                                return <span key={i}>{part}</span>;
+                            });
+                        })()}
                     </p>
 
-                    {/* Meta / Actions */}
-                    <div className="pt-2 flex flex-wrap gap-2 items-center">
-                        {item.metadata?.projectCode && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-neutral-100 text-neutral-500 border border-neutral-200 uppercase tracking-wide">
-                                {item.metadata.projectCode}
+                    {/* Meta: Title (Module • Code) • Timestamp */}
+                    <div className="flex items-center gap-2 text-xs text-neutral-500">
+                        <span>{item.title}</span>
+                        <span>•</span>
+                        <span>{item.timestamp}</span>
+                    </div>
+
+                    {/* Actions (if Approval) */}
+                    {item.type === "approval" && item.metadata?.status === "pending" && (
+                        <div className="pt-2 flex gap-2">
+                            <span className="flex items-center gap-1 px-3 py-1.5 bg-neutral-100 text-neutral-600 text-xs font-medium rounded-lg">
+                                <FileText className="w-3 h-3" /> Review Request
                             </span>
-                        )}
+                        </div>
+                    )}
 
-                        {item.type === "approval" && item.metadata?.status === "pending" && (
-                            <div className="flex gap-2 mt-1">
-                                <button className="flex items-center gap-1 px-3 py-1.5 bg-neutral-100 text-neutral-600 text-xs font-medium rounded-lg hover:bg-neutral-200 transition-colors">
-                                    <FileText className="w-3 h-3" /> Details
-                                </button>
-                                <button className="flex items-center gap-1 px-3 py-1.5 bg-white border border-neutral-200 text-neutral-600 text-xs font-medium rounded-lg hover:bg-neutral-50 transition-colors">
-                                    <X className="w-3 h-3" /> Reject
-                                </button>
-                                <button className="flex items-center gap-1 px-3 py-1.5 bg-neutral-900 text-white text-xs font-medium rounded-lg hover:bg-black transition-colors">
-                                    <Check className="w-3 h-3" /> Approve
-                                </button>
-                            </div>
-                        )}
-
-                        {item.metadata?.link && item.type !== "approval" && (
-                            <Link href={item.metadata.link} className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 ml-auto">
-                                View Details <ArrowRight className="w-3 h-3" />
-                            </Link>
-                        )}
+                    {/* View Details Indicator (Visual Only, Parent is Link) */}
+                    <div className="pt-1 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="flex items-center gap-1 text-xs font-medium text-blue-600">
+                            View Details <ArrowRight className="w-3 h-3" />
+                        </span>
                     </div>
                 </div>
             </div>
