@@ -1,3 +1,6 @@
+-- Enable the pg_net extension for HTTP requests
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
 -- Trigger function to call the edge function
 CREATE OR REPLACE FUNCTION public.handle_new_notification()
 RETURNS TRIGGER AS $$
