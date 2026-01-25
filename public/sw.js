@@ -8,6 +8,37 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(self.clients.claim());
 });
 
+self.addEventListener('push', (event) => {
+    console.log('Push event received');
+
+    let data = { title: 'New Notification', body: 'You have a new update.' };
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch (e) {
+            data = { title: 'New Notification', body: event.data.text() };
+        }
+    }
+
+    const options = {
+        body: data.body,
+        icon: '/android-chrome-192x192.png',
+        badge: '/android-chrome-192x192.png',
+        tag: data.tag || 'adidaya-push',
+        data: {
+            link: data.link || '/dashboard/notifications'
+        },
+        // Action for mobile
+        actions: [
+            { action: 'open', title: 'View Details' }
+        ]
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(data.title, options)
+    );
+});
+
 self.addEventListener('notificationclick', (event) => {
     console.log('Notification clicked');
     event.notification.close();

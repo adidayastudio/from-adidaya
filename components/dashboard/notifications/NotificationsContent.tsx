@@ -29,31 +29,55 @@ export default function NotificationsContent({ section }: { section: Notificatio
         }
     }, []);
 
-    const requestPermission = async () => {
-        if ("Notification" in window) {
-            try {
-                const result = await Notification.requestPermission();
-                setPermission(result);
-                if (result === "granted") {
-                    // Test notification immediately after click to verify
-                    const options = {
-                        body: "You will now receive alerts for new activities.",
-                        icon: '/android-chrome-192x192.png',
-                        badge: '/android-chrome-192x192.png',
-                        tag: 'enabling-notifications'
-                    };
+    const VAPID_PUBLIC_KEY = "BLsN_ba3HI2Oi5Slu5L3027FH8gCleLwA35liLS7DjU2rIrOKKnc7ErxD7Xy3vfIJhhY99hVcDm5o7EUO8E5qMo";
 
-                    try {
-                        new Notification("Notifications Enabled", options);
-                    } catch (e) {
-                        if ('serviceWorker' in navigator) {
-                            navigator.serviceWorker.ready.then(reg => reg.showNotification("Notifications Enabled", options));
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error("Error requesting notification permission:", error);
+    const requestPermission = async () => {
+        if (!("Notification" in window)) return;
+
+        try {
+            const result = await Notification.requestPermission();
+            setPermission(result);
+
+            if (result === "granted") {
+                await subscribeToPush();
+
+                // Final success alert
+                triggerLocalNotification("Notifications Enabled", "You will now receive background alerts for new activities.");
             }
+        } catch (error) {
+            console.error("Error requesting notification permission:", error);
+        }
+    };
+
+    const subscribeToPush = async () => {
+        if (!('serviceWorker' in navigator)) return;
+
+        try {
+            const registration = await navigator.serviceWorker.ready;
+
+            // Subscribe to push service
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: VAPID_PUBLIC_KEY
+            });
+
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Save to Supabase
+            const p256dh = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh')!) as any));
+            const auth = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth')!) as any));
+
+            await (supabase as any).from('push_subscriptions').upsert({
+                user_id: user.id,
+                endpoint: subscription.endpoint,
+                p256dh: p256dh,
+                auth: auth
+            }, { onConflict: 'user_id,endpoint' });
+
+            console.log("✅ Push Subscription Saved to Supabase");
+        } catch (error) {
+            console.error("❌ Failed to subscribe to push:", error);
         }
     };
 
