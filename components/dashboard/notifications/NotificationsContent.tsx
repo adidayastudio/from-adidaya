@@ -19,6 +19,7 @@ export default function NotificationsContent({ section }: { section: Notificatio
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState<UiNotification[]>([]);
     const [permission, setPermission] = useState<NotificationPermission>("default");
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const supabase = createClient();
 
     // Check Permission on Mount
@@ -77,14 +78,16 @@ export default function NotificationsContent({ section }: { section: Notificatio
         },
     });
 
+    // Fetch user for realtime matching
+    useEffect(() => {
+        supabase.auth.getUser().then(({ data }) => {
+            setCurrentUserId(data.user?.id || null);
+        });
+    }, [supabase]);
+
     // Realtime Subscription
     useEffect(() => {
-        let userId: string | null = null;
-
-        // Pre-fetch user for faster realtime response
-        supabase.auth.getUser().then(({ data }) => {
-            userId = data.user?.id || null;
-        });
+        if (!currentUserId) return;
 
         const channel = (supabase as any)
             .channel('realtime-notifications')
@@ -96,42 +99,36 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     table: 'notifications',
                 },
                 (payload: any) => {
-                    // Check user ID (using cached userId for speed)
-                    if (payload.new && payload.new.user_id === userId) {
+                    // Check user ID using pre-fetched state
+                    if (payload.new && payload.new.user_id === currentUserId) {
                         const newNotif = payload.new;
 
-                        // Play notification sound
-                        const playNotificationSound = () => {
-                            try {
-                                const audio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIzLjEwMgAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA");
-                                audio.volume = 0.5;
-                                audio.play().catch(e => console.warn("Audio play blocked", e));
-                            } catch (e) {
-                                console.error("Sound failed", e);
-                            }
-                        };
+                        // Play chime
+                        try {
+                            // A real sharp "ding" sound
+                            const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU9vT18A/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/kJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQA=");
+                            audio.volume = 0.5;
+                            audio.play().catch(e => console.warn("Mobile chime blocked", e));
+                        } catch (e) {
+                            console.error("Audio error", e);
+                        }
 
-                        playNotificationSound();
-
-                        // Notification trigger logic
+                        // Notification - match TEST logic exactly
                         if (Notification.permission === "granted") {
                             const title = newNotif.title;
                             const options = {
                                 body: newNotif.description,
                                 icon: '/android-chrome-192x192.png',
                                 badge: '/android-chrome-192x192.png',
-                                tag: newNotif.id,
-                                renotify: true,
+                                tag: newNotif.id
                             };
 
                             try {
-                                if ('serviceWorker' in navigator && (window.matchMedia('(display-mode: standalone)').matches || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))) {
-                                    navigator.serviceWorker.ready.then(reg => reg.showNotification(title, options));
-                                } else {
-                                    new Notification(title, options);
-                                }
+                                new Notification(title, options);
                             } catch (e) {
-                                console.error("Notification failed", e);
+                                if ('serviceWorker' in navigator) {
+                                    navigator.serviceWorker.ready.then(reg => reg.showNotification(title, options));
+                                }
                             }
                         }
 
@@ -143,7 +140,7 @@ export default function NotificationsContent({ section }: { section: Notificatio
             .subscribe();
 
         return () => { (supabase as any).removeChannel(channel); };
-    }, [supabase]);
+    }, [supabase, currentUserId]);
 
     // Fetch Data
     useEffect(() => {
