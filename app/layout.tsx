@@ -3,6 +3,7 @@ import "../shared/styles/tokens.css";
 import "../shared/styles/typography.css";
 import type { ReactNode } from "react";
 import SidebarWrapper from "./SidebarWrapper";
+import ServiceWorkerRegister from "@/components/dashboard/shared/ServiceWorkerRegister";
 
 export const metadata = {
   title: "Adidaya Studio",
@@ -17,7 +18,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="overflow-x-hidden" suppressHydrationWarning>
       <body className="bg-bg-100 text-text-primary font-sans overflow-x-hidden" suppressHydrationWarning>
-
+        <ServiceWorkerRegister />
         {/* Tooltip Layer */}
         <div
           id="tooltip-layer"

@@ -78,16 +78,31 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     if (payload.new && payload.new.user_id === user?.id) {
                         const newNotif = payload.new;
 
-                        // Try to send push notification
+                        // Try to send push notification via Service Worker (Best for PWA/Mobile)
                         if (Notification.permission === "granted") {
-                            try {
+                            // Check if Service Worker is available
+                            if ('serviceWorker' in navigator) {
+                                navigator.serviceWorker.ready.then(registration => {
+                                    registration.showNotification(newNotif.title, {
+                                        body: newNotif.description,
+                                        icon: '/android-chrome-192x192.png',
+                                        badge: '/android-chrome-192x192.png', // Android badge
+                                        silent: false
+                                    });
+                                }).catch(err => {
+                                    console.error("SW Notification failed, falling back to new Notification()", err);
+                                    // Fallback
+                                    new Notification(newNotif.title, {
+                                        body: newNotif.description,
+                                        icon: '/android-chrome-192x192.png'
+                                    });
+                                });
+                            } else {
+                                // Fallback for non-SW browsers
                                 new Notification(newNotif.title, {
                                     body: newNotif.description,
-                                    icon: '/android-chrome-192x192.png', // Adidaya Logo
-                                    silent: false
+                                    icon: '/android-chrome-192x192.png'
                                 });
-                            } catch (e) {
-                                console.error("Push notification failed", e);
                             }
                         }
 
