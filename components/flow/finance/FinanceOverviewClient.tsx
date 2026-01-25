@@ -24,7 +24,7 @@ import { RecentActivityList } from "./modules/RecentActivityList";
 import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 import { RequestTypeSelector, RequestType } from "./modules/RequestTypeSelector";
 import { PersonalPurchaseRow, PersonalReimburseRow } from "./modules/PersonalTransactionRows";
-import { fetchFinanceDashboardData } from "@/lib/api/finance";
+import { fetchFinanceDashboardData } from "@/lib/client/finance-api";
 
 // Sort by: 1) deadline closest (expired first), 2) highest amount
 function sortAttentionItems(items: any[]): any[] {
@@ -48,14 +48,12 @@ export default function FinanceOverviewClient() {
     const router = useRouter();
 
     useEffect(() => {
-        if (userId) {
-            setIsLoadingData(true);
-            fetchFinanceDashboardData(userId)
-                .then(res => setData(res))
-                .catch(err => console.error("Failed to load dashboard data", err))
-                .finally(() => setIsLoadingData(false));
-        }
-    }, [userId]);
+        setIsLoadingData(true);
+        fetchFinanceDashboardData()
+            .then(res => setData(res))
+            .catch(err => console.error("Failed to load dashboard data", err))
+            .finally(() => setIsLoadingData(false));
+    }, []);
 
     const handleNavigation = (path: string, params?: Record<string, string>) => {
         if (!params) {
@@ -425,9 +423,7 @@ export default function FinanceOverviewClient() {
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
                 onSuccess={() => {
-                    if (userId) {
-                        fetchFinanceDashboardData(userId).then(setData);
-                    }
+                    fetchFinanceDashboardData().then(setData);
                 }}
             />
         </FinancePageWrapper>

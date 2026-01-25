@@ -25,7 +25,7 @@ import {
     toggleFundingSourceArchive,
     toggleFundingSourceActive,
     updateFundingSourcePositions
-} from "@/lib/api/finance";
+} from "@/lib/client/finance-api";
 
 // --- HELPER TO GET PLACEHOLDER ---
 function getBankPlaceholder(provider: string) {

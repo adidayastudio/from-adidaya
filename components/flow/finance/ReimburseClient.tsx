@@ -41,8 +41,7 @@ import { format, addMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO
 import { ReimburseRequest, ReimburseStatus, FundingSource } from "@/lib/types/finance-types";
 import { formatCurrency, STATUS_THEMES, cleanEntityName, getPrimaryStatus, formatStatus } from "./modules/utils";
 import { useSearchParams } from "next/navigation";
-import { fetchReimburseRequests, updateReimburseStatus, deleteReimburseRequest } from "@/lib/api/finance";
-import { fetchFundingSources } from "@/lib/api/finance";
+import { fetchReimburseRequests, updateReimburseStatus, deleteReimburseRequest, fetchFundingSources } from "@/lib/client/finance-api";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { fetchTeamMembers } from "@/lib/api/clock_team";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
