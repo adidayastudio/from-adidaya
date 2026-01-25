@@ -286,13 +286,20 @@ export default function NotificationsContent({ section }: { section: Notificatio
         await markNotificationAsRead(id);
     };
 
-    // Auto-request permission on mount
+    // Proactive Push Refresh: If already granted, ensures endpoint is up to date in Supabase
+    useEffect(() => {
+        if (permission === "granted" && currentUserId) {
+            console.log("🔄 [Push] Refreshing registration...");
+            subscribeToPush();
+        }
+    }, [permission, currentUserId]);
+
+    // Handle initial prompt (Safari often blocks auto-prompts, so we keep this subtle)
     useEffect(() => {
         if (permission === "default") {
-            // Small delay to ensure bridge is ready
             const timer = setTimeout(() => {
-                requestPermission();
-            }, 1500);
+                requestPermission().catch(() => { });
+            }, 3000);
             return () => clearTimeout(timer);
         }
     }, [permission]);
@@ -322,11 +329,36 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     />
                 </div>
 
+                <div className="flex items-center gap-2">
+                    {permission === "default" && (
+                        <button
+                            onClick={requestPermission}
+                            className="bg-neutral-900 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-800 transition-all flex items-center gap-2"
+                        >
+                            <Bell className="w-3.5 h-3.5" />
+                            Enable Alerts
+                        </button>
+                    )}
 
+                    <button
+                        onClick={() => triggerLocalNotification("Connection Check", "If you see this, notifications are enabled on this device.", true)}
+                        className="bg-neutral-100 text-neutral-600 text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-200 transition-all border border-neutral-200"
+                    >
+                        Test Alert
+                    </button>
+
+                    <button
+                        onClick={loadNotifications}
+                        className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all"
+                        title="Refresh Data"
+                    >
+                        <Filter className={clsx("w-5 h-5", loading && "animate-spin")} />
+                    </button>
+                </div>
 
                 {permission === "denied" && (
-                    <span className="text-xs text-red-500 font-medium px-2">
-                        Notifications Blocked by Browser
+                    <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider px-2">
+                        Blocked
                     </span>
                 )}
             </div>
