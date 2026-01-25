@@ -79,6 +79,13 @@ export default function NotificationsContent({ section }: { section: Notificatio
 
     // Realtime Subscription
     useEffect(() => {
+        let userId: string | null = null;
+
+        // Pre-fetch user for faster realtime response
+        supabase.auth.getUser().then(({ data }) => {
+            userId = data.user?.id || null;
+        });
+
         const channel = (supabase as any)
             .channel('realtime-notifications')
             .on(
@@ -88,29 +95,25 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     schema: 'public',
                     table: 'notifications',
                 },
-                async (payload: any) => {
-                    const { data: { user } } = await supabase.auth.getUser();
-                    if (payload.new && payload.new.user_id === user?.id) {
+                (payload: any) => {
+                    // Check user ID (using cached userId for speed)
+                    if (payload.new && payload.new.user_id === userId) {
                         const newNotif = payload.new;
 
-                        // Play notification sound (using a clean, audible chime)
+                        // Play notification sound
                         const playNotificationSound = () => {
                             try {
-                                // A clean, short notification chime (Base64 MP3)
                                 const audio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIzLjEwMgAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA");
                                 audio.volume = 0.5;
-                                audio.play().catch(e => {
-                                    // Browser might block sound if user hasn't interacted with page yet
-                                    console.warn("Audio playback was blocked or failed:", e);
-                                });
+                                audio.play().catch(e => console.warn("Audio play blocked", e));
                             } catch (e) {
-                                console.error("Could not play notification sound:", e);
+                                console.error("Sound failed", e);
                             }
                         };
 
                         playNotificationSound();
 
-                        // Try to send push notification
+                        // Notification trigger logic
                         if (Notification.permission === "granted") {
                             const title = newNotif.title;
                             const options = {
@@ -121,21 +124,14 @@ export default function NotificationsContent({ section }: { section: Notificatio
                                 renotify: true,
                             };
 
-                            // Strategy: Prefer native Notification constructor on Desktop (Mac Safari/Chrome)
-                            // Use Service Worker showNotification for Mobile/PWA context
                             try {
                                 if ('serviceWorker' in navigator && (window.matchMedia('(display-mode: standalone)').matches || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))) {
-                                    navigator.serviceWorker.ready.then(reg => {
-                                        reg.showNotification(title, options);
-                                    }).catch(() => new Notification(title, options));
+                                    navigator.serviceWorker.ready.then(reg => reg.showNotification(title, options));
                                 } else {
                                     new Notification(title, options);
                                 }
                             } catch (e) {
-                                // Ultimate fallback
-                                if ('serviceWorker' in navigator) {
-                                    navigator.serviceWorker.ready.then(reg => reg.showNotification(title, options));
-                                }
+                                console.error("Notification failed", e);
                             }
                         }
 
