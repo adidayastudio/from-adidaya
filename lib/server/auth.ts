@@ -43,6 +43,18 @@ export async function getAuthenticatedUser(): Promise<{
 }
 
 /**
+ * Require authentication for an API route.
+ * Returns { userId, email } on success, or NextResponse on failure.
+ */
+export async function requireAuth(): Promise<{ userId: string; email?: string } | NextResponse> {
+    const { user, error } = await getAuthenticatedUser();
+    if (!user || error) {
+        return unauthorizedResponse(error || "Unauthorized");
+    }
+    return { userId: user.id, email: user.email };
+}
+
+/**
  * Returns a 401 Unauthorized response
  */
 export function unauthorizedResponse(message = "Unauthorized") {
@@ -71,6 +83,13 @@ export function serverErrorResponse(message = "Internal Server Error") {
 }
 
 /**
+ * Generic error response with custom status
+ */
+export function errorResponse(message = "Error", status = 500) {
+    return NextResponse.json({ error: message }, { status });
+}
+
+/**
  * Returns a success response with data
  */
 export function successResponse<T>(data: T, status = 200) {
@@ -82,4 +101,11 @@ export function successResponse<T>(data: T, status = 200) {
  */
 export function createdResponse<T>(data: T) {
     return NextResponse.json(data, { status: 201 });
+}
+
+/**
+ * Generic JSON response
+ */
+export function jsonResponse<T>(data: T, status = 200) {
+    return NextResponse.json(data, { status });
 }

@@ -29,3 +29,6 @@ export function createServiceClient() {
 
     return createClient(url, serviceKey);
 }
+
+// Alias for consistency with API routes
+export { createServiceClient as createServerClient };
