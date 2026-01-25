@@ -17,8 +17,10 @@ export interface Notification {
 const supabase = createClient();
 
 export const fetchNotifications = async () => {
+    console.log("🛠️ [API] fetchNotifications started");
     try {
         const { data: { user } } = await supabase.auth.getUser();
+        console.log("🛠️ [API] Authenticated user:", user?.id);
         if (!user) return [];
 
         // Cast to any to avoid type errors since 'notifications' isn't in generated types yet

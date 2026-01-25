@@ -7,7 +7,7 @@ import { Search, Inbox, Filter, Bell } from "lucide-react";
 import { SummaryFilterCards, FilterItem } from "@/components/dashboard/shared/SummaryFilterCards";
 import NotificationItem from "./NotificationItem";
 import { fetchNotifications, markNotificationAsRead, Notification as ApiNotification } from "@/lib/api/notifications";
-import { Notification as UiNotification } from "./data";
+import { Notification as UiNotification, MOCK_NOTIFICATIONS } from "./data";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 
@@ -17,6 +17,7 @@ export default function NotificationsContent({ section }: { section: Notificatio
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [notifications, setNotifications] = useState<UiNotification[]>([]);
     const [permission, setPermission] = useState<NotificationPermission>("default");
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -217,14 +218,15 @@ export default function NotificationsContent({ section }: { section: Notificatio
         if (!currentUserId) return;
 
         console.log("📥 [Data] Fetching notifications for:", currentUserId);
-        setLoading(true);
+        setError(null);
         try {
             const data = await fetchNotifications();
             console.log("📥 [Data] Received:", data.length, "items");
             const mapped = data.map(mapNotification);
             setNotifications(mapped);
-        } catch (err) {
+        } catch (err: any) {
             console.error("❌ [Data] Load error:", err);
+            setError(err.message || "Failed to load notifications");
         } finally {
             setLoading(false);
         }
@@ -319,13 +321,24 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     Simulate Event
                 </button>
 
-                <button
-                    onClick={loadNotifications}
-                    className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all"
-                    title="Refresh List"
-                >
-                    <Filter className={clsx("w-5 h-5", loading && "animate-spin")} />
-                </button>
+                {/* Diagnostic Tools */}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => triggerLocalNotification("Test Alert", "This is a simulated database notification banner.", true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-neutral-100 text-neutral-600 text-sm font-medium rounded-full hover:bg-neutral-200 transition-colors border border-neutral-200 shadow-sm"
+                    >
+                        <Bell className="w-4 h-4 opacity-50" />
+                        Simulate
+                    </button>
+
+                    <button
+                        onClick={loadNotifications}
+                        className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all"
+                        title="Refresh List"
+                    >
+                        <Filter className={clsx("w-5 h-5", loading && "animate-spin")} />
+                    </button>
+                </div>
 
                 {permission === "default" && (
                     <button
@@ -346,7 +359,18 @@ export default function NotificationsContent({ section }: { section: Notificatio
 
             <div className="space-y-3">
                 {loading ? (
-                    <div className="text-center py-10 text-neutral-400">Loading notifications...</div>
+                    <div className="text-center py-10 text-neutral-400 font-medium animate-pulse">
+                        <Bell className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                        Fetching notifications...
+                    </div>
+                ) : error ? (
+                    <div className="p-6 text-center border-2 border-red-50 border-dashed rounded-3xl bg-red-50/30">
+                        <p className="text-red-600 font-semibold mb-2">Error Loading Data</p>
+                        <p className="text-sm text-red-500 mb-4">{error}</p>
+                        <button onClick={loadNotifications} className="text-sm font-bold text-white bg-red-500 px-6 py-2 rounded-full shadow-lg shadow-red-100 hover:bg-red-600 transition-all">
+                            Try Again
+                        </button>
+                    </div>
                 ) : filteredNotifications.length > 0 ? (
                     filteredNotifications.map((item) => (
                         (item.metadata as any)?.link ? (
