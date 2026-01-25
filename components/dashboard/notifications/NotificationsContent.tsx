@@ -24,12 +24,20 @@ export default function NotificationsContent({ section }: { section: Notificatio
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const supabase = createClient();
 
-    // Check Permission on Mount
+    const [debugState, setDebugState] = useState({
+        auth: "Checking...",
+        realtime: "Disconnected",
+        push: "Checking...",
+        lastSync: "Never"
+    });
+
+    // Permission Sync
     useEffect(() => {
         if ("Notification" in window) {
             setPermission(Notification.permission);
+            setDebugState(prev => ({ ...prev, push: Notification.permission }));
         }
-    }, []);
+    }, [permission]);
 
     const requestPermission = async () => {
         if (!("Notification" in window)) return;
@@ -39,8 +47,8 @@ export default function NotificationsContent({ section }: { section: Notificatio
             setPermission(result);
 
             if (result === "granted") {
-                await subscribeToPush();
-
+                const ok = await subscribeToPush();
+                setDebugState(prev => ({ ...prev, push: ok ? "granted (Synced)" : "granted (Sync Failed)" }));
                 // Final success alert
                 triggerLocalNotification("Notifications Enabled", "You will now receive background alerts for new activities.");
             }
@@ -70,18 +78,20 @@ export default function NotificationsContent({ section }: { section: Notificatio
         },
     });
 
-    // Fetch user for realtime matching
+    // User & Auth Sync
     useEffect(() => {
         const fetchUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
-            setCurrentUserId(user?.id || null);
-            console.log("👤 [User] Initial ID discovered:", user?.id);
+            const uid = user?.id || null;
+            setCurrentUserId(uid);
+            setDebugState(prev => ({ ...prev, auth: uid ? `Session active (${uid.substring(0, 8)})` : "No session" }));
         };
         fetchUser();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setCurrentUserId(session?.user?.id || null);
-            console.log("👤 [User] Auth state changed:", session?.user?.id);
+            const uid = session?.user?.id || null;
+            setCurrentUserId(uid);
+            setDebugState(prev => ({ ...prev, auth: uid ? `Session changed (${uid.substring(0, 8)})` : "No session" }));
         });
 
         return () => subscription.unsubscribe();
@@ -95,6 +105,7 @@ export default function NotificationsContent({ section }: { section: Notificatio
         }
 
         console.log("📡 [Realtime] Subscribing for user:", currentUserId);
+        setDebugState(prev => ({ ...prev, realtime: "Connecting..." }));
 
         const channel = (supabase as any)
             .channel('realtime-notifications')
@@ -120,6 +131,7 @@ export default function NotificationsContent({ section }: { section: Notificatio
             )
             .subscribe((status: string) => {
                 console.log("🔌 [Realtime] Channel status:", status);
+                setDebugState(prev => ({ ...prev, realtime: status }));
             });
 
         return () => {
@@ -146,7 +158,7 @@ export default function NotificationsContent({ section }: { section: Notificatio
 
         // Play chime
         try {
-            const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU9vT18A/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/kJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQA=");
+            const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU9vT18A/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/f39/kJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQA=");
             audio.volume = 0.5;
             audio.play().catch(() => { });
         } catch (e) { }
@@ -185,12 +197,14 @@ export default function NotificationsContent({ section }: { section: Notificatio
         if (!currentUserId) return;
 
         console.log("📥 [Data] Fetching notifications for:", currentUserId);
+        setLoading(true);
         setError(null);
         try {
             const data = await fetchNotifications();
             console.log("📥 [Data] Received:", data.length, "items");
             const mapped = data.map(mapNotification);
             setNotifications(mapped);
+            setDebugState(prev => ({ ...prev, lastSync: new Date().toLocaleTimeString() }));
         } catch (err: any) {
             console.error("❌ [Data] Load error:", err);
             setError(err.message || "Failed to load notifications");
@@ -209,16 +223,16 @@ export default function NotificationsContent({ section }: { section: Notificatio
 
 
     // Counts
+    const getCategory = (n: UiNotification) => (n.metadata as any)?.category ||
+        (n.type === 'approval' ? 'finance' : n.type === 'mention' ? 'projects' : 'system');
+
     const counts = {
         all: notifications.length,
         unread: notifications.filter(n => !n.isRead).length,
-        finance: notifications.filter(n => (n.metadata as any)?.category === "finance" || n.type === "approval").length,
-        projects: notifications.filter(n => (n.metadata as any)?.category === "projects" || n.type === "mention").length,
-        system: notifications.filter(n => (n.metadata as any)?.category === "system" || n.type === "system").length,
+        finance: notifications.filter(n => getCategory(n) === "finance").length,
+        projects: notifications.filter(n => getCategory(n) === "projects").length,
+        system: notifications.filter(n => getCategory(n) === "system").length,
     };
-
-    const getCategory = (n: UiNotification) => (n.metadata as any)?.category ||
-        (n.type === 'approval' ? 'finance' : n.type === 'mention' ? 'projects' : 'system');
 
     const filterItems: FilterItem[] = [
         { id: "all", label: "All", count: loading ? "-" : counts.all, color: "neutral" },
@@ -257,7 +271,9 @@ export default function NotificationsContent({ section }: { section: Notificatio
     useEffect(() => {
         if (permission === "granted" && currentUserId) {
             console.log("🔄 [Push] Refreshing registration...");
-            subscribeToPush();
+            subscribeToPush().then(ok => {
+                setDebugState(prev => ({ ...prev, push: ok ? "granted (Synced)" : "granted (Sync Failed)" }));
+            });
         }
     }, [permission, currentUserId]);
 
@@ -274,7 +290,28 @@ export default function NotificationsContent({ section }: { section: Notificatio
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="space-y-4">
-                <h1 className="text-2xl font-bold text-neutral-900">Notifications</h1>
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold text-neutral-900">Notifications</h1>
+                </div>
+
+                {/* Debug Dashboard */}
+                <div className="flex flex-wrap gap-2 px-4 py-2 bg-neutral-50 rounded-xl border border-neutral-200/60 shadow-inner">
+                    <div className="flex items-center gap-1.5 min-w-fit">
+                        <div className={clsx("w-1.5 h-1.5 rounded-full", currentUserId ? "bg-green-500" : "bg-red-500")} />
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase">{debugState.auth}</span>
+                    </div>
+                    <span className="text-neutral-300">•</span>
+                    <div className="flex items-center gap-1.5 min-w-fit">
+                        <div className={clsx("w-1.5 h-1.5 rounded-full", debugState.realtime === "SUBSCRIBED" ? "bg-green-500" : "bg-orange-500")} />
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase">Live: {debugState.realtime}</span>
+                    </div>
+                    <span className="text-neutral-300">•</span>
+                    <div className="flex items-center gap-1.5 min-w-fit">
+                        <div className={clsx("w-1.5 h-1.5 rounded-full", debugState.push.includes("Synced") ? "bg-green-500" : "bg-orange-500")} />
+                        <span className="text-[10px] font-bold text-neutral-500 uppercase">Push: {debugState.push}</span>
+                    </div>
+                </div>
+
                 <SummaryFilterCards
                     items={filterItems}
                     selectedId={section}
@@ -284,8 +321,8 @@ export default function NotificationsContent({ section }: { section: Notificatio
 
             <div className="h-px bg-neutral-100" />
 
-            <div className="flex items-center justify-between gap-2">
-                <div className="relative flex-1 max-w-sm">
+            <div className="flex items-center justify-between gap-4">
+                <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                     <input
                         type="text"
@@ -300,66 +337,60 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     {permission === "default" && (
                         <button
                             onClick={requestPermission}
-                            className="bg-neutral-900 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-800 transition-all flex items-center gap-2"
+                            className="bg-neutral-900 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-800 transition-all flex items-center gap-2 shadow-lg active:scale-95"
                         >
                             <Bell className="w-3.5 h-3.5" />
-                            Enable Alerts
+                            Enable App Alerts
                         </button>
                     )}
 
                     <button
-                        onClick={() => triggerLocalNotification("Connection Check", "If you see this, notifications are enabled on this device.", true)}
-                        className="bg-neutral-100 text-neutral-600 text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-200 transition-all border border-neutral-200"
+                        onClick={() => triggerLocalNotification("Health Check", "Testing Banner and Realtime Engine...", true)}
+                        className="bg-neutral-100 text-neutral-600 text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-200 transition-all border border-neutral-200 active:scale-95"
                     >
                         Test Alert
                     </button>
 
                     <button
                         onClick={loadNotifications}
-                        className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all"
-                        title="Refresh Data"
+                        className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all active:scale-90"
+                        title={"Last sync: " + debugState.lastSync}
                     >
                         <Filter className={clsx("w-5 h-5", loading && "animate-spin")} />
                     </button>
                 </div>
-
-                {permission === "denied" && (
-                    <span className="text-[10px] text-red-500 font-bold uppercase tracking-wider px-2">
-                        Blocked
-                    </span>
-                )}
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 pb-24 lg:pb-0">
                 {loading ? (
-                    <div className="text-center py-10 text-neutral-400 font-medium animate-pulse">
-                        <Bell className="w-8 h-8 mx-auto mb-2 opacity-20" />
-                        Fetching notifications...
+                    <div className="text-center py-20 animate-pulse">
+                        <Bell className="w-8 h-8 mx-auto mb-3 text-neutral-200" />
+                        <p className="text-neutral-400 font-medium">Fetching workspace updates...</p>
                     </div>
                 ) : error ? (
-                    <div className="p-6 text-center border-2 border-red-50 border-dashed rounded-3xl bg-red-50/30">
-                        <p className="text-red-600 font-semibold mb-2">Error Loading Data</p>
-                        <p className="text-sm text-red-500 mb-4">{error}</p>
-                        <button onClick={loadNotifications} className="text-sm font-bold text-white bg-red-500 px-6 py-2 rounded-full shadow-lg shadow-red-100 hover:bg-red-600 transition-all">
-                            Try Again
+                    <div className="p-10 text-center border-2 border-red-50 border-dashed rounded-3xl bg-red-50/20">
+                        <p className="text-red-600 font-bold mb-2">Sync Interrupted</p>
+                        <p className="text-sm text-red-400 mb-6">{error}</p>
+                        <button onClick={loadNotifications} className="text-sm font-bold text-white bg-red-500 px-8 py-3 rounded-full hover:bg-red-600 shadow-xl shadow-red-200/50">
+                            Reconnect System
                         </button>
                     </div>
                 ) : filteredNotifications.length > 0 ? (
                     filteredNotifications.map((item) => (
-                        (item.metadata as any)?.link ? (
-                            <Link key={item.id} href={(item.metadata as any).link} className="block group" onClick={() => !item.isRead && handleMarkAsRead(item.id)}>
+                        item.metadata?.link ? (
+                            <Link key={item.id} href={item.metadata.link} className="block group transition-all active:scale-[0.98]" onClick={() => !item.isRead && handleMarkAsRead(item.id)}>
                                 <NotificationItem item={item} />
                             </Link>
                         ) : (
-                            <div key={item.id} onClick={() => !item.isRead && handleMarkAsRead(item.id)} className="cursor-default">
+                            <div key={item.id} onClick={() => !item.isRead && handleMarkAsRead(item.id)} className="transition-all active:scale-[0.98]">
                                 <NotificationItem item={item} />
                             </div>
                         )
                     ))
                 ) : (
-                    <div className="flex flex-col items-center justify-center gap-2 h-40 text-sm text-neutral-400 italic rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50">
-                        <Inbox className="w-5 h-5 text-neutral-300" />
-                        <p>No notifications found.</p>
+                    <div className="flex flex-col items-center justify-center gap-3 h-64 text-sm text-neutral-400 rounded-3xl border border-dashed border-neutral-200 bg-neutral-50/50">
+                        <Inbox className="w-8 h-8 text-neutral-200" />
+                        <p className="font-medium italic">Everything is up to date.</p>
                     </div>
                 )}
             </div>
