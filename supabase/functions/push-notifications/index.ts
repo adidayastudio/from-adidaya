@@ -7,8 +7,8 @@ const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
 const VAPID_SUBJECT = "mailto:hello@adidaya.studio";
 
 const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    `https://${Deno.env.get("PROJECT_ID")}.supabase.co`,
+    Deno.env.get("SERVICE_ROLE_KEY")!
 );
 
 serve(async (req) => {

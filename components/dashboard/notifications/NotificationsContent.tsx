@@ -312,23 +312,14 @@ export default function NotificationsContent({ section }: { section: Notificatio
                 </div>
 
                 {/* Permission Buttons */}
-                {/* Diagnostic Test Button */}
-                <button
-                    onClick={() => triggerLocalNotification("Test Alert", "This is a simulated database notification banner.", true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-neutral-100 text-neutral-600 text-sm font-medium rounded-full hover:bg-neutral-200 transition-colors border border-neutral-200 shadow-sm"
-                >
-                    <Bell className="w-4 h-4 opacity-50" />
-                    Simulate Event
-                </button>
-
                 {/* Diagnostic Tools */}
                 <div className="flex items-center gap-2">
                     <button
-                        onClick={() => triggerLocalNotification("Test Alert", "This is a simulated database notification banner.", true)}
+                        onClick={() => triggerLocalNotification("Connection Check", "If you see this, notifications are enabled on this device.", true)}
                         className="flex items-center gap-2 px-4 py-2 bg-neutral-100 text-neutral-600 text-sm font-medium rounded-full hover:bg-neutral-200 transition-colors border border-neutral-200 shadow-sm"
                     >
                         <Bell className="w-4 h-4 opacity-50" />
-                        Simulate
+                        Test Alert
                     </button>
 
                     <button

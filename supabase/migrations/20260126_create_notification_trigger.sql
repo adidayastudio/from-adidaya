@@ -13,8 +13,8 @@ BEGIN
     BEGIN
         -- Try to get project ID and service role key
         -- We handle the case where 'vault' might not be enabled or permissions denied
-        SELECT value INTO project_id FROM vault.decrypted_secrets WHERE name = 'SUPABASE_PROJECT_ID';
-        SELECT value INTO service_role_key FROM vault.decrypted_secrets WHERE name = 'SUPABASE_SERVICE_ROLE_KEY';
+        SELECT value INTO project_id FROM vault.decrypted_secrets WHERE name = 'PROJECT_ID';
+        SELECT value INTO service_role_key FROM vault.decrypted_secrets WHERE name = 'SERVICE_ROLE_KEY';
 
         -- Only proceed if we have the credentials
         IF project_id IS NOT NULL AND service_role_key IS NOT NULL THEN
