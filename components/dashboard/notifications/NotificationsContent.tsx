@@ -160,8 +160,21 @@ export default function NotificationsContent({ section }: { section: Notificatio
         };
     }, [supabase, currentUserId]);
 
-    const triggerLocalNotification = (title: string, body: string) => {
-        console.log("🔔 [Notification] Attempting to trigger:", { title, body });
+    const triggerLocalNotification = (title: string, body: string, addToUI = false) => {
+        console.log("🔔 [Notification] Attempting to trigger:", { title, body, addToUI });
+
+        if (addToUI) {
+            const simulatedNotif = {
+                id: 'sim-' + Date.now(),
+                type: 'info' as any,
+                is_read: false,
+                title,
+                description: body,
+                created_at: new Date().toISOString(),
+                metadata: { actor: 'User Session' }
+            };
+            setNotifications(prev => [mapNotification(simulatedNotif), ...prev]);
+        }
 
         // Play chime
         try {
@@ -200,17 +213,31 @@ export default function NotificationsContent({ section }: { section: Notificatio
     };
 
     // Fetch Data
-    useEffect(() => {
-        const loadNotifications = async () => {
-            setLoading(true);
+    const loadNotifications = async () => {
+        if (!currentUserId) return;
+
+        console.log("📥 [Data] Fetching notifications for:", currentUserId);
+        setLoading(true);
+        try {
             const data = await fetchNotifications();
+            console.log("📥 [Data] Received:", data.length, "items");
             const mapped = data.map(mapNotification);
             setNotifications(mapped);
+        } catch (err) {
+            console.error("❌ [Data] Load error:", err);
+        } finally {
             setLoading(false);
-        };
+        }
+    };
 
-        loadNotifications();
-    }, []);
+    useEffect(() => {
+        if (currentUserId) {
+            loadNotifications();
+        }
+    }, [currentUserId]);
+
+    // Cleanup and Counts logic follows...
+
 
     // Counts
     const counts = {
@@ -285,11 +312,19 @@ export default function NotificationsContent({ section }: { section: Notificatio
                 {/* Permission Buttons */}
                 {/* Diagnostic Test Button */}
                 <button
-                    onClick={() => triggerLocalNotification("Test Alert", "This is a simulated database notification banner.")}
+                    onClick={() => triggerLocalNotification("Test Alert", "This is a simulated database notification banner.", true)}
                     className="flex items-center gap-2 px-4 py-2 bg-neutral-100 text-neutral-600 text-sm font-medium rounded-full hover:bg-neutral-200 transition-colors border border-neutral-200 shadow-sm"
                 >
                     <Bell className="w-4 h-4 opacity-50" />
                     Simulate Event
+                </button>
+
+                <button
+                    onClick={loadNotifications}
+                    className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all"
+                    title="Refresh List"
+                >
+                    <Filter className={clsx("w-5 h-5", loading && "animate-spin")} />
                 </button>
 
                 {permission === "default" && (
