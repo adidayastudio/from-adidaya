@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7"
-import * as webpush from "https://esm.sh/gh/manustravo/web-push-deno@main/mod.ts" // Using a Deno compatible web-push port
+import * as webpush from "https://deno.land/x/web_push@v3.0.0/mod.ts"
 
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
