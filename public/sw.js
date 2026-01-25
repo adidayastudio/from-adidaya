@@ -12,6 +12,8 @@ self.addEventListener('notificationclick', (event) => {
     console.log('Notification clicked');
     event.notification.close();
 
+    const targetUrl = event.notification.data?.link || '/';
+
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
             // Focus existing window if available
@@ -22,7 +24,7 @@ self.addEventListener('notificationclick', (event) => {
             }
             // Open new window if none open
             if (clients.openWindow) {
-                return clients.openWindow('/');
+                return clients.openWindow(targetUrl);
             }
         })
     );

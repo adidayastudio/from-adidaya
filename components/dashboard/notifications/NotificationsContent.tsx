@@ -30,13 +30,28 @@ export default function NotificationsContent({ section }: { section: Notificatio
 
     const requestPermission = async () => {
         if ("Notification" in window) {
-            const result = await Notification.requestPermission();
-            setPermission(result);
-            if (result === "granted") {
-                new Notification("Notifications Enabled", {
-                    body: "You will now receive alerts for new activities.",
-                    icon: '/icon-192x192.png'
-                });
+            try {
+                const result = await Notification.requestPermission();
+                setPermission(result);
+                if (result === "granted") {
+                    // Test notification immediately after click to verify
+                    const options = {
+                        body: "You will now receive alerts for new activities.",
+                        icon: '/android-chrome-192x192.png',
+                        badge: '/android-chrome-192x192.png',
+                        tag: 'enabling-notifications'
+                    };
+
+                    try {
+                        new Notification("Notifications Enabled", options);
+                    } catch (e) {
+                        if ('serviceWorker' in navigator) {
+                            navigator.serviceWorker.ready.then(reg => reg.showNotification("Notifications Enabled", options));
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Error requesting notification permission:", error);
             }
         }
     };
@@ -78,14 +93,18 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     if (payload.new && payload.new.user_id === user?.id) {
                         const newNotif = payload.new;
 
-                        // Play notification sound
+                        // Play notification sound (using a clean, audible chime)
                         const playNotificationSound = () => {
                             try {
+                                // A clean, short notification chime (Base64 MP3)
                                 const audio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIzLjEwMgAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA");
                                 audio.volume = 0.5;
-                                audio.play().catch(e => console.warn("Audio play blocked until user interaction", e));
+                                audio.play().catch(e => {
+                                    // Browser might block sound if user hasn't interacted with page yet
+                                    console.warn("Audio playback was blocked or failed:", e);
+                                });
                             } catch (e) {
-                                console.error("Sound failed", e);
+                                console.error("Could not play notification sound:", e);
                             }
                         };
 
@@ -99,20 +118,24 @@ export default function NotificationsContent({ section }: { section: Notificatio
                                 icon: '/android-chrome-192x192.png',
                                 badge: '/android-chrome-192x192.png',
                                 tag: newNotif.id,
-                                renotify: true, // For Chrome to re-alert if tab is same
+                                renotify: true,
                             };
 
-                            // Modern preference: Registration showNotification (Best for Chrome/Mobile/PWA)
-                            if ('serviceWorker' in navigator) {
-                                navigator.serviceWorker.ready.then(reg => {
-                                    reg.showNotification(title, options);
-                                }).catch(() => {
-                                    // Fallback to legacy
+                            // Strategy: Prefer native Notification constructor on Desktop (Mac Safari/Chrome)
+                            // Use Service Worker showNotification for Mobile/PWA context
+                            try {
+                                if ('serviceWorker' in navigator && (window.matchMedia('(display-mode: standalone)').matches || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent))) {
+                                    navigator.serviceWorker.ready.then(reg => {
+                                        reg.showNotification(title, options);
+                                    }).catch(() => new Notification(title, options));
+                                } else {
                                     new Notification(title, options);
-                                });
-                            } else {
-                                // Standard legacy constructor
-                                new Notification(title, options);
+                                }
+                            } catch (e) {
+                                // Ultimate fallback
+                                if ('serviceWorker' in navigator) {
+                                    navigator.serviceWorker.ready.then(reg => reg.showNotification(title, options));
+                                }
                             }
                         }
 
