@@ -78,6 +78,19 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     if (payload.new && payload.new.user_id === user?.id) {
                         const newNotif = payload.new;
 
+                        // Play notification sound
+                        const playNotificationSound = () => {
+                            try {
+                                const audio = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjIzLjEwMgAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUGluZwAAAAAA");
+                                audio.volume = 0.5;
+                                audio.play().catch(e => console.warn("Audio play blocked until user interaction", e));
+                            } catch (e) {
+                                console.error("Sound failed", e);
+                            }
+                        };
+
+                        playNotificationSound();
+
                         // Try to send push notification
                         if (Notification.permission === "granted") {
                             const title = newNotif.title;
@@ -85,19 +98,21 @@ export default function NotificationsContent({ section }: { section: Notificatio
                                 body: newNotif.description,
                                 icon: '/android-chrome-192x192.png',
                                 badge: '/android-chrome-192x192.png',
-                                tag: newNotif.id, // Prevent duplicate alerts for same notification
+                                tag: newNotif.id,
+                                renotify: true, // For Chrome to re-alert if tab is same
                             };
 
-                            try {
-                                // Standard constructor (Best for Desktop Safari/Chrome)
+                            // Modern preference: Registration showNotification (Best for Chrome/Mobile/PWA)
+                            if ('serviceWorker' in navigator) {
+                                navigator.serviceWorker.ready.then(reg => {
+                                    reg.showNotification(title, options);
+                                }).catch(() => {
+                                    // Fallback to legacy
+                                    new Notification(title, options);
+                                });
+                            } else {
+                                // Standard legacy constructor
                                 new Notification(title, options);
-                            } catch (e) {
-                                // Service Worker fallback (Required for some Mobile/PWA contexts)
-                                if ('serviceWorker' in navigator) {
-                                    navigator.serviceWorker.ready.then(reg => {
-                                        reg.showNotification(title, options);
-                                    }).catch(err => console.error("SW Notification failed:", err));
-                                }
                             }
                         }
 
