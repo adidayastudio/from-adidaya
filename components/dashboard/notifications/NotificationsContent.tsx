@@ -286,6 +286,17 @@ export default function NotificationsContent({ section }: { section: Notificatio
         await markNotificationAsRead(id);
     };
 
+    // Auto-request permission on mount
+    useEffect(() => {
+        if (permission === "default") {
+            // Small delay to ensure bridge is ready
+            const timer = setTimeout(() => {
+                requestPermission();
+            }, 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [permission]);
+
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="space-y-4">
@@ -311,35 +322,7 @@ export default function NotificationsContent({ section }: { section: Notificatio
                     />
                 </div>
 
-                {/* Permission Buttons */}
-                {/* Diagnostic Tools */}
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => triggerLocalNotification("Connection Check", "If you see this, notifications are enabled on this device.", true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-neutral-100 text-neutral-600 text-sm font-medium rounded-full hover:bg-neutral-200 transition-colors border border-neutral-200 shadow-sm"
-                    >
-                        <Bell className="w-4 h-4 opacity-50" />
-                        Test Alert
-                    </button>
 
-                    <button
-                        onClick={loadNotifications}
-                        className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all"
-                        title="Refresh List"
-                    >
-                        <Filter className={clsx("w-5 h-5", loading && "animate-spin")} />
-                    </button>
-                </div>
-
-                {permission === "default" && (
-                    <button
-                        onClick={requestPermission}
-                        className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white text-sm font-medium rounded-full hover:bg-neutral-800 transition-colors shadow-sm"
-                    >
-                        <Bell className="w-4 h-4" />
-                        Enable Alerts
-                    </button>
-                )}
 
                 {permission === "denied" && (
                     <span className="text-xs text-red-500 font-medium px-2">
