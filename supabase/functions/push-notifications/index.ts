@@ -33,7 +33,7 @@ serve(async (req) => {
             link: record.link || '/dashboard/notifications'
         });
 
-        const pushPromises = subscriptions.map(sub => {
+        const pushPromises = subscriptions.map(async (sub) => {
             const pushConfig = {
                 endpoint: sub.endpoint,
                 keys: {
@@ -42,23 +42,32 @@ serve(async (req) => {
                 }
             };
 
-            return webpush.sendNotification(
-                pushConfig,
-                payload,
-                {
-                    vapidDetails: {
-                        subject: VAPID_SUBJECT,
-                        publicKey: VAPID_PUBLIC_KEY,
-                        privateKey: VAPID_PRIVATE_KEY,
-                    },
-                }
-            ).catch(err => {
-                console.error(`Failed to send push to ${sub.endpoint}:`, err);
-                // If 410 Gone or 404, we should remove the subscripton
+            console.log(`📡 [Push] Sending to endpoint: ${sub.endpoint.substring(0, 40)}...`);
+
+            try {
+                const response = await webpush.sendNotification(
+                    pushConfig,
+                    payload,
+                    {
+                        vapidDetails: {
+                            subject: VAPID_SUBJECT,
+                            publicKey: VAPID_PUBLIC_KEY,
+                            privateKey: VAPID_PRIVATE_KEY,
+                        },
+                    }
+                );
+                console.log(`✅ [Push] Success for ${user_id}: Status ${response.statusCode}`);
+                return response;
+            } catch (err: any) {
+                console.error(`❌ [Push] Error for ${user_id}:`, err.statusCode, err.message);
+
+                // If 410 Gone or 404, the subscription is definitely stale/uninstalled
                 if (err.statusCode === 410 || err.statusCode === 404) {
-                    return supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+                    console.log(`🧹 [Push] Cleaning up stale endpoint for ${user_id}`);
+                    await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
                 }
-            });
+                return null;
+            }
         });
 
         await Promise.all(pushPromises);

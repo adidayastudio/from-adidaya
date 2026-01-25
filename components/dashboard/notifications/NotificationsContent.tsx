@@ -9,6 +9,7 @@ import NotificationItem from "./NotificationItem";
 import { fetchNotifications, markNotificationAsRead, Notification as ApiNotification } from "@/lib/api/notifications";
 import { Notification as UiNotification, MOCK_NOTIFICATIONS } from "./data";
 import { createClient } from "@/utils/supabase/client";
+import { subscribeToPush } from "@/lib/api/push-registration";
 import Link from "next/link";
 
 export type NotificationSection = "all" | "unread" | "finance" | "projects" | "system";
@@ -30,8 +31,6 @@ export default function NotificationsContent({ section }: { section: Notificatio
         }
     }, []);
 
-    const VAPID_PUBLIC_KEY = "BLsN_ba3HI2Oi5Slu5L3027FH8gCleLwA35liLS7DjU2rIrOKKnc7ErxD7Xy3vfIJhhY99hVcDm5o7EUO8E5qMo";
-
     const requestPermission = async () => {
         if (!("Notification" in window)) return;
 
@@ -47,38 +46,6 @@ export default function NotificationsContent({ section }: { section: Notificatio
             }
         } catch (error) {
             console.error("Error requesting notification permission:", error);
-        }
-    };
-
-    const subscribeToPush = async () => {
-        if (!('serviceWorker' in navigator)) return;
-
-        try {
-            const registration = await navigator.serviceWorker.ready;
-
-            // Subscribe to push service
-            const subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: VAPID_PUBLIC_KEY
-            });
-
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            // Save to Supabase
-            const p256dh = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('p256dh')!) as any));
-            const auth = btoa(String.fromCharCode.apply(null, new Uint8Array(subscription.getKey('auth')!) as any));
-
-            await (supabase as any).from('push_subscriptions').upsert({
-                user_id: user.id,
-                endpoint: subscription.endpoint,
-                p256dh: p256dh,
-                auth: auth
-            }, { onConflict: 'user_id,endpoint' });
-
-            console.log("✅ Push Subscription Saved to Supabase");
-        } catch (error) {
-            console.error("❌ Failed to subscribe to push:", error);
         }
     };
 
