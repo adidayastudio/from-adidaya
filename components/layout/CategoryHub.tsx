@@ -78,22 +78,21 @@ export default function CategoryHub({
                 </div>
             </div>
 
-            {/* iOS 26 GLASS APP BUTTONS WIDGET */}
-            <div className="relative z-10 -mt-12 px-4 mb-6 flex justify-center">
+            {/* iOS 26 GLASS APP BUTTONS WIDGET - SCROLLABLE */}
+            <div className="relative z-10 -mt-12 px-4 mb-6">
                 <div
-                    className="backdrop-blur-xl rounded-[28px] shadow-xl shadow-black/[0.05] border border-white/50 p-4 w-fit"
+                    className="backdrop-blur-xl rounded-[28px] shadow-xl shadow-black/[0.05] border border-white/50 py-4 px-2 overflow-x-auto scrollbar-hide"
                     style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.75) 100%)' }}
                 >
-                    {/* Horizontal row - evenly spaced */}
-                    <div className="flex justify-between">
+                    {/* Horizontal scrollable row */}
+                    <div className="flex gap-1 w-max mx-auto">
                         {apps.map((app) => {
                             const Icon = app.icon;
                             return (
                                 <Link
                                     key={app.label}
                                     href={app.href}
-                                    className="flex flex-col items-center gap-1.5 p-2 rounded-xl active:scale-95 transition-all relative flex-shrink-0"
-                                    style={{ minWidth: apps.length > 4 ? '70px' : '80px' }}
+                                    className="flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl active:scale-95 transition-all relative flex-shrink-0"
                                 >
                                     <div
                                         className={clsx(
