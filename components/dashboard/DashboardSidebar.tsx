@@ -13,7 +13,7 @@ import { formatTargetTime } from "@/lib/work-hours-utils";
 interface NavItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   href: string;
 }
 
@@ -131,46 +131,6 @@ export default function DashboardSidebar() {
           })}
         </div>
       </aside>
-
-      {/* MOBILE BOTTOM NAVIGATION */}
-      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 w-full px-4 max-w-sm">
-        <div className="flex-1 bg-white/50 backdrop-blur-sm backdrop-saturate-150 shadow-sm rounded-full px-3 py-2 flex justify-between items-center">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={clsx(
-                  "relative flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
-                  active ? "bg-neutral-100" : ""
-                )}
-              >
-                {item.icon && (
-                  <item.icon
-                    className={clsx(
-                      "w-5 h-5 transition-colors",
-                      active ? "text-neutral-900" : "text-neutral-400"
-                    )}
-                    strokeWidth={active ? 2 : 1.5}
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* FAB */}
-        <button
-          onClick={() => setIsClockModalOpen(true)}
-          className={clsx(
-            "w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 flex-shrink-0 text-white",
-            isCheckedIn ? "bg-red-500 animate-pulse-slow" : "bg-blue-600"
-          )}
-        >
-          {isCheckedIn ? <Square className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
-        </button>
-      </div>
 
       <ClockActionModal
         isOpen={isClockModalOpen}

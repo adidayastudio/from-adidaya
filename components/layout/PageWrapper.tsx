@@ -13,7 +13,7 @@ export default function PageWrapper({
   children,
 }: PageWrapperProps) {
   return (
-    <div className="mt-2 flex gap-4">
+    <div className="md:mt-2 flex gap-4">
       {/* SUB SIDE BAR - Desktop only */}
       <aside className="hidden lg:block w-[240px] shrink-0">
         <div className="sticky top-6">
@@ -26,7 +26,7 @@ export default function PageWrapper({
       {/* MAIN CONTENT CONTAINER */}
       <main className="flex-1 min-w-0">
         {header && <div className="mb-6">{header}</div>}
-        <div className={clsx("bg-white rounded-3xl p-4 h-full pb-24 md:pb-4 shadow-sm", !header && "mt-0")}>
+        <div className={clsx("md:bg-white md:rounded-3xl px-4 md:p-4 h-full pb-24 md:pb-4 md:shadow-sm", !header && "mt-0")}>
           {children}
         </div>
       </main>

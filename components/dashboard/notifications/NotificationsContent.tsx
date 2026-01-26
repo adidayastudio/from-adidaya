@@ -289,7 +289,8 @@ export default function NotificationsContent({ section }: { section: Notificatio
 
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
-            <div className="space-y-4">
+            {/* HEADER & DEBUG - Hidden on Mobile */}
+            <div className="hidden md:block space-y-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-neutral-900">Notifications</h1>
                 </div>
@@ -321,7 +322,8 @@ export default function NotificationsContent({ section }: { section: Notificatio
 
             <div className="h-px bg-neutral-100" />
 
-            <div className="flex items-center justify-between gap-4">
+            {/* TOOLBAR - Desktop Only */}
+            <div className="hidden md:flex items-center justify-between gap-4">
                 <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                     <input

@@ -131,23 +131,6 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
 
   return (
     <>
-      {/* MOBILE HAMBURGER BUTTON - Fixed top left */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-lg bg-white border border-neutral-200 shadow-md"
-      >
-        <Menu className="w-6 h-6 text-neutral-700" />
-      </button>
-
-      {/* MOBILE LOGOUT BUTTON - Fixed top right */}
-      <button
-        onClick={handleLogout}
-        className="fixed top-4 right-4 z-50 md:hidden p-2 rounded-lg bg-white border border-neutral-200 shadow-md text-red-600 active:scale-95 transition-transform"
-        aria-label="Sign Out"
-      >
-        <LogOut className="w-6 h-6" />
-      </button>
-
       {/* MOBILE OVERLAY BACKDROP */}
       {mobileOpen && (
         <div
@@ -159,7 +142,7 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
       {/* SIDEBAR - Desktop: always visible, Mobile: drawer from left */}
       <aside
         className={clsx(
-          "fixed left-0 top-0 h-screen bg-bg-100 border-r border-border-light transition-all duration-300 z-50 flex flex-col",
+          "fixed left-0 top-0 h-screen bg-bg-100 border-r border-border-light transition-all duration-300 z-[60] flex flex-col",
           // Mobile: slide in/out
           "md:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
@@ -263,6 +246,17 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
               </div>
             );
           })}
+
+          {/* SIGN OUT (Mobile Only Inside Navigation) */}
+          <div className="mt-8 pt-4 border-t border-border-light md:hidden">
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-full text-sm font-medium text-red-600 hover:bg-red-50 transition-all w-full"
+            >
+              <LogOut size={20} strokeWidth={1.5} />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </nav>
 
         <div className="mt-auto border-t border-border-light px-4 py-4">

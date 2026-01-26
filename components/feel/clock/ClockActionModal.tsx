@@ -113,35 +113,44 @@ export default function ClockActionModal({
     };
 
     const modalContent = (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className={`bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-neutral-200`}>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/30 backdrop-blur-md animate-in fade-in duration-200">
+            <div className="backdrop-blur-2xl w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-white/50"
+                style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(250,250,252,0.95) 100%)' }}>
                 {/* Header */}
-                <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
+                <div className="px-6 py-4 border-b border-neutral-200/30 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <ClockIcon className="w-5 h-5 text-neutral-600" />
-                        <h2 className="font-bold text-neutral-900">
+                        <ClockIcon className="w-5 h-5 text-neutral-500" />
+                        <h2 className="font-semibold text-neutral-800">
                             Confirm Clock {type}
                         </h2>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-lg transition-colors">
+                    <button onClick={onClose}
+                        className="p-2 backdrop-blur-sm rounded-lg transition-all active:scale-95 border border-neutral-200/40"
+                        style={{ background: 'linear-gradient(180deg, rgba(245,245,245,0.8) 0%, rgba(240,240,240,0.5) 100%)' }}>
                         <X className="w-4 h-4 text-neutral-400" />
                     </button>
                 </div>
 
                 {/* Content */}
                 <div className="p-6 space-y-6">
-                    <p className="text-neutral-600 text-sm">
+                    <p className="text-neutral-500 text-sm">
                         Are you sure you want to clock {type.toLowerCase()} now? The system will log your current location.
                     </p>
 
                     {/* Location Status Card */}
                     <div className={clsx(
-                        "p-4 rounded-xl border flex flex-col gap-3",
-                        loading ? "bg-neutral-50 border-neutral-200" :
-                            isOutside ? "bg-amber-50 border-amber-200" :
-                                isUnknown ? "bg-neutral-50 border-neutral-200" :
-                                    "bg-emerald-50 border-emerald-200"
-                    )}>
+                        "p-4 rounded-2xl backdrop-blur-sm border flex flex-col gap-3",
+                        loading ? "border-neutral-200/40" :
+                            isOutside ? "border-amber-200/40" :
+                                isUnknown ? "border-neutral-200/40" :
+                                    "border-emerald-200/40"
+                    )}
+                        style={{
+                            background: loading ? 'linear-gradient(180deg, rgba(250,250,250,0.8) 0%, rgba(245,245,245,0.5) 100%)' :
+                                isOutside ? 'linear-gradient(180deg, rgba(254,252,232,0.8) 0%, rgba(254,249,195,0.5) 100%)' :
+                                    isUnknown ? 'linear-gradient(180deg, rgba(250,250,250,0.8) 0%, rgba(245,245,245,0.5) 100%)' :
+                                        'linear-gradient(180deg, rgba(236,253,245,0.8) 0%, rgba(209,250,229,0.5) 100%)'
+                        }}>
                         <div className="flex items-start gap-3">
                             {loading ? (
                                 <Loader2 className="w-5 h-5 text-neutral-400 animate-spin mt-0.5" />
@@ -153,10 +162,10 @@ export default function ClockActionModal({
 
                             <div className="flex-1">
                                 <p className={clsx(
-                                    "text-sm font-bold",
+                                    "text-sm font-semibold",
                                     loading ? "text-neutral-700" :
-                                        isOutside ? "text-amber-900" :
-                                            "text-emerald-900"
+                                        isOutside ? "text-amber-800" :
+                                            "text-emerald-800"
                                 )}>
                                     {loading ? "Detecting location..." :
                                         isOutside ? "Outside registered area" :
@@ -165,8 +174,8 @@ export default function ClockActionModal({
                                 <p className={clsx(
                                     "text-xs mt-0.5",
                                     loading ? "text-neutral-500" :
-                                        isOutside ? "text-amber-700" :
-                                            "text-emerald-700"
+                                        isOutside ? "text-amber-600" :
+                                            "text-emerald-600"
                                 )}>
                                     {loading ? "Verifying GPS coordinates..." :
                                         isOutside ? "You are not within any registered project or office area" :
@@ -177,7 +186,8 @@ export default function ClockActionModal({
                             {!loading && (
                                 <button
                                     onClick={refresh}
-                                    className="p-1.5 hover:bg-white/50 rounded-lg transition-colors"
+                                    className="p-1.5 backdrop-blur-sm rounded-lg transition-all active:scale-95 border border-white/50"
+                                    style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.8) 0%, rgba(250,250,250,0.5) 100%)' }}
                                     title="Refresh location"
                                 >
                                     <Navigation className="w-4 h-4 text-neutral-500" />
@@ -188,7 +198,8 @@ export default function ClockActionModal({
 
                     {/* error message from geolocation */}
                     {error && (
-                        <div className="px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-[11px] text-red-600 flex items-center gap-2">
+                        <div className="px-3 py-2 backdrop-blur-sm border border-red-200/40 rounded-xl text-[11px] text-red-600 flex items-center gap-2"
+                            style={{ background: 'linear-gradient(180deg, rgba(254,242,242,0.8) 0%, rgba(254,226,226,0.5) 100%)' }}>
                             <AlertTriangle className="w-3 h-3" />
                             {error}
                         </div>
@@ -197,7 +208,7 @@ export default function ClockActionModal({
                     {/* Remote Mode Selection (Outside only) */}
                     {needsRemoteMode && !loading && (
                         <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <label className="text-xs font-bold text-neutral-700 uppercase tracking-wider">
+                            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                                 Select Remote Mode
                             </label>
                             <div className="grid grid-cols-2 gap-2">
@@ -206,11 +217,12 @@ export default function ClockActionModal({
                                         key={mode.id}
                                         onClick={() => setRemoteMode(mode.id)}
                                         className={clsx(
-                                            "px-2 py-2.5 rounded-xl border-2 text-[10px] font-bold transition-all flex items-center justify-center text-center leading-tight min-h-[48px]",
+                                            "px-2 py-2.5 rounded-xl border transition-all flex items-center justify-center text-center leading-tight min-h-[48px] backdrop-blur-sm text-[10px] font-semibold active:scale-95",
                                             remoteMode === mode.id
                                                 ? `${modeColors[mode.color].active} shadow-lg`
-                                                : `bg-white border-neutral-100 text-neutral-500 ${modeColors[mode.color].inactive}`
+                                                : `border-neutral-200/40 text-neutral-500 ${modeColors[mode.color].inactive}`
                                         )}
+                                        style={remoteMode !== mode.id ? { background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(250,250,250,0.7) 100%)' } : {}}
                                     >
                                         {mode.label}
                                     </button>
@@ -222,21 +234,23 @@ export default function ClockActionModal({
                     {/* Reason Input (Conditional) */}
                     {(needsReason || remoteMode === "other") && isOutside && remoteMode && (
                         <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                            <label className="text-xs font-bold text-neutral-700 uppercase tracking-wider">
+                            <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
                                 {remoteMode === "other" ? "Specify Reason" : "Reason & Notes"}
                             </label>
                             <textarea
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
                                 placeholder={remoteMode === "other" ? "Enter your specific reason for outside clocking..." : "E.g. Working from client's office, on the way to site..."}
-                                className="w-full px-3 py-2 rounded-xl border border-neutral-200 focus:ring-2 focus:ring-neutral-900 focus:border-transparent min-h-[80px] text-sm resize-none"
+                                className="w-full px-3 py-2 rounded-xl backdrop-blur-sm border border-neutral-200/40 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-300/50 min-h-[80px] text-sm resize-none"
+                                style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(250,250,250,0.7) 100%)' }}
                             />
                         </div>
                     )}
 
                     {/* Blockage Message */}
                     {isBlocked && (
-                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2 animate-in shake duration-300">
+                        <div className="p-3 backdrop-blur-sm border border-red-200/40 rounded-xl flex items-start gap-2 animate-in shake duration-300"
+                            style={{ background: 'linear-gradient(180deg, rgba(254,242,242,0.8) 0%, rgba(254,226,226,0.5) 100%)' }}>
                             <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5" />
                             <p className="text-xs text-red-800 leading-relaxed font-medium">
                                 Clocking is blocked. Crew members must be inside a registered project or office area to clock {type.toLowerCase()}.
@@ -246,22 +260,30 @@ export default function ClockActionModal({
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-end gap-3">
-                    <Button variant="outline" onClick={onClose} disabled={submitting}>
+                <div className="px-6 py-5 border-t border-neutral-200/30 flex items-center justify-end gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={submitting}
+                        className="px-6 py-3 rounded-full text-sm font-semibold text-neutral-600 backdrop-blur-sm border border-neutral-200/50 active:scale-95 transition-all"
+                        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(245,245,245,0.85) 100%)' }}
+                    >
                         Cancel
-                    </Button>
-                    <Button
+                    </button>
+                    <button
                         onClick={handleConfirm}
                         disabled={submitting || loading || isBlocked || (needsRemoteMode && !remoteMode) || (needsReason && !reason.trim())}
                         className={clsx(
-                            "min-w-[100px] border-2 transition-all",
-                            type === "IN"
-                                ? "bg-blue-600 hover:bg-blue-700 border-blue-600 text-white"
-                                : "bg-neutral-900 border-neutral-900 text-white"
+                            "px-6 py-3 rounded-full text-sm font-semibold text-white min-w-[120px] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
+                            type === "IN" ? "shadow-lg shadow-blue-500/30" : "shadow-lg shadow-neutral-400/30"
                         )}
+                        style={{
+                            background: type === "IN"
+                                ? 'linear-gradient(180deg, #3B82F6 0%, #2563EB 100%)'
+                                : 'linear-gradient(180deg, #404040 0%, #171717 100%)'
+                        }}
                     >
-                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Clock ${type}`}
-                    </Button>
+                        {submitting ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `Clock ${type}`}
+                    </button>
                 </div>
             </div>
         </div>

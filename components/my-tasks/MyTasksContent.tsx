@@ -128,8 +128,8 @@ export default function MyTasksContent({ section }: { section: MyTasksSection })
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
 
-      {/* HEADER & SUMMARY CARDS */}
-      <div className="space-y-4">
+      {/* HEADER & SUMMARY CARDS - Hidden on Mobile for Dashboard Tab feel */}
+      <div className="hidden md:block space-y-4">
         <h1 className="text-2xl font-bold text-neutral-900">My Tasks</h1>
 
         <SummaryFilterCards
@@ -141,17 +141,10 @@ export default function MyTasksContent({ section }: { section: MyTasksSection })
 
       <div className="h-px bg-neutral-100" />
 
-      {/* TOOLBAR */}
-      <div className="flex items-center justify-between gap-2 w-full">
+      {/* TOOLBAR - Desktop Only */}
+      <div className="hidden md:flex items-center justify-between gap-2 w-full">
         {/* LEFT GROUP: Search + Filters */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => setShowSearchInput(!showSearchInput)}
-            className="md:hidden p-2 rounded-full border border-neutral-200 bg-white text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50 transition-colors flex-shrink-0"
-            title="Search"
-          >
-            <Search className="w-4 h-4" />
-          </button>
           <div className="relative hidden md:block flex-shrink-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <input
@@ -202,17 +195,6 @@ export default function MyTasksContent({ section }: { section: MyTasksSection })
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
           </div>
-
-          <button
-            onClick={() => setShowMobileFilters(!showMobileFilters)}
-            className={clsx(
-              "md:hidden p-2 rounded-full border border-neutral-200 bg-white transition-colors flex-shrink-0",
-              showMobileFilters ? "text-neutral-700 bg-neutral-100" : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-50"
-            )}
-            title="Filter"
-          >
-            <Filter className="w-4 h-4" />
-          </button>
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">

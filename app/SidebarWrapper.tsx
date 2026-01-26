@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "../components/sidebar/Sidebar";
+import MobileBottomBar from "../components/layout/MobileBottomBar";
 
 export default function SidebarWrapper({ children }: { children: React.ReactNode }) {
   const [sidebarWidth, setSidebarWidth] = useState(256);
@@ -26,6 +27,7 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
       >
         {children}
       </main>
+      <MobileBottomBar />
     </>
   );
 }

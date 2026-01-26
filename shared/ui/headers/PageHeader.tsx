@@ -41,7 +41,7 @@ export function PageHeader({
       {/* Breadcrumbs */}
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav
-          className="flex items-center gap-1.5 text-sm"
+          className="hidden md:flex items-center gap-1.5 text-sm"
           aria-label="Breadcrumb"
         >
           {breadcrumbs.map((item, index) => {
@@ -121,7 +121,7 @@ export function Breadcrumb({
 }) {
   return (
     <nav
-      className={clsx("flex items-center gap-1.5 text-sm mb-4", className)}
+      className={clsx("hidden md:flex items-center gap-1.5 text-sm mb-4", className)}
       aria-label="Breadcrumb"
     >
       {items.map((item, index) => {

@@ -80,8 +80,8 @@ export default function MyProjectsContent({ section }: { section: MyProjectsSect
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
 
-            {/* HEADER & CARDS */}
-            <div className="space-y-4">
+            {/* HEADER & CARDS - Hidden on Mobile */}
+            <div className="hidden md:block space-y-4">
                 <h1 className="text-2xl font-bold text-neutral-900">My Projects</h1>
                 <SummaryFilterCards
                     items={filterItems}
@@ -92,8 +92,8 @@ export default function MyProjectsContent({ section }: { section: MyProjectsSect
 
             <div className="h-px bg-neutral-100" />
 
-            {/* TOOLBAR */}
-            <div className="flex items-center justify-between gap-2">
+            {/* TOOLBAR - Desktop Only */}
+            <div className="hidden md:flex items-center justify-between gap-2">
                 {/* Search */}
                 <div className="relative flex-1 max-w-sm">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
