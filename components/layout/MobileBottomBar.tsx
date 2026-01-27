@@ -11,7 +11,15 @@ import {
     Heart,
     Play,
     Square,
-    Plus
+    Plus,
+    Upload,
+    Download,
+    FileText,
+    Settings,
+    Database,
+    Package,
+    Wrench,
+    Briefcase
 } from "lucide-react";
 import { useClock } from "@/hooks/useClock";
 import useUserProfile from "@/hooks/useUserProfile";
@@ -36,14 +44,49 @@ export default function MobileBottomBar() {
     };
 
     // Determine FAB context
-    const isDashboard = pathname === "/dashboard" || pathname === "/dashboard/overview";
+    const getFabConfig = () => {
+        const isDashboard = pathname === "/dashboard" || pathname === "/dashboard/overview";
+        if (isDashboard) return { id: 'CLOCK', icon: (isCheckedIn ? Square : Play), color: (isCheckedIn ? 'red' : 'blue'), isClock: true };
+
+        // Projects
+        if (pathname === "/flow/projects/list") return { id: 'PROJECT_NEW', label: 'New Project', icon: Plus, color: 'red' };
+        if (pathname === "/flow/projects/activity") return { id: 'PROJECT_LOG_ACTIVITY', label: 'Log Activity', icon: Plus, color: 'red' };
+        if (pathname === "/flow/projects/docs") return { id: 'PROJECT_UPLOAD_DOC', label: 'Upload Doc', icon: Upload, color: 'red' };
+        if (pathname === "/flow/projects/reports") return { id: 'PROJECT_EXPORT', label: 'Export', icon: Download, color: 'red' };
+        if (pathname.includes("/flow/projects/overview") || pathname.includes("/flow/projects/schedule")) return null;
+        if (pathname.startsWith("/flow/projects")) return { id: 'PROJECT_NEW', label: 'New Project', icon: Plus, color: 'red' };
+
+        // Finance
+        if (pathname === "/flow/finance/overview") return { id: 'FINANCE_NEW_REQUEST', label: 'New Request', icon: Plus, color: 'red' };
+        if (pathname === "/flow/finance/purchasing") return { id: 'FINANCE_NEW_PURCHASE', label: 'New Purchase', icon: Plus, color: 'red' };
+        if (pathname === "/flow/finance/reimburse") return { id: 'FINANCE_NEW_PURCHASE', label: 'New Purchase', icon: Plus, color: 'red' }; // User said "reimburse: new purchase" but likely meant New Reimburse. Mapping to New Purchase per prompt.
+        if (pathname === "/flow/finance/petty-cash") return { id: 'FINANCE_TOP_UP', label: 'Top Up', icon: Plus, color: 'red' };
+        if (pathname === "/flow/finance/funding-sources") return { id: 'FINANCE_NEW_SOURCE', label: 'New Source', icon: Plus, color: 'red' };
+        if (pathname === "/flow/finance/reports") return { id: 'FINANCE_EXPORT', label: 'Export', icon: Download, color: 'red' };
+
+        // Resources
+        if (pathname === "/flow/resources/overview") return { id: 'RESOURCE_NEW', label: 'New Mat/Tool/Asset', icon: Plus, color: 'red' };
+        if (pathname === "/flow/resources/materials") return { id: 'RESOURCE_NEW_MAT', label: 'New Mat', icon: Plus, color: 'red' };
+        if (pathname === "/flow/resources/tools") return { id: 'RESOURCE_NEW_TOOL', label: 'New Tool', icon: Plus, color: 'red' };
+        if (pathname === "/flow/resources/assets") return { id: 'RESOURCE_NEW_ASSET', label: 'New Assets', icon: Plus, color: 'red' };
+
+        // Client
+        if (pathname.startsWith("/flow/client")) return { id: 'CLIENT_NEW', label: 'New', icon: Plus, color: 'red' };
+
+        return null;
+    };
+
+    const fabConfig = getFabConfig();
 
     const handleFabClick = () => {
-        if (isDashboard) {
+        if (!fabConfig) return;
+
+        if (fabConfig.isClock) {
             setIsClockModalOpen(true);
         } else {
-            // Default action for other pages or can be customized per-path
-            console.log("FAB Clicked on", pathname);
+            // Dispatch custom event for page to handle
+            const event = new CustomEvent('fab-action', { detail: { id: fabConfig.id } });
+            window.dispatchEvent(event);
         }
     };
 
@@ -85,30 +128,22 @@ export default function MobileBottomBar() {
                 </div>
 
                 {/* iOS 26 GLASS FAB */}
-                <button
-                    onClick={handleFabClick}
-                    className={clsx(
-                        "w-14 h-14 flex items-center justify-center rounded-full shadow-xl transition-all active:scale-95 flex-shrink-0 text-white border border-white/20",
-                        isDashboard
-                            ? (isCheckedIn
-                                ? "shadow-red-500/30"
-                                : "shadow-blue-500/40")
-                            : "shadow-neutral-400/30"
-                    )}
-                    style={{
-                        background: isDashboard
-                            ? (isCheckedIn
+                {fabConfig && (
+                    <button
+                        onClick={handleFabClick}
+                        className={clsx(
+                            "w-14 h-14 flex items-center justify-center rounded-full shadow-xl transition-all active:scale-95 flex-shrink-0 text-white border border-white/20",
+                            fabConfig.color === 'red' ? "shadow-red-500/30" : "shadow-blue-500/40"
+                        )}
+                        style={{
+                            background: fabConfig.color === 'red'
                                 ? 'linear-gradient(180deg, #EF4444 0%, #DC2626 100%)'
-                                : 'linear-gradient(180deg, #3B82F6 0%, #2563EB 100%)')
-                            : 'linear-gradient(180deg, #404040 0%, #171717 100%)'
-                    }}
-                >
-                    {isDashboard ? (
-                        isCheckedIn ? <Square className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />
-                    ) : (
-                        <Plus className="w-6 h-6" />
-                    )}
-                </button>
+                                : 'linear-gradient(180deg, #3B82F6 0%, #2563EB 100%)'
+                        }}
+                    >
+                        <fabConfig.icon className={clsx("w-5 h-5", fabConfig.id === 'CLOCK' && !isCheckedIn && "ml-0.5")} />
+                    </button>
+                )}
             </div>
 
             <ClockActionModal

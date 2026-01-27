@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Filter, Wrench, ArrowRightLeft, AlertCircle } from "lucide-react";
 import { ResourceStatusBadge } from "@/components/flow/resources/ResourceStatusBadge";
 
@@ -45,6 +45,17 @@ const MOCK_TOOLS = [
 
 export default function ToolsPage() {
     const [searchQuery, setSearchQuery] = useState("");
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'RESOURCE_NEW_TOOL') {
+                alert("New Tool action triggered via FAB");
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     const filteredTools = MOCK_TOOLS.filter((item) =>
         item.tool.toLowerCase().includes(searchQuery.toLowerCase()) ||

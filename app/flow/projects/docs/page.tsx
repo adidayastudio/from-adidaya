@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProjectsPageWrapper from "@/components/flow/projects/ProjectsPageWrapper";
 import { User, Users, Search, Upload, FolderOpen } from "lucide-react";
 import clsx from "clsx";
@@ -9,6 +9,17 @@ import Drawer, { FormField, FormInput, FormTextarea, FormSelect, FormActions } f
 export default function DocumentsPage() {
     const [viewMode, setViewMode] = useState<"personal" | "team">("team");
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'PROJECT_UPLOAD_DOC') {
+                setIsDrawerOpen(true);
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     return (
         <ProjectsPageWrapper

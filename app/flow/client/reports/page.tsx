@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import PageWrapper from "@/components/layout/PageWrapper";
 import ClientSidebar from "@/components/flow/client/ClientSidebar";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
@@ -15,6 +16,17 @@ const MOCK_CLIENT_STATS = [
 function formatShort(n: number) { return n >= 1000000 ? `${(n / 1000000).toFixed(0)}M` : `${n}`; }
 
 export default function ClientReportsPage() {
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'CLIENT_NEW') {
+                alert("New Client action triggered via FAB");
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
+
     return (
         <div className="min-h-screen bg-neutral-50 p-6">
             <Breadcrumb items={[{ label: "Flow" }, { label: "Client" }, { label: "Reports" }]} />

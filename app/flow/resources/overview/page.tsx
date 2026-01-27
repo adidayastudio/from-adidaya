@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Package, Wrench, Building2, AlertTriangle, ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -67,6 +68,17 @@ function StatCard({ stat }: { stat: typeof MOCK_STATS[0] }) {
 }
 
 export default function ResourcesOverviewPage() {
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'RESOURCE_NEW') {
+                alert("New Resource action triggered via FAB");
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* HEADER */}

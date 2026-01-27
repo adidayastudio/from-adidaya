@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageWrapper from "@/components/layout/PageWrapper";
 import ClientSidebar from "@/components/flow/client/ClientSidebar";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
@@ -26,6 +26,17 @@ export default function ClientListPage() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isViewOpen, setIsViewOpen] = useState(false);
     const [selectedClient, setSelectedClient] = useState<typeof MOCK_CLIENTS[0] | null>(null);
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'CLIENT_NEW') {
+                setIsDrawerOpen(true);
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     return (
         <div className="min-h-screen bg-neutral-50 p-6">

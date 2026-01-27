@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Filter, Warehouse } from "lucide-react";
 import { ResourceStatusBadge } from "@/components/flow/resources/ResourceStatusBadge";
 
@@ -55,6 +55,17 @@ const MOCK_MATERIALS = [
 
 export default function MaterialsPage() {
     const [searchQuery, setSearchQuery] = useState("");
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'RESOURCE_NEW_MAT') {
+                alert("New Material action triggered via FAB");
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     const filteredMaterials = MOCK_MATERIALS.filter((item) =>
         item.material.toLowerCase().includes(searchQuery.toLowerCase()) ||

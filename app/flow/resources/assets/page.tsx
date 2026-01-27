@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Filter, Building2, Tag } from "lucide-react";
 import { ResourceStatusBadge } from "@/components/flow/resources/ResourceStatusBadge";
 
@@ -34,6 +34,17 @@ const MOCK_ASSETS = [
 
 export default function AssetsPage() {
     const [searchQuery, setSearchQuery] = useState("");
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'RESOURCE_NEW_ASSET') {
+                alert("New Asset action triggered via FAB");
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     const filteredAssets = MOCK_ASSETS.filter((item) =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

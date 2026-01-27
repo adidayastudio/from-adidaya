@@ -4,7 +4,7 @@ import { Expense } from "@/app/flow/finance/actions";
 import { useFinance } from "@/components/flow/finance/FinanceContext";
 import { BarChart3, TrendingUp, Download, Calendar, PieChart } from "lucide-react";
 import { format, startOfMonth, subMonths, isSameMonth } from "date-fns";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import clsx from "clsx";
 
 function formatCurrency(amount: number) {
@@ -62,6 +62,17 @@ export default function ReportsClient({ expenses }: { expenses: Expense[] }) {
 
         return { trend, categoryData, maxTrend, maxCategory, currentTotal };
     }, [expenses]);
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'FINANCE_EXPORT') {
+                alert("Exporting Reports logic to be implemented or uses existing PDF generator.");
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     if (viewMode === "personal") {
         return (

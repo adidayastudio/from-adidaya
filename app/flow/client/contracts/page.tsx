@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PageWrapper from "@/components/layout/PageWrapper";
 import ClientSidebar from "@/components/flow/client/ClientSidebar";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
@@ -24,6 +24,17 @@ function StatusBadge({ status }: { status: string }) {
 export default function ContractsPage() {
     const [viewMode, setViewMode] = useState<"personal" | "team">("team");
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'CLIENT_NEW') {
+                setIsDrawerOpen(true);
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     return (
         <div className="min-h-screen bg-neutral-50 p-6">

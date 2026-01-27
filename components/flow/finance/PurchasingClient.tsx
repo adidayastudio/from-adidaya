@@ -998,6 +998,19 @@ export default function PurchasingClient() {
         { key: 'date', direction: 'desc' }
     );
 
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'FINANCE_NEW_PURCHASE') {
+                setIsDrawerOpen(true);
+            } else if (e.detail?.id === 'FINANCE_EXPORT') {
+                handleExport();
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, [handleExport]);
+
     // Custom status order for sorting (similar to ReimburseClient)
     const STATUS_ORDER = ['DRAFT', 'SUBMITTED', 'NEED_REVISION', 'APPROVED', 'PAID', 'REJECTED', 'CANCELLED'];
 

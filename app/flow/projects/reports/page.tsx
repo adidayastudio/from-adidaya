@@ -1,9 +1,20 @@
 "use client";
 
+import { useEffect } from "react";
 import ProjectsPageWrapper from "@/components/flow/projects/ProjectsPageWrapper";
 import { BarChart3, Download, Calendar, FileBarChart } from "lucide-react";
 
 export default function ProjectsReportsPage() {
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'PROJECT_EXPORT') {
+                alert("Export Project Report triggered via FAB");
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
     return (
         <ProjectsPageWrapper
             breadcrumbItems={[{ label: "Flow" }, { label: "Projects" }, { label: "Reports" }]}

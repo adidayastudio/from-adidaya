@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ProjectsPageWrapper from "@/components/flow/projects/ProjectsPageWrapper";
 import { User, Users, Search, Inbox } from "lucide-react";
 import clsx from "clsx";
 
 export default function ActivityPage() {
     const [viewMode, setViewMode] = useState<"personal" | "team">("team");
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'PROJECT_LOG_ACTIVITY') {
+                alert("Log Activity action triggered via FAB");
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     return (
         <ProjectsPageWrapper

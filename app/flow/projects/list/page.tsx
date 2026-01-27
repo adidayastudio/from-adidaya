@@ -121,6 +121,17 @@ export default function ProjectsListPage() {
 
     useEffect(() => { loadProjects(); loadMasterData(); }, [loadProjects, loadMasterData]);
 
+    // Listen for FAB events
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'PROJECT_NEW') {
+                openAddDrawer();
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
+
     // Filter projects
     const filtered = projects.filter(p => {
         if (filter !== "all" && p.status.toLowerCase() !== filter.toLowerCase()) return false;

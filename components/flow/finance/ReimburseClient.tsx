@@ -817,6 +817,17 @@ export default function ReimburseClient() {
     const isTeamView = viewMode === "team";
     const initialStatus = searchParams.get("status") as ReimburseStatus | "ALL" | null;
 
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'FINANCE_NEW_PURCHASE') {
+                setIsDrawerOpen(true);
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
+
     // Load Data
     const loadData = async () => {
         setIsLoadingData(true);

@@ -55,6 +55,17 @@ export default function FinanceOverviewClient() {
             .finally(() => setIsLoadingData(false));
     }, []);
 
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'FINANCE_NEW_REQUEST') {
+                setIsDrawerOpen(true);
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
+
     const handleNavigation = (path: string, params?: Record<string, string>) => {
         if (!params) {
             router.push(path);

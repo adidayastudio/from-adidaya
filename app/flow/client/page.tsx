@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ClientPageWrapper from "@/components/flow/client/ClientPageWrapper";
 import ClientSidebar from "@/components/flow/client/ClientSidebar";
 import { Users, MessageSquare, FileSignature, Receipt, AlertTriangle, User, DollarSign, TrendingUp } from "lucide-react";
@@ -35,6 +35,17 @@ function SummaryCard({ icon, iconBg, label, value, subtext }: { icon: React.Reac
 
 export default function ClientOverviewPage() {
   const [viewMode, setViewMode] = useState<"personal" | "team">("team");
+
+  // FAB Action Listener
+  useEffect(() => {
+    const handleFabAction = (e: any) => {
+      if (e.detail?.id === 'CLIENT_NEW') {
+        alert("New Client action triggered via FAB");
+      }
+    };
+    window.addEventListener('fab-action', handleFabAction);
+    return () => window.removeEventListener('fab-action', handleFabAction);
+  }, []);
 
   const header = (
     <div className="space-y-4">

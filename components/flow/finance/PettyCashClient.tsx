@@ -112,6 +112,17 @@ export default function PettyCashClient() {
         }
     }, [isLoading, canAccessTeam, viewMode, setViewMode]);
 
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'FINANCE_TOP_UP') {
+                alert("Please select a pool to top up or implementation for global top-up needed.");
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
+
     const totalFloat = MOCK_POOLS.reduce((acc, curr) => acc + curr.balance, 0);
 
     return (

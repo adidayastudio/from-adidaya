@@ -140,6 +140,19 @@ export default function FundingSourcesClient() {
         loadData();
     }, [loadData]);
 
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'FINANCE_NEW_SOURCE') {
+                setEditingSource(null);
+                setFormData({ name: "", type: "BANK", provider: "MANDIRI", balance: "", account_number: "" });
+                setShowAddModal(true);
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
+
 
     // Filter sources based on tab
     const filteredSources = sources.filter(s => {
