@@ -34,11 +34,12 @@ import {
     Upload,
     MapPin,
     Copy,
-    Check
+    Check,
+    Filter
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, addMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { format, addMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore } from "date-fns";
 import { ReimburseRequest, ReimburseStatus, FundingSource } from "@/lib/types/finance-types";
 import { formatCurrency, STATUS_THEMES, cleanEntityName, getPrimaryStatus, formatStatus } from "./modules/utils";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
@@ -771,6 +772,7 @@ export default function ReimburseClient() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedProject, setSelectedProject] = useState("ALL");
     const [statusFilter, setStatusFilter] = useState<ReimburseStatus | "ALL">("ALL");
+    const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
 
     const [items, setItems] = useState<any[]>([]);
     const [fundingSources, setFundingSources] = useState<FundingSource[]>([]);
@@ -791,12 +793,19 @@ export default function ReimburseClient() {
     const [previewingDocument, setPreviewingDocument] = useState<{ item: any, initialTab: 'invoice' | 'proof' } | null>(null);
 
     // Sorting
-    const [sortColumn, setSortColumn] = useState<'date' | 'project' | 'amount' | 'status' | 'submitter' | null>('date');
+    const [sortColumn, setSortColumn] = useState<'created_at' | 'project_name' | 'amount' | 'status' | 'submitter' | null>('created_at');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
     const STATUS_ORDER = ['DRAFT', 'PENDING', 'NEED_REVISION', 'APPROVED', 'PAID', 'REJECTED'];
 
-    const handleSort = (column: 'date' | 'project' | 'amount' | 'status' | 'submitter') => {
+    // Extract available categories dynamically
+    const availableCategories = useMemo(() => {
+        const cats = new Set<string>();
+        items.forEach(item => { if (item.category) cats.add(item.category); });
+        return ['ALL', ...Array.from(cats)].sort();
+    }, [items]);
+
+    const handleSort = (column: 'created_at' | 'project_name' | 'amount' | 'status' | 'submitter') => {
         if (sortColumn === column) {
             setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
         } else {
@@ -902,10 +911,10 @@ export default function ReimburseClient() {
             result = [...result].sort((a, b) => {
                 let comparison = 0;
                 switch (sortColumn) {
-                    case 'date':
+                    case 'created_at':
                         comparison = new Date(a.date || a.created_at).getTime() - new Date(b.date || b.created_at).getTime();
                         break;
-                    case 'project':
+                    case 'project_name':
                         comparison = (a.project?.project_name || '').localeCompare(b.project?.project_name || '');
                         break;
                     case 'amount':
@@ -1077,39 +1086,145 @@ export default function ReimburseClient() {
                     />
                 </SummaryCardsRow>
 
-                {/* ADVANCED TOOLBAR */}
-                <div className="flex flex-col md:flex-row gap-4 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40">
-                    {/* LEFT: Search, Month, Project */}
+                {/* ADVANCED TOOLBAR - MOBILE (1 LINE) - iOS GLASSY */}
+                <div className="flex md:hidden items-center gap-1.5 p-2 rounded-2xl bg-white/50 backdrop-blur-md border border-white/60 shadow-sm">
+                    {/* Search Icon Button */}
+                    <button
+                        onClick={() => {
+                            const input = document.getElementById('mobile-search-input');
+                            if (input) {
+                                input.classList.toggle('hidden');
+                                if (!input.classList.contains('hidden')) input.focus();
+                            }
+                        }}
+                        className={clsx(
+                            "p-2.5 rounded-full backdrop-blur-sm border shadow-sm transition-all",
+                            searchTerm
+                                ? "bg-red-500/10 border-red-200/60 text-red-600"
+                                : "bg-white/80 border-white/60 text-neutral-500"
+                        )}
+                    >
+                        <Search className="w-4 h-4" />
+                    </button>
+
+                    {/* Month Selector - iOS Glassy */}
+                    <div className="flex items-center gap-0.5 p-1 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 shadow-sm">
+                        <button onClick={() => handleMonthChange("prev")} className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors">
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-[11px] font-bold text-neutral-700 min-w-[42px] text-center">
+                            {format(currentMonth, "MMM-yy")}
+                        </span>
+                        <button onClick={() => handleMonthChange("next")} className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors">
+                            <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+
+                    {/* Project Dropdown (Native) */}
+                    <div className="relative">
+                        <div className="h-9 px-3 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-[11px] font-bold text-neutral-700 shadow-sm flex items-center gap-1">
+                            <span>{selectedProject === "ALL" ? "ALL" : projects.find(p => p.id === selectedProject)?.projectCode || "ALL"}</span>
+                            <ChevronDown className="w-3 h-3 text-neutral-400" />
+                        </div>
+                        <select
+                            value={selectedProject}
+                            onChange={(e) => setSelectedProject(e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
+                        >
+                            <option value="ALL">All Projects</option>
+                            {projects.map(p => (
+                                <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Category Filter (Native) */}
+                    <div className="relative">
+                        <div className={clsx(
+                            "p-2.5 rounded-full backdrop-blur-sm border shadow-sm transition-all flex items-center justify-center",
+                            categoryFilter !== "ALL"
+                                ? "bg-neutral-900 text-white border-neutral-800"
+                                : "bg-white/80 border-white/60 text-neutral-500"
+                        )}>
+                            <Filter className="w-4 h-4" />
+                        </div>
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
+                        >
+                            {availableCategories.map(cat => (
+                                <option key={cat} value={cat}>
+                                    {cat === 'ALL' ? 'All Types' : cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase().replace(/_/g, ' ')}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Export Icon - iOS Glassy */}
+                    <button
+                        onClick={handleExport}
+                        disabled={isExporting || filteredItems.length === 0}
+                        className={clsx(
+                            "p-2.5 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 shadow-sm text-neutral-500 hover:text-neutral-700 transition-colors",
+                            (isExporting || filteredItems.length === 0) && "opacity-50 cursor-not-allowed"
+                        )}
+                    >
+                        {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                    </button>
+
+                    {/* New Icon - Red Accent */}
+                    {!isBefore(currentMonth, startOfMonth(new Date())) && (
+                        <button
+                            onClick={() => { setEditingItem(null); setIsDrawerOpen(true); }}
+                            className="p-2.5 bg-red-600 rounded-full text-white shadow-md shadow-red-200/50 hover:bg-red-700 transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Mobile Search Input (Hidden by default) - iOS Glassy */}
+                <input
+                    id="mobile-search-input"
+                    type="text"
+                    placeholder="Search..."
+                    className="hidden md:hidden w-full mt-2 h-10 px-4 bg-white/80 backdrop-blur-sm rounded-xl border border-white/60 shadow-sm text-sm text-neutral-700 placeholder:text-neutral-400"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+
+                {/* ADVANCED TOOLBAR - DESKTOP */}
+                <div className="hidden md:flex flex-row gap-4 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40 shadow-sm">
+                    {/* LEFT: Search, Month, Project, Category */}
                     <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                         <div className="h-10 flex items-center gap-2 px-3 bg-white rounded-xl border border-neutral-200 shadow-sm focus-within:ring-2 focus-within:ring-red-500/10 focus-within:border-red-500/50 transition-all w-full md:w-[220px]">
                             <Search className="w-4 h-4 text-neutral-400" />
                             <input
                                 type="text"
                                 placeholder="Search..."
-                                className="bg-transparent border-none outline-none text-sm font-medium text-neutral-700 placeholder:text-neutral-400 w-full"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
+                                className="bg-transparent border-none outline-none text-sm font-medium text-neutral-700 placeholder:text-neutral-400 w-full"
                             />
                         </div>
 
                         <div className="h-10 flex items-center gap-1 p-1 bg-white rounded-xl border border-neutral-200 shadow-sm">
-                            <button
-                                onClick={() => handleMonthChange("prev")}
-                                className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
-                            >
+                            <button onClick={() => handleMonthChange("prev")} className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all">
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
                             <div className="px-2 text-sm font-bold text-neutral-700 whitespace-nowrap min-w-[100px] text-center">
                                 {format(currentMonth, "MMM yyyy")}
                             </div>
-                            <button
-                                onClick={() => handleMonthChange("next")}
-                                className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
-                            >
+                            <button onClick={() => handleMonthChange("next")} className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all">
                                 <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
 
+                        {/* Project Dropdown (Desktop - Native styled) */}
                         <div className="relative group">
                             <select
                                 value={selectedProject}
@@ -1119,6 +1234,22 @@ export default function ReimburseClient() {
                                 <option value="ALL">All Projects</option>
                                 {projects.map(p => (
                                     <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
+                                ))}
+                            </select>
+                            <ChevronDown className="w-4 h-4 text-neutral-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        </div>
+
+                        {/* Category Dropdown (Desktop) */}
+                        <div className="relative group">
+                            <select
+                                value={categoryFilter}
+                                onChange={(e) => setCategoryFilter(e.target.value)}
+                                className="h-10 pl-3 pr-8 bg-white rounded-xl border border-neutral-200 shadow-sm text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 hover:border-red-500/30 transition-all appearance-none cursor-pointer min-w-[150px]"
+                            >
+                                {availableCategories.map(cat => (
+                                    <option key={cat} value={cat}>
+                                        {cat === 'ALL' ? 'All Categories' : cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase().replace(/_/g, ' ')}
+                                    </option>
                                 ))}
                             </select>
                             <ChevronDown className="w-4 h-4 text-neutral-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -1150,22 +1281,114 @@ export default function ReimburseClient() {
                     </div>
                 </div>
 
-                {/* TABLE */}
-                <div className="bg-white/40 backdrop-blur-md rounded-3xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.02)] overflow-hidden">
+                {/* MOBILE CARD LIST */}
+                <div className="mt-6 block md:hidden space-y-2">
+                    {filteredItems.length === 0 ? (
+                        <div className="bg-white/40 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-6 text-center">
+                            <Package className="w-10 h-10 text-neutral-300 mx-auto mb-2" />
+                            <h4 className="text-sm font-semibold text-neutral-700">
+                                {searchTerm ? "No results found" :
+                                    statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
+                                        isBefore(currentMonth, startOfMonth(new Date()))
+                                            ? `No claims in ${format(currentMonth, "MMMM")}`
+                                            : "No claims yet"}
+                            </h4>
+                            {/* Only show New Request button for current or future months */}
+                            {!searchTerm && statusFilter === "ALL" && !isBefore(currentMonth, startOfMonth(new Date())) && (
+                                <button
+                                    onClick={() => { setEditingItem(null); setIsDrawerOpen(true); }}
+                                    className="mt-3 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg"
+                                >
+                                    <Plus className="w-3 h-3 inline mr-1" />New Claim
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        filteredItems.map((item) => {
+                            const isUnpaidApproved = item.status === "APPROVED" && item.financial_status !== "PAID" && false; // Reimburse logic
+                            const isRejected = item.status === "REJECTED";
+                            const isApproved = item.status === "APPROVED";
+
+                            return (
+                                <div
+                                    key={item.id}
+                                    onClick={() => {
+                                        if (isTeamView) setViewingItem(item);
+                                        else { setEditingItem(item); setIsDrawerOpen(true); }
+                                    }}
+                                    className={clsx(
+                                        "backdrop-blur-md rounded-xl border shadow-sm px-3 py-2.5 cursor-pointer active:scale-[0.99] transition-all",
+                                        isRejected
+                                            ? "bg-neutral-100/80 border-neutral-200/60 opacity-60"
+                                            : isApproved
+                                                ? "bg-emerald-50/60 border-emerald-100/60"
+                                                : "bg-white/60 border-white/50"
+                                    )}
+                                >
+                                    {/* Line 1: Item + Amount + Status */}
+                                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                                        <div className="text-[12px] font-semibold text-neutral-900 leading-tight flex-1 min-w-0">
+                                            {item.description}
+                                        </div>
+                                        <span className="text-[12px] font-bold text-neutral-900 tabular-nums whitespace-nowrap">{formatCurrency(item.amount)}</span>
+                                        <StatusBadge status={item.status} />
+                                    </div>
+
+                                    {/* Line 2: Project + Date + Category + Submitter + Actions */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1 text-[10px] text-neutral-400">
+                                            <span className="font-bold text-neutral-500">{item.project?.project_code || "N/A"}</span>
+                                            <span>•</span>
+                                            <span>{format(new Date(item.created_at), "dd MMM")}</span>
+                                            <span>•</span>
+                                            <span className="capitalize">{item.category?.replace(/_/g, ' ').toLowerCase() || 'Uncategorized'}</span>
+                                            {isTeamView && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span>{cleanEntityName(item.staff_name).split(' ')[0]}</span>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-1">
+                                            {isTeamView && item.status === "PENDING" && (
+                                                <>
+                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1 text-emerald-600 bg-emerald-50 rounded"><CheckCircle2 className="w-3.5 h-3.5" /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1 text-rose-600 bg-rose-50 rounded"><Ban className="w-3.5 h-3.5" /></button>
+                                                </>
+                                            )}
+                                            {isTeamView && item.status === "APPROVED" && (
+                                                <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1 text-emerald-600 bg-emerald-50 rounded"><CreditCard className="w-3.5 h-3.5" /></button>
+                                            )}
+                                            {/* Edit for owner */}
+                                            {!isTeamView && (item.status === "DRAFT" || item.status === "NEED_REVISION" || item.status === "PENDING" || item.status === "REJECTED") && (
+                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1 text-neutral-500 bg-neutral-100 rounded"><Pencil className="w-3.5 h-3.5" /></button>
+                                            )}
+                                            <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1 text-blue-600 bg-blue-50 rounded"><Eye className="w-3.5 h-3.5" /></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })
+                    )}
+                </div>
+
+                {/* DESKTOP TABLE */}
+                <div className="hidden md:block bg-white/40 backdrop-blur-md rounded-3xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.02)] overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-neutral-100 bg-white/20">
-                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('date')}>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('created_at')}>
                                         <span className="flex items-center gap-1">
                                             Date
-                                            {sortColumn === 'date' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                            {sortColumn === 'created_at' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                                         </span>
                                     </th>
-                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('project')}>
+                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('project_name')}>
                                         <span className="flex items-center gap-1">
                                             Project
-                                            {sortColumn === 'project' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                            {sortColumn === 'project_name' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                                         </span>
                                     </th>
                                     <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Description</th>
@@ -1207,7 +1430,7 @@ export default function ReimburseClient() {
                                                 }
                                             }}
                                         >
-                                            <td className="px-6 py-4 text-xs font-medium text-neutral-500">{format(new Date(item.date || item.created_at), "dd MMM yyyy")}</td>
+                                            <td className="px-6 py-4 text-xs font-medium text-neutral-500">{format(new Date(item.created_at), "dd MMM yyyy")}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] font-bold bg-neutral-100 px-1.5 py-0.5 rounded w-fit text-neutral-500 mb-1">{item.project?.project_code || "N/A"}</span>

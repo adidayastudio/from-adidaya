@@ -11,7 +11,7 @@ import { FEEL_APPS } from "@/lib/navigation-config";
 // Define Clock Tabs matching ClockSidebar logic
 // Href uses query params to switch sections
 const CLOCK_TABS = [
-    { id: "overview", label: "Overview", href: "/feel/clock?section=overview", icon: LayoutDashboard },
+    { id: "overview", label: "Overview", href: "/feel/clock", icon: LayoutDashboard },
     { id: "timesheets", label: "Timesheets", href: "/feel/clock?section=timesheets", icon: CalendarDays },
     { id: "leaves", label: "Leave", href: "/feel/clock?section=leaves", icon: UserX },
     { id: "overtime", label: "Overtime", href: "/feel/clock?section=overtime", icon: Hourglass },
@@ -105,7 +105,7 @@ export default function ClockPageWrapper({
                         role={role}
                         fabAction={fabAction}
                     />
-                }>
+                } isTransparent>
                     <div className="animate-in fade-in duration-500 pb-24 lg:pb-0">
                         {header}
                         {children}

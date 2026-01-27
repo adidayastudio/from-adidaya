@@ -22,15 +22,15 @@ import { getOvertimeStart, getWorkMinutes } from "@/lib/work-hours-utils";
 interface ClockOvertimeProps {
     role?: UserRole;
     userName?: string;
+    viewMode: "personal" | "team";
     onLogOvertime?: () => void;
     onEditLog?: (overtime: OvertimeLog) => void;
     onViewLog?: (overtime: OvertimeLog) => void;
 }
 
-export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, onEditLog, onViewLog }: ClockOvertimeProps) {
+export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLogOvertime, onEditLog, onViewLog }: ClockOvertimeProps) {
     const { profile } = useUserProfile();
     const isManager = canViewTeamData(role || profile?.role);
-    const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<"date" | "employee" | "overtime">("date");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
@@ -368,16 +368,7 @@ export function ClockOvertime({ role, userName = "Staff Member", onLogOvertime, 
 
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Overtime</h1>
-                        <p className="text-sm text-neutral-500 mt-1">Overtime hours validation and tracking.</p>
-                    </div>
-                    <ViewToggle viewMode={viewMode} onViewChange={setViewMode} role={role} />
-                </div>
-                <div className="border-b border-neutral-200" />
-            </div>
+            {/* HEADER REMOVED - Using Global PageHeader */}
 
             {/* MONTHLY RECAP CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

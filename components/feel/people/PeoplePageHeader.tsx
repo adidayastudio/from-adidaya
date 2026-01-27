@@ -38,32 +38,22 @@ export default function PeoplePageHeader({
   onSearchChange?: (q: string) => void;
 }) {
   return (
-    <div className="space-y-6">
-      {/* Standard Header */}
-      <div className="flex flex-col gap-6">
-        <div className="flex items-start justify-between border-b border-neutral-200 pb-4">
-          <div>
-            <h1 className="text-2xl font-bold text-neutral-900">People</h1>
-            <p className="text-sm text-neutral-500 mt-1">Directory of all employees, partners, and stakeholders.</p>
-          </div>
-          <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />} onClick={onAddPerson}>
-            Add Person
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-4">
+      {/* COMPACT HEADER with ACTIONS */}
 
-      {/* Toolbar: Filters & View Toggle */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+
+      {/* COMPACT TOOLBAR */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         {/* Filters */}
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-brand-red transition-colors" />
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
+          <div className="relative group shrink-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 group-focus-within:text-brand-red transition-colors" />
             <Input
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search people..."
               inputSize="sm"
-              className="pl-9 w-64"
+              className="pl-9 w-60 h-9 text-sm bg-white/50 border-neutral-200/60 focus:bg-white transition-all"
             />
           </div>
 
@@ -77,7 +67,7 @@ export default function PeoplePageHeader({
             ]}
             onChange={() => { }}
             selectSize="sm"
-            className="w-40"
+            className="w-32 h-9 text-xs bg-white/50 border-neutral-200/60"
           />
 
           <Select
@@ -90,17 +80,21 @@ export default function PeoplePageHeader({
             ]}
             onChange={() => { }}
             selectSize="sm"
-            className="w-36"
+            className="w-32 h-9 text-xs bg-white/50 border-neutral-200/60"
           />
         </div>
 
         {/* View Toggle */}
-        <ViewToggle<PeopleView>
-          value={view}
-          onChange={onChangeView}
-          options={VIEW_OPTIONS}
-        />
+        <div className="shrink-0">
+          <ViewToggle<PeopleView>
+            value={view}
+            onChange={onChangeView}
+            options={VIEW_OPTIONS}
+          />
+        </div>
       </div>
     </div>
   );
+
+
 }

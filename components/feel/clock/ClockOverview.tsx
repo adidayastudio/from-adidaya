@@ -210,39 +210,7 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
     return (
         <div className="space-y-8 w-full animate-in fade-in duration-500">
             {/* HEADER */}
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Clock</h1>
-                        <p className="text-sm text-neutral-500 mt-1">Time tracking, leaves, and attendance records.</p>
-                    </div>
-
-                    {/* VIEW MODE TOGGLE (Manager Only) - Responsive */}
-                    {isManager && (
-                        <div className="flex items-center bg-neutral-100 rounded-full p-1 self-start md:self-auto">
-                            <button
-                                onClick={() => setViewMode("personal")}
-                                className={clsx(
-                                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
-                                    viewMode === "personal" ? "bg-white shadow text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
-                                )}
-                            >
-                                <User className="w-4 h-4" /> Personal
-                            </button>
-                            <button
-                                onClick={() => setViewMode("team")}
-                                className={clsx(
-                                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
-                                    viewMode === "team" ? "bg-white shadow text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
-                                )}
-                            >
-                                <Users className="w-4 h-4" /> Team
-                            </button>
-                        </div>
-                    )}
-                </div>
-                <div className="border-b border-neutral-200" />
-            </div>
+            {/* HEADER REMOVED - Using Global PageHeader */}
 
             {/* PERSONAL VIEW */}
             {viewMode === "personal" && (
@@ -318,9 +286,7 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                         </div>
                     </div>
 
-                    {/* MONTHLY SUMMARY */}
                     <div className="space-y-4 pt-4">
-                        <h3 className="text-lg font-bold text-neutral-900">Monthly Summary <span className="text-neutral-400 font-normal text-sm ml-2">(January 2025)</span></h3>
                         <h3 className="text-lg font-bold text-neutral-900">Monthly Summary <span className="text-neutral-400 font-normal text-sm ml-2">(January 2025)</span></h3>
                         <SummaryCardsRow>
                             <SummaryCard

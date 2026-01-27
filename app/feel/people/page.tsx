@@ -12,6 +12,7 @@ import GlobalDirectory from "@/components/feel/people/GlobalDirectory";
 import PerformanceView from "@/components/feel/people/PerformanceView";
 import { EmptyState } from "@/shared/ui/overlays/EmptyState";
 import { BarChart, Settings } from "lucide-react";
+import { PageHeader } from "@/shared/ui/headers/PageHeader";
 
 export default function FeelPeoplePage() {
    const { profile, loading } = useUserProfile();
@@ -20,7 +21,7 @@ export default function FeelPeoplePage() {
    const pathname = usePathname();
 
    const sectionParam = searchParams.get("section");
-   const currentSection: PeopleSection = (sectionParam as PeopleSection) || "directory";
+   const currentSection: PeopleSection = (sectionParam as PeopleSection) || "overview";
 
    const handleSectionChange = (section: PeopleSection) => {
       const params = new URLSearchParams(searchParams);
@@ -46,6 +47,13 @@ export default function FeelPeoplePage() {
       }
    };
 
+   const header = (
+      <PageHeader
+         title="People Directory"
+         description="Manage your team, view profiles, and track performance."
+      />
+   );
+
    return (
       <PeoplePageWrapper
          breadcrumbItems={[
@@ -53,6 +61,7 @@ export default function FeelPeoplePage() {
             { label: "People" },
             { label: isGlobalView ? getBreadcrumbLabel() : "My Dashboard" }
          ]}
+         header={header}
          sidebar={
             <PeopleSidebar
                activeSection={currentSection}

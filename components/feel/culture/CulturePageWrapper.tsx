@@ -8,7 +8,7 @@ import { Sparkles, Trophy, PartyPopper, MessageCircle } from "lucide-react";
 
 // Culture Tabs - only include existing pages
 const CULTURE_TABS = [
-    { id: "feed", label: "Feed", href: "/feel/culture" },
+    { id: "overview", label: "Overview", href: "/feel/culture" },
 ];
 
 interface CulturePageWrapperProps {
@@ -47,7 +47,7 @@ export default function CulturePageWrapper({
             {/* DESKTOP LAYOUT */}
             <div className="hidden lg:block min-h-screen bg-neutral-50 p-6">
                 <Breadcrumb items={breadcrumbItems} />
-                <PageWrapper sidebar={sidebar}>
+                <PageWrapper sidebar={sidebar} isTransparent>
                     <div className="space-y-8 w-full animate-in fade-in duration-500">
                         {header}
                         {children}

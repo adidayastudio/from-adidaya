@@ -13,6 +13,7 @@ import { CulturePulse } from "@/components/feel/culture/CulturePulse";
 import { CultureHandbook } from "@/components/feel/culture/CultureHandbook";
 import { CultureRecognition } from "@/components/feel/culture/CultureRecognition";
 import { CultureSetup } from "@/components/feel/culture/CultureSetup";
+import { PageHeader } from "@/shared/ui/headers/PageHeader";
 
 type CultureSection = "home" | "chapter" | "journey" | "values" | "pulse" | "handbook" | "recognition" | "team_overview" | "team_members" | "setup";
 type ViewMode = "PERSONAL" | "TEAM";
@@ -76,6 +77,13 @@ export default function CulturePage() {
     }
   };
 
+  const header = (
+    <PageHeader
+      title="Culture & Values"
+      description="Company values, handbook, and team recognition."
+    />
+  );
+
   return (
     <CulturePageWrapper
       breadcrumbItems={[
@@ -83,6 +91,7 @@ export default function CulturePage() {
         { label: "Culture" },
         { label: activeSection.charAt(0).toUpperCase() + activeSection.slice(1).replace("_", " ") }
       ]}
+      header={header}
       sidebar={
         <CultureSidebar
           activeSection={activeSection}

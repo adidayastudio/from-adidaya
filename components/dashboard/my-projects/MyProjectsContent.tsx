@@ -82,7 +82,6 @@ export default function MyProjectsContent({ section }: { section: MyProjectsSect
 
             {/* HEADER & CARDS - Hidden on Mobile */}
             <div className="hidden md:block space-y-4">
-                <h1 className="text-2xl font-bold text-neutral-900">My Projects</h1>
                 <SummaryFilterCards
                     items={filterItems}
                     selectedId={section}

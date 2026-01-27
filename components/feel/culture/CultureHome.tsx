@@ -31,39 +31,7 @@ export function CultureHome({ onNavigate, viewMode, onToggleView, userRole }: Cu
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* HEADER (Matching ClockOverview) */}
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Culture</h1>
-                        <p className="text-sm text-neutral-500 mt-1">Your journey, values, and life at Adidaya.</p>
-                    </div>
-
-                    {/* VIEW MODE TOGGLE (HR Only) */}
-                    {isHr && (
-                        <div className="flex items-center bg-neutral-100 rounded-full p-1 self-start md:self-auto">
-                            <button
-                                onClick={() => onToggleView("PERSONAL")}
-                                className={clsx(
-                                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
-                                    viewMode === "PERSONAL" ? "bg-white shadow text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
-                                )}
-                            >
-                                <User className="w-4 h-4" /> Personal
-                            </button>
-                            <button
-                                onClick={() => onToggleView("TEAM")}
-                                className={clsx(
-                                    "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
-                                    viewMode === "TEAM" ? "bg-white shadow text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
-                                )}
-                            >
-                                <Users className="w-4 h-4" /> Team
-                            </button>
-                        </div>
-                    )}
-                </div>
-                <div className="border-b border-neutral-200" />
-            </div>
+            {/* HEADER REMOVED - Using Global PageHeader */}
 
             {/* Hero Greeting */}
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white relative overflow-hidden">

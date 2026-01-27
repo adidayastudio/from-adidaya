@@ -21,15 +21,15 @@ import {
 interface ClockBusinessTripsProps {
     role?: UserRole;
     userName?: string;
+    viewMode: "personal" | "team";
     onNewTrip?: () => void;
     onEditTrip?: (trip: BusinessTrip) => void;
     onViewTrip?: (trip: BusinessTrip) => void;
 }
 
-export function ClockBusinessTrips({ role, userName = "Staff Member", onNewTrip, onEditTrip, onViewTrip }: ClockBusinessTripsProps) {
+export function ClockBusinessTrips({ role, userName = "Staff Member", viewMode, onNewTrip, onEditTrip, onViewTrip }: ClockBusinessTripsProps) {
     const { profile } = useUserProfile();
     const isManager = canViewTeamData(role || profile?.role);
-    const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
     const [displayMode, setDisplayMode] = useState<"list" | "calendar">("list");
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<"date" | "employee" | "status">("date");
@@ -355,16 +355,7 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", onNewTrip,
 
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Business Trips</h1>
-                        <p className="text-sm text-neutral-500 mt-1">Perjalanan dinas requests and management.</p>
-                    </div>
-                    <ViewToggle viewMode={viewMode} onViewChange={setViewMode} role={role} />
-                </div>
-                <div className="border-b border-neutral-200" />
-            </div>
+            {/* HEADER REMOVED - Using Global PageHeader */}
 
             {/* TOOLBAR */}
             <div className="flex items-center justify-between gap-2 w-full">

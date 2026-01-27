@@ -100,6 +100,11 @@ export interface ReimburseRequest {
     amount: number;
     approved_amount?: number;
     status: ReimburseStatus;
+    project?: {
+        id: string;
+        project_code: string;
+        project_name: string;
+    };
     invoice_url?: string; // Receipt
     payment_proof_url?: string; // Proof of transfer
     payment_date?: string;

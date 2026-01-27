@@ -81,7 +81,7 @@ export function PageHeader({
       <div className="flex items-start justify-between gap-4 border-b border-neutral-200 pb-4">
         {/* LEFT */}
         <div className="min-w-0">
-          <h1 className="text-lg font-semibold text-neutral-900 truncate">
+          <h1 className="text-lg md:text-2xl font-bold text-neutral-900 truncate">
             {title}
           </h1>
 

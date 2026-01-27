@@ -11,7 +11,7 @@ import { FEEL_APPS } from "@/lib/navigation-config";
 // Define Crew Tabs matching CrewSidebar logic
 // Href uses query params to switch sections
 const CREW_TABS = [
-    { id: "directory", label: "Directory", href: "/feel/crew?tab=directory", icon: Users },
+    { id: "directory", label: "Directory", href: "/feel/crew", icon: Users },
     { id: "assignments", label: "Assignment", href: "/feel/crew?tab=assignments", icon: ClipboardList },
     { id: "daily-input", label: "Daily Log", href: "/feel/crew?tab=daily-input", icon: CalendarClock },
     { id: "payroll", label: "Payroll", href: "/feel/crew?tab=payroll", icon: Wallet },
@@ -90,7 +90,7 @@ export default function CrewPageWrapper({
                         role={role}
                         fabAction={fabAction}
                     />
-                }>
+                } isTransparent>
                     <div className="flex flex-col h-full pb-28 lg:pb-0">
                         {header}
                         {children}

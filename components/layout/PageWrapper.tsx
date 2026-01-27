@@ -5,12 +5,14 @@ type PageWrapperProps = {
   sidebar: React.ReactNode;
   header?: React.ReactNode;
   children: React.ReactNode;
+  isTransparent?: boolean;
 };
 
 export default function PageWrapper({
   sidebar,
   header,
   children,
+  isTransparent = false,
 }: PageWrapperProps) {
   return (
     <div className="md:mt-2 flex gap-4">
@@ -26,7 +28,11 @@ export default function PageWrapper({
       {/* MAIN CONTENT CONTAINER */}
       <main className="flex-1 min-w-0">
         {header && <div className="mb-6">{header}</div>}
-        <div className={clsx("md:bg-white md:rounded-3xl px-4 md:p-4 h-full pb-24 md:pb-4 md:shadow-sm", !header && "mt-0")}>
+        <div className={clsx(
+          "px-4 md:p-4 h-full pb-24 md:pb-4",
+          !isTransparent && "md:bg-white md:rounded-3xl md:shadow-sm",
+          !header && "mt-0"
+        )}>
           {children}
         </div>
       </main>

@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 
-type CalendarSection = "schedule" | "team-events" | "leaves" | "travel";
+type CalendarSection = "overview" | "team-events" | "leaves" | "travel";
 
 interface NavItemConfig {
     id: CalendarSection;
@@ -15,14 +15,14 @@ interface NavItemConfig {
 }
 
 const NAV_ITEMS: NavItemConfig[] = [
-    { id: "schedule", label: "My Schedule", shortLabel: "Schedule", icon: Calendar },
+    { id: "overview", label: "My Schedule", shortLabel: "Schedule", icon: Calendar },
     { id: "team-events", label: "Team Events", shortLabel: "Events", icon: Users },
     { id: "leaves", label: "Leave Calendar", shortLabel: "Leave", icon: Coffee },
     { id: "travel", label: "Duty Travel", shortLabel: "Travel", icon: Plane },
 ];
 
 export default function CalendarSidebar() {
-    const [activeSection, setActiveSection] = useState<CalendarSection>("schedule");
+    const [activeSection, setActiveSection] = useState<CalendarSection>("overview");
 
     return (
         <>

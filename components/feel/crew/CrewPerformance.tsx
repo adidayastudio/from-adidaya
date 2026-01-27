@@ -327,15 +327,7 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                 </div>
             )}
 
-            <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Performance & KPI</h1>
-                        <p className="text-sm text-neutral-500 mt-1">Weighted Score: 50% Attendance • 25% Overtime • 25% Rating</p>
-                    </div>
-                </div>
-                <div className="border-b border-neutral-200" />
-            </div>
+            {/* HEADER REMOVED - Using Global PageHeader */}
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <button onClick={() => setActiveCard("ALL")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ALL" ? "bg-blue-600 border-blue-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "ALL" ? "text-blue-100" : "text-neutral-500")}>Avg Score</div><div className={clsx("text-2xl font-bold", activeCard === "ALL" ? "text-white" : "text-blue-600")}>{stats.avg}</div></button>

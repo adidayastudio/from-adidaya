@@ -8,7 +8,7 @@ import { Calendar, CalendarDays, CalendarCheck, Users } from "lucide-react";
 
 // Calendar Tabs - only include existing pages
 const CALENDAR_TABS = [
-    { id: "overview", label: "Schedule", href: "/feel/calendar" },
+    { id: "overview", label: "Overview", href: "/feel/calendar" },
 ];
 
 interface CalendarPageWrapperProps {
@@ -47,7 +47,7 @@ export default function CalendarPageWrapper({
             {/* DESKTOP LAYOUT */}
             <div className="hidden lg:block min-h-screen bg-neutral-50 p-6">
                 <Breadcrumb items={breadcrumbItems} />
-                <PageWrapper sidebar={sidebar}>
+                <PageWrapper sidebar={sidebar} isTransparent>
                     <div className="space-y-8 w-full animate-in fade-in duration-500">
                         {header}
                         {children}

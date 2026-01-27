@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
+import { Breadcrumb, PageHeader } from "@/shared/ui/headers/PageHeader";
 import PageWrapper from "@/components/layout/PageWrapper";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import MyProjectsContent, { MyProjectsSection } from "@/components/dashboard/my-projects/MyProjectsContent";
@@ -20,6 +20,13 @@ function ProjectsPageContent() {
     "archived": "Archived"
   };
 
+  const header = (
+    <PageHeader
+      title="My Projects"
+      description="Manage active projects, track progress, and view updates."
+    />
+  );
+
   return (
     <div className="min-h-screen bg-neutral-50 p-4 md:p-6 relative">
       <Breadcrumb
@@ -30,7 +37,7 @@ function ProjectsPageContent() {
         ]}
       />
 
-      <PageWrapper sidebar={<DashboardSidebar />}>
+      <PageWrapper sidebar={<DashboardSidebar />} header={header}>
         <MyProjectsContent section={section} />
       </PageWrapper>
     </div>

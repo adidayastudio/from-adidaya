@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Star, BookOpen, Map, Heart, Activity, LayoutDashboard, Settings, Globe, Award, FileText, MoreHorizontal, X, ChevronRight } from "lucide-react";
 import clsx from "clsx";
 
-export type CultureSection = "home" | "chapter" | "journey" | "values" | "pulse" | "handbook" | "recognition" | "team_overview" | "team_members" | "setup";
+export type CultureSection = "overview" | "chapter" | "journey" | "values" | "pulse" | "handbook" | "recognition" | "team_overview" | "team_members" | "setup";
 
 interface CultureSidebarProps {
   activeSection: CultureSection;
@@ -14,7 +14,7 @@ interface CultureSidebarProps {
 
 // Menu Configuration
 const PERSONAL_MENU = [
-  { id: "home", label: "Home", icon: Star },
+  { id: "overview", label: "Home", icon: Star },
   { id: "chapter", label: "My Chapter", icon: BookOpen },
   { id: "journey", label: "Journey", icon: Map },
   { id: "values", label: "Values", icon: Heart },

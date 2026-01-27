@@ -17,14 +17,14 @@ import { AttendanceRecord } from "@/lib/api/clock";
 interface ClockTimesheetsProps {
     role?: UserRole;
     userName?: string;
+    viewMode: "personal" | "team";
 }
 
 const ITEMS_PER_PAGE = 25;
 
-export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesheetsProps) {
+export function ClockTimesheets({ role, userName = "Staff Member", viewMode: personalTeamView }: ClockTimesheetsProps) {
     const [searchQuery, setSearchQuery] = useState("");
     const [viewMode, setViewMode] = useState<"list" | "grid" | "chart">("list");
-    const [personalTeamView, setPersonalTeamView] = useState<"personal" | "team">("personal");
     const [sortBy, setSortBy] = useState<"date" | "employee">("date");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
@@ -483,180 +483,172 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
             {/* HEADER */}
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Timesheets</h1>
-                        <p className="text-sm text-neutral-500 mt-1">Daily entry logs and attendance records.</p>
-                    </div>
-                    <ViewToggle viewMode={personalTeamView} onViewChange={(v) => { setPersonalTeamView(v); setCurrentPage(1); }} role={role} />
-                </div>
+            {/* HEADER REMOVED - Using Global PageHeader */}
 
-                <div className="border-b border-neutral-200" />
 
-                {/* ATTENDANCE ALERT (Personal) - Only show if there is data for the current month */}
-                {personalTeamView === "personal" && filteredData.length > 0 && (
-                    <>
-                        {weeklyLateCount === 0 ? (
-                            <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4 flex items-start gap-3">
-                                <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="text-sm font-semibold text-emerald-800">Perfect Attendance!</h4>
-                                    <p className="text-sm text-emerald-700 mt-1">
-                                        Congrats! Maintain your discipline by never being late this week.
-                                    </p>
-                                </div>
+            {/* ATTENDANCE ALERT (Personal) - Only show if there is data for the current month */}
+            {personalTeamView === "personal" && filteredData.length > 0 && (
+                <>
+                    {weeklyLateCount === 0 ? (
+                        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4 flex items-start gap-3">
+                            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="text-sm font-semibold text-emerald-800">Perfect Attendance!</h4>
+                                <p className="text-sm text-emerald-700 mt-1">
+                                    Congrats! Maintain your discipline by never being late this week.
+                                </p>
                             </div>
-                        ) : weeklyLateCount <= 3 ? (
-                            <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex items-start gap-3">
-                                <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="text-sm font-semibold text-orange-800">Attendance Alert</h4>
-                                    <p className="text-sm text-orange-700 mt-1">
-                                        You have been late <span className="font-bold">{weeklyLateCount} times</span> this week. Please pay attention to your punctuality.
-                                    </p>
-                                </div>
+                        </div>
+                    ) : weeklyLateCount <= 3 ? (
+                        <div className="bg-orange-50 border border-orange-100 rounded-lg p-4 flex items-start gap-3">
+                            <AlertCircle className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="text-sm font-semibold text-orange-800">Attendance Alert</h4>
+                                <p className="text-sm text-orange-700 mt-1">
+                                    You have been late <span className="font-bold">{weeklyLateCount} times</span> this week. Please pay attention to your punctuality.
+                                </p>
                             </div>
-                        ) : (
-                            <div className="bg-rose-50 border border-rose-100 rounded-lg p-4 flex items-start gap-3">
-                                <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-                                <div>
-                                    <h4 className="text-sm font-semibold text-rose-800">Critical Attendance Alert</h4>
-                                    <p className="text-sm text-rose-700 mt-1">
-                                        You have been late <span className="font-bold">{weeklyLateCount} times</span> this week. Your KPI score will decrease. Frequent lateness impacts your performance review.
-                                    </p>
-                                </div>
+                        </div>
+                    ) : (
+                        <div className="bg-rose-50 border border-rose-100 rounded-lg p-4 flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="text-sm font-semibold text-rose-800">Critical Attendance Alert</h4>
+                                <p className="text-sm text-rose-700 mt-1">
+                                    You have been late <span className="font-bold">{weeklyLateCount} times</span> this week. Your KPI score will decrease. Frequent lateness impacts your performance review.
+                                </p>
                             </div>
-                        )}
-                    </>
-                )}
+                        </div>
+                    )}
+                </>
+            )}
 
-                {/* SUMMARY STATS (Payroll / KPI Logic) */}
-                {stats && (() => {
-                    // For Team View: Calculate AVERAGES across all team members from Jan 12
-                    if (personalTeamView === "team" && isManager) {
-                        const activeMembers = teamMembers.filter(m => !EXCLUDED_USERS.includes(m.username));
-                        const memberCount = activeMembers.length || 1;
+            {/* SUMMARY STATS (Payroll / KPI Logic) */}
+            {stats && (() => {
+                // For Team View: Calculate AVERAGES across all team members from Jan 12
+                if (personalTeamView === "team" && isManager) {
+                    const activeMembers = teamMembers.filter(m => !EXCLUDED_USERS.includes(m.username));
+                    const memberCount = activeMembers.length || 1;
 
-                        // Filter data from Jan 12 onwards (first clock-in date)
-                        const startDate = "2026-01-12";
-                        const today = new Date();
-                        const allDays = eachDayOfInterval({
-                            start: new Date(startDate),
-                            end: min([today, endOfMonth(currentMonth)])
+                    // Filter data from Jan 12 onwards (first clock-in date)
+                    const startDate = "2026-01-12";
+                    const today = new Date();
+                    const allDays = eachDayOfInterval({
+                        start: new Date(startDate),
+                        end: min([today, endOfMonth(currentMonth)])
+                    });
+                    const workDayDates = allDays.filter(d => !isSunday(d) && !HOLIDAYS_2026.find(h => h.date === format(d, "yyyy-MM-dd")));
+
+                    const teamData = filteredData.filter(d => d.date >= startDate);
+
+                    // Calculate totals across all team members
+                    const totalPresent = teamData.filter(d => d.status === "ontime" || d.status === "intime" || d.status === "late").length;
+                    const totalLate = teamData.filter(d => d.status === "late").length;
+                    const totalOT = teamData.reduce((sum, d) => sum + (d.overtimeMinutes || 0), 0);
+
+                    // Calculate ABSENT: For each workday, count members who have NO record
+                    let totalAbsent = 0;
+                    workDayDates.forEach(dayDate => {
+                        const dateStr = format(dayDate, "yyyy-MM-dd");
+                        activeMembers.forEach(member => {
+                            const hasRecord = teamData.some(d => d.date === dateStr && (d.userId === member.id || d.employee === member.username));
+                            if (!hasRecord) totalAbsent++;
                         });
-                        const workDayDates = allDays.filter(d => !isSunday(d) && !HOLIDAYS_2026.find(h => h.date === format(d, "yyyy-MM-dd")));
+                    });
 
-                        const teamData = filteredData.filter(d => d.date >= startDate);
+                    // Calculate averages (round up to 1 decimal)
+                    const avgPresent = Math.ceil((totalPresent / memberCount) * 10) / 10;
+                    const avgLate = Math.ceil((totalLate / memberCount) * 10) / 10;
+                    const avgAbsent = Math.ceil((totalAbsent / memberCount) * 10) / 10;
+                    const avgOTMinutes = Math.round(totalOT / memberCount);
 
-                        // Calculate totals across all team members
-                        const totalPresent = teamData.filter(d => d.status === "ontime" || d.status === "intime" || d.status === "late").length;
-                        const totalLate = teamData.filter(d => d.status === "late").length;
-                        const totalOT = teamData.reduce((sum, d) => sum + (d.overtimeMinutes || 0), 0);
+                    // Format overtime as Xh Ym
+                    const otHours = Math.floor(avgOTMinutes / 60);
+                    const otMins = Math.round(avgOTMinutes % 60);
+                    const avgOTFormatted = otHours > 0 ? `${otHours}h ${otMins}m` : `${otMins}m`;
 
-                        // Calculate ABSENT: For each workday, count members who have NO record
-                        let totalAbsent = 0;
-                        workDayDates.forEach(dayDate => {
-                            const dateStr = format(dayDate, "yyyy-MM-dd");
-                            activeMembers.forEach(member => {
-                                const hasRecord = teamData.some(d => d.date === dateStr && (d.userId === member.id || d.employee === member.username));
-                                if (!hasRecord) totalAbsent++;
-                            });
-                        });
+                    // Attendance Score
+                    const workDays = workDayDates.length;
+                    const avgScore = workDays > 0 ? Math.round((totalPresent / (workDays * memberCount)) * 100) : 0;
 
-                        // Calculate averages (round up to 1 decimal)
-                        const avgPresent = Math.ceil((totalPresent / memberCount) * 10) / 10;
-                        const avgLate = Math.ceil((totalLate / memberCount) * 10) / 10;
-                        const avgAbsent = Math.ceil((totalAbsent / memberCount) * 10) / 10;
-                        const avgOTMinutes = Math.round(totalOT / memberCount);
-
-                        // Format overtime as Xh Ym
-                        const otHours = Math.floor(avgOTMinutes / 60);
-                        const otMins = Math.round(avgOTMinutes % 60);
-                        const avgOTFormatted = otHours > 0 ? `${otHours}h ${otMins}m` : `${otMins}m`;
-
-                        // Attendance Score
-                        const workDays = workDayDates.length;
-                        const avgScore = workDays > 0 ? Math.round((totalPresent / (workDays * memberCount)) * 100) : 0;
-
-                        return (
-                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
-                                <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                    <div className="text-xs text-neutral-500">Avg Days Present</div>
-                                    <div className="text-xl font-bold text-neutral-900 mt-1">{avgPresent.toFixed(1)}</div>
-                                </div>
-                                <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                    <div className="text-xs text-neutral-500">Avg Late Arrivals</div>
-                                    <div className={clsx("text-xl font-bold mt-1", avgLate > 0 ? "text-rose-600" : "text-neutral-900")}>
-                                        {avgLate.toFixed(1)}
-                                    </div>
-                                </div>
-                                <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                    <div className="text-xs text-neutral-500">Avg Absent/Leave</div>
-                                    <div className={clsx("text-xl font-bold mt-1", avgAbsent > 0 ? "text-rose-600" : "text-neutral-900")}>
-                                        {avgAbsent.toFixed(1)}
-                                    </div>
-                                </div>
-                                <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                    <div className="text-xs text-neutral-500">Avg Overtime</div>
-                                    <div className="text-xl font-bold text-emerald-600 mt-1">
-                                        {avgOTFormatted}
-                                    </div>
-                                </div>
-                                <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                    <div className="text-xs text-neutral-500">Avg Attendance Score</div>
-                                    <div className={clsx(
-                                        "text-xl font-bold mt-1",
-                                        avgScore >= 90 ? "text-emerald-600" :
-                                            avgScore >= 75 ? "text-yellow-600" : "text-rose-600"
-                                    )}>
-                                        {avgScore}%
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    }
-
-                    // Personal View: Show individual totals (existing logic)
                     return (
                         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
                             <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Days Present</div>
-                                <div className="text-xl font-bold text-neutral-900 mt-1">{stats.totalDaysPresent}</div>
+                                <div className="text-xs text-neutral-500">Avg Days Present</div>
+                                <div className="text-xl font-bold text-neutral-900 mt-1">{avgPresent.toFixed(1)}</div>
                             </div>
                             <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Late Arrivals</div>
-                                <div className={clsx("text-xl font-bold mt-1", stats.totalDaysLate > 0 ? "text-rose-600" : "text-neutral-900")}>
-                                    {stats.totalDaysLate}
+                                <div className="text-xs text-neutral-500">Avg Late Arrivals</div>
+                                <div className={clsx("text-xl font-bold mt-1", avgLate > 0 ? "text-rose-600" : "text-neutral-900")}>
+                                    {avgLate.toFixed(1)}
                                 </div>
                             </div>
                             <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Absent/Leave</div>
-                                <div className="text-xl font-bold text-neutral-900 mt-1">
-                                    {stats.totalDaysAbsent + stats.totalDaysLeave + stats.totalDaysSick}
+                                <div className="text-xs text-neutral-500">Avg Absent/Leave</div>
+                                <div className={clsx("text-xl font-bold mt-1", avgAbsent > 0 ? "text-rose-600" : "text-neutral-900")}>
+                                    {avgAbsent.toFixed(1)}
                                 </div>
                             </div>
                             <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Overtime Hours</div>
+                                <div className="text-xs text-neutral-500">Avg Overtime</div>
                                 <div className="text-xl font-bold text-emerald-600 mt-1">
-                                    {formatMinutes(stats.totalOvertimeMinutes)}
+                                    {avgOTFormatted}
                                 </div>
                             </div>
                             <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Attendance Score</div>
+                                <div className="text-xs text-neutral-500">Avg Attendance Score</div>
                                 <div className={clsx(
                                     "text-xl font-bold mt-1",
-                                    stats.attendanceScore >= 90 ? "text-emerald-600" :
-                                        stats.attendanceScore >= 75 ? "text-yellow-600" : "text-rose-600"
+                                    avgScore >= 90 ? "text-emerald-600" :
+                                        avgScore >= 75 ? "text-yellow-600" : "text-rose-600"
                                 )}>
-                                    {stats.attendanceScore}%
+                                    {avgScore}%
                                 </div>
                             </div>
                         </div>
                     );
-                })()}
+                }
 
-            </div>
+                // Personal View: Show individual totals (existing logic)
+                return (
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
+                        <div className="bg-white border rounded-xl p-3 shadow-sm">
+                            <div className="text-xs text-neutral-500">Days Present</div>
+                            <div className="text-xl font-bold text-neutral-900 mt-1">{stats.totalDaysPresent}</div>
+                        </div>
+                        <div className="bg-white border rounded-xl p-3 shadow-sm">
+                            <div className="text-xs text-neutral-500">Late Arrivals</div>
+                            <div className={clsx("text-xl font-bold mt-1", stats.totalDaysLate > 0 ? "text-rose-600" : "text-neutral-900")}>
+                                {stats.totalDaysLate}
+                            </div>
+                        </div>
+                        <div className="bg-white border rounded-xl p-3 shadow-sm">
+                            <div className="text-xs text-neutral-500">Absent/Leave</div>
+                            <div className="text-xl font-bold text-neutral-900 mt-1">
+                                {stats.totalDaysAbsent + stats.totalDaysLeave + stats.totalDaysSick}
+                            </div>
+                        </div>
+                        <div className="bg-white border rounded-xl p-3 shadow-sm">
+                            <div className="text-xs text-neutral-500">Overtime Hours</div>
+                            <div className="text-xl font-bold text-emerald-600 mt-1">
+                                {formatMinutes(stats.totalOvertimeMinutes)}
+                            </div>
+                        </div>
+                        <div className="bg-white border rounded-xl p-3 shadow-sm">
+                            <div className="text-xs text-neutral-500">Attendance Score</div>
+                            <div className={clsx(
+                                "text-xl font-bold mt-1",
+                                stats.attendanceScore >= 90 ? "text-emerald-600" :
+                                    stats.attendanceScore >= 75 ? "text-yellow-600" : "text-rose-600"
+                            )}>
+                                {stats.attendanceScore}%
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
+
 
             {/* TOOLBAR - SUPER COMPACT */}
             <div className="flex items-center justify-between gap-2 w-full">
@@ -752,190 +744,193 @@ export function ClockTimesheets({ role, userName = "Staff Member" }: ClockTimesh
             </div>
 
             {/* Expandable Search Input for tiny screens */}
-            {isManager && personalTeamView === "team" && showSearchInput && (
-                <div className="sm:hidden relative w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                    <input
-                        type="text"
-                        placeholder="Search employee..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-action-primary w-full"
-                        autoFocus
-                    />
-                </div>
-            )}
+            {
+                isManager && personalTeamView === "team" && showSearchInput && (
+                    <div className="sm:hidden relative w-full">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                        <input
+                            type="text"
+                            placeholder="Search employee..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-action-primary w-full"
+                            autoFocus
+                        />
+                    </div>
+                )
+            }
 
             {/* LIST VIEW (TABLE) */}
 
             {/* LIST VIEW (TABLE) */}
 
 
-            {viewMode === "list" && (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 border-b border-neutral-200">
-                                <tr>
-                                    {isManager && personalTeamView === "team" && (
+            {
+                viewMode === "list" && (
+                    <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                    <tr>
+                                        {isManager && personalTeamView === "team" && (
+                                            <th
+                                                className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 transition-colors select-none"
+                                                onClick={() => handleSort("employee")}
+                                            >
+                                                <span className="flex items-center gap-1">
+                                                    Employee
+                                                    {sortBy === "employee" ? (
+                                                        sortOrder === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                                                    ) : (
+                                                        <ArrowUpDown className="w-4 h-4 text-neutral-400" />
+                                                    )}
+                                                </span>
+                                            </th>
+                                        )}
                                         <th
                                             className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 transition-colors select-none"
-                                            onClick={() => handleSort("employee")}
+                                            onClick={() => handleSort("date")}
                                         >
                                             <span className="flex items-center gap-1">
-                                                Employee
-                                                {sortBy === "employee" ? (
+                                                Date
+                                                {sortBy === "date" ? (
                                                     sortOrder === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
                                                 ) : (
                                                     <ArrowUpDown className="w-4 h-4 text-neutral-400" />
                                                 )}
                                             </span>
                                         </th>
-                                    )}
-                                    <th
-                                        className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 transition-colors select-none"
-                                        onClick={() => handleSort("date")}
-                                    >
-                                        <span className="flex items-center gap-1">
-                                            Date
-                                            {sortBy === "date" ? (
-                                                sortOrder === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                                            ) : (
-                                                <ArrowUpDown className="w-4 h-4 text-neutral-400" />
-                                            )}
-                                        </span>
-                                    </th>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock In</th>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Location</th>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock Out</th>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Duration</th>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Overtime</th>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100">
-                                {paginatedData.map((row, idx) => {
-                                    // Get location label
-                                    const getLocationLabel = () => {
-                                        const r = row as any;
-                                        const mode = r.checkInRemoteMode;
-                                        const locType = r.checkInLocationType;
-                                        const locCode = r.checkInLocationCode;
-                                        const status = r.checkInLocationStatus;
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock In</th>
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Location</th>
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock Out</th>
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Duration</th>
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Overtime</th>
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                    {paginatedData.map((row, idx) => {
+                                        // Get location label
+                                        const getLocationLabel = () => {
+                                            const r = row as any;
+                                            const mode = r.checkInRemoteMode;
+                                            const locType = r.checkInLocationType;
+                                            const locCode = r.checkInLocationCode;
+                                            const status = r.checkInLocationStatus;
 
-                                        if (status === "inside" && locType === "office") {
-                                            return { label: `WFO`, code: locCode, color: "text-blue-600" };
-                                        }
-                                        if (status === "inside" && locType === "project") {
-                                            return { label: `Project`, code: locCode, color: "text-emerald-600" };
-                                        }
-                                        // Handle Remote / Other
-                                        if (mode === 'business_trip') return { label: 'BST', code: null, color: "text-purple-600" };
-                                        if (mode && mode !== '-') return { label: mode, code: null, color: "text-purple-600" };
+                                            if (status === "inside" && locType === "office") {
+                                                return { label: `WFO`, code: locCode, color: "text-blue-600" };
+                                            }
+                                            if (status === "inside" && locType === "project") {
+                                                return { label: `Project`, code: locCode, color: "text-emerald-600" };
+                                            }
+                                            // Handle Remote / Other
+                                            if (mode === 'business_trip') return { label: 'BST', code: null, color: "text-purple-600" };
+                                            if (mode && mode !== '-') return { label: mode, code: null, color: "text-purple-600" };
 
-                                        // Default fallback
-                                        return { label: "-", code: null, color: "text-neutral-400" };
-                                    };
+                                            // Default fallback
+                                            return { label: "-", code: null, color: "text-neutral-400" };
+                                        };
 
-                                    const locInfo = getLocationLabel();
-                                    const mapsUrl = (row as any).checkInLatitude
-                                        ? `https://www.google.com/maps?q=${(row as any).checkInLatitude},${(row as any).checkInLongitude}`
-                                        : "#";
+                                        const locInfo = getLocationLabel();
+                                        const mapsUrl = (row as any).checkInLatitude
+                                            ? `https://www.google.com/maps?q=${(row as any).checkInLatitude},${(row as any).checkInLongitude}`
+                                            : "#";
 
-                                    return (
-                                        <tr key={row.id} className="group hover:bg-neutral-50 transition-colors">
-                                            {isManager && personalTeamView === "team" && (
-                                                <td className="px-6 py-4 whitespace-nowrap font-medium text-neutral-900">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-500">
-                                                            {row.employee?.split(' ').map((n: string) => n[0]).join('')}
+                                        return (
+                                            <tr key={row.id} className="group hover:bg-neutral-50 transition-colors">
+                                                {isManager && personalTeamView === "team" && (
+                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-neutral-900">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-500">
+                                                                {row.employee?.split(' ').map((n: string) => n[0]).join('')}
+                                                            </div>
+                                                            {row.employee}
                                                         </div>
-                                                        {row.employee}
+                                                    </td>
+                                                )}
+                                                <td className="px-6 py-4 whitespace-nowrap text-neutral-500">{format(new Date(row.date), "EEE, dd MMM")}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockIn}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="flex flex-col gap-1">
+                                                        <a
+                                                            href={mapsUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={clsx("flex items-center gap-1.5 hover:underline decoration-neutral-300 underline-offset-2", locInfo.color)}
+                                                        >
+                                                            {/* Icon: Map Pin */}
+                                                            <MapPin className="w-3.5 h-3.5" />
+
+                                                            <span className="font-medium text-xs">
+                                                                {locInfo.label}{locInfo.code && ` (${locInfo.code})`}
+                                                            </span>
+                                                        </a>
+                                                        {/* NOTES DISPLAY - Only show if exists */}
+                                                        {(row as any).notes && (
+                                                            <span className="text-[10px] text-neutral-500 max-w-[200px] truncate leading-tight ml-5" title={(row as any).notes}>
+                                                                <span className="font-medium text-neutral-400">Note: </span>
+                                                                {(row as any).notes}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </td>
-                                            )}
-                                            <td className="px-6 py-4 whitespace-nowrap text-neutral-500">{format(new Date(row.date), "EEE, dd MMM")}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockIn}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="flex flex-col gap-1">
-                                                    <a
-                                                        href={mapsUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={clsx("flex items-center gap-1.5 hover:underline decoration-neutral-300 underline-offset-2", locInfo.color)}
-                                                    >
-                                                        {/* Icon: Map Pin */}
-                                                        <MapPin className="w-3.5 h-3.5" />
-
-                                                        <span className="font-medium text-xs">
-                                                            {locInfo.label}{locInfo.code && ` (${locInfo.code})`}
-                                                        </span>
-                                                    </a>
-                                                    {/* NOTES DISPLAY - Only show if exists */}
-                                                    {(row as any).notes && (
-                                                        <span className="text-[10px] text-neutral-500 max-w-[200px] truncate leading-tight ml-5" title={(row as any).notes}>
-                                                            <span className="font-medium text-neutral-400">Note: </span>
-                                                            {(row as any).notes}
-                                                        </span>
+                                                <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockOut}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-neutral-500 text-xs">{row.duration}</td>
+                                                <td className="px-6 py-4">
+                                                    {row.overtime !== "-" ? (
+                                                        <span className="text-emerald-600 font-medium">+{row.overtime}</span>
+                                                    ) : (
+                                                        <span className="text-neutral-400">-</span>
                                                     )}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {getStatusBadge(row.status || "absent", false)}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {paginatedData.length === 0 && (
+                                        <tr>
+                                            <td colSpan={isManager && personalTeamView === "team" ? 10 : 9} className="px-6 py-12 text-center text-neutral-500">
+                                                <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
+                                                    <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4">
+                                                        <Calendar className="w-8 h-8 text-neutral-400" />
+                                                    </div>
+                                                    <h3 className="text-lg font-semibold text-neutral-900 mb-1">No Records Found</h3>
+                                                    <p className="text-neutral-500 text-sm">
+                                                        Looks like there are no attendance records for <span className="font-medium text-neutral-700">{formatMonthYear(currentMonth)}</span>.
+                                                        {personalTeamView === "personal" ? " Enjoy the quiet time or check a different month!" : " Your team was either very quiet or on break."}
+                                                    </p>
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockOut}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-neutral-500 text-xs">{row.duration}</td>
-                                            <td className="px-6 py-4">
-                                                {row.overtime !== "-" ? (
-                                                    <span className="text-emerald-600 font-medium">+{row.overtime}</span>
-                                                ) : (
-                                                    <span className="text-neutral-400">-</span>
-                                                )}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {getStatusBadge(row.status || "absent", false)}
                                             </td>
                                         </tr>
-                                    );
-                                })}
-                                {paginatedData.length === 0 && (
-                                    <tr>
-                                        <td colSpan={isManager && personalTeamView === "team" ? 10 : 9} className="px-6 py-12 text-center text-neutral-500">
-                                            <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
-                                                <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4">
-                                                    <Calendar className="w-8 h-8 text-neutral-400" />
-                                                </div>
-                                                <h3 className="text-lg font-semibold text-neutral-900 mb-1">No Records Found</h3>
-                                                <p className="text-neutral-500 text-sm">
-                                                    Looks like there are no attendance records for <span className="font-medium text-neutral-700">{formatMonthYear(currentMonth)}</span>.
-                                                    {personalTeamView === "personal" ? " Enjoy the quiet time or check a different month!" : " Your team was either very quiet or on break."}
-                                                </p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    {/* PAGINATION - Hide if no data */}
-                    {totalPages > 1 && (
-                        <div className="px-6 py-4 border-t border-neutral-100 flex items-center justify-between">
-                            <button
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:hover:bg-transparent"
-                            >
-                                <ChevronLeft className="w-4 h-4 text-neutral-500" />
-                            </button>
-                            <span className="text-sm text-neutral-600">Page {currentPage} of {totalPages}</span>
-                            <button
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:hover:bg-transparent"
-                            >
-                                <ChevronRight className="w-4 h-4 text-neutral-500" />
-                            </button>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
-                    )}
-                </div>
-            )
+                        {/* PAGINATION - Hide if no data */}
+                        {totalPages > 1 && (
+                            <div className="px-6 py-4 border-t border-neutral-100 flex items-center justify-between">
+                                <button
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:hover:bg-transparent"
+                                >
+                                    <ChevronLeft className="w-4 h-4 text-neutral-500" />
+                                </button>
+                                <span className="text-sm text-neutral-600">Page {currentPage} of {totalPages}</span>
+                                <button
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:hover:bg-transparent"
+                                >
+                                    <ChevronRight className="w-4 h-4 text-neutral-500" />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )
             }
 
             {/* GRID VIEW */}

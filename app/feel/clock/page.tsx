@@ -10,6 +10,7 @@ import { ClockLeaveRequests } from "@/components/feel/clock/ClockLeaveRequests";
 import { ClockOvertime } from "@/components/feel/clock/ClockOvertime";
 import { ClockApprovals } from "@/components/feel/clock/ClockApprovals";
 import { ClockBusinessTrips } from "@/components/feel/clock/ClockBusinessTrips";
+import { ViewToggle } from "@/components/feel/clock/ViewToggle";
 
 import useUserProfile from "@/hooks/useUserProfile";
 import { ClockLeaveRequestDrawer } from "@/components/feel/clock/ClockLeaveRequestDrawer";
@@ -21,6 +22,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { useClock } from "@/hooks/useClock";
 import { useClockData } from "@/hooks/useClockData";
 import { LeaveRequest, OvertimeLog, BusinessTrip } from "@/lib/api/clock";
+import { PageHeader } from "@/shared/ui/headers/PageHeader";
 
 const VALID_SECTIONS: ClockSection[] = ["overview", "timesheets", "leaves", "overtime", "business-trip", "approvals"];
 
@@ -50,6 +52,8 @@ function ClockPageContent() {
   const [selectedTrip, setSelectedTrip] = useState<BusinessTrip | undefined>(undefined);
 
   const [isReadOnly, setIsReadOnly] = useState(false);
+
+  const [personalTeamView, setPersonalTeamView] = useState<"personal" | "team">("personal");
 
   const [showOvertimeAlert, setShowOvertimeAlert] = useState(false);
   const [isClockModalOpen, setIsClockModalOpen] = useState(false);
@@ -186,10 +190,41 @@ function ClockPageContent() {
     }
   };
 
+  const header = (
+    <PageHeader
+      title={
+        currentSection === "timesheets" ? "Timesheets" :
+          currentSection === "leaves" ? "Leave Requests" :
+            currentSection === "overtime" ? "Overtime" :
+              currentSection === "business-trip" ? "Business Trips" :
+                currentSection === "approvals" ? "Approvals" :
+                  currentSection === "overview" && isCheckedIn ? "Currently Clocked In" :
+                    "Attendance & Time"
+      }
+      description={
+        currentSection === "timesheets" ? "Daily entry logs and attendance records." :
+          currentSection === "leaves" ? "Manage vacation, sick leave, and permissions." :
+            currentSection === "overtime" ? "Validation and tracking of extra hours." :
+              currentSection === "business-trip" ? "Manage business travel requests." :
+                currentSection === "approvals" ? "Review and manage team requests." :
+                  "Track work hours, leaves, and business trips."
+      }
+      actions={
+        currentSection !== "overview" && currentSection !== "approvals" && (
+          <ViewToggle
+            viewMode={personalTeamView}
+            onViewChange={setPersonalTeamView}
+            role={profile?.role}
+          />
+        )
+      }
+    />
+  );
+
   if (loading) return null;
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6 relative">
+    <>
 
 
       {/* GLOBAL DRAWERS & ALERTS */}
@@ -236,6 +271,7 @@ function ClockPageContent() {
           { label: "Clock" },
           { label: getBreadcrumbLabel() },
         ]}
+        header={header}
         activeSection={currentSection}
         onSectionChange={(section) => {
           // Update URL
@@ -267,12 +303,17 @@ function ClockPageContent() {
             />
           )}
           {currentSection === "timesheets" && (
-            <ClockTimesheets role={profile?.role} userName={profile?.name} />
+            <ClockTimesheets
+              role={profile?.role}
+              userName={profile?.name}
+              viewMode={personalTeamView}
+            />
           )}
           {currentSection === "leaves" && (
             <ClockLeaveRequests
               role={profile?.role}
               userName={profile?.name}
+              viewMode={personalTeamView}
               onNewRequest={handleNewLeave}
               onEditRequest={handleEditLeave}
               onViewRequest={handleViewLeave}
@@ -282,6 +323,7 @@ function ClockPageContent() {
             <ClockOvertime
               role={profile?.role}
               userName={profile?.name}
+              viewMode={personalTeamView}
               onLogOvertime={handleNewOvertime}
               onEditLog={handleEditOvertime}
               onViewLog={handleViewOvertime}
@@ -291,6 +333,7 @@ function ClockPageContent() {
             <ClockBusinessTrips
               role={profile?.role}
               userName={profile?.name}
+              viewMode={personalTeamView}
               onNewTrip={handleNewTrip}
               onEditTrip={handleEditTrip}
               onViewTrip={handleViewTrip}
@@ -309,7 +352,7 @@ function ClockPageContent() {
         userRole={profile?.role || "staff"}
         onConfirm={toggleClock}
       />
-    </div>
+    </>
   );
 }
 

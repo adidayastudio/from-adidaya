@@ -12,7 +12,7 @@ import { CrewPerformance } from "@/components/feel/crew/CrewPerformance";
 import { CrewRequests } from "@/components/feel/crew/CrewRequests";
 import { CrewDetail } from "@/components/feel/crew/CrewDetail";
 import PageWrapper from "@/components/layout/PageWrapper";
-
+import { PageHeader } from "@/shared/ui/headers/PageHeader";
 import { Plus } from "lucide-react";
 
 export default function CrewPage() {
@@ -24,7 +24,7 @@ export default function CrewPage() {
   const activeSection: CrewSection = (tabParam as CrewSection) || "directory";
 
   const setActiveSection = (section: CrewSection) => {
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(searchParams.toString());
     params.set("tab", section);
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -84,14 +84,38 @@ export default function CrewPage() {
 
   const fab = getFabConfig();
 
+  const header = (
+    <PageHeader
+      title={
+        activeSection === "assignments" ? "Project Assignment" :
+          activeSection === "daily-input" ? "Daily Log" :
+            activeSection === "payroll" ? "Payroll" :
+              activeSection === "performance" ? "Performance & KPI" :
+                activeSection === "requests" ? "Requests" :
+                  activeSection === "directory" && selectedCrewId ? "Crew Detail" :
+                    "Crew Directory"
+      }
+      description={
+        activeSection === "assignments" ? "History of crew assignments to projects." :
+          activeSection === "daily-input" ? "Input daily attendance and overtime." :
+            activeSection === "payroll" ? "Calculated from daily logs." :
+              activeSection === "performance" ? "Weighted Score: 50% Attendance • 25% Overtime • 25% Rating" :
+                activeSection === "requests" ? "Leave, Cash Advance, and Reimbursement." :
+                  activeSection === "directory" && selectedCrewId ? "View and edit crew details." :
+                    "Manage field workers."
+      }
+    />
+  );
+
   return (
-    <div className="min-h-screen bg-neutral-50 p-6 relative">
+    <>
       <CrewPageWrapper
         breadcrumbItems={[
           { label: "Feel" },
           { label: "Crew" },
           { label: getBreadcrumbLabel() },
         ]}
+        header={header}
         activeSection={activeSection}
         onSectionChange={(section) => {
           // Update URL
@@ -108,16 +132,12 @@ export default function CrewPage() {
         fabAction={fab ? {
           icon: fab.icon,
           onClick: fab.onClick,
-          title: fab.title, // Changed from fab.label to fab.title
-          // highlight: fab.variant === "danger" // fab.variant is not defined in original getFabConfig
+          title: fab.title,
         } : undefined}
       >
         <div className="flex flex-col h-full animate-in fade-in duration-500 pb-24 lg:pb-0">
           {/* Added Check: pb-24 for mobile FAB space */}
           {activeSection === "directory" && (
-            // Original directory also handled selectedCrewId for CrewDetail.
-            // This new structure only shows CrewDirectory.
-            // If CrewDetail is still needed, its logic needs to be re-integrated.
             selectedCrewId ? (
               <CrewDetail crewId={selectedCrewId} onBack={() => setSelectedCrewId(null)} />
             ) : (
@@ -128,7 +148,7 @@ export default function CrewPage() {
             <CrewAssignments role={userRole} triggerOpen={triggerNewAssignment} />
           )}
           {activeSection === "daily-input" && (
-            <CrewDailyInput role={userRole} /> // Changed from CrewDailyLog to CrewDailyInput
+            <CrewDailyInput role={userRole} />
           )}
           {activeSection === "payroll" && (
             <CrewPayroll role={userRole} />
@@ -141,6 +161,6 @@ export default function CrewPage() {
           )}
         </div>
       </CrewPageWrapper>
-    </div>
+    </>
   );
 }

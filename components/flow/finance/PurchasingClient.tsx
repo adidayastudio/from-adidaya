@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
 import { useFinance } from "./FinanceContext";
@@ -16,11 +17,12 @@ import {
     ExternalLink,
     Copy,
     Check,
-    Upload
+    Upload,
+    Filter
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, startOfMonth, endOfMonth, isBefore } from "date-fns";
 import { PurchasingItem, ApprovalStatus, FundingSource, PurchaseType, PurchaseStage } from "@/lib/types/finance-types";
 import { Project } from "@/types/project";
 import { formatCurrency, getPrimaryStatus, STATUS_THEMES, formatStatus, cleanEntityName } from "./modules/utils";
@@ -787,6 +789,13 @@ export default function PurchasingClient() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [isExporting, setIsExporting] = useState(false);
 
+    // Extract available categories dynamically
+    const availableCategories = useMemo(() => {
+        const cats = new Set<string>();
+        items.forEach(item => { if (item.type) cats.add(item.type); });
+        return ['ALL', ...Array.from(cats)].sort();
+    }, [items]);
+
     // Confirmation Modal State
     const [confirmModal, setConfirmModal] = useState<{
         open: boolean;
@@ -1108,7 +1117,7 @@ export default function PurchasingClient() {
     const summaryStats = useMemo(() => {
         return {
             total: baseItems.length,
-            pending: baseItems.filter(i => i.approval_status === "SUBMITTED").length,
+            pending: baseItems.filter(i => i.approval_status === "SUBMITTED" || i.approval_status === "NEED_REVISION").length,
             approved: baseItems.filter(i => i.approval_status === "APPROVED" && i.financial_status !== "PAID").length,
             paid: baseItems.filter(i => i.financial_status === "PAID").length,
             rejected: baseItems.filter(i => i.approval_status === "REJECTED").length
@@ -1122,6 +1131,12 @@ export default function PurchasingClient() {
         if (statusFilter !== "ALL") {
             if (statusFilter === "PAID") {
                 current = current.filter(i => i.financial_status === "PAID");
+            } else if (statusFilter === "APPROVED") {
+                // Approved filter only shows APPROVED items that are NOT yet PAID
+                current = current.filter(i => i.approval_status === "APPROVED" && i.financial_status !== "PAID");
+            } else if (statusFilter === "SUBMITTED") {
+                // Pending filter includes SUBMITTED and NEED_REVISION
+                current = current.filter(i => i.approval_status === "SUBMITTED" || i.approval_status === "NEED_REVISION");
             } else {
                 current = current.filter(item => item.approval_status === statusFilter);
             }
@@ -1224,10 +1239,116 @@ export default function PurchasingClient() {
                     />
                 </SummaryCardsRow>
 
-                {/* ADVANCED TOOLBAR */}
-                <div
-                    className="flex flex-col md:flex-row gap-4 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40"
-                >
+                {/* ADVANCED TOOLBAR - MOBILE (1 LINE) - iOS GLASSY */}
+                <div className="flex md:hidden items-center gap-1.5 p-2 rounded-2xl bg-white/50 backdrop-blur-md border border-white/60 shadow-sm">
+                    {/* Search Icon Button */}
+                    <button
+                        onClick={() => {
+                            const input = document.getElementById('mobile-search-input');
+                            if (input) {
+                                input.classList.toggle('hidden');
+                                if (!input.classList.contains('hidden')) input.focus();
+                            }
+                        }}
+                        className={clsx(
+                            "p-2.5 rounded-full backdrop-blur-sm border shadow-sm transition-all",
+                            searchTerm
+                                ? "bg-red-500/10 border-red-200/60 text-red-600"
+                                : "bg-white/80 border-white/60 text-neutral-500"
+                        )}
+                    >
+                        <Search className="w-4 h-4" />
+                    </button>
+
+                    {/* Month Selector - iOS Glassy */}
+                    <div className="flex items-center gap-0.5 p-1 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 shadow-sm">
+                        <button onClick={() => handleMonthChange("prev")} className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors">
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-[11px] font-bold text-neutral-700 min-w-[42px] text-center">
+                            {format(currentMonth, "MMM-yy")}
+                        </span>
+                        <button onClick={() => handleMonthChange("next")} className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors">
+                            <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+
+                    {/* Project Dropdown (Native) */}
+                    <div className="relative">
+                        <div className="h-9 px-3 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-[11px] font-bold text-neutral-700 shadow-sm flex items-center gap-1">
+                            <span>{selectedProject === "ALL" ? "ALL" : projects.find(p => p.id === selectedProject)?.projectCode || "ALL"}</span>
+                            <ChevronDown className="w-3 h-3 text-neutral-400" />
+                        </div>
+                        <select
+                            value={selectedProject}
+                            onChange={(e) => setSelectedProject(e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
+                        >
+                            <option value="ALL">All Projects</option>
+                            {projects.map(p => (
+                                <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Category Filter (Native) */}
+                    <div className="relative">
+                        <div className={clsx(
+                            "p-2.5 rounded-full backdrop-blur-sm border shadow-sm transition-all flex items-center justify-center",
+                            categoryFilter !== "ALL"
+                                ? "bg-neutral-900 text-white border-neutral-800"
+                                : "bg-white/80 border-white/60 text-neutral-500"
+                        )}>
+                            <Filter className="w-4 h-4" />
+                        </div>
+                        <select
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value as any)}
+                            className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
+                        >
+                            {availableCategories.map(cat => (
+                                <option key={cat} value={cat}>
+                                    {cat === 'ALL' ? 'All Types' : cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase().replace(/_/g, ' ')}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Export Icon - iOS Glassy */}
+                    <button
+                        onClick={handleExport}
+                        className="p-2.5 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-neutral-500 shadow-sm hover:text-neutral-700 transition-colors"
+                    >
+                        <Download className="w-4 h-4" />
+                    </button>
+
+
+                    {/* New Icon - Red Accent (only for current/future months) */}
+                    {!isBefore(currentMonth, startOfMonth(new Date())) && (
+                        <button
+                            onClick={() => { setEditingItem(null); setIsDrawerOpen(true); }}
+                            className="p-2.5 bg-red-600 rounded-full text-white shadow-md shadow-red-200/50 hover:bg-red-700 transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+
+                {/* Mobile Search Input (Hidden by default) - iOS Glassy */}
+                <input
+                    id="mobile-search-input"
+                    type="text"
+                    placeholder="Search..."
+                    className="hidden md:hidden w-full mt-2 h-10 px-4 bg-white/80 backdrop-blur-sm rounded-xl border border-white/60 shadow-sm text-sm text-neutral-700 placeholder:text-neutral-400"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+
+                {/* ADVANCED TOOLBAR - DESKTOP */}
+                <div className="hidden md:flex flex-row gap-4 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40">
                     {/* LEFT: Search, Month, Project */}
                     <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                         <div className="h-10 flex items-center gap-2 px-3 bg-white rounded-xl border border-neutral-200 shadow-sm focus-within:ring-2 focus-within:ring-red-500/10 focus-within:border-red-500/50 transition-all w-full md:w-[220px]">
@@ -1318,8 +1439,94 @@ export default function PurchasingClient() {
                 </div>
             </div>
 
-            {/* TABLE */}
-            <div className="mt-6 bg-white/40 backdrop-blur-md rounded-3xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.02)] overflow-hidden">
+            {/* MOBILE CARD VIEW - 2 LINE COMPACT */}
+            <div className="mt-6 block md:hidden space-y-2">
+                {filteredItems.length === 0 ? (
+                    <div className="bg-white/40 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-6 text-center">
+                        <Package className="w-10 h-10 text-neutral-300 mx-auto mb-2" />
+                        <h4 className="text-sm font-semibold text-neutral-700">
+                            {searchTerm ? "No results found" :
+                                statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
+                                    isBefore(currentMonth, startOfMonth(new Date()))
+                                        ? `No purchasing in ${format(currentMonth, "MMMM yyyy")}`
+                                        : "No purchase requests yet"}
+                        </h4>
+                        {/* Only show New Request button for current or future months */}
+                        {!searchTerm && statusFilter === "ALL" && !isBefore(currentMonth, startOfMonth(new Date())) && (
+                            <button
+                                onClick={() => setIsDrawerOpen(true)}
+                                className="mt-3 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg"
+                            >
+                                <Plus className="w-3 h-3 inline mr-1" />New Request
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    filteredItems.map((item) => {
+                        const isUnpaidApproved = item.approval_status === "APPROVED" && item.financial_status !== "PAID";
+                        const isRejected = item.approval_status === "REJECTED";
+                        return (
+                            <div
+                                key={item.id}
+                                onClick={() => setViewingItem(item)}
+                                className={clsx(
+                                    "backdrop-blur-md rounded-xl border shadow-sm px-3 py-2.5 cursor-pointer active:scale-[0.99] transition-all",
+                                    isRejected
+                                        ? "bg-neutral-100/80 border-neutral-200/60 opacity-60"
+                                        : isUnpaidApproved
+                                            ? "bg-orange-50/80 border-orange-200/60"
+                                            : "bg-white/60 border-white/50"
+                                )}
+                            >
+                                {/* Line 1: Item + Harga + Status */}
+                                <div className="flex items-center justify-between gap-2 mb-1.5">
+                                    <div className="text-[12px] font-semibold text-neutral-900 leading-tight flex-1 min-w-0">
+                                        {item.description}
+                                    </div>
+                                    <span className="text-[12px] font-bold text-neutral-900 tabular-nums whitespace-nowrap">{formatCurrency(item.amount)}</span>
+                                    <StatusBadge status={getPrimaryStatus(item.approval_status, item.purchase_stage, item.financial_status)} />
+                                </div>
+
+                                {/* Line 2: Kode + Tanggal + Kategori + Submitter + Actions */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1 text-[10px] text-neutral-400">
+                                        <span className="font-bold text-neutral-500">{item.project_code}</span>
+                                        <span>•</span>
+                                        <span>{format(new Date(item.date), "dd MMM")}</span>
+                                        <span>•</span>
+                                        <span className="capitalize">{formatStatus(item.type)}</span>
+                                        {isTeamView && item.submitted_by_name && (
+                                            <>
+                                                <span>•</span>
+                                                <span>{cleanEntityName(item.submitted_by_name).split(' ')[0]}</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    {/* Action Icons */}
+                                    <div className="flex items-center gap-1">
+                                        {isTeamView && item.approval_status === "SUBMITTED" && (
+                                            <>
+                                                <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1 text-emerald-600 bg-emerald-50 rounded"><CheckCircle2 className="w-3.5 h-3.5" /></button>
+                                                <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1 text-rose-600 bg-rose-50 rounded"><Ban className="w-3.5 h-3.5" /></button>
+                                            </>
+                                        )}
+                                        {(item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION" || (item.approval_status === "APPROVED" && item.financial_status !== "PAID")) && (
+                                            <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1 text-neutral-500 bg-neutral-100 rounded"><Pencil className="w-3.5 h-3.5" /></button>
+                                        )}
+                                        {isTeamView && item.approval_status === "APPROVED" && item.financial_status !== "PAID" && item.invoice_url && item.beneficiary_bank && (
+                                            <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1 text-emerald-600 bg-emerald-50 rounded"><CreditCard className="w-3.5 h-3.5" /></button>
+                                        )}
+                                        <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1 text-blue-600 bg-blue-50 rounded"><Eye className="w-3.5 h-3.5" /></button>
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })
+                )}
+            </div>
+
+            {/* DESKTOP/TABLET TABLE VIEW */}
+            <div className="mt-6 hidden md:block bg-white/40 backdrop-blur-md rounded-3xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.02)] overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -1399,7 +1606,7 @@ export default function PurchasingClient() {
                         <tbody className="divide-y divide-neutral-50">
                             {filteredItems.length === 0 ? (
                                 <tr>
-                                    <td colSpan={isTeamView ? 7 : 6} className="py-16 text-center">
+                                    <td colSpan={isTeamView ? 8 : 7} className="py-16 text-center">
                                         <div className="flex flex-col items-center gap-4">
                                             <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
                                                 <Package className="w-8 h-8 text-neutral-300" />
@@ -1408,19 +1615,24 @@ export default function PurchasingClient() {
                                                 <h4 className="text-base font-semibold text-neutral-700">
                                                     {searchTerm ? "No results found" :
                                                         statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
-                                                            "No purchase requests yet"}
+                                                            isBefore(currentMonth, startOfMonth(new Date()))
+                                                                ? `No purchasing in ${format(currentMonth, "MMMM yyyy")}`
+                                                                : "No purchase requests yet"}
                                                 </h4>
                                                 <p className="text-sm text-neutral-400 max-w-xs mx-auto">
                                                     {searchTerm ?
                                                         `We couldn't find any requests matching "${searchTerm}". Try a different search term.` :
                                                         statusFilter !== "ALL" ?
                                                             `There are no ${statusFilter.toLowerCase()} purchase requests for ${format(currentMonth, "MMMM yyyy")}.` :
-                                                            isTeamView ?
-                                                                "When team members submit purchase requests, they'll appear here for your review." :
-                                                                "Start by creating your first purchase request. Track materials, tools, and services."}
+                                                            isBefore(currentMonth, startOfMonth(new Date())) ?
+                                                                `There were no purchase requests recorded in ${format(currentMonth, "MMMM yyyy")}.` :
+                                                                isTeamView ?
+                                                                    "When team members submit purchase requests, they'll appear here for your review." :
+                                                                    "Start by creating your first purchase request. Track materials, tools, and services."}
                                                 </p>
                                             </div>
-                                            {!searchTerm && statusFilter === "ALL" && (
+                                            {/* Only show New Request button for current or future months */}
+                                            {!searchTerm && statusFilter === "ALL" && !isBefore(currentMonth, startOfMonth(new Date())) && (
                                                 <button
                                                     onClick={() => setIsDrawerOpen(true)}
                                                     className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-red-200/50 transition-all flex items-center gap-2"
@@ -1784,6 +1996,7 @@ export default function PurchasingClient() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </FinancePageWrapper >
+
+        </FinancePageWrapper>
     );
 }

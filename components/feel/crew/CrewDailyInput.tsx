@@ -437,15 +437,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
             {/* HEADER */}
-            <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Daily Log</h1>
-                        <p className="text-sm text-neutral-500 mt-1">Input daily attendance and overtime.</p>
-                    </div>
-                </div>
-                <div className="border-b border-neutral-200" />
-            </div>
+            {/* HEADER REMOVED - Using Global PageHeader */}
 
             {/* TOOLBAR */}
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full">

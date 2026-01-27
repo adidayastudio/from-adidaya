@@ -498,17 +498,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
-            {/* Header */}
-            <div className="space-y-4">
-                <div className="flex flex-col gap-3">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div><h1 className="text-2xl font-bold text-neutral-900">Crew Directory</h1><p className="text-sm text-neutral-500 mt-1">Manage field workers.</p></div>
-                        <Button variant="primary" className="!rounded-xl !py-2.5 !px-5 hidden sm:flex" icon={<Plus className="w-4 h-4" />} onClick={() => { resetForm(); setShowAddDrawer(true); }}>Add Crew</Button>
-                    </div>
-                    <Button variant="primary" className="!rounded-xl !py-2.5 !px-5 sm:hidden w-full justify-center" icon={<Plus className="w-4 h-4" />} onClick={() => { resetForm(); setShowAddDrawer(true); }}>Add Crew</Button>
-                </div>
-                <div className="border-b border-neutral-200" />
-            </div>
+
 
             {/* Stats Cards */}
             <SummaryCardsRow>

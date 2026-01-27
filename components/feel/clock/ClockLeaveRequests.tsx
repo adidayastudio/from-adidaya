@@ -19,17 +19,15 @@ import { ClockConfirmationModal } from "./ClockConfirmationModal";
 interface ClockLeaveRequestsProps {
     role?: UserRole;
     userName?: string;
+    viewMode: "personal" | "team";
     onNewRequest?: () => void;
     onEditRequest?: (leave: LeaveRequest) => void;
     onViewRequest?: (leave: LeaveRequest) => void;
 }
 
-
-
-export function ClockLeaveRequests({ role, userName = "Staff Member", onNewRequest, onEditRequest, onViewRequest }: ClockLeaveRequestsProps) {
+export function ClockLeaveRequests({ role, userName = "Staff Member", viewMode, onNewRequest, onEditRequest, onViewRequest }: ClockLeaveRequestsProps) {
     const { profile } = useUserProfile();
     const isManager = canViewTeamData(role || profile?.role);
-    const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
     const [displayMode, setDisplayMode] = useState<"list" | "calendar">("list");
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<"date" | "employee" | "status">("date");
@@ -376,16 +374,7 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", onNewReque
 
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
-            <div className="space-y-4">
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Leave Requests</h1>
-                        <p className="text-sm text-neutral-500 mt-1">Vacation, sick leave, and permission requests.</p>
-                    </div>
-                    <ViewToggle viewMode={viewMode} onViewChange={setViewMode} role={role} />
-                </div>
-                <div className="border-b border-neutral-200" />
-            </div>
+            {/* HEADER REMOVED - Using Global PageHeader */}
 
             {/* TOOLBAR - SUPER COMPACT */}
             <div className="flex items-center justify-between gap-2 w-full">

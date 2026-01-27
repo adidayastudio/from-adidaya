@@ -340,38 +340,31 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
 
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
-            {/* HEADER */}
-            <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">Approvals</h1>
-                        <p className="text-sm text-neutral-500 mt-1">Review and manage team requests.</p>
-                    </div>
-                </div>
+            {/* HEADER REMOVED - Using Global PageHeader */}
 
-                {/* TOOLBAR */}
-                <ClockToolbar
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    tabs={[
-                        { id: "all", label: "All" },
-                        { id: "Leave Request", label: "Leave" },
-                        { id: "Overtime", label: "Overtime" },
-                        { id: "Business Trip", label: "Trip" },
-                    ]}
-                    activeTab={filterType}
-                    onTabChange={(id) => setFilterType(id as any)}
-                    currentDate={currentMonth}
-                    onMonthChange={handleMonthChange}
-                    onSort={() => {
-                        if (sortBy === "date") setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                        else { setSortBy("date"); setSortOrder("desc"); }
-                    }}
-                    sortActive={sortBy === "date"}
-                    onExport={handleExport}
-                    isExporting={exporting}
-                />
-            </div>
+            {/* TOOLBAR */}
+            <ClockToolbar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                tabs={[
+                    { id: "all", label: "All" },
+                    { id: "Leave Request", label: "Leave" },
+                    { id: "Overtime", label: "Overtime" },
+                    { id: "Business Trip", label: "Trip" },
+                ]}
+                activeTab={filterType}
+                onTabChange={(id) => setFilterType(id as any)}
+                currentDate={currentMonth}
+                onMonthChange={handleMonthChange}
+                onSort={() => {
+                    if (sortBy === "date") setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                    else { setSortBy("date"); setSortOrder("desc"); }
+                }}
+                sortActive={sortBy === "date"}
+                onExport={handleExport}
+                isExporting={exporting}
+            />
+
 
             {/* TABLE */}
             <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
@@ -484,33 +477,39 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
                 </div>
             </div>
             {/* VIEW DRAWERS */}
-            {viewLeave && (
-                <ClockLeaveRequestDrawer
-                    open={!!viewLeave}
-                    onClose={() => setViewLeave(undefined)}
-                    editData={viewLeave}
-                    readOnly={true}
-                />
-            )}
+            {
+                viewLeave && (
+                    <ClockLeaveRequestDrawer
+                        open={!!viewLeave}
+                        onClose={() => setViewLeave(undefined)}
+                        editData={viewLeave}
+                        readOnly={true}
+                    />
+                )
+            }
 
-            {viewOvertime && (
-                <ClockOvertimeLogDrawer
-                    open={!!viewOvertime}
-                    onClose={() => setViewOvertime(undefined)}
-                    editData={viewOvertime}
-                    readOnly={true}
-                    attendanceClockIn={attendance.find(a => a.userId === viewOvertime.userId && a.date === viewOvertime.date)?.clockIn ?? undefined}
-                />
-            )}
+            {
+                viewOvertime && (
+                    <ClockOvertimeLogDrawer
+                        open={!!viewOvertime}
+                        onClose={() => setViewOvertime(undefined)}
+                        editData={viewOvertime}
+                        readOnly={true}
+                        attendanceClockIn={attendance.find(a => a.userId === viewOvertime.userId && a.date === viewOvertime.date)?.clockIn ?? undefined}
+                    />
+                )
+            }
 
-            {viewTrip && (
-                <ClockBusinessTripDrawer
-                    open={!!viewTrip}
-                    onClose={() => setViewTrip(undefined)}
-                    editData={viewTrip}
-                    readOnly={true}
-                />
-            )}
+            {
+                viewTrip && (
+                    <ClockBusinessTripDrawer
+                        open={!!viewTrip}
+                        onClose={() => setViewTrip(undefined)}
+                        editData={viewTrip}
+                        readOnly={true}
+                    />
+                )
+            }
 
             {/* CONFIRMATION MODAL */}
             <ClockConfirmationModal
@@ -533,6 +532,6 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
                 initialStartTime={modalConfig.item?.rawStartTime}
                 initialEndTime={modalConfig.item?.rawEndTime}
             />
-        </div>
+        </div >
     );
 }
