@@ -23,6 +23,7 @@ import {
     XCircle,
     X,
     Send,
+    Clock,
     ExternalLink,
     Package,
     Home,
@@ -40,6 +41,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format, addMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { ReimburseRequest, ReimburseStatus, FundingSource } from "@/lib/types/finance-types";
 import { formatCurrency, STATUS_THEMES, cleanEntityName, getPrimaryStatus, formatStatus } from "./modules/utils";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { useSearchParams } from "next/navigation";
 import { fetchReimburseRequests, updateReimburseStatus, deleteReimburseRequest, fetchFundingSources } from "@/lib/client/finance-api";
 import { fetchAllProjects } from "@/lib/api/projects";
@@ -1023,82 +1025,57 @@ export default function ReimburseClient() {
 
             <div className="flex flex-col gap-6">
                 {/* SUMMARY CARDS */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 overflow-visible pb-4">
-                    <button
+                <SummaryCardsRow>
+                    <SummaryCard
+                        icon={<Package className="w-5 h-5 text-red-600" />}
+                        iconBg="bg-red-50"
+                        label="Total Requests"
+                        value={summaryStats.total.toString()}
                         onClick={() => setStatusFilter("ALL")}
-                        className={clsx(
-                            "relative p-5 rounded-3xl border text-left transition-all duration-300 group overflow-hidden",
-                            statusFilter === "ALL"
-                                ? "bg-red-600 border-red-500 shadow-xl shadow-red-200"
-                                : "bg-white/60 hover:bg-white border-white/60 hover:border-white shadow-sm hover:shadow-md"
-                        )}
-                    >
-                        <div className={clsx("text-sm font-medium mb-1", statusFilter === "ALL" ? "text-red-100" : "text-neutral-500")}>Total Requests</div>
-                        <div className={clsx("text-3xl font-bold tracking-tight", statusFilter === "ALL" ? "text-white" : "text-neutral-900")}>
-                            {summaryStats.total}
-                        </div>
-                    </button>
+                        isActive={statusFilter === "ALL"}
+                        activeColor="ring-red-500"
+                    />
 
-                    <button
+                    <SummaryCard
+                        icon={<Clock className="w-5 h-5 text-orange-600" />}
+                        iconBg="bg-orange-50"
+                        label="Pending"
+                        value={summaryStats.pending.toString()}
                         onClick={() => setStatusFilter("PENDING")}
-                        className={clsx(
-                            "relative p-5 rounded-3xl border text-left transition-all duration-300 group overflow-hidden",
-                            statusFilter === "PENDING"
-                                ? "bg-orange-500 border-orange-400 shadow-xl shadow-orange-200"
-                                : "bg-white/60 hover:bg-white border-white/60 hover:border-white shadow-sm hover:shadow-md"
-                        )}
-                    >
-                        <div className={clsx("text-sm font-medium mb-1", statusFilter === "PENDING" ? "text-orange-100" : "text-neutral-500")}>Pending</div>
-                        <div className={clsx("text-3xl font-bold tracking-tight", statusFilter === "PENDING" ? "text-white" : "text-neutral-900")}>
-                            {summaryStats.pending}
-                        </div>
-                    </button>
+                        isActive={statusFilter === "PENDING"}
+                        activeColor="ring-orange-500"
+                    />
 
-                    <button
+                    <SummaryCard
+                        icon={<CheckCircle2 className="w-5 h-5 text-blue-600" />}
+                        iconBg="bg-blue-50"
+                        label="Approved"
+                        value={summaryStats.approved.toString()}
                         onClick={() => setStatusFilter("APPROVED")}
-                        className={clsx(
-                            "relative p-5 rounded-3xl border text-left transition-all duration-300 group overflow-hidden",
-                            statusFilter === "APPROVED"
-                                ? "bg-blue-600 border-blue-500 shadow-xl shadow-blue-200"
-                                : "bg-white/60 hover:bg-white border-white/60 hover:border-white shadow-sm hover:shadow-md"
-                        )}
-                    >
-                        <div className={clsx("text-sm font-medium mb-1", statusFilter === "APPROVED" ? "text-blue-100" : "text-neutral-500")}>Approved</div>
-                        <div className={clsx("text-3xl font-bold tracking-tight", statusFilter === "APPROVED" ? "text-white" : "text-neutral-900")}>
-                            {summaryStats.approved}
-                        </div>
-                    </button>
+                        isActive={statusFilter === "APPROVED"}
+                        activeColor="ring-blue-500"
+                    />
 
-                    <button
+                    <SummaryCard
+                        icon={<CreditCard className="w-5 h-5 text-emerald-600" />}
+                        iconBg="bg-emerald-50"
+                        label="Paid"
+                        value={summaryStats.paid.toString()}
                         onClick={() => setStatusFilter("PAID")}
-                        className={clsx(
-                            "relative p-5 rounded-3xl border text-left transition-all duration-300 group overflow-hidden",
-                            statusFilter === "PAID"
-                                ? "bg-emerald-600 border-emerald-500 shadow-xl shadow-emerald-200"
-                                : "bg-white/60 hover:bg-white border-white/60 hover:border-white shadow-sm hover:shadow-md"
-                        )}
-                    >
-                        <div className={clsx("text-sm font-medium mb-1", statusFilter === "PAID" ? "text-emerald-100" : "text-neutral-500")}>Paid</div>
-                        <div className={clsx("text-3xl font-bold tracking-tight", statusFilter === "PAID" ? "text-white" : "text-neutral-900")}>
-                            {summaryStats.paid}
-                        </div>
-                    </button>
+                        isActive={statusFilter === "PAID"}
+                        activeColor="ring-emerald-500"
+                    />
 
-                    <button
+                    <SummaryCard
+                        icon={<XCircle className="w-5 h-5 text-neutral-600" />}
+                        iconBg="bg-neutral-100"
+                        label="Rejected"
+                        value={summaryStats.rejected.toString()}
                         onClick={() => setStatusFilter("REJECTED")}
-                        className={clsx(
-                            "relative p-5 rounded-3xl border text-left transition-all duration-300 group overflow-hidden",
-                            statusFilter === "REJECTED"
-                                ? "bg-neutral-800 border-neutral-700 shadow-xl shadow-neutral-200"
-                                : "bg-white/60 hover:bg-white border-white/60 hover:border-white shadow-sm hover:shadow-md"
-                        )}
-                    >
-                        <div className={clsx("text-sm font-medium mb-1", statusFilter === "REJECTED" ? "text-neutral-300" : "text-neutral-500")}>Rejected</div>
-                        <div className={clsx("text-3xl font-bold tracking-tight", statusFilter === "REJECTED" ? "text-white" : "text-neutral-900")}>
-                            {summaryStats.rejected}
-                        </div>
-                    </button>
-                </div>
+                        isActive={statusFilter === "REJECTED"}
+                        activeColor="ring-neutral-500"
+                    />
+                </SummaryCardsRow>
 
                 {/* ADVANCED TOOLBAR */}
                 <div className="flex flex-col md:flex-row gap-4 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40">

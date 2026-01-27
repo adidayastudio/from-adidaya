@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import PageWrapper from "@/components/layout/PageWrapper";
+import ClockPageWrapper from "@/components/feel/clock/ClockPageWrapper";
 import ClockSidebar, { ClockSection } from "@/components/feel/clock/ClockSidebar";
 import { ClockOverview } from "@/components/feel/clock/ClockOverview";
 import { ClockTimesheets } from "@/components/feel/clock/ClockTimesheets";
@@ -10,7 +10,7 @@ import { ClockLeaveRequests } from "@/components/feel/clock/ClockLeaveRequests";
 import { ClockOvertime } from "@/components/feel/clock/ClockOvertime";
 import { ClockApprovals } from "@/components/feel/clock/ClockApprovals";
 import { ClockBusinessTrips } from "@/components/feel/clock/ClockBusinessTrips";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
+
 import useUserProfile from "@/hooks/useUserProfile";
 import { ClockLeaveRequestDrawer } from "@/components/feel/clock/ClockLeaveRequestDrawer";
 import { ClockOvertimeLogDrawer } from "@/components/feel/clock/ClockOvertimeLogDrawer";
@@ -190,13 +190,7 @@ function ClockPageContent() {
 
   return (
     <div className="min-h-screen bg-neutral-50 p-6 relative">
-      <Breadcrumb
-        items={[
-          { label: "Feel" },
-          { label: "Clock" },
-          { label: getBreadcrumbLabel() },
-        ]}
-      />
+
 
       {/* GLOBAL DRAWERS & ALERTS */}
       <ClockLeaveRequestDrawer
@@ -236,26 +230,27 @@ function ClockPageContent() {
         </div>
       )}
 
-      <PageWrapper sidebar={
-        <ClockSidebar
-          activeSection={currentSection}
-          onSectionChange={(section) => {
-            // Update URL
-            const params = new URLSearchParams(searchParams.toString());
-            params.set("section", section);
-            router.push(`?${params.toString()}`, { scroll: false });
-          }}
-          role={profile?.role}
-          // Pass FAB to sidebar to render in mobile dock if needed, or we render completely separate?
-          // User: "floating button di sebelah kanan side bar"
-          fabAction={fab ? {
-            icon: fab.icon,
-            onClick: fab.onClick,
-            title: fab.label,
-            highlight: fab.variant === "danger"
-          } : undefined}
-        />
-      }>
+      <ClockPageWrapper
+        breadcrumbItems={[
+          { label: "Feel" },
+          { label: "Clock" },
+          { label: getBreadcrumbLabel() },
+        ]}
+        activeSection={currentSection}
+        onSectionChange={(section) => {
+          // Update URL
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("section", section);
+          router.push(`?${params.toString()}`, { scroll: false });
+        }}
+        role={profile?.role}
+        fabAction={fab ? {
+          icon: fab.icon,
+          onClick: fab.onClick,
+          title: fab.label,
+          highlight: fab.variant === "danger"
+        } : undefined}
+      >
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-24 lg:pb-0">
           {/* Added Check: pb-24 for mobile FAB space */}
 
@@ -305,7 +300,7 @@ function ClockPageContent() {
             <ClockApprovals role={profile?.role} />
           )}
         </div>
-      </PageWrapper>
+      </ClockPageWrapper>
 
       <ClockActionModal
         isOpen={isClockModalOpen}

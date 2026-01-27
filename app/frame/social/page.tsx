@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import PageWrapper from "@/components/layout/PageWrapper";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
+import { useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import SocialPageWrapper from "@/components/frame/social/SocialPageWrapper";
 import { SocialPost, PostStatus, SocialAccount, Platform } from "@/components/frame/social/types/social.types";
 import { MOCK_POSTS, MOCK_ACCOUNTS } from "@/components/frame/social/data/mock-posts";
 
@@ -24,25 +24,19 @@ type Section = "overview" | "accounts" | "account-detail";
 type DetailTab = "content" | "settings" | "insights";
 
 export default function FrameSocialPage() {
+    const searchParams = useSearchParams();
+    const sectionParam = searchParams.get("section") as Section | null;
 
-    // STATE
     const [posts, setPosts] = useState<SocialPost[]>(MOCK_POSTS);
     const [accounts, setAccounts] = useState<SocialAccount[]>(MOCK_ACCOUNTS);
-
-    // SECTION & VIEW
-    const [activeSection, setActiveSection] = useState<Section>("overview");
+    const [activeSection, setActiveSection] = useState<Section>(sectionParam || "overview");
     const [overviewView, setOverviewView] = useState<SocialView>("BOARD");
     const [accountView, setAccountView] = useState<AccountView>("LIST");
     const [viewingAccount, setViewingAccount] = useState<SocialAccount | undefined>();
     const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>("content");
-
-    // FILTERS
     const [selectedPlatform, setSelectedPlatform] = useState<Platform | "ALL">("ALL");
     const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>(MOCK_ACCOUNTS.map(a => a.id));
-
     const [currentDate, setCurrentDate] = useState(new Date());
-
-    // MODALS
     const [isCreatorOpen, setIsCreatorOpen] = useState(false);
     const [creatorDate, setCreatorDate] = useState<string>();
     const [postToEdit, setPostToEdit] = useState<SocialPost | undefined>();
@@ -50,7 +44,15 @@ export default function FrameSocialPage() {
     const [accountToEdit, setAccountToEdit] = useState<SocialAccount | undefined>();
     const [deleteAccountId, setDeleteAccountId] = useState<string | null>(null);
 
-    // HANDLERS
+    // Sync with URL query params
+    useEffect(() => {
+        if (sectionParam) {
+            setActiveSection(sectionParam);
+        } else {
+            setActiveSection("overview");
+        }
+    }, [sectionParam]);
+
     const handleToggleAccount = (id: string) => {
         if (selectedAccountIds.includes(id)) {
             if (selectedAccountIds.length > 1) {
@@ -93,7 +95,6 @@ export default function FrameSocialPage() {
         setPosts(prev => prev.filter(p => p.id !== postId));
     };
 
-    // ACCOUNT
     const handleAddAccount = () => {
         setAccountToEdit(undefined);
         setIsAddAccountOpen(true);
@@ -149,19 +150,14 @@ export default function FrameSocialPage() {
         }
     };
 
-    // CURRENT MONTH KEY
     const currentMonthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
-
-    // MONTH FILTER for Overview
     const [overviewMonthFilter, setOverviewMonthFilter] = useState<string>(currentMonthKey);
 
-    // FILTERING
     const filteredAccounts = useMemo(() => {
         if (selectedPlatform === "ALL") return accounts;
         return accounts.filter(a => a.platform === selectedPlatform);
     }, [accounts, selectedPlatform]);
 
-    // Get available months from posts
     const availableMonths = useMemo(() => {
         const months = new Set<string>();
         posts.forEach(p => {
@@ -184,19 +180,15 @@ export default function FrameSocialPage() {
 
     const filteredPosts = useMemo(() => {
         let result = posts.filter(p => selectedAccountIds.includes(p.accountId));
-
         if (selectedPlatform !== "ALL") {
             result = result.filter(p => {
                 const acc = accounts.find(a => a.id === p.accountId);
                 return acc?.platform === selectedPlatform;
             });
         }
-
-        // Apply month filter (only for Overview)
         if (overviewMonthFilter !== "all") {
             result = result.filter(p => p.scheduledDate.startsWith(overviewMonthFilter));
         }
-
         return result;
     }, [posts, selectedAccountIds, selectedPlatform, accounts, overviewMonthFilter]);
 
@@ -204,16 +196,13 @@ export default function FrameSocialPage() {
     const deleteAccountName = deleteAccountId ? accounts.find(a => a.id === deleteAccountId)?.name || "" : "";
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
-            <Breadcrumb
-                items={[
+        <>
+            <SocialPageWrapper
+                breadcrumbItems={[
                     { label: "Frame" },
                     { label: "Social" },
                     ...(activeSection === "account-detail" && viewingAccount ? [{ label: viewingAccount.name }] : [])
                 ]}
-            />
-
-            <PageWrapper
                 sidebar={
                     <SocialSidebar
                         accounts={filteredAccounts}
@@ -229,126 +218,113 @@ export default function FrameSocialPage() {
                     />
                 }
             >
-                <div className="space-y-6">
+                {activeSection === "overview" && (
+                    <>
+                        <SocialPageHeader
+                            view={overviewView}
+                            onChangeView={setOverviewView}
+                            onAddPost={() => handleCreatePost()}
+                            monthFilter={overviewMonthFilter}
+                            onMonthFilterChange={setOverviewMonthFilter}
+                            monthOptions={monthOptions}
+                        />
 
-                    {/* OVERVIEW */}
-                    {activeSection === "overview" && (
-                        <>
-                            <SocialPageHeader
-                                view={overviewView}
-                                onChangeView={setOverviewView}
-                                onAddPost={() => handleCreatePost()}
-                                monthFilter={overviewMonthFilter}
-                                onMonthFilterChange={setOverviewMonthFilter}
-                                monthOptions={monthOptions}
-                            />
-
-                            <div className="min-h-[500px]">
-                                {overviewView === "CALENDAR" && (
-                                    <SocialPlannerView
-                                        posts={filteredPosts}
-                                        accounts={accounts}
-                                        currentDate={currentDate}
-                                        onNavigateMonth={handleNavigateMonth}
-                                        onCreatePost={(date) => handleCreatePost(date)}
-                                        onEditPost={handleEditPost}
-                                    />
-                                )}
-
-                                {overviewView === "BOARD" && (
-                                    <SocialBoardView
-                                        posts={filteredPosts}
-                                        accounts={accounts}
-                                        onEditPost={handleEditPost}
-                                        onCreatePost={(status) => handleCreatePost(undefined, status)}
-                                    />
-                                )}
-
-                                {overviewView === "LIST" && (
-                                    <SocialListView
-                                        posts={filteredPosts}
-                                        accounts={accounts}
-                                        onEditPost={handleEditPost}
-                                    />
-                                )}
-                            </div>
-                        </>
-                    )}
-
-                    {/* ACCOUNT MANAGEMENT */}
-                    {activeSection === "accounts" && (
-                        <>
-                            <AccountPageHeader
-                                view={accountView}
-                                onChangeView={setAccountView}
-                                onAddAccount={handleAddAccount}
-                            />
-
-                            <div className="min-h-[500px]">
-                                {accountView === "LIST" && (
-                                    <AccountListView
-                                        accounts={accounts}
-                                        onViewAccount={handleViewAccount}
-                                        onEditAccount={handleEditAccount}
-                                        onDeleteAccount={handleDeleteAccount}
-                                        onAddAccount={handleAddAccount}
-                                    />
-                                )}
-
-                                {accountView === "BOARD" && (
-                                    <AccountBoardView
-                                        accounts={accounts}
-                                        onViewAccount={handleViewAccount}
-                                        onEditAccount={handleEditAccount}
-                                        onDeleteAccount={handleDeleteAccount}
-                                        onAddAccount={handleAddAccount}
-                                    />
-                                )}
-                            </div>
-                        </>
-                    )}
-
-                    {/* ACCOUNT DETAIL */}
-                    {activeSection === "account-detail" && viewingAccount && (
-                        <>
-                            {activeDetailTab === "content" && (
-                                <AccountDetailPage
-                                    account={viewingAccount}
-                                    allAccounts={accounts}
-                                    posts={posts}
-                                    onBack={() => setActiveSection("accounts")}
-                                    onEditAccount={() => setActiveDetailTab("settings")}
+                        <div className="min-h-[500px]">
+                            {overviewView === "CALENDAR" && (
+                                <SocialPlannerView
+                                    posts={filteredPosts}
+                                    accounts={accounts}
+                                    currentDate={currentDate}
+                                    onNavigateMonth={handleNavigateMonth}
+                                    onCreatePost={(date) => handleCreatePost(date)}
+                                    onEditPost={handleEditPost}
+                                />
+                            )}
+                            {overviewView === "BOARD" && (
+                                <SocialBoardView
+                                    posts={filteredPosts}
+                                    accounts={accounts}
                                     onEditPost={handleEditPost}
                                     onCreatePost={(status) => handleCreatePost(undefined, status)}
-                                    onNavigateMonth={handleNavigateMonth}
-                                    currentDate={currentDate}
                                 />
                             )}
-
-                            {activeDetailTab === "settings" && (
-                                <AccountSettingsPage
-                                    account={viewingAccount}
-                                    onSave={(data) => {
-                                        handleSaveAccount({ ...viewingAccount, ...data });
-                                        setActiveDetailTab("content");
-                                    }}
-                                    onBack={() => setActiveDetailTab("content")}
+                            {overviewView === "LIST" && (
+                                <SocialListView
+                                    posts={filteredPosts}
+                                    accounts={accounts}
+                                    onEditPost={handleEditPost}
                                 />
                             )}
+                        </div>
+                    </>
+                )}
 
-                            {activeDetailTab === "insights" && (
-                                <AccountInsightsPage
-                                    account={viewingAccount}
-                                    posts={posts}
-                                    onBack={() => setActiveDetailTab("content")}
+                {activeSection === "accounts" && (
+                    <>
+                        <AccountPageHeader
+                            view={accountView}
+                            onChangeView={setAccountView}
+                            onAddAccount={handleAddAccount}
+                        />
+                        <div className="min-h-[500px]">
+                            {accountView === "LIST" && (
+                                <AccountListView
+                                    accounts={accounts}
+                                    onViewAccount={handleViewAccount}
+                                    onEditAccount={handleEditAccount}
+                                    onDeleteAccount={handleDeleteAccount}
+                                    onAddAccount={handleAddAccount}
                                 />
                             )}
-                        </>
-                    )}
-                </div>
-            </PageWrapper>
+                            {accountView === "BOARD" && (
+                                <AccountBoardView
+                                    accounts={accounts}
+                                    onViewAccount={handleViewAccount}
+                                    onEditAccount={handleEditAccount}
+                                    onDeleteAccount={handleDeleteAccount}
+                                    onAddAccount={handleAddAccount}
+                                />
+                            )}
+                        </div>
+                    </>
+                )}
 
-            {/* POST CREATOR */}
+                {activeSection === "account-detail" && viewingAccount && (
+                    <>
+                        {activeDetailTab === "content" && (
+                            <AccountDetailPage
+                                account={viewingAccount}
+                                allAccounts={accounts}
+                                posts={posts}
+                                onBack={() => setActiveSection("accounts")}
+                                onEditAccount={() => setActiveDetailTab("settings")}
+                                onEditPost={handleEditPost}
+                                onCreatePost={(status) => handleCreatePost(undefined, status)}
+                                onNavigateMonth={handleNavigateMonth}
+                                currentDate={currentDate}
+                            />
+                        )}
+                        {activeDetailTab === "settings" && (
+                            <AccountSettingsPage
+                                account={viewingAccount}
+                                onSave={(data) => {
+                                    handleSaveAccount({ ...viewingAccount, ...data });
+                                    setActiveDetailTab("content");
+                                }}
+                                onBack={() => setActiveDetailTab("content")}
+                            />
+                        )}
+                        {activeDetailTab === "insights" && (
+                            <AccountInsightsPage
+                                account={viewingAccount}
+                                posts={posts}
+                                onBack={() => setActiveDetailTab("content")}
+                            />
+                        )}
+                    </>
+                )}
+            </SocialPageWrapper>
+
             <SocialPostCreator
                 isOpen={isCreatorOpen}
                 onClose={() => setIsCreatorOpen(false)}
@@ -359,7 +335,6 @@ export default function FrameSocialPage() {
                 onDelete={handleDeletePost}
             />
 
-            {/* ADD/EDIT ACCOUNT */}
             <AddAccountModal
                 isOpen={isAddAccountOpen}
                 onClose={() => { setIsAddAccountOpen(false); setAccountToEdit(undefined); }}
@@ -368,13 +343,12 @@ export default function FrameSocialPage() {
                 existingCodes={existingCodes}
             />
 
-            {/* DELETE CONFIRMATION */}
             <DeleteAccountModal
                 isOpen={!!deleteAccountId}
                 accountName={deleteAccountName}
                 onConfirm={confirmDeleteAccount}
                 onCancel={() => setDeleteAccountId(null)}
             />
-        </div>
+        </>
     );
 }

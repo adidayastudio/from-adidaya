@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { format, differenceInMinutes, isSaturday, isSunday, startOfMonth, eachDayOfInterval, endOfMonth, isSameDay } from "date-fns";
 import { formatMinutes } from "@/lib/clock-data-logic";
 import clsx from "clsx";
-import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, Briefcase, CheckCircle, List, Grid as GridIcon, XCircle, LogOut, CloudSun } from "lucide-react";
+import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, Briefcase, CheckCircle, List, Grid as GridIcon, XCircle, LogOut, CloudSun, CalendarDays, Key, Plane, ClipboardList, AlertTriangle, UserCheck, UserX } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
@@ -12,6 +12,7 @@ import { useClockData } from "@/hooks/useClockData";
 import useUserProfile from "@/hooks/useUserProfile";
 import { ViewToggle } from "./ViewToggle";
 import { isOvertime as isOvertimeCheck, getShiftSchedule, getWorkHoursConfig, getStandardEndTime } from "@/lib/work-hours-utils";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 
 interface ClockOverviewProps {
     userName: string;
@@ -320,12 +321,41 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                     {/* MONTHLY SUMMARY */}
                     <div className="space-y-4 pt-4">
                         <h3 className="text-lg font-bold text-neutral-900">Monthly Summary <span className="text-neutral-400 font-normal text-sm ml-2">(January 2025)</span></h3>
-                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <SummaryCard label="Working Hours" value={personalStats.workingHours} unit="Hours" subtext="Total this month" />
-                            <SummaryCard label="Late Arrivals" value={String(personalStats.lateCount)} unit="Days" subtext="Month to date" warning={personalStats.lateCount > 0} />
-                            <SummaryCard label="Leave History" value={String(personalStats.approvedLeaves)} unit="Days" subtext="Total approved" />
-                            <SummaryCard label="Annual Leave" value={hasAnnualLeave ? "12" : "0"} unit="Days" subtext={hasAnnualLeave ? "Available balance" : "No balance yet"} warning={!hasAnnualLeave} />
-                        </div>
+                        <h3 className="text-lg font-bold text-neutral-900">Monthly Summary <span className="text-neutral-400 font-normal text-sm ml-2">(January 2025)</span></h3>
+                        <SummaryCardsRow>
+                            <SummaryCard
+                                icon={<Clock className="w-5 h-5 text-blue-600" />}
+                                iconBg="bg-blue-50"
+                                label="Working Hours"
+                                value={`${personalStats.workingHours} Hours`}
+                                subtext="Total this month"
+                            />
+                            <SummaryCard
+                                icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
+                                iconBg="bg-red-50"
+                                label="Late Arrivals"
+                                value={`${personalStats.lateCount} Days`}
+                                subtext="Month to date"
+                                isActive={personalStats.lateCount > 0}
+                                activeColor="ring-red-500 border-red-200 bg-red-50/10"
+                            />
+                            <SummaryCard
+                                icon={<CalendarDays className="w-5 h-5 text-purple-600" />}
+                                iconBg="bg-purple-50"
+                                label="Leave History"
+                                value={`${personalStats.approvedLeaves} Days`}
+                                subtext="Total approved"
+                            />
+                            <SummaryCard
+                                icon={<Plane className="w-5 h-5 text-emerald-600" />}
+                                iconBg="bg-emerald-50"
+                                label="Annual Leave"
+                                value={hasAnnualLeave ? "12 Days" : "0 Days"}
+                                subtext={hasAnnualLeave ? "Available balance" : "No balance yet"}
+                                isActive={!hasAnnualLeave}
+                                activeColor="ring-orange-500 border-orange-200"
+                            />
+                        </SummaryCardsRow>
                     </div>
                 </>
             )}
@@ -339,12 +369,39 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                     </div>
 
                     {/* TEAM STATS */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <SummaryCard label="Checked In" value={String(teamCheckedIn)} unit="Active" subtext="Currently working" />
-                        <SummaryCard label="Late Today" value={String(teamLate)} unit="Members" subtext="Arrived after 09:00" warning={teamLate > 0} />
-                        <SummaryCard label="On Leave" value={String(teamOnLeave)} unit="Members" subtext="Approved leave" />
-                        <SummaryCard label="Pending" value={String(leaves.filter(l => l.status === "pending").length)} unit="Requests" subtext="Awaiting review" trendUp />
-                    </div>
+                    <SummaryCardsRow>
+                        <SummaryCard
+                            icon={<UserCheck className="w-5 h-5 text-green-600" />}
+                            iconBg="bg-green-50"
+                            label="Checked In"
+                            value={`${teamCheckedIn} Active`}
+                            subtext="Currently working"
+                        />
+                        <SummaryCard
+                            icon={<AlertTriangle className="w-5 h-5 text-orange-600" />}
+                            iconBg="bg-orange-50"
+                            label="Late Today"
+                            value={`${teamLate} Members`}
+                            subtext="Arrived after 09:00"
+                            isActive={teamLate > 0}
+                            activeColor="ring-orange-500 border-orange-200 bg-orange-50/10"
+                        />
+                        <SummaryCard
+                            icon={<UserX className="w-5 h-5 text-blue-600" />}
+                            iconBg="bg-blue-50"
+                            label="On Leave"
+                            value={`${teamOnLeave} Members`}
+                            subtext="Approved leave"
+                        />
+                        <SummaryCard
+                            icon={<ClipboardList className="w-5 h-5 text-amber-600" />}
+                            iconBg="bg-amber-50"
+                            label="Pending"
+                            value={`${leaves.filter(l => l.status === "pending").length} Requests`}
+                            subtext="Awaiting review"
+                            trend="up"
+                        />
+                    </SummaryCardsRow>
 
                     {/* TEAM LIST */}
                     <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm mt-6">
@@ -441,23 +498,4 @@ function StatusBadge({ status }: { status: string }) {
     }
 }
 
-function SummaryCard({ label, value, unit, subtext, trend, trendUp, isNegativeMetric, warning }: { label: string; value: string; unit: string; subtext: string; trend?: string; trendUp?: boolean; isNegativeMetric?: boolean; warning?: boolean }) {
-    return (
-        <div className={clsx("bg-white rounded-xl border p-5 flex flex-col justify-between hover:border-action-primary/50 transition-colors group min-h-[140px] h-full", warning ? "border-orange-200 bg-orange-50/30" : "border-neutral-200")}>
-            <div className="flex justify-between items-start mb-2">
-                <div className="text-sm font-medium text-neutral-500 line-clamp-1">{label}</div>
-                {warning && <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0" />}
-            </div>
-            <div>
-                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 mb-2">
-                    <div className={clsx("text-2xl lg:text-3xl font-bold tracking-tight", warning ? "text-orange-700" : "text-neutral-900")}>{value}</div>
-                    <div className={clsx("text-sm font-medium", warning ? "text-orange-500" : "text-neutral-500")}>{unit}</div>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                    <div className={clsx("text-xs line-clamp-1", warning ? "text-orange-600" : "text-neutral-400")}>{subtext}</div>
-                    {trend && <div className={clsx("text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0", (trendUp && !isNegativeMetric) || (!trendUp && isNegativeMetric) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700")}>{trend}</div>}
-                </div>
-            </div>
-        </div>
-    );
-}
+

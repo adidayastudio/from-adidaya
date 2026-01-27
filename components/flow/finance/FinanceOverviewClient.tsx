@@ -18,7 +18,7 @@ import {
     formatShort,
     cleanEntityName
 } from "./modules/utils";
-import { SummaryCard } from "./modules/SummaryCard";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { AttentionItemRow } from "./modules/AttentionItemRow";
 import { RecentActivityList } from "./modules/RecentActivityList";
 import { NewRequestDrawer } from "./modules/NewRequestDrawer";
@@ -85,7 +85,7 @@ export default function FinanceOverviewClient() {
                 />
 
                 {/* SUMMARY CARDS */}
-                <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <SummaryCardsRow>
                     {viewMode === "team" ? (
                         <>
                             <SummaryCard
@@ -150,7 +150,7 @@ export default function FinanceOverviewClient() {
                             />
                         </>
                     )}
-                </section>
+                </SummaryCardsRow>
 
                 {/* ONE BIG CARD: REQUESTS */}
                 <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl shadow-sm overflow-hidden min-h-[500px] flex flex-col">

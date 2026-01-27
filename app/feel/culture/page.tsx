@@ -1,13 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import PageWrapper from "@/components/layout/PageWrapper";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
+import CulturePageWrapper from "@/components/feel/culture/CulturePageWrapper";
 import { CultureSidebar } from "@/components/feel/culture/CultureSidebar";
 import { CultureHome } from "@/components/feel/culture/CultureHome";
-import { Users, User } from "lucide-react";
-import clsx from "clsx";
 
 import { CultureChapter } from "@/components/feel/culture/CultureChapter";
 import { CultureTeam } from "@/components/feel/culture/CultureTeam";
@@ -32,8 +28,7 @@ export default function CulturePage() {
   const activeSection: CultureSection = (sectionParam as CultureSection) || "home";
   const viewMode: ViewMode = (viewParam as ViewMode) || "PERSONAL";
 
-  // Mock Role - toggle this to test access
-  const userRole = "hr"; // "staff" or "hr"
+  const userRole = "hr";
 
   const handleSectionChange = (section: string) => {
     const params = new URLSearchParams(searchParams);
@@ -44,7 +39,6 @@ export default function CulturePage() {
   const toggleViewMode = (mode: ViewMode) => {
     const params = new URLSearchParams(searchParams);
     params.set("view", mode);
-    // Reset section to logical default when switching views
     params.set("section", mode === "PERSONAL" ? "home" : "team_overview");
     router.push(`${pathname}?${params.toString()}`);
   };
@@ -83,22 +77,23 @@ export default function CulturePage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6 relative">
-      <div className="flex items-center justify-between mb-0">
-        <Breadcrumb items={[{ label: "Feel" }, { label: "Culture" }, { label: activeSection.charAt(0).toUpperCase() + activeSection.slice(1).replace("_", " ") }]} />
-      </div>
-
-      <PageWrapper sidebar={
+    <CulturePageWrapper
+      breadcrumbItems={[
+        { label: "Feel" },
+        { label: "Culture" },
+        { label: activeSection.charAt(0).toUpperCase() + activeSection.slice(1).replace("_", " ") }
+      ]}
+      sidebar={
         <CultureSidebar
           activeSection={activeSection}
           onSectionChange={handleSectionChange}
           viewMode={viewMode}
         />
-      }>
-        <div className="flex flex-col h-full pb-28 lg:pb-0">
-          {renderContent()}
-        </div>
-      </PageWrapper>
-    </div>
+      }
+    >
+      <div className="flex flex-col h-full pb-28 lg:pb-0">
+        {renderContent()}
+      </div>
+    </CulturePageWrapper>
   );
 }

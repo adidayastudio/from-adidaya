@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import PageWrapper from "@/components/layout/PageWrapper";
+import ClientPageWrapper from "@/components/flow/client/ClientPageWrapper";
 import ClientSidebar from "@/components/flow/client/ClientSidebar";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { Users, MessageSquare, FileSignature, Receipt, AlertTriangle, User, DollarSign, TrendingUp } from "lucide-react";
 import clsx from "clsx";
 
@@ -37,74 +36,75 @@ function SummaryCard({ icon, iconBg, label, value, subtext }: { icon: React.Reac
 export default function ClientOverviewPage() {
   const [viewMode, setViewMode] = useState<"personal" | "team">("team");
 
-  return (
-    <div className="min-h-screen bg-neutral-50 p-6">
-      <Breadcrumb items={[{ label: "Flow" }, { label: "Client" }, { label: "Overview" }]} />
-      <PageWrapper sidebar={<ClientSidebar />}>
-        <div className="space-y-8 w-full animate-in fade-in duration-500">
-          <div className="space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold text-neutral-900">Client Overview</h1>
-                <p className="text-sm text-neutral-500 mt-1">Manage client relationships, contracts, and billing.</p>
-              </div>
-              <div className="flex items-center bg-neutral-100 rounded-full p-1">
-                <button onClick={() => setViewMode("personal")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "personal" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><User className="w-4 h-4" /> Personal</button>
-                <button onClick={() => setViewMode("team")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "team" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><Users className="w-4 h-4" /> Team</button>
-              </div>
-            </div>
-            <div className="border-b border-neutral-200" />
-          </div>
-
-          {viewMode === "team" ? (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <SummaryCard icon={<Users className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" label="Total Clients" value={String(MOCK_TEAM.totalClients)} subtext="All time" />
-                <SummaryCard icon={<FileSignature className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" label="Active Projects" value={String(MOCK_TEAM.activeProjects)} subtext="In progress" />
-                <SummaryCard icon={<FileSignature className="w-5 h-5 text-orange-600" />} iconBg="bg-orange-50" label="Pending Contracts" value={String(MOCK_TEAM.pendingContracts)} subtext="Awaiting signature" />
-                <SummaryCard icon={<TrendingUp className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" label="Total Revenue" value={formatShort(MOCK_TEAM.totalRevenue)} subtext="This year" />
-                <SummaryCard icon={<DollarSign className="w-5 h-5 text-red-600" />} iconBg="bg-red-50" label="Pending Payments" value={formatShort(MOCK_TEAM.pendingPayments)} subtext="Outstanding" />
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl border p-6">
-                  <h3 className="font-semibold mb-4">Top Clients</h3>
-                  {MOCK_RECENT_CLIENTS.map((c) => (
-                    <div key={c.name} className="flex items-center justify-between py-3 border-b last:border-0">
-                      <div><div className="font-medium">{c.name}</div><div className="text-sm text-neutral-500">{c.projects} projects</div></div>
-                      <div className="font-medium text-neutral-900">{formatShort(c.value)}</div>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-white rounded-xl border p-6">
-                  <div className="flex items-center gap-2 mb-4"><AlertTriangle className="w-5 h-5 text-neutral-400" /><h3 className="font-semibold">Alerts</h3></div>
-                  <div className="space-y-3">{MOCK_ALERTS.map((a, i) => (
-                    <div key={i} className={clsx("p-4 rounded-xl border", a.type === "warning" ? "bg-orange-50 border-orange-200" : "bg-blue-50 border-blue-200")}>
-                      <div className={clsx("font-medium text-sm", a.type === "warning" ? "text-orange-900" : "text-blue-900")}>{a.title}</div>
-                      <div className={clsx("text-sm", a.type === "warning" ? "text-orange-700" : "text-blue-700")}>{a.message}</div>
-                    </div>
-                  ))}</div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <SummaryCard icon={<Users className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" label="My Clients" value={String(MOCK_PERSONAL.myClients)} subtext="Assigned" />
-                <SummaryCard icon={<FileSignature className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" label="Active Projects" value={String(MOCK_PERSONAL.activeProjects)} subtext="In progress" />
-                <SummaryCard icon={<MessageSquare className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" label="Communications" value={String(MOCK_PERSONAL.communications)} subtext="This month" />
-              </div>
-              <div className="bg-white rounded-xl border p-6">
-                <h3 className="font-semibold mb-4">My Assigned Clients</h3>
-                {MOCK_RECENT_CLIENTS.slice(0, 2).map((c) => (
-                  <div key={c.name} className="flex items-center justify-between py-3 border-b last:border-0">
-                    <div className="font-medium">{c.name}</div><div className="text-sm text-neutral-500">{c.projects} projects</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+  const header = (
+    <div className="space-y-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">Client Overview</h1>
+          <p className="text-sm text-neutral-500 mt-1">Manage client relationships, contracts, and billing.</p>
         </div>
-      </PageWrapper>
+        <div className="flex items-center bg-neutral-100 rounded-full p-1">
+          <button onClick={() => setViewMode("personal")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "personal" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><User className="w-4 h-4" /> Personal</button>
+          <button onClick={() => setViewMode("team")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "team" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><Users className="w-4 h-4" /> Team</button>
+        </div>
+      </div>
+      <div className="border-b border-neutral-200" />
     </div>
+  );
+
+  return (
+    <ClientPageWrapper
+      breadcrumbItems={[{ label: "Flow" }, { label: "Client" }, { label: "Overview" }]}
+      header={header}
+      sidebar={<ClientSidebar />}
+    >
+      {viewMode === "team" ? (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <SummaryCard icon={<Users className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" label="Total Clients" value={String(MOCK_TEAM.totalClients)} subtext="All time" />
+            <SummaryCard icon={<FileSignature className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" label="Active Projects" value={String(MOCK_TEAM.activeProjects)} subtext="In progress" />
+            <SummaryCard icon={<FileSignature className="w-5 h-5 text-orange-600" />} iconBg="bg-orange-50" label="Pending Contracts" value={String(MOCK_TEAM.pendingContracts)} subtext="Awaiting signature" />
+            <SummaryCard icon={<TrendingUp className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" label="Total Revenue" value={formatShort(MOCK_TEAM.totalRevenue)} subtext="This year" />
+            <SummaryCard icon={<DollarSign className="w-5 h-5 text-red-600" />} iconBg="bg-red-50" label="Pending Payments" value={formatShort(MOCK_TEAM.pendingPayments)} subtext="Outstanding" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <div className="bg-white rounded-xl border p-6">
+              <h3 className="font-semibold mb-4">Top Clients</h3>
+              {MOCK_RECENT_CLIENTS.map((c) => (
+                <div key={c.name} className="flex items-center justify-between py-3 border-b last:border-0">
+                  <div><div className="font-medium">{c.name}</div><div className="text-sm text-neutral-500">{c.projects} projects</div></div>
+                  <div className="font-medium text-neutral-900">{formatShort(c.value)}</div>
+                </div>
+              ))}
+            </div>
+            <div className="bg-white rounded-xl border p-6">
+              <div className="flex items-center gap-2 mb-4"><AlertTriangle className="w-5 h-5 text-neutral-400" /><h3 className="font-semibold">Alerts</h3></div>
+              <div className="space-y-3">{MOCK_ALERTS.map((a, i) => (
+                <div key={i} className={clsx("p-4 rounded-xl border", a.type === "warning" ? "bg-orange-50 border-orange-200" : "bg-blue-50 border-blue-200")}>
+                  <div className={clsx("font-medium text-sm", a.type === "warning" ? "text-orange-900" : "text-blue-900")}>{a.title}</div>
+                  <div className={clsx("text-sm", a.type === "warning" ? "text-orange-700" : "text-blue-700")}>{a.message}</div>
+                </div>
+              ))}</div>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <SummaryCard icon={<Users className="w-5 h-5 text-blue-600" />} iconBg="bg-blue-50" label="My Clients" value={String(MOCK_PERSONAL.myClients)} subtext="Assigned" />
+            <SummaryCard icon={<FileSignature className="w-5 h-5 text-green-600" />} iconBg="bg-green-50" label="Active Projects" value={String(MOCK_PERSONAL.activeProjects)} subtext="In progress" />
+            <SummaryCard icon={<MessageSquare className="w-5 h-5 text-purple-600" />} iconBg="bg-purple-50" label="Communications" value={String(MOCK_PERSONAL.communications)} subtext="This month" />
+          </div>
+          <div className="bg-white rounded-xl border p-6 mt-6">
+            <h3 className="font-semibold mb-4">My Assigned Clients</h3>
+            {MOCK_RECENT_CLIENTS.slice(0, 2).map((c) => (
+              <div key={c.name} className="flex items-center justify-between py-3 border-b last:border-0">
+                <div className="font-medium">{c.name}</div><div className="text-sm text-neutral-500">{c.projects} projects</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </ClientPageWrapper>
   );
 }

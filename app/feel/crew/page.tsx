@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import CrewPageWrapper from "@/components/feel/crew/CrewPageWrapper";
 import CrewSidebar, { CrewSection } from "@/components/feel/crew/CrewSidebar";
 import { CrewDirectory } from "@/components/feel/crew/CrewDirectory";
 import { CrewAssignments } from "@/components/feel/crew/CrewAssignments";
@@ -11,7 +12,7 @@ import { CrewPerformance } from "@/components/feel/crew/CrewPerformance";
 import { CrewRequests } from "@/components/feel/crew/CrewRequests";
 import { CrewDetail } from "@/components/feel/crew/CrewDetail";
 import PageWrapper from "@/components/layout/PageWrapper";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
+
 import { Plus } from "lucide-react";
 
 export default function CrewPage() {
@@ -85,24 +86,61 @@ export default function CrewPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50 p-6 relative">
-      <Breadcrumb items={[{ label: "Feel" }, { label: "Crew" }, { label: getBreadcrumbLabel() }]} />
-
-      <PageWrapper sidebar={
-        <CrewSidebar
-          activeSection={activeSection}
-          onSectionChange={(s) => {
-            setActiveSection(s);
-            setSelectedCrewId(null);
-            setTriggerAddCrew(0);
-            setTriggerNewAssignment(0);
-            setTriggerAddRequest(0);
-          }}
-          role={userRole}
-          fabAction={fab ? { icon: fab.icon, onClick: fab.onClick, title: fab.title } : undefined}
-        />
-      }>
-        <div className="flex flex-col h-full pb-28 lg:pb-0">{renderSection()}</div>
-      </PageWrapper>
+      <CrewPageWrapper
+        breadcrumbItems={[
+          { label: "Feel" },
+          { label: "Crew" },
+          { label: getBreadcrumbLabel() },
+        ]}
+        activeSection={activeSection}
+        onSectionChange={(section) => {
+          // Update URL
+          const params = new URLSearchParams(searchParams.toString());
+          params.set("tab", section);
+          router.push(`?${params.toString()}`, { scroll: false });
+          // Reset other states as per original setActiveSection logic
+          setSelectedCrewId(null);
+          setTriggerAddCrew(0);
+          setTriggerNewAssignment(0);
+          setTriggerAddRequest(0);
+        }}
+        role={userRole}
+        fabAction={fab ? {
+          icon: fab.icon,
+          onClick: fab.onClick,
+          title: fab.title, // Changed from fab.label to fab.title
+          // highlight: fab.variant === "danger" // fab.variant is not defined in original getFabConfig
+        } : undefined}
+      >
+        <div className="flex flex-col h-full animate-in fade-in duration-500 pb-24 lg:pb-0">
+          {/* Added Check: pb-24 for mobile FAB space */}
+          {activeSection === "directory" && (
+            // Original directory also handled selectedCrewId for CrewDetail.
+            // This new structure only shows CrewDirectory.
+            // If CrewDetail is still needed, its logic needs to be re-integrated.
+            selectedCrewId ? (
+              <CrewDetail crewId={selectedCrewId} onBack={() => setSelectedCrewId(null)} />
+            ) : (
+              <CrewDirectory role={userRole} triggerOpen={triggerAddCrew} onViewDetail={setSelectedCrewId} />
+            )
+          )}
+          {activeSection === "assignments" && (
+            <CrewAssignments role={userRole} triggerOpen={triggerNewAssignment} />
+          )}
+          {activeSection === "daily-input" && (
+            <CrewDailyInput role={userRole} /> // Changed from CrewDailyLog to CrewDailyInput
+          )}
+          {activeSection === "payroll" && (
+            <CrewPayroll role={userRole} />
+          )}
+          {activeSection === "performance" && (
+            <CrewPerformance role={userRole} />
+          )}
+          {activeSection === "requests" && (
+            <CrewRequests role={userRole} triggerOpen={triggerAddRequest} />
+          )}
+        </div>
+      </CrewPageWrapper>
     </div>
   );
 }

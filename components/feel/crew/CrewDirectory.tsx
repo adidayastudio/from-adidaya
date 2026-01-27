@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
-import { Plus, Search, ChevronDown, ChevronUp, Edit2, Trash2, Filter, List, LayoutGrid, ArrowUpDown, X, Download, Loader2, Users } from "lucide-react";
+import { Plus, Search, ChevronDown, ChevronUp, Edit2, Trash2, Filter, List, LayoutGrid, ArrowUpDown, X, Download, Loader2, Users, UserCheck, Star, Hammer } from "lucide-react";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import {
@@ -510,12 +511,48 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <button onClick={() => setActiveCard("ALL")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ALL" ? "bg-blue-600 border-blue-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "ALL" ? "text-blue-100" : "text-neutral-500")}>Total</div><div className={clsx("text-2xl font-bold", activeCard === "ALL" ? "text-white" : "text-blue-600")}>{derivedStats.total}</div></button>
-                <button onClick={() => setActiveCard("ACTIVE")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ACTIVE" ? "bg-emerald-600 border-emerald-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "ACTIVE" ? "text-emerald-100" : "text-neutral-500")}>Active</div><div className={clsx("text-2xl font-bold", activeCard === "ACTIVE" ? "text-white" : "text-emerald-600")}>{derivedStats.active}</div></button>
-                <button onClick={() => setActiveCard("SKILLED")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "SKILLED" ? "bg-purple-600 border-purple-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "SKILLED" ? "text-purple-100" : "text-neutral-500")}>Skilled</div><div className={clsx("text-2xl font-bold", activeCard === "SKILLED" ? "text-white" : "text-purple-600")}>{derivedStats.skilled}</div></button>
-                <button onClick={() => setActiveCard("UNSKILLED")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "UNSKILLED" ? "bg-orange-500 border-orange-500" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "UNSKILLED" ? "text-orange-100" : "text-neutral-500")}>Unskilled</div><div className={clsx("text-2xl font-bold", activeCard === "UNSKILLED" ? "text-white" : "text-orange-500")}>{derivedStats.unskilled}</div></button>
-            </div>
+            <SummaryCardsRow>
+                <SummaryCard
+                    icon={<Users className="w-5 h-5 text-blue-600" />}
+                    iconBg="bg-blue-50"
+                    label="Total Crew"
+                    value={`${derivedStats.total} Members`}
+                    subtext="All stored"
+                    onClick={() => setActiveCard("ALL")}
+                    isActive={activeCard === "ALL"}
+                    activeColor="ring-blue-500 border-blue-200"
+                />
+                <SummaryCard
+                    icon={<UserCheck className="w-5 h-5 text-emerald-600" />}
+                    iconBg="bg-emerald-50"
+                    label="Active"
+                    value={`${derivedStats.active} Members`}
+                    subtext="Currently active"
+                    onClick={() => setActiveCard("ACTIVE")}
+                    isActive={activeCard === "ACTIVE"}
+                    activeColor="ring-emerald-500 border-emerald-200"
+                />
+                <SummaryCard
+                    icon={<Star className="w-5 h-5 text-purple-600" />}
+                    iconBg="bg-purple-50"
+                    label="Skilled"
+                    value={`${derivedStats.skilled} Members`}
+                    subtext="Specialized roles"
+                    onClick={() => setActiveCard("SKILLED")}
+                    isActive={activeCard === "SKILLED"}
+                    activeColor="ring-purple-500 border-purple-200"
+                />
+                <SummaryCard
+                    icon={<Hammer className="w-5 h-5 text-orange-600" />}
+                    iconBg="bg-orange-50"
+                    label="Unskilled"
+                    value={`${derivedStats.unskilled} Members`}
+                    subtext="Helpers & General"
+                    onClick={() => setActiveCard("UNSKILLED")}
+                    isActive={activeCard === "UNSKILLED"}
+                    activeColor="ring-orange-500 border-orange-200"
+                />
+            </SummaryCardsRow>
 
             {/* Search & Filters Bar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-2 w-full">

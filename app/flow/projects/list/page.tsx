@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import PageWrapper from "@/components/layout/PageWrapper";
-import ProjectsSidebar from "@/components/flow/projects/ProjectsSidebar";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
+import ProjectsPageWrapper from "@/components/flow/projects/ProjectsPageWrapper";
 import { User, Users, Search, Plus, Eye, LayoutGrid, Edit2, Trash2, Loader2, FolderOpen, X, ChevronUp, ChevronDown } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
@@ -288,93 +286,92 @@ export default function ProjectsListPage() {
     const typologyOptions = [{ label: "Select typology...", value: "" }, ...typologies.map(t => ({ label: `${t.name} (${t.code})`, value: t.code }))];
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
-            <Breadcrumb items={[{ label: "Flow" }, { label: "Projects" }, { label: "List" }]} />
-            <PageWrapper sidebar={<ProjectsSidebar />}>
-                <div className="space-y-8 w-full animate-in fade-in duration-500">
-                    {/* Page Header */}
-                    <div className="space-y-4">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h1 className="text-2xl font-bold text-neutral-900">Projects</h1>
-                                <p className="text-sm text-neutral-500 mt-1">Manage and track all your projects in one place.</p>
+        <ProjectsPageWrapper
+            breadcrumbItems={[{ label: "Flow" }, { label: "Projects" }, { label: "List" }]}
+        >
+            <div className="space-y-8 w-full animate-in fade-in duration-500">
+                {/* Page Header */}
+                <div className="space-y-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold text-neutral-900">Projects</h1>
+                            <p className="text-sm text-neutral-500 mt-1">Manage and track all your projects in one place.</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center bg-neutral-100 rounded-full p-1">
+                                <button onClick={() => setViewMode("personal")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "personal" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><User className="w-4 h-4" /> Personal</button>
+                                <button onClick={() => setViewMode("team")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "team" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><Users className="w-4 h-4" /> Team</button>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center bg-neutral-100 rounded-full p-1">
-                                    <button onClick={() => setViewMode("personal")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "personal" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><User className="w-4 h-4" /> Personal</button>
-                                    <button onClick={() => setViewMode("team")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "team" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><Users className="w-4 h-4" /> Team</button>
-                                </div>
-                                {CAN_EDIT && (<button onClick={openAddDrawer} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 transition-colors"><Plus className="w-4 h-4" /> New Project</button>)}
-                            </div>
+                            {CAN_EDIT && (<button onClick={openAddDrawer} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 transition-colors"><Plus className="w-4 h-4" /> New Project</button>)}
                         </div>
-                        <div className="border-b border-neutral-200" />
                     </div>
-
-                    {/* Filters */}
-                    <div className="flex items-center gap-4">
-                        <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input type="text" placeholder="Search projects..." className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
-                        <select className="px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">All Status</option><option value="active">Active</option><option value="planning">Planning</option><option value="completed">Completed</option></select>
-                    </div>
-
-                    {/* Loading */}
-                    {isLoading && (<div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>)}
-
-                    {/* Empty */}
-                    {!isLoading && projects.length === 0 && (
-                        <div className="text-center py-16 bg-neutral-50/50 rounded-2xl border border-dashed border-neutral-200">
-                            <FolderOpen className="w-12 h-12 mx-auto text-neutral-300 mb-4" />
-                            <h3 className="text-lg font-medium text-neutral-600 mb-2">No projects yet</h3>
-                            <p className="text-sm text-neutral-400 mb-6">Create your first project to get started</p>
-                            {CAN_EDIT && (<button onClick={openAddDrawer} className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700"><Plus className="w-4 h-4" /> Create Project</button>)}
-                        </div>
-                    )}
-
-                    {/* Table */}
-                    {!isLoading && projects.length > 0 && (
-                        <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
-                            <table className="w-full">
-                                <thead className="bg-neutral-50/80 border-b border-neutral-100">
-                                    <tr>
-                                        <SortHeader label="Project" sortKeyName="number" />
-                                        <SortHeader label="Client" sortKeyName="client" />
-                                        <SortHeader label="Scope" sortKeyName="scope" />
-                                        <SortHeader label="Progress" sortKeyName="progress" align="center" />
-                                        <SortHeader label="Value" sortKeyName="value" align="right" />
-                                        <SortHeader label="Status" sortKeyName="status" />
-                                        <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">{sorted.map((p) => (
-                                    <tr key={p.id} className="hover:bg-neutral-50/50">
-                                        <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600"><LayoutGrid className="w-5 h-5" /></div><div><div className="font-medium text-neutral-900">{p.name || "-"}</div><div className="text-xs text-neutral-500">{p.code || "-"} · {p.number || "-"}</div></div></div></td>
-                                        <td className="px-6 py-4 text-sm text-neutral-600">{p.client || "-"}</td>
-                                        <td className="px-6 py-4 text-sm text-neutral-500">{p.scope || "-"}</td>
-                                        <td className="px-6 py-4"><div className="flex items-center gap-2 justify-center"><div className="w-20 h-2 bg-neutral-100 rounded-full overflow-hidden"><div className="h-full bg-red-500 rounded-full" style={{ width: `${p.progress}%` }} /></div><span className="text-sm font-medium">{p.progress}%</span></div></td>
-                                        <td className="px-6 py-4 text-sm font-medium text-right">{p.value ? formatShort(p.value) : "-"}</td>
-                                        <td className="px-6 py-4"><StatusBadge status={p.status} /></td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <Link href={`/flow/projects/${p.number}-${p.code}`} className="p-2 hover:bg-neutral-100 rounded"><Eye className="w-4 h-4 text-neutral-500" /></Link>
-                                                {CAN_EDIT && (
-                                                    <>
-                                                        <button onClick={() => openEditDrawer(p)} className="p-2 hover:bg-neutral-100 rounded"><Edit2 className="w-4 h-4 text-neutral-500" /></button>
-                                                        <button onClick={() => setDeleteTarget(p)} className="p-2 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-neutral-400 hover:text-red-500" /></button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}</tbody>
-                            </table>
-                        </div>
-                    )}
-
-                    {/* No results */}
-                    {!isLoading && projects.length > 0 && filtered.length === 0 && (
-                        <div className="text-center py-8 text-neutral-500">No projects match your search or filter.</div>
-                    )}
+                    <div className="border-b border-neutral-200" />
                 </div>
-            </PageWrapper>
+
+                {/* Filters */}
+                <div className="flex items-center gap-4">
+                    <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input type="text" placeholder="Search projects..." className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
+                    <select className="px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">All Status</option><option value="active">Active</option><option value="planning">Planning</option><option value="completed">Completed</option></select>
+                </div>
+
+                {/* Loading */}
+                {isLoading && (<div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>)}
+
+                {/* Empty */}
+                {!isLoading && projects.length === 0 && (
+                    <div className="text-center py-16 bg-neutral-50/50 rounded-2xl border border-dashed border-neutral-200">
+                        <FolderOpen className="w-12 h-12 mx-auto text-neutral-300 mb-4" />
+                        <h3 className="text-lg font-medium text-neutral-600 mb-2">No projects yet</h3>
+                        <p className="text-sm text-neutral-400 mb-6">Create your first project to get started</p>
+                        {CAN_EDIT && (<button onClick={openAddDrawer} className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700"><Plus className="w-4 h-4" /> Create Project</button>)}
+                    </div>
+                )}
+
+                {/* Table */}
+                {!isLoading && projects.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+                        <table className="w-full">
+                            <thead className="bg-neutral-50/80 border-b border-neutral-100">
+                                <tr>
+                                    <SortHeader label="Project" sortKeyName="number" />
+                                    <SortHeader label="Client" sortKeyName="client" />
+                                    <SortHeader label="Scope" sortKeyName="scope" />
+                                    <SortHeader label="Progress" sortKeyName="progress" align="center" />
+                                    <SortHeader label="Value" sortKeyName="value" align="right" />
+                                    <SortHeader label="Status" sortKeyName="status" />
+                                    <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y">{sorted.map((p) => (
+                                <tr key={p.id} className="hover:bg-neutral-50/50">
+                                    <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600"><LayoutGrid className="w-5 h-5" /></div><div><div className="font-medium text-neutral-900">{p.name || "-"}</div><div className="text-xs text-neutral-500">{p.code || "-"} · {p.number || "-"}</div></div></div></td>
+                                    <td className="px-6 py-4 text-sm text-neutral-600">{p.client || "-"}</td>
+                                    <td className="px-6 py-4 text-sm text-neutral-500">{p.scope || "-"}</td>
+                                    <td className="px-6 py-4"><div className="flex items-center gap-2 justify-center"><div className="w-20 h-2 bg-neutral-100 rounded-full overflow-hidden"><div className="h-full bg-red-500 rounded-full" style={{ width: `${p.progress}%` }} /></div><span className="text-sm font-medium">{p.progress}%</span></div></td>
+                                    <td className="px-6 py-4 text-sm font-medium text-right">{p.value ? formatShort(p.value) : "-"}</td>
+                                    <td className="px-6 py-4"><StatusBadge status={p.status} /></td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <Link href={`/flow/projects/${p.number}-${p.code}`} className="p-2 hover:bg-neutral-100 rounded"><Eye className="w-4 h-4 text-neutral-500" /></Link>
+                                            {CAN_EDIT && (
+                                                <>
+                                                    <button onClick={() => openEditDrawer(p)} className="p-2 hover:bg-neutral-100 rounded"><Edit2 className="w-4 h-4 text-neutral-500" /></button>
+                                                    <button onClick={() => setDeleteTarget(p)} className="p-2 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-neutral-400 hover:text-red-500" /></button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}</tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* No results */}
+                {!isLoading && projects.length > 0 && filtered.length === 0 && (
+                    <div className="text-center py-8 text-neutral-500">No projects match your search or filter.</div>
+                )}
+            </div>
 
             {/* Add/Edit Drawer */}
             <Drawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} title={editingProject ? "Edit Project" : "New Project"} width="lg">
@@ -434,6 +431,6 @@ export default function ProjectsListPage() {
                     </div>
                 </div>
             )}
-        </div>
+        </ProjectsPageWrapper>
     );
 }

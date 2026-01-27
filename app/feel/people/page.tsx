@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import PageWrapper from "@/components/layout/PageWrapper";
+import PeoplePageWrapper from "@/components/feel/people/PeoplePageWrapper";
 import PeopleSidebar, { PeopleSection } from "@/components/feel/people/PeopleSidebar";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import useUserProfile from "@/hooks/useUserProfile";
 import { PEOPLE_DATA } from "@/components/feel/people/data";
 
@@ -31,7 +30,6 @@ export default function FeelPeoplePage() {
 
    const [directoryFilter, setDirectoryFilter] = useState("all");
 
-   // Find the full person object for the logged-in user
    const myPersonData = PEOPLE_DATA.find(p => p.id === profile?.id);
    const isGlobalView = profile?.role === "admin" || profile?.role === "supervisor";
 
@@ -49,52 +47,46 @@ export default function FeelPeoplePage() {
    };
 
    return (
-      <div className="min-h-screen bg-neutral-50 p-6">
-         {/* Breadcrumb */}
-         <Breadcrumb
-            items={[
-               { label: "Feel" },
-               { label: "People" },
-               { label: isGlobalView ? getBreadcrumbLabel() : "My Dashboard" }
-            ]}
-         />
-
-         <PageWrapper sidebar={
+      <PeoplePageWrapper
+         breadcrumbItems={[
+            { label: "Feel" },
+            { label: "People" },
+            { label: isGlobalView ? getBreadcrumbLabel() : "My Dashboard" }
+         ]}
+         sidebar={
             <PeopleSidebar
                activeSection={currentSection}
                onSectionChange={handleSectionChange}
                activeFilter={directoryFilter as any}
                onFilterChange={(v) => setDirectoryFilter(v)}
             />
-         }>
-            {loading ? (
-               <div className="p-12 text-center text-neutral-400">Loading modules...</div>
-            ) : isGlobalView ? (
-               /* GLOBAL VIEW (Admin/Supervisor) */
-               <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  {currentSection === "directory" && (
-                     <GlobalDirectory people={PEOPLE_DATA} role={profile?.role || "admin"} />
-                  )}
-                  {currentSection === "overview" && (
-                     <GlobalDirectory people={PEOPLE_DATA} role={profile?.role || "admin"} />
-                  )}
-                  {currentSection === "performance" && (
-                     <PerformanceView people={PEOPLE_DATA} />
-                  )}
-                  {currentSection === "analytics" && (
-                     <EmptyState icon={BarChart} title="Team Analytics" description="Advanced charts and team distribution metrics." />
-                  )}
-                  {currentSection === "management" && (
-                     <EmptyState icon={Settings} title="People Management" description="Onboarding, Offboarding, and Role assignments." />
-                  )}
-               </div>
-            ) : myPersonData ? (
-               /* PERSONAL VIEW (Staff) */
-               <PersonalDashboard person={myPersonData} />
-            ) : (
-               <div className="p-12 text-center text-red-400">Error: User profile not linked to directory data.</div>
-            )}
-         </PageWrapper>
-      </div>
+         }
+      >
+         {loading ? (
+            <div className="p-12 text-center text-neutral-400">Loading modules...</div>
+         ) : isGlobalView ? (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+               {currentSection === "directory" && (
+                  <GlobalDirectory people={PEOPLE_DATA} role={profile?.role || "admin"} />
+               )}
+               {currentSection === "overview" && (
+                  <GlobalDirectory people={PEOPLE_DATA} role={profile?.role || "admin"} />
+               )}
+               {currentSection === "performance" && (
+                  <PerformanceView people={PEOPLE_DATA} />
+               )}
+               {currentSection === "analytics" && (
+                  <EmptyState icon={BarChart} title="Team Analytics" description="Advanced charts and team distribution metrics." />
+               )}
+               {currentSection === "management" && (
+                  <EmptyState icon={Settings} title="People Management" description="Onboarding, Offboarding, and Role assignments." />
+               )}
+            </div>
+         ) : myPersonData ? (
+            <PersonalDashboard person={myPersonData} />
+         ) : (
+            <div className="p-12 text-center text-red-400">Error: User profile not linked to directory data.</div>
+         )}
+      </PeoplePageWrapper>
    );
 }
