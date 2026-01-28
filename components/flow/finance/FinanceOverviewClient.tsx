@@ -221,7 +221,7 @@ export default function FinanceOverviewClient() {
                                                 </button>
                                             </div>
                                             <div className="space-y-1">
-                                                {data.lists.goodsReceived.map((item: any) => (
+                                                {data.lists.goodsReceived.slice(0, 5).map((item: any) => (
                                                     <AttentionItemRow
                                                         key={item.id}
                                                         item={{
@@ -258,7 +258,7 @@ export default function FinanceOverviewClient() {
                                                 </button>
                                             </div>
                                             <div className="space-y-1">
-                                                {data.lists.invoices.map((item: any) => (
+                                                {data.lists.invoices.slice(0, 5).map((item: any) => (
                                                     <AttentionItemRow
                                                         key={item.id}
                                                         item={{
@@ -298,7 +298,7 @@ export default function FinanceOverviewClient() {
                                             </button>
                                         </div>
                                         <div className="space-y-1">
-                                            {data.lists.staffClaims.map((item: any) => (
+                                            {data.lists.staffClaims.slice(0, 5).map((item: any) => (
                                                 <AttentionItemRow
                                                     key={item.id}
                                                     item={{
@@ -325,26 +325,6 @@ export default function FinanceOverviewClient() {
                                         </div>
                                     </div>
                                 )}
-
-                                {listType === "ACTIVITY" && (
-                                    <div className="px-6 py-5">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest bg-neutral-100 px-3 py-1.5 rounded-lg">
-                                                Recent Activity
-                                            </h3>
-                                            <button className="text-xs font-medium text-neutral-400 hover:text-red-600 flex items-center gap-1 group transition-colors">
-                                                View Full Log <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                                            </button>
-                                        </div>
-                                        <RecentActivityList activities={data.lists.recentActivity.map((a: any) => ({
-                                            id: a.id,
-                                            action: a.type === 'PURCHASE' ? (a.approval_status === 'APPROVED' ? 'Purchase Approved' : 'New Purchase Request') : (a.status === 'APPROVED' ? 'Reimbursement Approved' : 'New Reimbursement'),
-                                            description: `${a.description} - ${formatShort(a.amount)}`,
-                                            user: cleanEntityName(a.created_by_name || a.staff_name || 'Unknown User'),
-                                            timestamp: a.updated_at
-                                        }))} />
-                                    </div>
-                                )}
                             </div>
                         ) : (
                             /* PERSONAL VIEW */
@@ -363,7 +343,7 @@ export default function FinanceOverviewClient() {
                                             </button>
                                         </div>
                                         <div className="space-y-2">
-                                            {data.lists.myPurchaseHistory.map((p: any) => (
+                                            {data.lists.myPurchaseHistory.slice(0, 5).map((p: any) => (
                                                 <PersonalPurchaseRow
                                                     key={p.id}
                                                     item={{
@@ -408,7 +388,7 @@ export default function FinanceOverviewClient() {
                                             </button>
                                         </div>
                                         <div className="space-y-2">
-                                            {data.lists.myReimburseHistory.map((r: any) => (
+                                            {data.lists.myReimburseHistory.slice(0, 5).map((r: any) => (
                                                 <PersonalReimburseRow
                                                     key={r.id}
                                                     item={{
@@ -432,23 +412,6 @@ export default function FinanceOverviewClient() {
                                                 <p className="text-sm text-neutral-400 italic">No reimbursement history found.</p>
                                             )}
                                         </div>
-                                    </div>
-                                )}
-
-                                {listType === "ACTIVITY" && (
-                                    <div className="px-6 py-5">
-                                        <div className="flex items-center justify-between mb-6">
-                                            <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
-                                                Recent Activity
-                                            </h3>
-                                        </div>
-                                        <RecentActivityList activities={data.lists.recentActivity.map((a: any) => ({
-                                            id: a.id,
-                                            action: a.type === 'PURCHASE' ? (a.approval_status === 'APPROVED' ? 'Purchase Approved' : 'New Purchase Request') : (a.status === 'APPROVED' ? 'Reimbursement Approved' : 'New Reimbursement'),
-                                            description: `${a.description} - ${formatShort(a.amount)}`,
-                                            user: cleanEntityName(a.created_by_name || a.staff_name || 'Unknown User'),
-                                            timestamp: a.updated_at
-                                        }))} />
                                     </div>
                                 )}
                             </div>

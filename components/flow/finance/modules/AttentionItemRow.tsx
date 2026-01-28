@@ -18,16 +18,16 @@ export function AttentionItemRow({
         <div
             onClick={onClick}
             className={clsx(
-                "group relative flex items-start gap-4 p-2 -mx-2 rounded-xl transition-all duration-300 border border-transparent",
-                onClick && "cursor-pointer hover:bg-white/60 hover:shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:border-white/50 hover:backdrop-blur-sm"
+                "group relative flex items-center gap-4 px-4 py-3 -mx-4 rounded-xl transition-all duration-300 border border-transparent",
+                onClick && "cursor-pointer hover:bg-white/60 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)]"
             )}
         >
-            {/* Icon/Avatar based on type */}
+            {/* Icon/Avatar */}
             <div className={clsx(
-                "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors duration-300",
-                item.type === 'goods_received' && "bg-orange-50 text-orange-600 group-hover:bg-orange-100",
-                item.type === 'invoice' && "bg-yellow-50 text-yellow-600 group-hover:bg-yellow-100",
-                item.type === 'staff_claim' && "bg-red-50 text-red-600 group-hover:bg-red-100"
+                "w-9 h-9 rounded-full flex items-center justify-center shrink-0 border border-white/50 shadow-sm",
+                item.type === 'goods_received' && "bg-orange-50 text-orange-600",
+                item.type === 'invoice' && "bg-yellow-50 text-yellow-600",
+                item.type === 'staff_claim' && "bg-red-50 text-red-600"
             )}>
                 {item.type === 'goods_received' && <AlertCircle className="w-5 h-5" />}
                 {item.type === 'invoice' && <FileText className="w-5 h-5" />}
@@ -35,45 +35,38 @@ export function AttentionItemRow({
             </div>
 
             {/* Main Content */}
-            <div className="flex-1 min-w-0 py-0.5">
-                <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2 min-w-0 pr-2">
-                        <span className="font-semibold text-neutral-900 text-sm truncate">{item.description}</span>
-                        {item.quantity && (
-                            <span className="text-xs text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded-md shrink-0 border border-neutral-200/50">
-                                {item.quantity}
-                            </span>
-                        )}
-                    </div>
-                    <span className="font-bold text-neutral-900 text-sm shrink-0 tracking-tight">{formatAmount(item.amount)}</span>
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                    <span className="shrink-0 text-[10px] font-black text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded tracking-tighter uppercase border border-neutral-200/50">
+                        {item.projectCode}
+                    </span>
+                    <span className="text-xs font-bold text-neutral-900 truncate">
+                        {item.description}
+                    </span>
                 </div>
-
-                <div className="flex items-center justify-between text-xs text-neutral-500">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-medium text-neutral-600 bg-neutral-100 px-1.5 py-0.5 rounded">{item.projectCode}</span>
-                        <span className="truncate">{item.beneficiary}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                        <span>{formatDate(item.submittedDate)}</span>
-                        {item.deadline && (
-                            <>
-                                <ArrowRight className="w-3 h-3 text-neutral-300" />
-                                <span className={clsx(
-                                    "font-medium px-1.5 py-0.5 rounded-md",
-                                    deadlineStatus === 'overdue' && "bg-red-50 text-red-600",
-                                    deadlineStatus === 'today' && "bg-orange-50 text-orange-600",
-                                    deadlineStatus === 'soon' && "bg-yellow-50 text-yellow-600",
-                                    deadlineStatus === 'normal' && "text-neutral-500"
-                                )}>
-                                    {deadlineStatus === 'overdue' && "Overdue"}
-                                    {deadlineStatus === 'today' && "Today"}
-                                    {deadlineStatus !== 'overdue' && deadlineStatus !== 'today' && formatDate(item.deadline)}
-                                </span>
-                            </>
-                        )}
-                    </div>
+                <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-medium">
+                    <span className="truncate max-w-[120px]">{item.beneficiary}</span>
+                    <span className="text-neutral-200">•</span>
+                    <span>{formatDate(item.submittedDate)}</span>
                 </div>
+            </div>
+
+            {/* Amount & Status */}
+            <div className="flex flex-col items-end shrink-0 gap-1 min-w-[100px]">
+                <span className="text-[13px] font-black text-neutral-900 tabular-nums">
+                    {formatAmount(item.amount)}
+                </span>
+                {item.deadline && (
+                    <span className={clsx(
+                        "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-tighter",
+                        deadlineStatus === 'overdue' && "bg-red-50 text-red-600",
+                        deadlineStatus === 'today' && "bg-orange-50 text-orange-600",
+                        deadlineStatus === 'soon' && "bg-yellow-50 text-yellow-600",
+                        deadlineStatus === 'normal' && "text-neutral-400"
+                    )}>
+                        {deadlineStatus === 'overdue' ? 'Overdue' : deadlineStatus === 'today' ? 'Today' : formatDate(item.deadline)}
+                    </span>
+                )}
             </div>
         </div>
     );
