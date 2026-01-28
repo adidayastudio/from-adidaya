@@ -25,6 +25,7 @@ import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 import { RequestTypeSelector, RequestType } from "./modules/RequestTypeSelector";
 import { PersonalPurchaseRow, PersonalReimburseRow } from "./modules/PersonalTransactionRows";
 import { fetchFinanceDashboardData } from "@/lib/client/finance-api";
+import { RequestChoiceDrawer } from "./modules/RequestChoiceDrawer";
 
 // Sort by: 1) deadline closest (expired first), 2) highest amount
 function sortAttentionItems(items: any[]): any[] {
@@ -42,6 +43,8 @@ export default function FinanceOverviewClient() {
     const { viewMode, isLoading: isAuthLoading, userId } = useFinance();
     const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [isChoiceOpen, setIsChoiceOpen] = useState(false);
+    const [selectedType, setSelectedType] = useState<RequestType>("PURCHASE");
     const [listType, setListType] = useState<RequestType>("PURCHASE");
     const [data, setData] = useState<any>(null);
     const [isLoadingData, setIsLoadingData] = useState(true);
@@ -59,7 +62,7 @@ export default function FinanceOverviewClient() {
     useEffect(() => {
         const handleFabAction = (e: any) => {
             if (e.detail?.id === 'FINANCE_NEW_REQUEST') {
-                setIsDrawerOpen(true);
+                setIsChoiceOpen(true);
             }
         };
         window.addEventListener('fab-action', handleFabAction);
@@ -166,24 +169,34 @@ export default function FinanceOverviewClient() {
                 {/* ONE BIG CARD: REQUESTS */}
                 <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl shadow-sm overflow-hidden min-h-[500px] flex flex-col">
                     {/* INTEGRATED HEADER */}
-                    <div className="px-6 py-4 border-b border-neutral-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-6">
+                    <div className="px-6 py-6 border-b border-neutral-100/50">
+                        <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
                                 {viewMode === "team" ? "Team Requests" : "My Requests"}
                             </h2>
-                            <div className="w-48">
-                                <RequestTypeSelector
-                                    activeType={listType}
-                                    onTypeChange={setListType}
-                                />
+                            <div className="flex items-center gap-3">
+                                <div className="w-56 sm:w-64">
+                                    <RequestTypeSelector
+                                        activeType={listType}
+                                        onTypeChange={setListType}
+                                    />
+                                </div>
+                                {/* Mobile Plus Button */}
+                                <button
+                                    onClick={() => setIsChoiceOpen(true)}
+                                    className="sm:hidden w-10 h-10 flex items-center justify-center bg-red-600 rounded-xl text-white shadow-lg active:scale-95 transition-all"
+                                >
+                                    <Plus className="w-5 h-5" strokeWidth={2.5} />
+                                </button>
                             </div>
                         </div>
 
+                        {/* DESKTOP (and Tablet) BIG RED BUTTON */}
                         <button
-                            onClick={() => setIsDrawerOpen(true)}
-                            className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            onClick={() => setIsChoiceOpen(true)}
+                            className="hidden sm:flex w-full h-12 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-sm font-bold shadow-xl shadow-red-600/20 active:scale-[0.98] transition-all items-center justify-center gap-2"
                         >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-4 h-4" strokeWidth={3} />
                             New Request
                         </button>
                     </div>
@@ -192,7 +205,7 @@ export default function FinanceOverviewClient() {
                     <div className="flex-1">
                         {viewMode === "team" ? (
                             <div className="divide-y divide-neutral-100/50">
-                                {listType === "PURCHASE" ? (
+                                {listType === "PURCHASE" && (
                                     <>
                                         {/* GOODS RECEIVED */}
                                         <div className="px-6 py-5">
@@ -269,8 +282,9 @@ export default function FinanceOverviewClient() {
                                             </div>
                                         </div>
                                     </>
-                                ) : (
-                                    /* REIMBURSE TEAM LIST */
+                                )}
+
+                                {listType === "REIMBURSE" && (
                                     <div className="px-6 py-5">
                                         <div className="flex items-center justify-between mb-4">
                                             <h3 className="text-xs font-bold text-red-600 uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded-lg">
@@ -311,11 +325,31 @@ export default function FinanceOverviewClient() {
                                         </div>
                                     </div>
                                 )}
+
+                                {listType === "ACTIVITY" && (
+                                    <div className="px-6 py-5">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h3 className="text-xs font-bold text-neutral-500 uppercase tracking-widest bg-neutral-100 px-3 py-1.5 rounded-lg">
+                                                Recent Activity
+                                            </h3>
+                                            <button className="text-xs font-medium text-neutral-400 hover:text-red-600 flex items-center gap-1 group transition-colors">
+                                                View Full Log <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                                            </button>
+                                        </div>
+                                        <RecentActivityList activities={data.lists.recentActivity.map((a: any) => ({
+                                            id: a.id,
+                                            action: a.type === 'PURCHASE' ? (a.approval_status === 'APPROVED' ? 'Purchase Approved' : 'New Purchase Request') : (a.status === 'APPROVED' ? 'Reimbursement Approved' : 'New Reimbursement'),
+                                            description: `${a.description} - ${formatShort(a.amount)}`,
+                                            user: cleanEntityName(a.created_by_name || a.staff_name || 'Unknown User'),
+                                            timestamp: a.updated_at
+                                        }))} />
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             /* PERSONAL VIEW */
                             <div className="px-6 py-5">
-                                {listType === "PURCHASE" ? (
+                                {listType === "PURCHASE" && (
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">
                                             <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
@@ -358,7 +392,9 @@ export default function FinanceOverviewClient() {
                                             )}
                                         </div>
                                     </div>
-                                ) : (
+                                )}
+
+                                {listType === "REIMBURSE" && (
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">
                                             <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
@@ -398,43 +434,46 @@ export default function FinanceOverviewClient() {
                                         </div>
                                     </div>
                                 )}
+
+                                {listType === "ACTIVITY" && (
+                                    <div className="px-6 py-5">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
+                                                Recent Activity
+                                            </h3>
+                                        </div>
+                                        <RecentActivityList activities={data.lists.recentActivity.map((a: any) => ({
+                                            id: a.id,
+                                            action: a.type === 'PURCHASE' ? (a.approval_status === 'APPROVED' ? 'Purchase Approved' : 'New Purchase Request') : (a.status === 'APPROVED' ? 'Reimbursement Approved' : 'New Reimbursement'),
+                                            description: `${a.description} - ${formatShort(a.amount)}`,
+                                            user: cleanEntityName(a.created_by_name || a.staff_name || 'Unknown User'),
+                                            timestamp: a.updated_at
+                                        }))} />
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
                 </div>
-
-                {/* TEAM VIEW: RECENT ACTIVITY AT BOTTOM */}
-                {viewMode === "team" && (
-                    <div className="space-y-6">
-                        <div className="flex items-center justify-between px-4">
-                            <div>
-                                <h2 className="text-xl font-bold text-neutral-900 tracking-tight">Recent Activity</h2>
-                                <p className="text-sm text-neutral-500">Latest financial transactions and event updates</p>
-                            </div>
-                            <button className="text-xs font-medium text-neutral-400 hover:text-red-600 flex items-center gap-1 group transition-colors">
-                                View Full Log <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        </div>
-
-                        <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl shadow-sm px-6 py-5">
-                            <RecentActivityList activities={data.lists.recentActivity.map((a: any) => ({
-                                id: a.id,
-                                action: a.type === 'PURCHASE' ? (a.approval_status === 'APPROVED' ? 'Purchase Approved' : 'New Purchase Request') : (a.status === 'APPROVED' ? 'Reimbursement Approved' : 'New Reimbursement'),
-                                description: `${a.description} - ${formatShort(a.amount)}`,
-                                user: cleanEntityName(a.created_by_name || a.staff_name || 'Unknown User'),
-                                timestamp: a.updated_at
-                            }))} />
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* SHARED DRAWER */}
             <NewRequestDrawer
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
+                initialType={selectedType}
                 onSuccess={() => {
                     fetchFinanceDashboardData().then(setData);
+                }}
+            />
+
+            <RequestChoiceDrawer
+                isOpen={isChoiceOpen}
+                onClose={() => setIsChoiceOpen(false)}
+                onSelect={(type) => {
+                    setSelectedType(type);
+                    setIsChoiceOpen(false);
+                    setTimeout(() => setIsDrawerOpen(true), 300);
                 }}
             />
         </FinancePageWrapper>
