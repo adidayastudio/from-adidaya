@@ -36,11 +36,13 @@ import {
   CheckSquare,
   ClipboardCheck,
   Bell,
-  LayoutDashboard
+  LayoutDashboard,
+  Inbox
 } from "lucide-react";
 import { useClock } from "@/hooks/useClock";
 import { formatTargetTime } from "@/lib/work-hours-utils";
 import ClockActionModal from "@/components/feel/clock/ClockActionModal";
+import { useNotifications } from "@/hooks/useNotifications";
 
 // Dashboard Tab Components
 import MyTasksContent from "@/components/my-tasks/MyTasksContent";
@@ -56,6 +58,7 @@ export default function DashboardPage() {
   const supabase = createClient();
   const { profile } = useUserProfile();
   const { isCheckedIn, elapsed, toggleClock, formatTime, status: clockStatus, startTime } = useClock();
+  const { unreadCount } = useNotifications();
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [isClockModalOpen, setIsClockModalOpen] = useState(false);
@@ -205,8 +208,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link href="/dashboard/notifications" className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-neutral-100 flex items-center justify-center shadow-sm active:scale-95 transition-all">
+                  <Link href="/dashboard/notifications" className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-neutral-100 flex items-center justify-center shadow-sm active:scale-95 transition-all relative">
                     <Bell className="w-5 h-5 text-neutral-500" strokeWidth={1.5} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
                   </Link>
                   <Link href="/settings" className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-neutral-100 flex items-center justify-center shadow-sm active:scale-95 transition-all">
                     <User className="w-5 h-5 text-neutral-500" strokeWidth={1.5} />
@@ -368,41 +376,43 @@ export default function DashboardPage() {
               <div className="space-y-2.5">
                 {activeTab === "tasks" && (
                   <>
-                    {[
-                      { id: "1", name: "Review JPF Design", project: "JPF House", due: "Today", status: "in-progress" },
-                      { id: "2", name: "Client Meeting Prep", project: "Urban Park", due: "Tomorrow", status: "not-started" },
-                      { id: "3", name: "Finalize Material List", project: "Skyline Tower", due: "Jan 10", status: "not-started" },
-                    ].map((task) => (
-                      <Link
-                        key={task.id}
-                        href="/dashboard/tasks"
-                        className="flex items-center justify-between p-3.5 backdrop-blur-xl rounded-2xl border border-white/50 active:scale-[0.98] transition-all shadow-sm"
-                        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)' }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={clsx(
-                            "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-sm border",
-                            task.status === "in-progress"
-                              ? "bg-gradient-to-br from-blue-100/80 to-blue-50/40 border-blue-200/40"
-                              : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 border-neutral-200/40"
+                    {/* Tasks Empty State */}
+                    {false ? (
+                      [].map((task: any) => (
+                        <Link
+                          key={task.id}
+                          href="/dashboard/tasks"
+                          className="flex items-center justify-between p-3.5 backdrop-blur-xl rounded-2xl border border-white/50 active:scale-[0.98] transition-all shadow-sm"
+                          style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)' }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={clsx(
+                              "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-sm border",
+                              task.status === "in-progress"
+                                ? "bg-gradient-to-br from-blue-100/80 to-blue-50/40 border-blue-200/40"
+                                : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 border-neutral-200/40"
+                            )}>
+                              <ClipboardCheck className={clsx("w-4 h-4", task.status === "in-progress" ? "text-blue-500" : "text-neutral-400")} strokeWidth={1.5} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-neutral-700">{task.name}</p>
+                              <p className="text-[10px] text-neutral-400">{task.project}</p>
+                            </div>
+                          </div>
+                          <span className={clsx(
+                            "text-[10px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm border",
+                            task.due === "Today"
+                              ? "bg-gradient-to-br from-blue-100/80 to-blue-50/40 text-blue-600 border-blue-200/40"
+                              : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 text-neutral-500 border-neutral-200/40"
                           )}>
-                            <ClipboardCheck className={clsx("w-4 h-4", task.status === "in-progress" ? "text-blue-500" : "text-neutral-400")} strokeWidth={1.5} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-neutral-700">{task.name}</p>
-                            <p className="text-[10px] text-neutral-400">{task.project}</p>
-                          </div>
-                        </div>
-                        <span className={clsx(
-                          "text-[10px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm border",
-                          task.due === "Today"
-                            ? "bg-gradient-to-br from-blue-100/80 to-blue-50/40 text-blue-600 border-blue-200/40"
-                            : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 text-neutral-500 border-neutral-200/40"
-                        )}>
-                          {task.due}
-                        </span>
-                      </Link>
-                    ))}
+                            {task.due}
+                          </span>
+                        </Link>
+                      ))
+                    ) : (
+                      <EmptyPlaceholder text="No tasks due today 🎉" />
+                    )}
+                    {/* View All Button - Always Show */}
                     <Link href="/dashboard/tasks" className="block text-center text-[11px] font-semibold text-blue-500 py-2">
                       View All Tasks →
                     </Link>
@@ -410,42 +420,43 @@ export default function DashboardPage() {
                 )}
                 {activeTab === "projects" && (
                   <>
-                    {[
-                      { id: "JPF", name: "JPF House", progress: 68, status: "active" },
-                      { id: "UPC", name: "Urban Park Center", progress: 45, status: "attention" },
-                      { id: "SKY", name: "Skyline Tower", progress: 12, status: "active" },
-                    ].map((project) => (
-                      <Link
-                        key={project.id}
-                        href={`/flow/projects/${project.id}`}
-                        className="flex items-center justify-between p-3.5 backdrop-blur-xl rounded-2xl border border-white/50 active:scale-[0.98] transition-all shadow-sm"
-                        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)' }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={clsx(
-                            "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-sm border",
-                            project.status === "attention"
-                              ? "bg-gradient-to-br from-orange-100/80 to-orange-50/40 border-orange-200/40"
-                              : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 border-neutral-200/40"
-                          )}>
-                            <FolderKanban className={clsx("w-4 h-4", project.status === "attention" ? "text-orange-500" : "text-neutral-400")} strokeWidth={1.5} />
+                    {/* Projects Empty State */}
+                    {false ? (
+                      [].map((project: any) => (
+                        <Link
+                          key={project.id}
+                          href={`/flow/projects/${project.id}`}
+                          className="flex items-center justify-between p-3.5 backdrop-blur-xl rounded-2xl border border-white/50 active:scale-[0.98] transition-all shadow-sm"
+                          style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)' }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={clsx(
+                              "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-sm border",
+                              project.status === "attention"
+                                ? "bg-gradient-to-br from-orange-100/80 to-orange-50/40 border-orange-200/40"
+                                : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 border-neutral-200/40"
+                            )}>
+                              <FolderKanban className={clsx("w-4 h-4", project.status === "attention" ? "text-orange-500" : "text-neutral-400")} strokeWidth={1.5} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-neutral-700">{project.name}</p>
+                              <p className="text-[10px] text-neutral-400">{project.id}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-neutral-700">{project.name}</p>
-                            <p className="text-[10px] text-neutral-400">{project.id}</p>
+                          <div className="flex items-center gap-2">
+                            <div className="w-16 h-1.5 bg-neutral-200/50 rounded-full overflow-hidden backdrop-blur-sm">
+                              <div
+                                className={clsx("h-full rounded-full", project.status === "attention" ? "bg-orange-400" : "bg-blue-500")}
+                                style={{ width: `${project.progress}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-semibold text-neutral-500">{project.progress}%</span>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-neutral-200/50 rounded-full overflow-hidden backdrop-blur-sm">
-                            <div
-                              className={clsx("h-full rounded-full", project.status === "attention" ? "bg-orange-400" : "bg-blue-500")}
-                              style={{ width: `${project.progress}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-semibold text-neutral-500">{project.progress}%</span>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      ))
+                    ) : (
+                      <EmptyPlaceholder text="No active projects" />
+                    )}
                     <Link href="/dashboard/projects" className="block text-center text-[11px] font-semibold text-blue-500 py-2">
                       View All Projects →
                     </Link>
@@ -657,6 +668,17 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function EmptyPlaceholder({ text = "No items" }: { text?: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 h-32 text-neutral-400">
+      <div className="w-10 h-10 rounded-full bg-neutral-50 flex items-center justify-center">
+        <Inbox className="w-5 h-5 opacity-50" />
+      </div>
+      <span className="text-xs font-medium">{text}</span>
     </div>
   );
 }

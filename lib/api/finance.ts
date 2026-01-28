@@ -742,31 +742,33 @@ export async function fetchFinanceDashboardData(userId: string) {
     const paidToMe = myPaidReimburse?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
 
     // 3. ATTENTION ITEMS (TEAM VIEW) / LISTS
-    // Goods Received (Unpaid)
+    // Goods Received (Unpaid/Need Payment)
     const { data: goodsReceived } = await supabase
         .from('purchasing_requests')
         .select('*, project:projects(project_name, project_code)')
+        .eq('approval_status', 'APPROVED')
         .eq('purchase_stage', 'RECEIVED')
         .neq('financial_status', 'PAID')
-        .order('date', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(5);
 
-    // Invoices Pending
+    // Invoices Pending (Need Payment)
     const { data: invoices } = await supabase
         .from('purchasing_requests')
         .select('*, project:projects(project_name, project_code)')
+        .eq('approval_status', 'APPROVED')
         .eq('purchase_stage', 'INVOICED')
         .neq('financial_status', 'PAID')
-        .order('date', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(5);
 
-    // Reimburse Approval
+    // Reimburse Approval (PENDING status)
     const { data: staffClaims } = await supabase
         .from('reimbursement_requests')
         .select('*, project:projects(project_name, project_code)')
         .eq('status', 'PENDING')
-        .order('date', { ascending: true })
-        .limit(10);
+        .order('created_at', { ascending: false })
+        .limit(5);
 
     // 4. MY HISTORY (PERSONAL VIEW)
     const { data: myPurchaseHistory } = await supabase

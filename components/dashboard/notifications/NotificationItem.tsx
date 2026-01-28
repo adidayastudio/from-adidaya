@@ -11,17 +11,17 @@ interface NotificationItemProps {
     onMarkAsRead?: (id: string) => void;
 }
 
-export default function NotificationItem({ item, onMarkAsRead }: NotificationItemProps) {
+export default function NotificationItem({ item }: NotificationItemProps) {
     const isUnread = !item.isRead;
 
     const getIcon = () => {
         switch (item.type) {
-            case "approval": return <FileText className="w-4 h-4 text-purple-600" />;
-            case "mention": return <AtSign className="w-4 h-4 text-blue-600" />;
-            case "system": return <Settings className="w-4 h-4 text-gray-600" />;
-            case "success": return <Check className="w-4 h-4 text-green-600" />;
-            case "warning": return <AlertTriangle className="w-4 h-4 text-orange-600" />;
-            default: return <Info className="w-4 h-4 text-gray-600" />;
+            case "approval": return <FileText className="w-3.5 h-3.5 text-purple-600" />;
+            case "mention": return <AtSign className="w-3.5 h-3.5 text-blue-600" />;
+            case "system": return <Settings className="w-3.5 h-3.5 text-gray-600" />;
+            case "success": return <Check className="w-3.5 h-3.5 text-green-600" />;
+            case "warning": return <AlertTriangle className="w-3.5 h-3.5 text-orange-600" />;
+            default: return <Info className="w-3.5 h-3.5 text-gray-600" />;
         }
     };
 
@@ -38,25 +38,23 @@ export default function NotificationItem({ item, onMarkAsRead }: NotificationIte
 
     return (
         <div className={clsx(
-            "group relative p-4 rounded-xl border transition-all duration-200",
-            isUnread ? "bg-white border-neutral-200 shadow-sm" : "bg-neutral-50/50 border-transparent hover:bg-white hover:border-neutral-200"
+            "group relative p-3 rounded-2xl transition-all duration-200 touch-manipulation",
+            isUnread
+                ? "bg-white shadow-sm ring-1 ring-neutral-100"
+                : "bg-neutral-50/50 hover:bg-neutral-100/50"
         )}>
-            {isUnread && (
-                <div className="absolute top-4 right-4 w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-            )}
-
-            <div className="flex gap-4">
+            <div className="flex gap-3 items-start">
                 {/* Avatar / Icon */}
-                <div className="flex-shrink-0 pt-1">
+                <div className="flex-shrink-0 pt-0.5">
                     {item.source?.avatar ? (
-                        <img src={item.source.avatar} alt={item.source.name} className="w-10 h-10 rounded-full object-cover" />
+                        <img src={item.source.avatar} alt={item.source.name} className="w-8 h-8 rounded-full object-cover ring-2 ring-white" />
                     ) : (
                         item.source?.color ? (
-                            <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm", item.source.color)}>
+                            <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ring-2 ring-white", item.source.color)}>
                                 {item.source.name.charAt(0)}
                             </div>
                         ) : (
-                            <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center", getBgColor())}>
+                            <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center ring-2 ring-white", getBgColor())}>
                                 {getIcon()}
                             </div>
                         )
@@ -64,12 +62,11 @@ export default function NotificationItem({ item, onMarkAsRead }: NotificationIte
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 space-y-1">
-                    {/* Main Description (Actor + Action) */}
-                    <p className={clsx("text-sm leading-relaxed", isUnread ? "font-semibold text-neutral-900" : "font-medium text-neutral-700")}>
+                <div className="flex-1 min-w-0">
+                    {/* Main Description */}
+                    <p className={clsx("text-sm leading-snug line-clamp-2 pr-4", isUnread ? "font-semibold text-neutral-900" : "font-medium text-neutral-600")}>
                         {(() => {
                             const text = item.description || "";
-                            // Define keywords and their colors
                             const keywords = [
                                 { word: "approved", color: "text-blue-600" },
                                 { word: "rejected", color: "text-red-600" },
@@ -77,13 +74,6 @@ export default function NotificationItem({ item, onMarkAsRead }: NotificationIte
                                 { word: "paid", color: "text-emerald-600" },
                                 { word: "submitted", color: "text-neutral-900" }
                             ];
-
-                            // Find the keyword present in the text
-                            // We split by the first occurrence of a keyword to style it
-                            // Simplistic approach: split by space implies word matching, but "marking as paid:" is multi-word.
-                            // Better approach: Regex replacement with component
-
-                            // Let's use a robust regex
                             const pattern = new RegExp(`(${keywords.map(k => k.word).join("|")})`, "i");
                             const parts = text.split(pattern);
 
@@ -97,29 +87,18 @@ export default function NotificationItem({ item, onMarkAsRead }: NotificationIte
                         })()}
                     </p>
 
-                    {/* Meta: Title (Module • Code) • Timestamp */}
-                    <div className="flex items-center gap-2 text-xs text-neutral-500">
+                    {/* Meta */}
+                    <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 mt-1 font-medium">
                         <span>{item.title}</span>
-                        <span>•</span>
+                        <span className="w-0.5 h-0.5 rounded-full bg-neutral-300" />
                         <span>{item.timestamp}</span>
                     </div>
-
-                    {/* Actions (if Approval) */}
-                    {item.type === "approval" && item.metadata?.status === "pending" && (
-                        <div className="pt-2 flex gap-2">
-                            <span className="flex items-center gap-1 px-3 py-1.5 bg-neutral-100 text-neutral-600 text-xs font-medium rounded-lg">
-                                <FileText className="w-3 h-3" /> Review Request
-                            </span>
-                        </div>
-                    )}
-
-                    {/* View Details Indicator (Visual Only, Parent is Link) */}
-                    <div className="pt-1 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="flex items-center gap-1 text-xs font-medium text-blue-600">
-                            View Details <ArrowRight className="w-3 h-3" />
-                        </span>
-                    </div>
                 </div>
+
+                {/* Unread Indicator */}
+                {isUnread && (
+                    <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5 animate-pulse" />
+                )}
             </div>
         </div>
     );

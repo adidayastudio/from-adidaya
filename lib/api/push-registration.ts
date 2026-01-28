@@ -51,4 +51,23 @@ export const subscribeToPush = async () => {
         console.error("❌ [Push] Subscription sync failed:", error);
         return false;
     }
+}
+
+
+export const unsubscribeFromPush = async () => {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+            await subscription.unsubscribe();
+            console.log("✅ [Push] Unsubscribed successfully.");
+            // Ideally we should also delete from DB, but the next sync/upsert will handle the new one, 
+            // and the old one will 410 Gone and get deleted by Edge Function eventually.
+            return true;
+        }
+    } catch (e) {
+        console.error("Error unsubscribing:", e);
+    }
+    return false;
 };

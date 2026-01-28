@@ -10,7 +10,7 @@ interface PersonalPurchaseRowProps {
     onPay?: (item: PurchasingItem) => void;
 }
 
-export function PersonalPurchaseRow({ item, onPay }: PersonalPurchaseRowProps) {
+export function PersonalPurchaseRow({ item }: PersonalPurchaseRowProps) {
     const primaryStatus = getPrimaryStatus(
         item.approval_status,
         item.purchase_stage,
@@ -18,51 +18,42 @@ export function PersonalPurchaseRow({ item, onPay }: PersonalPurchaseRowProps) {
     );
     const theme = STATUS_THEMES[primaryStatus];
 
+    // Naturalize category type
+    const naturalType = (item.type || 'MATERIAL')
+        .replace(/_/g, ' ')
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
     return (
-        <div className="group hover:bg-white/60 hover:shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-300 cursor-pointer border-b border-neutral-50 last:border-0 rounded-xl flex items-center gap-4 px-4 py-3">
-            {/* DATE */}
-            <div className="w-20 shrink-0 text-[11px] font-medium text-neutral-400 tabular-nums">
-                {formatDate(item.date)}
-            </div>
-
-            {/* PROJECT & DESCRIPTION */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                    <span className="shrink-0 text-[9px] font-black text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded tracking-tighter uppercase border border-neutral-200/50">
-                        {item.project_code}
-                    </span>
-                    <span className="text-xs font-bold text-neutral-900 truncate">
-                        {cleanEntityName(item.project_name)}
-                    </span>
-                </div>
-                <div className="text-[12px] font-medium text-neutral-600 truncate mb-0.5">
+        <div className="group hover:bg-white/60 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all duration-300 cursor-pointer border-b border-neutral-50 last:border-0 rounded-xl px-4 py-2.5 flex flex-col gap-0.5">
+            {/* LINE 1: ITEM | HARGA | STATUS */}
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-[13px] font-bold text-neutral-900 truncate flex-1 leading-tight">
                     {item.description}
-                </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-neutral-400 font-medium">
-                    <span className="text-neutral-500">{item.quantity} {item.unit}</span>
-                    <span className="text-neutral-200">•</span>
-                    <span className="truncate max-w-[120px]">{cleanEntityName(item.vendor)}</span>
-                </div>
-            </div>
-
-            {/* AMOUNT & STATUS */}
-            <div className="flex flex-col items-end shrink-0 gap-1.5 min-w-[110px]">
-                <div className="text-[13px] font-black text-neutral-900 tabular-nums tracking-tight">
-                    {formatCurrency(item.amount)}
-                </div>
-                <span className={clsx(
-                    "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm border border-white/10",
-                    theme.bg, theme.text
-                )}>
-                    {primaryStatus}
                 </span>
+                <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[13px] font-black text-neutral-900 tabular-nums">
+                        {formatCurrency(item.amount)}
+                    </span>
+                    <span className={clsx(
+                        "px-1.5 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-widest border border-white/10",
+                        theme.bg, theme.text
+                    )}>
+                        {primaryStatus}
+                    </span>
+                </div>
             </div>
 
-            {/* ACTIONS (Hover Only) */}
-            <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0">
-                <button onClick={(e) => { e.stopPropagation(); onPay?.(item); }} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all">
-                    <Eye className="w-4 h-4" strokeWidth={2} />
-                </button>
+            {/* LINE 2: PROYEK . TANGGAL . KATEGORI */}
+            <div className="flex items-center gap-1.5 text-[10.5px] font-medium text-neutral-400 leading-none">
+                <span className="font-bold text-neutral-500 uppercase tracking-tighter">
+                    {item.project_code}
+                </span>
+                <span className="text-neutral-200">•</span>
+                <span className="tabular-nums">{formatDate(item.date)}</span>
+                <span className="text-neutral-200">•</span>
+                <span>{naturalType}</span>
             </div>
         </div>
     );
@@ -75,51 +66,46 @@ interface PersonalReimburseRowProps {
 export function PersonalReimburseRow({ item }: PersonalReimburseRowProps) {
     const theme = STATUS_THEMES[item.status];
 
+    // Naturalize category
+    const naturalCategory = (item.category || 'General')
+        .replace(/_/g, ' ')
+        .split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
     return (
-        <div className="group hover:bg-white/60 hover:shadow-[0_8px_32px_rgba(0,0,0,0.04)] transition-all duration-300 cursor-pointer border-b border-neutral-50 last:border-0 rounded-xl flex items-center gap-4 px-4 py-3">
-            {/* DATE */}
-            <div className="w-20 shrink-0 text-[11px] font-medium text-neutral-400 tabular-nums">
-                {formatDate(item.created_at)}
-            </div>
-
-            {/* PROJECT & DESCRIPTION */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                    <span className="shrink-0 text-[9px] font-black text-neutral-500 bg-neutral-100 px-1.5 py-0.5 rounded tracking-tighter uppercase border border-neutral-200/50">
-                        {item.project_code}
-                    </span>
-                    <span className="text-xs font-bold text-neutral-900 truncate">
-                        {cleanEntityName(item.project_name)}
-                    </span>
-                </div>
-                <div className="text-[12px] font-medium text-neutral-600 truncate">
+        <div className="group hover:bg-white/60 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] transition-all duration-300 cursor-pointer border-b border-neutral-50 last:border-0 rounded-xl px-4 py-2.5 flex flex-col gap-0.5">
+            {/* LINE 1: ITEM | HARGA | STATUS */}
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-[13px] font-bold text-neutral-900 truncate flex-1 leading-tight">
                     {item.description}
-                </div>
-                {item.category && (
-                    <div className="text-[10px] text-neutral-400 font-medium">
-                        {item.category}
-                    </div>
-                )}
-            </div>
-
-            {/* AMOUNT & STATUS */}
-            <div className="flex flex-col items-end shrink-0 gap-1.5 min-w-[110px]">
-                <div className="text-[13px] font-black text-neutral-900 tabular-nums tracking-tight">
-                    {formatCurrency(item.amount)}
-                </div>
-                <span className={clsx(
-                    "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm border border-white/10",
-                    theme.bg, theme.text
-                )}>
-                    {item.status}
                 </span>
+                <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[13px] font-black text-neutral-900 tabular-nums">
+                        {formatCurrency(item.amount)}
+                    </span>
+                    <span className={clsx(
+                        "px-1.5 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-widest border border-white/10",
+                        theme.bg, theme.text
+                    )}>
+                        {item.status}
+                    </span>
+                </div>
             </div>
 
-            {/* ACTIONS (Hover Only) */}
-            <div className="hidden sm:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0">
-                <button className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all">
-                    <Eye className="w-4 h-4" strokeWidth={2} />
-                </button>
+            {/* LINE 2: PROYEK . TANGGAL . KATEGORI */}
+            <div className="flex items-center gap-1.5 text-[10.5px] font-medium text-neutral-400 leading-none">
+                <span className="font-bold text-neutral-500 uppercase tracking-tighter">
+                    {item.project_code}
+                </span>
+                <span className="text-neutral-200">•</span>
+                <span className="tabular-nums">{formatDate(item.created_at)}</span>
+                {item.category && (
+                    <>
+                        <span className="text-neutral-200">•</span>
+                        <span>{naturalCategory}</span>
+                    </>
+                )}
             </div>
         </div>
     );

@@ -25,7 +25,6 @@ import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 import { RequestTypeSelector, RequestType } from "./modules/RequestTypeSelector";
 import { PersonalPurchaseRow, PersonalReimburseRow } from "./modules/PersonalTransactionRows";
 import { fetchFinanceDashboardData } from "@/lib/client/finance-api";
-import { RequestChoiceDrawer } from "./modules/RequestChoiceDrawer";
 
 // Sort by: 1) deadline closest (expired first), 2) highest amount
 function sortAttentionItems(items: any[]): any[] {
@@ -43,7 +42,6 @@ export default function FinanceOverviewClient() {
     const { viewMode, isLoading: isAuthLoading, userId } = useFinance();
     const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [isChoiceOpen, setIsChoiceOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<RequestType>("PURCHASE");
     const [listType, setListType] = useState<RequestType>("PURCHASE");
     const [data, setData] = useState<any>(null);
@@ -62,7 +60,7 @@ export default function FinanceOverviewClient() {
     useEffect(() => {
         const handleFabAction = (e: any) => {
             if (e.detail?.id === 'FINANCE_NEW_REQUEST') {
-                setIsChoiceOpen(true);
+                setIsDrawerOpen(true);
             }
         };
         window.addEventListener('fab-action', handleFabAction);
@@ -167,38 +165,29 @@ export default function FinanceOverviewClient() {
                 </SummaryCardsRow>
 
                 {/* ONE BIG CARD: REQUESTS */}
-                <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl shadow-sm overflow-hidden min-h-[500px] flex flex-col">
+                <div className="bg-white/70 backdrop-blur-xl border border-white/40 rounded-3xl shadow-sm overflow-hidden flex flex-col">
                     {/* INTEGRATED HEADER */}
-                    <div className="px-6 py-6 border-b border-neutral-100/50">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
+                    <div className="px-6 py-4 border-b border-neutral-100/50">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-lg font-bold text-neutral-900 tracking-tight">
                                 {viewMode === "team" ? "Team Requests" : "My Requests"}
                             </h2>
-                            <div className="flex items-center gap-3">
-                                <div className="w-56 sm:w-64">
+                            <div className="flex items-center gap-2">
+                                <div className="w-44 sm:w-52">
                                     <RequestTypeSelector
                                         activeType={listType}
                                         onTypeChange={setListType}
                                     />
                                 </div>
-                                {/* Mobile Plus Button */}
                                 <button
-                                    onClick={() => setIsChoiceOpen(true)}
-                                    className="sm:hidden w-10 h-10 flex items-center justify-center bg-red-600 rounded-xl text-white shadow-lg active:scale-95 transition-all"
+                                    onClick={() => setIsDrawerOpen(true)}
+                                    className="hidden sm:flex h-9 px-3 sm:px-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[13px] font-bold shadow-lg shadow-red-600/20 active:scale-95 transition-all items-center gap-1.5"
                                 >
-                                    <Plus className="w-5 h-5" strokeWidth={2.5} />
+                                    <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+                                    <span className="hidden sm:inline">New Request</span>
                                 </button>
                             </div>
                         </div>
-
-                        {/* DESKTOP (and Tablet) BIG RED BUTTON */}
-                        <button
-                            onClick={() => setIsChoiceOpen(true)}
-                            className="hidden sm:flex w-full h-12 bg-red-600 hover:bg-red-700 text-white rounded-2xl text-sm font-bold shadow-xl shadow-red-600/20 active:scale-[0.98] transition-all items-center justify-center gap-2"
-                        >
-                            <Plus className="w-4 h-4" strokeWidth={3} />
-                            New Request
-                        </button>
                     </div>
 
                     {/* LIST CONTENT */}
@@ -208,9 +197,9 @@ export default function FinanceOverviewClient() {
                                 {listType === "PURCHASE" && (
                                     <>
                                         {/* GOODS RECEIVED */}
-                                        <div className="px-6 py-5">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <h3 className="text-xs font-bold text-orange-600 uppercase tracking-widest bg-orange-50 px-3 py-1.5 rounded-lg">
+                                        <div className="px-6 py-4">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h3 className="text-[10px] font-black text-orange-600 uppercase tracking-widest bg-orange-50 px-2.5 py-1 rounded-lg">
                                                     Goods Received (Unpaid)
                                                 </h3>
                                                 <button
@@ -245,9 +234,9 @@ export default function FinanceOverviewClient() {
                                             </div>
                                         </div>
                                         {/* INVOICES */}
-                                        <div className="px-6 py-5 bg-neutral-50/30">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <h3 className="text-xs font-bold text-yellow-600 uppercase tracking-widest bg-yellow-50 px-3 py-1.5 rounded-lg">
+                                        <div className="px-6 py-4 bg-neutral-50/30">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h3 className="text-[10px] font-black text-yellow-600 uppercase tracking-widest bg-yellow-50 px-2.5 py-1 rounded-lg">
                                                     Invoices Pending
                                                 </h3>
                                                 <button
@@ -285,9 +274,9 @@ export default function FinanceOverviewClient() {
                                 )}
 
                                 {listType === "REIMBURSE" && (
-                                    <div className="px-6 py-5">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-xs font-bold text-red-600 uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded-lg">
+                                    <div className="px-6 py-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-[10px] font-black text-red-600 uppercase tracking-widest bg-red-50 px-2.5 py-1 rounded-lg">
                                                 Reimburse Approval
                                             </h3>
                                             <button
@@ -328,9 +317,9 @@ export default function FinanceOverviewClient() {
                             </div>
                         ) : (
                             /* PERSONAL VIEW */
-                            <div className="px-6 py-5">
+                            <div className="px-6 py-4">
                                 {listType === "PURCHASE" && (
-                                    <div className="space-y-6">
+                                    <div className="space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
                                                 <ShoppingCart className="w-4 h-4 text-red-500" /> My Recent Purchases
@@ -342,7 +331,7 @@ export default function FinanceOverviewClient() {
                                                 View History <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-1.5">
                                             {data.lists.myPurchaseHistory.slice(0, 5).map((p: any) => (
                                                 <PersonalPurchaseRow
                                                     key={p.id}
@@ -375,7 +364,7 @@ export default function FinanceOverviewClient() {
                                 )}
 
                                 {listType === "REIMBURSE" && (
-                                    <div className="space-y-6">
+                                    <div className="space-y-4">
                                         <div className="flex items-center justify-between">
                                             <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
                                                 <Receipt className="w-4 h-4 text-purple-500" /> My Reimbursements
@@ -387,7 +376,7 @@ export default function FinanceOverviewClient() {
                                                 View History <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-1.5">
                                             {data.lists.myReimburseHistory.slice(0, 5).map((r: any) => (
                                                 <PersonalReimburseRow
                                                     key={r.id}
@@ -427,16 +416,6 @@ export default function FinanceOverviewClient() {
                 initialType={selectedType}
                 onSuccess={() => {
                     fetchFinanceDashboardData().then(setData);
-                }}
-            />
-
-            <RequestChoiceDrawer
-                isOpen={isChoiceOpen}
-                onClose={() => setIsChoiceOpen(false)}
-                onSelect={(type) => {
-                    setSelectedType(type);
-                    setIsChoiceOpen(false);
-                    setTimeout(() => setIsDrawerOpen(true), 300);
                 }}
             />
         </FinancePageWrapper>
