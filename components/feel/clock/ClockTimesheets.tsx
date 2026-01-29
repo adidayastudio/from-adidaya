@@ -843,8 +843,8 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                             <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
                                                 {/* Line 1: Day & Location */}
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm font-bold text-neutral-900 leading-none">
-                                                        {format(new Date(row.date), "EEEE")}
+                                                    <span className={clsx("text-sm font-bold text-neutral-900 leading-none", (personalTeamView === "team" && isManager) && "truncate max-w-[120px]")}>
+                                                        {(personalTeamView === "team" && isManager) ? row.employee : format(new Date(row.date), "EEEE")}
                                                     </span>
                                                     {row.checkInLocationCode && (
                                                         <a
