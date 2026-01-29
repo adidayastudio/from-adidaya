@@ -21,6 +21,7 @@ import {
     Wrench,
     Briefcase
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { useClock } from "@/hooks/useClock";
 import useUserProfile from "@/hooks/useUserProfile";
 import ClockActionModal from "@/components/feel/clock/ClockActionModal";
@@ -95,8 +96,8 @@ export default function MobileBottomBar() {
             <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 w-full px-4 max-w-sm">
                 {/* iOS 26 GLASS NAV BAR */}
                 <div
-                    className="flex-1 backdrop-blur-2xl border border-white/50 shadow-2xl shadow-black/10 rounded-full px-2 py-1.5 flex justify-between items-center"
-                    style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(250,250,252,0.75) 100%)' }}
+                    className="flex-1 backdrop-blur-3xl border border-white/40 shadow-2xl shadow-black/5 rounded-full px-2 py-1.5 flex justify-between items-center"
+                    style={{ background: 'rgba(255, 255, 255, 0.45)' }}
                 >
                     {MOBILE_NAV_ITEMS.map((item) => {
                         const active = isActive(item.href);
@@ -106,21 +107,27 @@ export default function MobileBottomBar() {
                                 key={item.id}
                                 href={item.href}
                                 className={clsx(
-                                    "relative flex flex-col items-center justify-center transition-all duration-200 rounded-full p-3",
+                                    "relative flex flex-col items-center justify-center transition-all duration-200 rounded-full p-2.5 isolate",
                                     active
-                                        ? "text-neutral-800"
-                                        : "text-neutral-400 active:text-neutral-600"
+                                        ? "text-neutral-900"
+                                        : "text-neutral-300 active:text-neutral-500"
                                 )}
                             >
                                 {active && (
-                                    <div
-                                        className="absolute inset-0 rounded-full border border-white/60"
-                                        style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(245,245,247,0.8) 100%)' }}
+                                    <motion.div
+                                        layoutId="active-mobile-nav"
+                                        className="absolute inset-0 rounded-full bg-neutral-300/40 backdrop-blur-xl border border-white/40 shadow-sm"
+                                        transition={{
+                                            type: "spring",
+                                            stiffness: 200,
+                                            damping: 22,
+                                            mass: 1
+                                        }}
                                     />
                                 )}
                                 <Icon
-                                    className="w-5 h-5 transition-colors relative z-10"
-                                    strokeWidth={active ? 2.5 : 2}
+                                    className="w-5 h-5 transition-all relative z-10"
+                                    strokeWidth={active ? 2.6 : 2}
                                 />
                             </Link>
                         );

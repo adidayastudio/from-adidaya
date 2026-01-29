@@ -186,12 +186,15 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
         </div>
 
         {/* MENU */}
-        <nav className="flex flex-col mt-4 px-2 pb-5 overflow-y-auto">
+        <nav className="flex flex-col mt-4 px-2 pb-5 overflow-y-auto flex-1">
           {menuItems.map((group) => {
             const colors = getSectionColors(group.section);
 
             return (
-              <div key={group.section} className="mt-4">
+              <div key={group.section} className={clsx(
+                "mt-4",
+                group.section === "SYSTEM" && "mt-8 border-t border-border-light pt-4"
+              )}>
                 {open && (
                   <p className="px-3 text-[11px] font-semibold text-text-tertiary mb-1">
                     {group.section}
@@ -247,6 +250,42 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
             );
           })}
 
+          <div className="mt-8 border-t border-border-light pt-4">
+            <div
+              className="relative group w-full"
+              onMouseEnter={(e) => {
+                if (open) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                setHoveredItem({
+                  label: "Settings",
+                  top: rect.top + rect.height / 2,
+                });
+              }}
+              onMouseLeave={() => setHoveredItem(null)}
+            >
+              <Link
+                href="/settings"
+                className={clsx(
+                  "flex items-center rounded-full text-sm font-medium transition-all select-none group/link",
+                  open ? "gap-3 px-3 py-2.5" : "px-0 py-2.5 justify-center w-full",
+                  pathname.startsWith("/settings")
+                    ? "text-neutral-900 bg-neutral-200"
+                    : "text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900"
+                )}
+              >
+                <Settings
+                  size={20}
+                  strokeWidth={pathname.startsWith("/settings") ? 2 : 1.5}
+                  className={clsx(
+                    "transition-transform group-hover/link:scale-110",
+                    pathname.startsWith("/settings") ? "text-neutral-900" : "text-neutral-400 group-hover/link:text-neutral-600"
+                  )}
+                />
+                {open && <span>Settings</span>}
+              </Link>
+            </div>
+          </div>
+
           {/* SIGN OUT (Mobile Only Inside Navigation) */}
           <div className="mt-8 pt-4 border-t border-border-light md:hidden">
             <button
@@ -259,7 +298,9 @@ export default function Sidebar({ onWidthChange }: { onWidthChange?: (w: number)
           </div>
         </nav>
 
-        <div className="mt-auto border-t border-border-light px-4 py-4">
+
+
+        <div className="border-t border-border-light px-4 py-4">
           {open && <p className="text-xs text-text-tertiary">© 2026 Adidaya Studio</p>}
         </div>
       </aside>
