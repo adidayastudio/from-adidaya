@@ -169,7 +169,8 @@ export default function ClockActionModal({
                                 )}>
                                     {loading ? "Detecting location..." :
                                         isOutside ? "Outside registered area" :
-                                            `Location detected: ${detection?.location?.code}`}
+                                            isUnknown ? "Location unknown" :
+                                                `Location detected: ${detection?.location?.code}`}
                                 </p>
                                 <p className={clsx(
                                     "text-xs mt-0.5",
@@ -179,7 +180,8 @@ export default function ClockActionModal({
                                 )}>
                                     {loading ? "Verifying GPS coordinates..." :
                                         isOutside ? "You are not within any registered project or office area" :
-                                            `${Math.round(detection?.distance || 0)} meters from ${detection?.location?.type}`}
+                                            isUnknown ? "Failed to verify your proximity to known locations" :
+                                                `${Math.round(detection?.distance || 0)} meters from ${detection?.location?.type}`}
                                 </p>
                             </div>
 

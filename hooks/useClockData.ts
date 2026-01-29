@@ -39,16 +39,13 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
             const targetId = isTeam ? undefined : userId;
 
             // Fetch independent data streams
-            // 1. Core clock data (critical) - Now filtered by DATE RANGE
-            const targetDateStr = targetDate.toISOString().split('T')[0]; // For sessions (single day)
-
             const clockPromise = Promise.all([
                 clockApi.fetchAttendanceRecords(targetId, startDate, endDate),
                 clockApi.fetchLeaveRequests(targetId, startDate, endDate),
                 clockApi.fetchOvertimeLogs(targetId, startDate, endDate),
                 clockApi.fetchBusinessTrips(targetId, startDate, endDate),
-                // Fetch sessions in parallel (usually for single day context)
-                clockApi.fetchAttendanceSessions(targetId, targetDateStr).catch(e => {
+                // Fetch sessions for the WHOLE MONTH now instead of single day
+                clockApi.fetchAttendanceSessions(targetId, startDate, endDate).catch(e => {
                     console.warn("⚠️ Independent session fetch failed", e);
                     return [];
                 }),

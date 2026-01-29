@@ -66,11 +66,11 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
     const isManager = canViewTeamData(role || profile?.role);
     // -- DATA FETCHING --
     // Now receiving currentMonth to filter fetching by month
-    const { attendance, leaves, overtime: otLogs, businessTrips: trips, teamMembers, logs, loading: loadingData, refresh } = useClockData(profile?.id, personalTeamView === "team", currentMonth);
+    const { attendance, leaves, overtime: otLogs, businessTrips: trips, teamMembers, sessions, logs, loading: loadingData, refresh } = useClockData(profile?.id, personalTeamView === "team", currentMonth);
 
     // -- MAP DATA TO UI FORMAT --
     const rawData = useMemo(() => {
-        return attendance.map(r => ({
+        const base = attendance.map(r => ({
             ...r,
             employee: r.userName || "Unknown",
             day: format(new Date(r.date), "EEE"),
@@ -80,7 +80,40 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             clockIn: r.clockIn ? format(new Date(r.clockIn), "HH:mm") : "-",
             clockOut: r.clockOut ? format(new Date(r.clockOut), "HH:mm") : "-",
         }));
-    }, [attendance]);
+
+        // Find sessions that don't have a matching record in 'attendance'
+        const orphanedSessions = (sessions || []).filter(s =>
+            !attendance.some(a => a.userId === s.userId && a.date === s.date)
+        );
+
+        // Group sessions by userId and date to avoid multiple entries per day in the same view
+        const groupedOrphans: Record<string, any> = {};
+        orphanedSessions.forEach(s => {
+            const key = `${s.userId}-${s.date}`;
+            if (!groupedOrphans[key]) {
+                const member = teamMembers.find(m => m.id === s.userId);
+                groupedOrphans[key] = {
+                    id: `orphan-s-${s.id}`,
+                    userId: s.userId,
+                    date: s.date,
+                    employee: member?.username || s.userName || "Unknown",
+                    day: format(new Date(s.date), "EEE"),
+                    clockIn: s.clockIn ? format(new Date(s.clockIn), "HH:mm") : "-",
+                    clockOut: s.clockOut ? format(new Date(s.clockOut), "HH:mm") : "-",
+                    duration: s.durationMinutes ? formatMinutes(s.durationMinutes) : "-",
+                    status: "intime" as any, // Fallback status
+                    overtime: "-",
+                    notes: "Raw Activity (Record Missing)"
+                };
+            } else if (s.clockOut) {
+                // If we found another session for same day, try to update clockOut if it has one
+                groupedOrphans[key].clockOut = format(new Date(s.clockOut), "HH:mm");
+                // Note: duration calculation for orphans is simplified here
+            }
+        });
+
+        return [...base, ...Object.values(groupedOrphans)];
+    }, [attendance, sessions, teamMembers]);
 
     // -- STATS CALCULATION --
     const [stats, setStats] = useState<ClockStats | null>(null);
@@ -111,67 +144,87 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
         }
 
         // DENSE DATA GENERATION (Personal View Only)
-        // Rule: Start from first check-in date of the month, fill gaps up to TODAY or End of Month.
-        if (personalTeamView === "personal" && baseData.length > 0) {
-            // 1. Find the first check-in date (Earliest record in the current dataset)
-            // rawData is derived from attendance, which is filtered by API to be within currentMonth.
-            // Sort by date to be sure
-            const sortedRecords = [...baseData].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const firstRecordDate = new Date(sortedRecords[0].date);
+        if (personalTeamView === "personal") {
+            // 1. Find the earliest date from Records OR Sessions OR Logs to start the view from
+            const allSourceDates = [
+                ...baseData.map(r => r.date),
+                ...((sessions || []).map(s => s.date)),
+                ...((logs || []).map(l => l.timestamp.split('T')[0]))
+            ].filter(Boolean).sort();
 
-            // 2. Define the End Boundary: Min(Today, EndOfCurrentMonth)
-            const today = new Date();
-            const endMonth = endOfMonth(currentMonth);
-            const endDate = today < endMonth ? today : endMonth;
+            if (allSourceDates.length > 0) {
+                const firstActivityDate = new Date(allSourceDates[0]);
 
-            // Only generate if firstRecordDate <= endDate
-            if (firstRecordDate <= endDate) {
-                const denseData: any[] = [];
-                const allDays = eachDayOfInterval({ start: firstRecordDate, end: endDate });
+                // 2. Define the End Boundary: Min(Today, EndOfCurrentMonth)
+                const today = new Date();
+                const endMonth = endOfMonth(currentMonth);
+                const endDate = today < endMonth ? today : endMonth;
 
-                allDays.forEach(dayObj => {
-                    const dayStr = format(dayObj, "yyyy-MM-dd");
-                    const existingRecord = baseData.find(r => r.date === dayStr);
+                // Only generate if firstActivityDate <= endDate
+                if (firstActivityDate <= endDate) {
+                    const denseData: any[] = [];
+                    const allDays = eachDayOfInterval({ start: firstActivityDate, end: endDate });
 
-                    if (existingRecord) {
-                        denseData.push(existingRecord);
-                    } else {
-                        // GAP FILLING
-                        const isSun = isSunday(dayObj);
-                        const holidayInfo = HOLIDAYS_2026.find(h => h.date === dayStr);
+                    allDays.forEach(dayObj => {
+                        const dayStr = format(dayObj, "yyyy-MM-dd");
+                        const existingRecord = baseData.find(r => r.date === dayStr);
 
-                        let status = "absent"; // Default for non-workday, non-holiday
-                        let notes: string | undefined;
+                        if (existingRecord) {
+                            denseData.push(existingRecord);
+                        } else {
+                            // FALLBACK: Check Sessions or Logs if no record exists
+                            const daySession = (sessions || []).find(s => s.date === dayStr);
+                            const dayLog = (logs || []).find(l => l.timestamp.startsWith(dayStr) && l.type === 'IN');
 
-                        if (holidayInfo) {
-                            if (holidayInfo.type === "collective_leave") {
-                                status = "leave";
-                            } else { // Regular holiday
-                                status = "holiday";
+                            if (daySession || dayLog) {
+                                denseData.push({
+                                    id: `fallback-${dayStr}`,
+                                    date: dayStr,
+                                    clockIn: daySession?.clockIn ? format(new Date(daySession.clockIn), "HH:mm") : (dayLog ? format(new Date(dayLog.timestamp), "HH:mm") : "-"),
+                                    clockOut: daySession?.clockOut ? format(new Date(daySession.clockOut), "HH:mm") : "-",
+                                    duration: daySession?.durationMinutes ? formatMinutes(daySession.durationMinutes) : "-",
+                                    status: "intime" as any, // Use intime as a fallback indicator
+                                    overtime: "-",
+                                    employee: userName,
+                                    day: format(dayObj, "EEE"),
+                                    userId: profile?.id,
+                                    notes: "Raw Activity (Record Missing)"
+                                });
+                            } else {
+                                // GAP FILLING (Standard Absent/Holiday)
+                                const isSun = isSunday(dayObj);
+                                const holidayInfo = HOLIDAYS_2026.find(h => h.date === dayStr);
+
+                                let status = "absent";
+                                let notes: string | undefined;
+
+                                if (holidayInfo) {
+                                    status = holidayInfo.type === "collective_leave" ? "leave" : "holiday";
+                                    notes = holidayInfo.nameEn;
+                                } else if (isSun) {
+                                    status = "holiday";
+                                    notes = "Weekend";
+                                }
+
+                                denseData.push({
+                                    id: `gen-${dayStr}`,
+                                    date: dayStr,
+                                    clockIn: "-",
+                                    clockOut: "-",
+                                    duration: "0h 0m",
+                                    status: status as any,
+                                    overtime: "-",
+                                    employee: userName,
+                                    day: format(dayObj, "EEE"),
+                                    userId: profile?.id,
+                                    totalMinutes: 0,
+                                    notes: notes
+                                });
                             }
-                            notes = holidayInfo.nameEn;
-                        } else if (isSun) {
-                            status = "holiday"; // User rule: "hari minggu otomatis jadi Holiday (kode H)"
-                            notes = "Weekend";
                         }
-
-                        denseData.push({
-                            id: `gen-${dayStr}`,
-                            date: dayStr,
-                            clockIn: "-",
-                            clockOut: "-",
-                            duration: "0h 0m",
-                            status: status as any,
-                            overtime: "-",
-                            employee: userName,
-                            day: format(dayObj, "EEE"),
-                            userId: profile?.id,
-                            totalMinutes: 0,
-                            notes: notes
-                        });
-                    }
-                });
-                baseData = denseData;
+                    });
+                    baseData = denseData;
+                }
             }
         }
 
@@ -210,7 +263,7 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             }
             return 0;
         });
-    }, [rawData, sortBy, sortOrder, selectedPerson, dateFrom, dateTo, searchQuery, personalTeamView, currentMonth, userName, profile]);
+    }, [rawData, sessions, logs, sortBy, sortOrder, selectedPerson, dateFrom, dateTo, searchQuery, personalTeamView, currentMonth, userName, profile]);
 
     // Update stats when filtered data changes
     useEffect(() => {

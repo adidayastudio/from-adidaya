@@ -194,17 +194,20 @@ export interface AttendanceSession {
     locationStatus?: string;
 }
 
-export async function fetchAttendanceSessions(userId?: string, date?: string): Promise<AttendanceSession[]> {
+export async function fetchAttendanceSessions(userId?: string, startDate?: string, endDate?: string): Promise<AttendanceSession[]> {
     let query = supabase.from("attendance_sessions").select("*");
 
     if (userId) {
         query = query.eq("user_id", userId);
     }
-    if (date) {
-        query = query.eq("date", date);
+    if (startDate) {
+        query = query.gte("date", startDate);
+    }
+    if (endDate) {
+        query = query.lte("date", endDate);
     }
 
-    const { data, error } = await query.order("date", { ascending: false }).order("session_number", { ascending: true });
+    const { data, error } = await (query as any).order("date", { ascending: false }).order("session_number", { ascending: true });
 
     if (error) {
         console.error("❌ Error fetching sessions:", error.message);
@@ -295,7 +298,8 @@ export interface ClockActionMetadata {
 
 export async function clockAction(userId: string, type: "IN" | "OUT", metadata?: ClockActionMetadata) {
     const now = new Date();
-    const dateStr = now.toISOString().split("T")[0];
+    // Use local YYYY-MM-DD to avoid timezone shifting issues (UTC vs Local)
+    const dateStr = now.toLocaleDateString('en-CA');
     const currentHour = now.getHours();
     const OVERTIME_HOUR = 17;
     const REGULAR_WORK_MINUTES = 8 * 60;
@@ -356,27 +360,31 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
         });
         if (sessionError) console.error("❌ Error inserting session:", sessionError.message);
 
-        // Update/Insert attendance_records (first clock in of the day)
-        if (nextSessionNumber === 1) {
-            // Calculate status: 
-            // < 09:01:00 = ontime
-            // 09:01:00 - 09:15:59 = intime
-            // >= 09:16:00 = late
+        // Ensure attendance_record exists (Self-healing if it's missing)
+        const { data: existingRecord } = await supabase.from("attendance_records")
+            .select("id, clock_in, status")
+            .eq("user_id", userId)
+            .eq("date", dateStr)
+            .maybeSingle();
 
-            const limitOnTime = new Date(now);
+        if (!existingRecord) {
+            // Determine clock_in and status for the summary record
+            const firstSess = nextSessionNumber === 1 ? { clock_in: now.toISOString() } : (existingSessions[0] || { clock_in: now.toISOString() });
+            const checkInTime = new Date(firstSess.clock_in);
+
+            const limitOnTime = new Date(checkInTime);
             limitOnTime.setHours(9, 1, 0, 0);
-
-            const limitInTime = new Date(now);
+            const limitInTime = new Date(checkInTime);
             limitInTime.setHours(9, 16, 0, 0);
 
             let status: AttendanceStatus = "late";
-            if (now < limitOnTime) status = "ontime";
-            else if (now < limitInTime) status = "intime";
+            if (checkInTime < limitOnTime) status = "ontime";
+            else if (checkInTime < limitInTime) status = "intime";
 
-            const { error: upsertError } = await supabase.from("attendance_records").upsert({
+            const { error: upsertError } = await (supabase.from("attendance_records") as any).upsert({
                 user_id: userId,
                 date: dateStr,
-                clock_in: now.toISOString(),
+                clock_in: checkInTime.toISOString(),
                 status: status,
                 check_in_latitude: metadata?.latitude,
                 check_in_longitude: metadata?.longitude,
@@ -384,9 +392,17 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                 check_in_location_type: metadata?.detectedLocationType,
                 check_in_remote_mode: metadata?.remoteMode,
                 check_in_location_status: metadata?.locationStatus,
-                check_in_notes: metadata?.overrideReason // Save reason to check_in_notes
+                check_in_notes: metadata?.overrideReason
             }, { onConflict: "user_id, date" });
-            if (upsertError) console.error("❌ Error upserting attendance record:", upsertError.message);
+            if (upsertError) console.error("❌ Error creating attendance record:", upsertError.message);
+        } else if (nextSessionNumber === 1) {
+            // If session 1 but record exists (maybe from a previous deleted/failed session), update it
+            const { error: updateError } = await (supabase.from("attendance_records") as any).update({
+                clock_in: now.toISOString(),
+                // Recalculate status for new clock in
+                status: (now.getHours() < 9 || (now.getHours() === 9 && now.getMinutes() === 0)) ? "ontime" : (now.getHours() < 10 && now.getMinutes() < 16) ? "intime" : "late"
+            }).eq("user_id", userId).eq("date", dateStr);
+            if (updateError) console.error("❌ Error updating existing attendance record:", updateError.message);
         }
 
     } else {
@@ -437,13 +453,30 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
             totalRegularMinutes = REGULAR_WORK_MINUTES;
         }
 
-        // Update attendance_records
-        const { error: updateRecordError } = await supabase.from("attendance_records").update({
+        // Update / Upsert attendance_records
+        // Use upsert to be safe if for some reason the IN record didn't exist
+        const firstSess = existingSessions[0] || lastSession;
+        const checkInTime = new Date(firstSess.clock_in);
+
+        // Recalculate status for safety
+        const limitOnTime = new Date(checkInTime);
+        limitOnTime.setHours(9, 1, 0, 0);
+        const limitInTime = new Date(checkInTime);
+        limitInTime.setHours(9, 16, 0, 0);
+        let status: AttendanceStatus = "late";
+        if (checkInTime < limitOnTime) status = "ontime";
+        else if (checkInTime < limitInTime) status = "intime";
+
+        const { error: upsertRecordError } = await (supabase.from("attendance_records") as any).upsert({
+            user_id: userId,
+            date: dateStr,
+            clock_in: checkInTime.toISOString(),
             clock_out: now.toISOString(),
+            status: status,
             total_minutes: totalRegularMinutes,
             overtime_minutes: totalOvertimeMinutes
-        }).eq("user_id", userId).eq("date", dateStr);
-        if (updateRecordError) console.error("❌ Error updating attendance record:", updateRecordError.message);
+        }, { onConflict: "user_id, date" });
+        if (upsertRecordError) console.error("❌ Error upserting attendance record on OUT:", upsertRecordError.message);
 
         // If overtime detected, also log to overtime_logs for visibility
         if (totalOvertimeMinutes > 0) {

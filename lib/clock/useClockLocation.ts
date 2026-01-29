@@ -47,6 +47,7 @@ export function useClockLocation() {
                 const message = errorMessages[err.code] || `Location error (code: ${err.code})`;
                 console.warn("⚠️ Geolocation error:", message);
                 setError(message);
+                setDetection({ status: "unknown" });
                 setLoading(false);
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
