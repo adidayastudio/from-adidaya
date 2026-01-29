@@ -819,171 +819,281 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
 
             {
                 viewMode === "list" && (
-                    <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-neutral-50 border-b border-neutral-200">
-                                    <tr>
-                                        {isManager && personalTeamView === "team" && (
+                    <>
+                        {/* MOBILE LIST VIEW (Cards) */}
+                        <div className="md:hidden space-y-4">
+                            {paginatedData.map((row: any) => {
+                                const statusColor = row.status === 'late' ? 'bg-rose-50 border-rose-100' :
+                                    row.status === 'ontime' ? 'bg-emerald-50 border-emerald-100' :
+                                        'bg-white border-neutral-200';
+                                return (
+                                    <div key={row.id} className={clsx("rounded-2xl border p-3.5 shadow-sm bg-white border-neutral-200", statusColor)}>
+                                        <div className="flex items-center gap-4">
+                                            {/* Left: Date Circle */}
+                                            <div className="flex flex-col items-center justify-center w-[52px] h-[52px] rounded-full bg-neutral-100/80 border border-neutral-200/60 shrink-0">
+                                                <span className="text-base font-bold text-neutral-900 leading-none tracking-tight">
+                                                    {format(new Date(row.date), "dd")}
+                                                </span>
+                                                <span className="text-[9px] font-bold text-neutral-500 uppercase leading-none mt-0.5 tracking-wide">
+                                                    {format(new Date(row.date), "MMM")}
+                                                </span>
+                                            </div>
+
+                                            {/* Middle: Content */}
+                                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                                                {/* Line 1: Day & Location */}
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-neutral-900 leading-none">
+                                                        {format(new Date(row.date), "EEEE")}
+                                                    </span>
+                                                    {row.checkInLocationCode && (
+                                                        <a
+                                                            href={(row as any).checkInLatitude ? `https://www.google.com/maps?q=${(row as any).checkInLatitude},${(row as any).checkInLongitude}` : "#"}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={clsx(
+                                                                "text-[10px] font-medium px-1.5 py-0.5 rounded truncate max-w-[80px]",
+                                                                (row as any).checkInLatitude ? "text-blue-600 bg-blue-50 hover:bg-blue-100 hover:underline" : "text-neutral-500 bg-neutral-100"
+                                                            )}
+                                                            onClick={(e) => {
+                                                                if (!(row as any).checkInLatitude) e.preventDefault();
+                                                            }}
+                                                        >
+                                                            {row.checkInLocationCode}
+                                                        </a>
+                                                    )}
+                                                </div>
+
+                                                {/* Line 2: Stats (No Dividers, just spacing) */}
+                                                <div className="flex items-center gap-3 text-xs leading-none">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-[10px] font-semibold text-neutral-400 uppercase">In</span>
+                                                        <span className="font-mono font-medium text-neutral-700">{row.clockIn}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-[10px] font-semibold text-neutral-400 uppercase">Out</span>
+                                                        <span className="font-mono font-medium text-neutral-700">{row.clockOut}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-[10px] font-semibold text-neutral-400 uppercase">Dur</span>
+                                                        <span className="font-mono font-medium text-neutral-500">{row.duration.replace('h ', 'h').replace('m', 'm')}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Right: Status */}
+                                            <div className="shrink-0 scale-90 origin-right">
+                                                {getStatusBadge(row.status || "absent", true)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+
+                            {paginatedData.length === 0 && (
+                                <div className="text-center py-10 px-4 bg-white rounded-xl border border-neutral-200 border-dashed">
+                                    <div className="w-12 h-12 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <Calendar className="w-6 h-6 text-neutral-400" />
+                                    </div>
+                                    <h3 className="text-sm font-semibold text-neutral-900">No Records Found</h3>
+                                    <p className="text-xs text-neutral-500 mt-1">Try changing the month or filters.</p>
+                                </div>
+                            )}
+
+                            {/* Mobile Pagination */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-between pt-4 pb-8">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        className="rounded-full w-10 h-10 p-0"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </Button>
+                                    <span className="text-sm font-medium text-neutral-600">Page {currentPage} of {totalPages}</span>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        className="rounded-full w-10 h-10 p-0"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* DESKTOP LIST VIEW (Table) - Hidden on Mobile */}
+                        <div className="hidden md:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-neutral-50 border-b border-neutral-200">
+                                        <tr>
+                                            {isManager && personalTeamView === "team" && (
+                                                <th
+                                                    className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 transition-colors select-none"
+                                                    onClick={() => handleSort("employee")}
+                                                >
+                                                    <span className="flex items-center gap-1">
+                                                        Employee
+                                                        {sortBy === "employee" ? (
+                                                            sortOrder === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                                                        ) : (
+                                                            <ArrowUpDown className="w-4 h-4 text-neutral-400" />
+                                                        )}
+                                                    </span>
+                                                </th>
+                                            )}
                                             <th
                                                 className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 transition-colors select-none"
-                                                onClick={() => handleSort("employee")}
+                                                onClick={() => handleSort("date")}
                                             >
                                                 <span className="flex items-center gap-1">
-                                                    Employee
-                                                    {sortBy === "employee" ? (
+                                                    Date
+                                                    {sortBy === "date" ? (
                                                         sortOrder === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
                                                     ) : (
                                                         <ArrowUpDown className="w-4 h-4 text-neutral-400" />
                                                     )}
                                                 </span>
                                             </th>
-                                        )}
-                                        <th
-                                            className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 transition-colors select-none"
-                                            onClick={() => handleSort("date")}
-                                        >
-                                            <span className="flex items-center gap-1">
-                                                Date
-                                                {sortBy === "date" ? (
-                                                    sortOrder === "asc" ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                                                ) : (
-                                                    <ArrowUpDown className="w-4 h-4 text-neutral-400" />
-                                                )}
-                                            </span>
-                                        </th>
-                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock In</th>
-                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Location</th>
-                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock Out</th>
-                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Duration</th>
-                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Overtime</th>
-                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-neutral-100">
-                                    {paginatedData.map((row, idx) => {
-                                        // Get location label
-                                        const getLocationLabel = () => {
-                                            const r = row as any;
-                                            const mode = r.checkInRemoteMode;
-                                            const locType = r.checkInLocationType;
-                                            const locCode = r.checkInLocationCode;
-                                            const status = r.checkInLocationStatus;
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock In</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Location</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock Out</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Duration</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Overtime</th>
+                                            <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-neutral-100">
+                                        {paginatedData.map((row, idx) => {
+                                            // Get location label
+                                            const getLocationLabel = () => {
+                                                const r = row as any;
+                                                const mode = r.checkInRemoteMode;
+                                                const locType = r.checkInLocationType;
+                                                const locCode = r.checkInLocationCode;
+                                                const status = r.checkInLocationStatus;
 
-                                            if (status === "inside" && locType === "office") {
-                                                return { label: `WFO`, code: locCode, color: "text-blue-600" };
-                                            }
-                                            if (status === "inside" && locType === "project") {
-                                                return { label: `Project`, code: locCode, color: "text-emerald-600" };
-                                            }
-                                            // Handle Remote / Other
-                                            if (mode === 'business_trip') return { label: 'BST', code: null, color: "text-purple-600" };
-                                            if (mode && mode !== '-') return { label: mode, code: null, color: "text-purple-600" };
+                                                if (status === "inside" && locType === "office") {
+                                                    return { label: `WFO`, code: locCode, color: "text-blue-600" };
+                                                }
+                                                if (status === "inside" && locType === "project") {
+                                                    return { label: `Project`, code: locCode, color: "text-emerald-600" };
+                                                }
+                                                // Handle Remote / Other
+                                                if (mode === 'business_trip') return { label: 'BST', code: null, color: "text-purple-600" };
+                                                if (mode && mode !== '-') return { label: mode, code: null, color: "text-purple-600" };
 
-                                            // Default fallback
-                                            return { label: "-", code: null, color: "text-neutral-400" };
-                                        };
+                                                // Default fallback
+                                                return { label: "-", code: null, color: "text-neutral-400" };
+                                            };
 
-                                        const locInfo = getLocationLabel();
-                                        const mapsUrl = (row as any).checkInLatitude
-                                            ? `https://www.google.com/maps?q=${(row as any).checkInLatitude},${(row as any).checkInLongitude}`
-                                            : "#";
+                                            const locInfo = getLocationLabel();
+                                            const mapsUrl = (row as any).checkInLatitude
+                                                ? `https://www.google.com/maps?q=${(row as any).checkInLatitude},${(row as any).checkInLongitude}`
+                                                : "#";
 
-                                        return (
-                                            <tr key={row.id} className="group hover:bg-neutral-50 transition-colors">
-                                                {isManager && personalTeamView === "team" && (
-                                                    <td className="px-6 py-4 whitespace-nowrap font-medium text-neutral-900">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-500">
-                                                                {row.employee?.split(' ').map((n: string) => n[0]).join('')}
+                                            return (
+                                                <tr key={row.id} className="group hover:bg-neutral-50 transition-colors">
+                                                    {isManager && personalTeamView === "team" && (
+                                                        <td className="px-6 py-4 whitespace-nowrap font-medium text-neutral-900">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-500">
+                                                                    {row.employee?.split(' ').map((n: string) => n[0]).join('')}
+                                                                </div>
+                                                                {row.employee}
                                                             </div>
-                                                            {row.employee}
+                                                        </td>
+                                                    )}
+                                                    <td className="px-6 py-4 whitespace-nowrap text-neutral-500">{format(new Date(row.date), "EEE, dd MMM")}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockIn}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="flex flex-col gap-1">
+                                                            <a
+                                                                href={mapsUrl}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className={clsx("flex items-center gap-1.5 hover:underline decoration-neutral-300 underline-offset-2", locInfo.color)}
+                                                            >
+                                                                {/* Icon: Map Pin */}
+                                                                <MapPin className="w-3.5 h-3.5" />
+
+                                                                <span className="font-medium text-xs">
+                                                                    {locInfo.label}{locInfo.code && ` (${locInfo.code})`}
+                                                                </span>
+                                                            </a>
+                                                            {/* NOTES DISPLAY - Only show if exists */}
+                                                            {(row as any).notes && (
+                                                                <span className="text-[10px] text-neutral-500 max-w-[200px] truncate leading-tight ml-5" title={(row as any).notes}>
+                                                                    <span className="font-medium text-neutral-400">Note: </span>
+                                                                    {(row as any).notes}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </td>
-                                                )}
-                                                <td className="px-6 py-4 whitespace-nowrap text-neutral-500">{format(new Date(row.date), "EEE, dd MMM")}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockIn}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="flex flex-col gap-1">
-                                                        <a
-                                                            href={mapsUrl}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className={clsx("flex items-center gap-1.5 hover:underline decoration-neutral-300 underline-offset-2", locInfo.color)}
-                                                        >
-                                                            {/* Icon: Map Pin */}
-                                                            <MapPin className="w-3.5 h-3.5" />
-
-                                                            <span className="font-medium text-xs">
-                                                                {locInfo.label}{locInfo.code && ` (${locInfo.code})`}
-                                                            </span>
-                                                        </a>
-                                                        {/* NOTES DISPLAY - Only show if exists */}
-                                                        {(row as any).notes && (
-                                                            <span className="text-[10px] text-neutral-500 max-w-[200px] truncate leading-tight ml-5" title={(row as any).notes}>
-                                                                <span className="font-medium text-neutral-400">Note: </span>
-                                                                {(row as any).notes}
-                                                            </span>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockOut}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-neutral-500 text-xs">{row.duration}</td>
+                                                    <td className="px-6 py-4">
+                                                        {row.overtime !== "-" ? (
+                                                            <span className="text-emerald-600 font-medium">+{row.overtime}</span>
+                                                        ) : (
+                                                            <span className="text-neutral-400">-</span>
                                                         )}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {getStatusBadge(row.status || "absent", false)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {paginatedData.length === 0 && (
+                                            <tr>
+                                                <td colSpan={isManager && personalTeamView === "team" ? 10 : 9} className="px-6 py-12 text-center text-neutral-500">
+                                                    <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
+                                                        <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4">
+                                                            <Calendar className="w-8 h-8 text-neutral-400" />
+                                                        </div>
+                                                        <h3 className="text-lg font-semibold text-neutral-900 mb-1">No Records Found</h3>
+                                                        <p className="text-neutral-500 text-sm">
+                                                            Looks like there are no attendance records for <span className="font-medium text-neutral-700">{formatMonthYear(currentMonth)}</span>.
+                                                            {personalTeamView === "personal" ? " Enjoy the quiet time or check a different month!" : " Your team was either very quiet or on break."}
+                                                        </p>
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockOut}</td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-neutral-500 text-xs">{row.duration}</td>
-                                                <td className="px-6 py-4">
-                                                    {row.overtime !== "-" ? (
-                                                        <span className="text-emerald-600 font-medium">+{row.overtime}</span>
-                                                    ) : (
-                                                        <span className="text-neutral-400">-</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {getStatusBadge(row.status || "absent", false)}
                                                 </td>
                                             </tr>
-                                        );
-                                    })}
-                                    {paginatedData.length === 0 && (
-                                        <tr>
-                                            <td colSpan={isManager && personalTeamView === "team" ? 10 : 9} className="px-6 py-12 text-center text-neutral-500">
-                                                <div className="flex flex-col items-center justify-center max-w-sm mx-auto">
-                                                    <div className="w-16 h-16 bg-neutral-50 rounded-full flex items-center justify-center mb-4">
-                                                        <Calendar className="w-8 h-8 text-neutral-400" />
-                                                    </div>
-                                                    <h3 className="text-lg font-semibold text-neutral-900 mb-1">No Records Found</h3>
-                                                    <p className="text-neutral-500 text-sm">
-                                                        Looks like there are no attendance records for <span className="font-medium text-neutral-700">{formatMonthYear(currentMonth)}</span>.
-                                                        {personalTeamView === "personal" ? " Enjoy the quiet time or check a different month!" : " Your team was either very quiet or on break."}
-                                                    </p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        {/* PAGINATION - Hide if no data */}
-                        {totalPages > 1 && (
-                            <div className="px-6 py-4 border-t border-neutral-100 flex items-center justify-between">
-                                <button
-                                    disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:hover:bg-transparent"
-                                >
-                                    <ChevronLeft className="w-4 h-4 text-neutral-500" />
-                                </button>
-                                <span className="text-sm text-neutral-600">Page {currentPage} of {totalPages}</span>
-                                <button
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:hover:bg-transparent"
-                                >
-                                    <ChevronRight className="w-4 h-4 text-neutral-500" />
-                                </button>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
-                        )}
-                    </div>
+                            {/* PAGINATION - Hide if no data */}
+                            {totalPages > 1 && (
+                                <div className="px-6 py-4 border-t border-neutral-100 flex items-center justify-between">
+                                    <button
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:hover:bg-transparent"
+                                    >
+                                        <ChevronLeft className="w-4 h-4 text-neutral-500" />
+                                    </button>
+                                    <span className="text-sm text-neutral-600">Page {currentPage} of {totalPages}</span>
+                                    <button
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        className="p-2 rounded-lg hover:bg-neutral-100 disabled:opacity-50 disabled:hover:bg-transparent"
+                                    >
+                                        <ChevronRight className="w-4 h-4 text-neutral-500" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </>
                 )
             }
+
 
             {/* GRID VIEW */}
             {
