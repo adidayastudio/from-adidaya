@@ -3,21 +3,10 @@
 import { useRef, useEffect, useState } from "react";
 import clsx from "clsx";
 import { User, Users } from "lucide-react";
-import { UserRole } from "@/hooks/useUserProfile";
-import { canViewTeamData } from "@/lib/auth-utils";
+import { useClockContext } from "./ClockContext";
 
-interface ViewToggleProps {
-    viewMode: "personal" | "team";
-    onViewChange: (mode: "personal" | "team") => void;
-    role?: UserRole;
-}
-
-export function ViewToggle({ viewMode, onViewChange, role }: ViewToggleProps) {
-    const isManager = canViewTeamData(role);
-
-    // Staff only sees personal view, no toggle needed
-    if (!isManager) return null;
-
+export function ClockViewToggle() {
+    const { viewMode, setViewMode, canAccessTeam, isLoading } = useClockContext();
     const personalRef = useRef<HTMLButtonElement>(null);
     const teamRef = useRef<HTMLButtonElement>(null);
     const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, left: 0 });
@@ -32,13 +21,26 @@ export function ViewToggle({ viewMode, onViewChange, role }: ViewToggleProps) {
         }
     }, [viewMode]);
 
-    if (!isManager) return null;
+    // Loading state: Maintain layout to prevent flicker
+    if (isLoading) {
+        return (
+            <div className="hidden md:flex items-center gap-2 p-1 rounded-full h-10 bg-neutral-100/50 border border-neutral-100 animate-pulse w-[180px]" />
+        );
+    }
+
+    // Staff only sees personal view, no toggle needed
+    if (!canAccessTeam) return null;
 
     return (
-        <div className="relative inline-flex p-1 rounded-full h-10 bg-neutral-100/80 backdrop-blur-sm border border-neutral-200/50 shadow-sm">
+        <div
+            className="relative hidden md:inline-flex p-1 rounded-full h-10"
+            style={{
+                background: 'rgba(0, 0, 0, 0.05)',
+            }}
+        >
             {/* Sliding indicator */}
             <div
-                className="absolute top-1 bottom-1 rounded-full bg-white shadow-md transition-all duration-300 ease-out"
+                className="absolute top-1 bottom-1 rounded-full bg-white shadow-sm transition-all duration-300 ease-out"
                 style={{
                     width: `${indicatorStyle.width}px`,
                     left: `${indicatorStyle.left}px`,
@@ -47,7 +49,7 @@ export function ViewToggle({ viewMode, onViewChange, role }: ViewToggleProps) {
 
             <button
                 ref={personalRef}
-                onClick={() => onViewChange("personal")}
+                onClick={() => setViewMode("personal")}
                 className={clsx(
                     "relative z-10 flex items-center gap-2 px-4 h-full rounded-full text-sm font-medium transition-colors duration-200",
                     viewMode === "personal"
@@ -59,7 +61,7 @@ export function ViewToggle({ viewMode, onViewChange, role }: ViewToggleProps) {
             </button>
             <button
                 ref={teamRef}
-                onClick={() => onViewChange("team")}
+                onClick={() => setViewMode("team")}
                 className={clsx(
                     "relative z-10 flex items-center gap-2 px-4 h-full rounded-full text-sm font-medium transition-colors duration-200",
                     viewMode === "team"

@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { Settings, User, Users, Shield, Key, Bell, Link, Lock, LogOut } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import useUserProfile from "@/hooks/useUserProfile";
+import { createClient } from "@/utils/supabase/client";
 
 /* ======================
    TYPES
@@ -56,6 +57,11 @@ interface SettingsSidebarProps {
 
 export default function SettingsSidebar({ activeView, onViewChange }: SettingsSidebarProps) {
   const { profile } = useUserProfile();
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
 
   return (
     <aside className="w-full h-full flex flex-col justify-between pb-6">
@@ -103,11 +109,7 @@ export default function SettingsSidebar({ activeView, onViewChange }: SettingsSi
 
       <div className="mt-auto px-3 border-t border-neutral-100 pt-4">
         <button
-          onClick={() => {
-            // Need supabase client here, but for now standard full reload login redirect or similar
-            // Since this component might not have router/supabase setup, let's keep it visually ready
-            window.location.href = "/login";
-          }}
+          onClick={handleLogout}
           className="w-full text-left rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-red-600 hover:bg-red-50 py-2 px-3"
         >
           <LogOut className="w-4 h-4" />

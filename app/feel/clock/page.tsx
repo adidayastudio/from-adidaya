@@ -10,7 +10,8 @@ import { ClockLeaveRequests } from "@/components/feel/clock/ClockLeaveRequests";
 import { ClockOvertime } from "@/components/feel/clock/ClockOvertime";
 import { ClockApprovals } from "@/components/feel/clock/ClockApprovals";
 import { ClockBusinessTrips } from "@/components/feel/clock/ClockBusinessTrips";
-import { ViewToggle } from "@/components/feel/clock/ViewToggle";
+import { ClockViewToggle } from "@/components/feel/clock/ClockViewToggle";
+import { ClockProvider, useClockContext } from "@/components/feel/clock/ClockContext";
 
 import useUserProfile from "@/hooks/useUserProfile";
 import { ClockLeaveRequestDrawer } from "@/components/feel/clock/ClockLeaveRequestDrawer";
@@ -53,10 +54,35 @@ function ClockPageContent() {
 
   const [isReadOnly, setIsReadOnly] = useState(false);
 
-  const [personalTeamView, setPersonalTeamView] = useState<"personal" | "team">("personal");
+  // View state from context
+  const { viewMode, setViewMode } = useClockContext();
 
   const [showOvertimeAlert, setShowOvertimeAlert] = useState(false);
   const [isClockModalOpen, setIsClockModalOpen] = useState(false);
+
+  // -- FAB ACTION LISTENER --
+  useEffect(() => {
+    const handleFabAction = (e: any) => {
+      const { id } = e.detail;
+      switch (id) {
+        case 'CLOCK':
+          setIsClockModalOpen(true);
+          break;
+        case 'CLOCK_NEW_LEAVE':
+          handleNewLeave();
+          break;
+        case 'CLOCK_LOG_OVERTIME':
+          handleNewOvertime();
+          break;
+        case 'CLOCK_NEW_TRIP':
+          handleNewTrip();
+          break;
+      }
+    };
+
+    window.addEventListener('fab-action' as any, handleFabAction);
+    return () => window.removeEventListener('fab-action' as any, handleFabAction);
+  }, [isCheckedIn, currentSection]); // Re-bind if dependencies change if necessary, though handlers are stable-ish
 
   // -- HANDLERS --
   const handleNewLeave = () => {
@@ -210,12 +236,8 @@ function ClockPageContent() {
                   "Track work hours, leaves, and business trips."
       }
       actions={
-        currentSection !== "overview" && currentSection !== "approvals" && (
-          <ViewToggle
-            viewMode={personalTeamView}
-            onViewChange={setPersonalTeamView}
-            role={profile?.role}
-          />
+        currentSection !== "approvals" && (
+          <ClockViewToggle />
         )
       }
     />
@@ -287,7 +309,7 @@ function ClockPageContent() {
           highlight: fab.variant === "danger"
         } : undefined}
       >
-        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-24 lg:pb-0">
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 pb-24 lg:pb-0 space-y-8">
           {/* Added Check: pb-24 for mobile FAB space */}
 
           {currentSection === "overview" && (
@@ -300,20 +322,21 @@ function ClockPageContent() {
               startTime={startTime}
               elapsed={elapsed}
               onClockAction={() => setIsClockModalOpen(true)}
+              viewMode={viewMode}
             />
           )}
           {currentSection === "timesheets" && (
             <ClockTimesheets
               role={profile?.role}
               userName={profile?.name}
-              viewMode={personalTeamView}
+              viewMode={viewMode}
             />
           )}
           {currentSection === "leaves" && (
             <ClockLeaveRequests
               role={profile?.role}
               userName={profile?.name}
-              viewMode={personalTeamView}
+              viewMode={viewMode}
               onNewRequest={handleNewLeave}
               onEditRequest={handleEditLeave}
               onViewRequest={handleViewLeave}
@@ -323,7 +346,7 @@ function ClockPageContent() {
             <ClockOvertime
               role={profile?.role}
               userName={profile?.name}
-              viewMode={personalTeamView}
+              viewMode={viewMode}
               onLogOvertime={handleNewOvertime}
               onEditLog={handleEditOvertime}
               onViewLog={handleViewOvertime}
@@ -333,12 +356,13 @@ function ClockPageContent() {
             <ClockBusinessTrips
               role={profile?.role}
               userName={profile?.name}
-              viewMode={personalTeamView}
+              viewMode={viewMode}
               onNewTrip={handleNewTrip}
               onEditTrip={handleEditTrip}
               onViewTrip={handleViewTrip}
             />
           )}
+
           {currentSection === "approvals" && (
             <ClockApprovals role={profile?.role} />
           )}

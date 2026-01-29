@@ -63,47 +63,6 @@ export default function ClockSidebar({ activeSection, onSectionChange, role, fab
         </div>
       </aside>
 
-      {/* MOBILE BOTTOM NAVIGATION - iOS Style */}
-      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 w-full px-4 max-w-sm">
-        <div className="flex-1 bg-white/50 backdrop-blur-sm backdrop-saturate-150 shadow-sm rounded-full px-3 py-2 flex justify-between items-center">
-          {visibleItems.map((item) => {
-            const isActive = activeSection === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => onSectionChange(item.id)}
-                className={clsx(
-                  "relative flex items-center justify-center transition-all duration-200 rounded-full",
-                  isActive
-                    ? "bg-blue-100 p-2.5"
-                    : "p-2.5"
-                )}
-              >
-                <item.icon
-                  className={clsx(
-                    "w-5 h-5 transition-colors",
-                    isActive ? "text-blue-600" : "text-neutral-400"
-                  )}
-                  strokeWidth={isActive ? 2 : 1.5}
-                />
-              </button>
-            );
-          })}
-        </div>
-
-        {/* FAB - Integrated in Bottom Bar Layout (Separate Circle) */}
-        {fabAction && (
-          <button
-            onClick={fabAction.onClick}
-            className={clsx(
-              "w-12 h-12 flex items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 flex-shrink-0",
-              fabAction.highlight ? "bg-red-500 text-white" : "bg-action-primary text-white"
-            )}
-          >
-            {fabAction.icon}
-          </button>
-        )}
-      </div>
     </>
   );
 }

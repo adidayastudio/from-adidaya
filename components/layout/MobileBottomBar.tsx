@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import clsx from "clsx";
 import {
     Home,
@@ -35,6 +35,7 @@ const MOBILE_NAV_ITEMS = [
 
 export default function MobileBottomBar() {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { isCheckedIn, toggleClock } = useClock();
     const { profile } = useUserProfile();
     const [isClockModalOpen, setIsClockModalOpen] = React.useState(false);
@@ -73,6 +74,23 @@ export default function MobileBottomBar() {
 
         // Client
         if (pathname.startsWith("/flow/client")) return { id: 'CLIENT_NEW', label: 'New', icon: Plus, color: 'red' };
+
+        // Clock (Feel)
+        if (pathname === "/feel/clock" || pathname.startsWith("/feel/clock")) {
+            const section = searchParams.get("section") || "overview";
+
+            if (section === "overview" || section === "timesheets") {
+                return {
+                    id: 'CLOCK',
+                    icon: (isCheckedIn ? Square : Play),
+                    color: (isCheckedIn ? 'red' : 'blue'),
+                    isClock: true
+                };
+            }
+            if (section === "leaves") return { id: 'CLOCK_NEW_LEAVE', label: 'New Request', icon: Plus, color: 'red' };
+            if (section === "overtime") return { id: 'CLOCK_LOG_OVERTIME', label: 'Log Overtime', icon: Plus, color: 'red' };
+            if (section === "business-trip") return { id: 'CLOCK_NEW_TRIP', label: 'New Trip', icon: Plus, color: 'red' };
+        }
 
         return null;
     };

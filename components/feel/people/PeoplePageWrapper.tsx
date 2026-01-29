@@ -11,6 +11,7 @@ import { Heart, Users, UserCircle, Gift, Star } from "lucide-react";
 const PEOPLE_TABS = [
     { id: "overview", label: "Overview", href: "/feel/people" },
     { id: "directory", label: "Directory", href: "/feel/people?section=directory" },
+    { id: "performance", label: "Performance", href: "/feel/people?section=performance" },
 ];
 
 interface PeoplePageWrapperProps {

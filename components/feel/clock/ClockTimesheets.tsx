@@ -6,7 +6,6 @@ import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, startOfMo
 import { HOLIDAYS_2026 } from "@/lib/constants/holidays";
 import { Download, ChevronDown, ChevronUp, Clock, AlertCircle, CheckCircle, Search, List, Grid3X3, ArrowUpDown, BarChart3, Calendar, User, Users, ChevronLeft, ChevronRight, Check, AlertTriangle, Loader2, X, MapPin } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { ViewToggle } from "./ViewToggle";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
 import { calculateStats, formatMinutes, ClockStats } from "@/lib/clock-data-logic";

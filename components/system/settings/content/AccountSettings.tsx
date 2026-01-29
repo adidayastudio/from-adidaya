@@ -2,8 +2,15 @@
 
 import { Button } from "@/shared/ui/primitives/button/button";
 import { User, Mail, Shield, LogOut } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
 export function AccountSettings() {
+    const handleLogout = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        window.location.href = "/login";
+    };
+
     return (
         <div className="max-w-2xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
@@ -67,7 +74,10 @@ export function AccountSettings() {
             </div>
 
             <div className="pt-4 border-t border-neutral-200">
-                <button className="text-red-600 text-sm font-bold flex items-center gap-2 hover:bg-red-50 px-4 py-2 rounded-lg transition-colors">
+                <button
+                    onClick={handleLogout}
+                    className="text-red-600 text-sm font-bold flex items-center gap-2 hover:bg-red-50 px-4 py-2 rounded-lg transition-colors"
+                >
                     <LogOut className="w-4 h-4" /> Sign Out from All Devices
                 </button>
             </div>

@@ -55,30 +55,6 @@ export default function CareerSidebar() {
         </div>
       </aside>
 
-      {/* MOBILE FLOATING TAB BAR - iOS Style */}
-      <div className="fixed bottom-4 left-4 right-4 z-50 md:hidden">
-        <div className="mx-auto max-w-fit bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl rounded-full px-2 py-1.5">
-          <div className="flex items-center gap-1">
-            {NAV_ITEMS.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={clsx(
-                  "flex flex-col items-center justify-center px-4 py-2 rounded-full transition-all",
-                  activeSection === item.id
-                    ? "bg-blue-500 text-white shadow-lg"
-                    : "text-neutral-500"
-                )}
-              >
-                <item.icon className="w-5 h-5" />
-                {activeSection === item.id && (
-                  <span className="text-[9px] font-semibold mt-0.5">{item.shortLabel}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
     </>
   );
 }

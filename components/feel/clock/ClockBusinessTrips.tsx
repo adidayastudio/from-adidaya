@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from "react";
 import clsx from "clsx";
 import { Briefcase, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, List, Grid3X3, Calendar as CalendarIcon, Download, Check, X, Ban, Edit, Trash, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { ViewToggle } from "./ViewToggle";
 import { ClockConfirmationModal } from "./ClockConfirmationModal";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";

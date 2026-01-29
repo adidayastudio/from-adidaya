@@ -14,7 +14,8 @@ export function useClock() {
     const checkActiveSession = useCallback(async () => {
         if (!profile?.id) return;
 
-        const dateStr = new Date().toISOString().split("T")[0];
+        // Use local YYYY-MM-DD to match api/clock.ts logic and avoid UTC mismatch around midnight
+        const dateStr = new Date().toLocaleDateString('en-CA');
 
         // Try new sessions table first, fallback to old records table
         let { data, error } = await supabase

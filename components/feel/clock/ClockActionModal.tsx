@@ -233,16 +233,16 @@ export default function ClockActionModal({
                         </div>
                     )}
 
-                    {/* Reason Input (Conditional) */}
-                    {(needsReason || remoteMode === "other") && isOutside && remoteMode && (
+                    {/* Reason Input (Always show if outside and mode selected) */}
+                    {isOutside && remoteMode && (
                         <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
                             <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
-                                {remoteMode === "other" ? "Specify Reason" : "Reason & Notes"}
+                                {remoteMode === "other" ? "Specify Reason" : "Notes (Optional)"}
                             </label>
                             <textarea
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
-                                placeholder={remoteMode === "other" ? "Enter your specific reason for outside clocking..." : "E.g. Working from client's office, on the way to site..."}
+                                placeholder={remoteMode === "other" ? "Enter your specific reason for outside clocking..." : "Add any notes about your location or task..."}
                                 className="w-full px-3 py-2 rounded-xl backdrop-blur-sm border border-neutral-200/40 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-300/50 min-h-[80px] text-sm resize-none"
                                 style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(250,250,250,0.7) 100%)' }}
                             />

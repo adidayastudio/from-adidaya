@@ -10,8 +10,7 @@ import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
 import { useClockData } from "@/hooks/useClockData";
 import useUserProfile from "@/hooks/useUserProfile";
-import { ViewToggle } from "./ViewToggle";
-import { isOvertime as isOvertimeCheck, getShiftSchedule, getWorkHoursConfig, getStandardEndTime } from "@/lib/work-hours-utils";
+import { isOvertime as isOvertimeCheck, getShiftSchedule, getWorkHoursConfig, getStandardEndTime, formatTargetTime } from "@/lib/work-hours-utils";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 
 interface ClockOverviewProps {
@@ -22,34 +21,69 @@ interface ClockOverviewProps {
     elapsed?: number;
     onClockAction?: () => void;
     joinDate?: string;
+    viewMode?: "personal" | "team";
 }
 
 // Mock Team Data removed in favor of real database records
 
-export function ClockOverview({ userName, role, isCheckedIn = false, startTime = null, elapsed = 0, onClockAction, joinDate }: ClockOverviewProps) {
+export function ClockOverview({ userName, role, isCheckedIn = false, startTime = null, elapsed = 0, onClockAction, joinDate, viewMode = "personal" }: ClockOverviewProps) {
     const { profile } = useUserProfile();
     const isManager = canViewTeamData(role || profile?.role);
-    const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
     const [currentTime, setCurrentTime] = useState(new Date());
 
     const { attendance, leaves, overtime, loading, teamMembers } = useClockData(profile?.id, viewMode === "team");
 
-    // Time Phase Logic
+    // Time Phase Logic (Synchronized with Dashboard)
     const getPhase = (date: Date) => {
         const hours = date.getHours();
+        if (isCheckedIn && hours >= 18) return "overtime";
         if (hours >= 5 && hours < 11) return "morning";
         if (hours >= 11 && hours < 15) return "afternoon";
         if (hours >= 15 && hours < 18) return "late-afternoon";
-        if (hours >= 18 && hours < 21) return "evening";
-        return "night"; // 21 - 5
+        return "night";
     };
 
     const phases = {
-        morning: { greeting: "Good Morning", color: "text-amber-600", bg: "bg-gradient-to-br from-amber-50/80 to-white/60", border: "border-amber-100/50", icon: Sunrise },
-        afternoon: { greeting: "Good Afternoon", color: "text-blue-600", bg: "bg-gradient-to-br from-blue-50/80 to-white/60", border: "border-blue-100/50", icon: Sun },
-        "late-afternoon": { greeting: "Good Afternoon", color: "text-orange-600", bg: "bg-gradient-to-br from-orange-50/80 to-white/60", border: "border-orange-100/50", icon: Sunset },
-        evening: { greeting: "Good Evening", color: "text-purple-600", bg: "bg-gradient-to-br from-purple-50/80 to-white/60", border: "border-purple-100/50", icon: CloudSun },
-        night: { greeting: "Good Night", color: "text-indigo-900", bg: "bg-gradient-to-br from-indigo-50/80 to-white/60", border: "border-indigo-100/50", icon: Moon },
+        morning: {
+            greeting: "Good Morning",
+            message: "Wishing you a productive and smooth day ahead.",
+            color: "text-amber-600",
+            bg: "bg-gradient-to-br from-amber-50/80 to-white/60",
+            border: "border-amber-100/50",
+            icon: Sunrise
+        },
+        afternoon: {
+            greeting: "Good Afternoon",
+            message: "How’s today going so far? A quick update helps keep things moving.",
+            color: "text-blue-600",
+            bg: "bg-gradient-to-br from-blue-50/80 to-white/60",
+            border: "border-blue-100/50",
+            icon: Sun
+        },
+        "late-afternoon": {
+            greeting: "Good Afternoon",
+            message: "As the day winds down, focus on what truly matters.",
+            color: "text-orange-600",
+            bg: "bg-gradient-to-br from-orange-50/80 to-white/60",
+            border: "border-orange-100/50",
+            icon: Sunset
+        },
+        overtime: {
+            greeting: "Working Late",
+            message: "You’re still working. Remember to take care of yourself.",
+            color: "text-rose-600",
+            bg: "bg-gradient-to-br from-rose-50/50 to-white/40",
+            border: "border-rose-100/30",
+            icon: Clock
+        },
+        night: {
+            greeting: "Good Night",
+            message: "It’s been a long day. Time to recharge for tomorrow.",
+            color: "text-indigo-900",
+            bg: "bg-gradient-to-br from-indigo-50/80 to-white/60",
+            border: "border-indigo-100/50",
+            icon: Moon
+        },
     };
 
     const currentPhaseKey = getPhase(currentTime);
@@ -217,36 +251,67 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                 <>
                     {/* DYNAMIC WELCOME BANNER (Soft Minimalist Glass) */}
                     <div className={clsx(
-                        "rounded-2xl p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all duration-700 mb-10 backdrop-blur-xl shadow-sm border",
+                        "rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 transition-all duration-700 mb-6 md:mb-10 backdrop-blur-xl shadow-sm border",
                         phase.bg,
                         phase.border
                     )}>
-                        <div className="flex items-center gap-5">
-                            <div className={clsx("w-16 h-16 rounded-xl flex items-center justify-center bg-white shadow-sm border border-neutral-100/50", phase.color)}>
-                                <PhaseIcon className="w-8 h-8 opacity-90" strokeWidth={1.5} />
+                        <div className="flex items-center gap-4 md:gap-5">
+                            <div className={clsx("w-12 h-12 md:w-16 md:h-16 rounded-xl flex items-center justify-center bg-white shadow-sm border border-neutral-100/50", phase.color)}>
+                                <PhaseIcon className="w-6 h-6 md:w-8 md:h-8 opacity-90" strokeWidth={1.5} />
                             </div>
                             <div className="space-y-0.5">
-                                <h2 className={clsx("text-xl font-bold tracking-tight transition-colors duration-500", phase.color)}>
-                                    {phase.greeting}, {userName}
+                                <h2 className={clsx("text-lg md:text-xl font-bold tracking-tight transition-colors duration-500", phase.color)}>
+                                    {phase.greeting}, {userName?.split(' ')[0]}
                                 </h2>
-                                <div className="flex items-center gap-2 text-neutral-500 font-medium text-sm">
-                                    Have a productive day ahead
+                                <div className="flex items-center gap-2 text-neutral-500 font-medium text-xs md:text-sm">
+                                    {phase.message}
                                 </div>
                             </div>
                         </div>
-                        <div className="text-left md:text-right flex flex-col items-start md:items-end border-l pl-8 border-neutral-900/5 md:border-l-0 md:pl-0 md:border-none">
-                            <div className={clsx("text-3xl font-bold tabular-nums tracking-tight transition-colors duration-500", phase.color)}>
+                        <div className="flex flex-row md:flex-col items-center md:items-end justify-between md:justify-center border-t md:border-t-0 md:border-l pt-4 md:pt-0 md:pl-8 border-neutral-900/5 transition-all">
+                            <div className={clsx("text-2xl md:text-3xl font-bold tabular-nums tracking-tight transition-colors duration-500", phase.color)}>
                                 {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                             </div>
-                            <div className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mt-1">
-                                {currentTime.toLocaleDateString("en-US", { weekday: 'long', day: 'numeric', month: 'long' })}
+                            <div className="text-[10px] md:text-xs font-semibold text-neutral-400 uppercase tracking-widest md:mt-1">
+                                {currentTime.toLocaleDateString("en-US", { weekday: 'short', day: 'numeric', month: 'short' })}
                             </div>
                         </div>
                     </div>
 
+                    {/* MOBILE CONDENSED STATUS (Only visible on mobile) */}
+                    <div className="lg:hidden mb-6 bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center", isCheckedIn ? "bg-green-50 text-green-600" : "bg-neutral-50 text-neutral-400")}>
+                                    <Clock className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider leading-none mb-1">Status</div>
+                                    <div className="text-sm font-bold text-neutral-900">{isCheckedIn ? "Currently Working" : "Not Clocked In"}</div>
+                                </div>
+                            </div>
+                            {isCheckedIn && (
+                                <div className="text-right">
+                                    <div className="text-xs font-bold text-neutral-400 uppercase tracking-wider leading-none mb-1">Elapsed</div>
+                                    <div className="text-lg font-bold text-green-600 tabular-nums leading-none">{formatTime(elapsed)}</div>
+                                </div>
+                            )}
+                        </div>
+                        {isCheckedIn && startTime && (
+                            <div className="pt-3 border-t border-neutral-50 flex items-center justify-between text-[11px] font-medium text-neutral-400">
+                                <div className="flex flex-col gap-0.5">
+                                    <span>Started at {formatHour(startTime)}</span>
+                                    <span className="text-neutral-500 font-normal">Target: <span className="font-semibold text-neutral-900">{formatTargetTime(startTime)}</span></span>
+                                </div>
+                                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Live Tracking</span>
+                            </div>
+                        )}
+                    </div>
+
+
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* CLOCK ACTION CARD */}
-                        <div className="bg-white rounded-2xl border border-neutral-200 p-10 shadow-sm flex flex-col items-center justify-center text-center space-y-8 min-h-[400px]">
+                        {/* CLOCK ACTION CARD - HIDDEN ON MOBILE */}
+                        <div className="hidden lg:flex bg-white rounded-2xl border border-neutral-200 p-10 shadow-sm flex-col items-center justify-center text-center space-y-8 min-h-[400px]">
                             <div className="relative">
                                 <div className={clsx("w-40 h-40 rounded-full flex items-center justify-center transition-all duration-300", isCheckedIn ? "bg-green-50 text-green-600 ring-8 ring-green-50/50" : "bg-neutral-50 text-neutral-400 ring-8 ring-neutral-50/50")}>
                                     <Clock className="w-16 h-16" />
@@ -264,9 +329,9 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
                         </div>
 
                         {/* TODAY'S OVERVIEW */}
-                        <div className="bg-white rounded-2xl border border-neutral-200 p-8 shadow-sm flex flex-col justify-center h-full min-h-[400px]">
+                        <div className="bg-white rounded-2xl border border-neutral-200 p-6 md:p-8 shadow-sm flex flex-col justify-center h-full lg:min-h-[400px]">
                             <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider mb-6">Today's Overview</h3>
-                            <div className="space-y-8">
+                            <div className="space-y-6 md:space-y-8">
                                 <OverviewRow icon={<Calendar className="w-5 h-5" />} iconBg="bg-blue-50 text-blue-600" title="Shift Schedule" subtitle={getWorkHoursConfig(new Date()).dayName} value={getShiftSchedule()} />
                                 <div className="border-b border-neutral-100/80" />
                                 <OverviewRow
@@ -329,11 +394,6 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
             {/* TEAM VIEW */}
             {viewMode === "team" && (
                 <>
-                    <div className="mb-4">
-                        <h2 className="text-lg font-bold text-neutral-900">Team Overview</h2>
-                        <p className="text-neutral-500 text-sm">Today's attendance status for your team.</p>
-                    </div>
-
                     {/* TEAM STATS */}
                     <SummaryCardsRow>
                         <SummaryCard

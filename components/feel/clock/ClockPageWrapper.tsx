@@ -6,7 +6,10 @@ import ClockSidebar, { ClockSection } from "@/components/feel/clock/ClockSidebar
 import { FolderKanban, LayoutDashboard, CalendarDays, UserX, Hourglass, Briefcase, CheckSquare, Clock } from "lucide-react";
 import { UserRole } from "@/hooks/useUserProfile";
 
+import { canViewTeamData } from "@/lib/auth-utils";
 import { FEEL_APPS } from "@/lib/navigation-config";
+import { ClockProvider } from "./ClockContext";
+import ClockMobileViewToggle from "./ClockMobileViewToggle";
 
 // Define Clock Tabs matching ClockSidebar logic
 // Href uses query params to switch sections
@@ -46,11 +49,9 @@ export default function ClockPageWrapper({
     fabAction
 }: ClockPageWrapperProps) {
 
-    // Filter tabs for mobile usage if needed (e.g. hide approvals if not admin)
-    // For now assuming we match visible items from Sidebar logic in parent or here
-    // But MobileNavBar takes simple tabs. Let's just pass all for now or filter if role is passed.
-
-    // Actually, simple static tabs might be better. 
+    // Filter tabs for mobile usage
+    const isManager = canViewTeamData(role);
+    const filteredTabs = CLOCK_TABS.filter(tab => tab.id !== "approvals" || isManager);
 
     return (
         <>
@@ -63,36 +64,19 @@ export default function ClockPageWrapper({
                     parentHref="/feel"
                     parentLabel="Feel"
                     siblingApps={FEEL_APPS}
-                    tabs={CLOCK_TABS}
+                    tabs={filteredTabs}
                     accentColor="text-blue-600"
                 />
 
+                {/* Floating Personal/Team toggle */}
+                <ClockMobileViewToggle />
+
                 {/* Content with top padding */}
-                <div className="px-4 pt-20 space-y-4">
+                <div className="pb-32 px-4 pt-20 space-y-4">
                     {/* Header is optional here or part of each section */}
-                    {/* For Clock, the header content is usually inside the section components (e.g., ClockOverview) 
-                        so we might not render 'header' prop explicitly if it duplicates.
-                        But FinancePageWrapper renders it. Let's keep it consistent.
-                    */}
                     {header}
                     {children}
                 </div>
-
-                {/* Mobile FAB or Actions might be needed if they were in the old sidebar bottom bar */}
-                {/* The MobileNavBar replaces the top part. The bottom nav from ClockSidebar might be redundant if we have top tabs.
-                    BUT ClockSidebar has the FAB integrated in the bottom bar.
-                    If we use top tabs, we might need a floating FAB for the main actions.
-                */}
-                {fabAction && (
-                    <div className="fixed bottom-6 right-4 z-50">
-                        <button
-                            onClick={fabAction.onClick}
-                            className={`w-14 h-14 flex items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 text-white ${fabAction.highlight ? "bg-red-500" : "bg-blue-600"}`}
-                        >
-                            {fabAction.icon}
-                        </button>
-                    </div>
-                )}
             </div>
 
             {/* DESKTOP LAYOUT */}
@@ -106,7 +90,7 @@ export default function ClockPageWrapper({
                         fabAction={fabAction}
                     />
                 } isTransparent>
-                    <div className="animate-in fade-in duration-500 pb-24 lg:pb-0">
+                    <div className="animate-in fade-in duration-500 pb-24 lg:pb-0 space-y-6">
                         {header}
                         {children}
                     </div>

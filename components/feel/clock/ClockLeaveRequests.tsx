@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import clsx from "clsx";
 import { CalendarRange, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, List, Grid3X3, ArrowUpDown, Calendar as CalendarIcon, Filter, X, Download, Check, Ban, Edit, Trash, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { ViewToggle } from "./ViewToggle";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
 import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isWithinInterval, parseISO, differenceInDays, isBefore, isAfter } from "date-fns";

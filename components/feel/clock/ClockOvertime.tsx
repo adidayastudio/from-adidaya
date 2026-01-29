@@ -3,7 +3,6 @@ import clsx from "clsx";
 import { Hourglass, Plus, Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowUpDown, Download, X, Check, Ban, Edit, Trash, Eye, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { ViewToggle } from "./ViewToggle";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
 import { formatDuration } from "@/lib/clock-utils";

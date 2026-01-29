@@ -88,20 +88,22 @@ export default function MobileNavBar({
             // Check if current URL starts with hrefPath and contains the query param
             if (pathname === hrefPath || pathname.startsWith(hrefPath + '/')) {
                 const hrefParams = new URLSearchParams(hrefQuery);
+                // All query params in href must match current searchParams
                 for (const [key, value] of hrefParams.entries()) {
-                    if (searchParams.get(key) === value) return true;
+                    if (searchParams.get(key) !== value) return false;
                 }
+                return true;
             }
             return false;
         }
 
-        // For href without query params, it's active if pathname matches and no relevant query params
+        // For href without query params, it's active if pathname matches AND no navigation params are present
         if (pathname === hrefPath) {
-            // Check if there are no view/section params (base page)
-            if (!searchParams.get('view') && !searchParams.get('section') && !searchParams.get('ai')) {
-                return true;
-            }
+            const navParams = ['view', 'section', 'tab', 'ai', 'mode'];
+            return !navParams.some(param => searchParams.get(param));
         }
+
+        // Deep matching for sub-paths
         if (hrefPath.split("/").length > 3 && pathname.startsWith(hrefPath)) return true;
         return false;
     };
