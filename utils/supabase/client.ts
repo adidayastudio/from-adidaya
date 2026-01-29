@@ -10,7 +10,6 @@ export function createClient() {
         console.error("NEXT_PUBLIC_SUPABASE_KEY:", key ? "Set" : "Missing");
 
         // Return a dummy client to prevent crash
-        // @ts-ignore - partial mock to satisfy basic usage
         return {
             auth: {
                 getUser: async () => ({ data: { user: null }, error: null }),
@@ -30,7 +29,7 @@ export function createClient() {
                     error: { message: "Missing Supabase Configuration" }
                 }),
             }),
-        };
+        } as any;
     }
 
     return createBrowserClient(url, key);

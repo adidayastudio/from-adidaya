@@ -89,7 +89,7 @@ export interface BusinessTrip {
 // ============================================
 
 export async function fetchAttendanceRecords(userId?: string, startDate?: string, endDate?: string): Promise<AttendanceRecord[]> {
-    let query = supabase.from("attendance_records").select(`
+    let query: any = supabase.from("attendance_records").select(`
         *,
         profiles:user_id (full_name, department, avatar_url)
     `);
@@ -112,7 +112,7 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
     }
 
     // Optimization: Fetch roles ONLY for the users in the result set
-    const userIds = Array.from(new Set((data || []).map(r => r.user_id as string).filter(Boolean)));
+    const userIds = Array.from(new Set((data || []).map((r: any) => r.user_id as string).filter(Boolean)));
     const roleMap = new Map<string, string>();
 
     if (userIds.length > 0) {
@@ -122,13 +122,13 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
             .in("user_id", userIds);
 
         if (!rolesError && rolesData) {
-            rolesData.forEach(r => roleMap.set(r.user_id, r.role));
+            rolesData.forEach((r: any) => roleMap.set(r.user_id, r.role));
         } else if (rolesError) {
             console.warn("⚠️ Failed to fetch roles for attendance list:", rolesError.message);
         }
     }
 
-    return (data || []).map(row => {
+    return (data || []).map((row: any) => {
         // Enforce 3-tier 09:00 rule for status consistency
         let status = row.status as AttendanceStatus;
         if (row.clock_in && (status === 'ontime' || status === 'intime' || status === 'late')) {
@@ -192,10 +192,15 @@ export interface AttendanceSession {
     locationType?: string;
     remoteMode?: string;
     locationStatus?: string;
+    userName?: string; // from join
+    avatar?: string; // from join
 }
 
 export async function fetchAttendanceSessions(userId?: string, startDate?: string, endDate?: string): Promise<AttendanceSession[]> {
-    let query = supabase.from("attendance_sessions").select("*");
+    let query: any = supabase.from("attendance_sessions").select(`
+        *,
+        profiles:user_id (full_name, avatar_url)
+    `);
 
     if (userId) {
         query = query.eq("user_id", userId);
@@ -214,7 +219,7 @@ export async function fetchAttendanceSessions(userId?: string, startDate?: strin
         return [];
     }
 
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
         id: row.id,
         userId: row.user_id,
         date: row.date,
@@ -228,7 +233,9 @@ export async function fetchAttendanceSessions(userId?: string, startDate?: strin
         locationCode: row.location_code,
         locationType: row.location_type,
         remoteMode: row.remote_mode,
-        locationStatus: row.location_status
+        locationStatus: row.location_status,
+        userName: row.profiles?.full_name,
+        avatar: row.profiles?.avatar_url
     }));
 }
 
@@ -251,7 +258,7 @@ export interface AttendanceLog {
 }
 
 export async function fetchAttendanceLogs(userId?: string, startDate?: string, endDate?: string): Promise<AttendanceLog[]> {
-    let query = supabase.from("attendance_logs")
+    let query: any = supabase.from("attendance_logs")
         .select(`
             *,
             profiles:user_id (full_name, avatar_url)
@@ -268,7 +275,7 @@ export async function fetchAttendanceLogs(userId?: string, startDate?: string, e
         return [];
     }
 
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
         id: row.id,
         userId: row.user_id,
         type: row.type,
@@ -438,7 +445,7 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
 
         let totalRegularMinutes = 0;
         let totalOvertimeMinutes = 0;
-        (allSessions || []).forEach(s => {
+        (allSessions || []).forEach((s: any) => {
             if (s.is_overtime) {
                 totalOvertimeMinutes += s.duration_minutes || 0;
             } else {
@@ -522,7 +529,7 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
 // ============================================
 
 export async function fetchLeaveRequests(userId?: string, startDate?: string, endDate?: string): Promise<LeaveRequest[]> {
-    let query = supabase.from("leave_requests").select(`
+    let query: any = supabase.from("leave_requests").select(`
         *,
         profiles:user_id (full_name)
     `);
@@ -550,7 +557,7 @@ export async function fetchLeaveRequests(userId?: string, startDate?: string, en
         return [];
     }
 
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
         id: row.id,
         userId: row.user_id,
         userName: row.profiles?.full_name,
@@ -673,7 +680,7 @@ export async function deleteLeaveAttendanceRecords(
 // ============================================
 
 export async function fetchOvertimeLogs(userId?: string, startDate?: string, endDate?: string): Promise<OvertimeLog[]> {
-    let query = supabase.from("overtime_logs").select(`
+    let query: any = supabase.from("overtime_logs").select(`
         *,
         profiles:user_id (full_name)
     `);
@@ -695,7 +702,7 @@ export async function fetchOvertimeLogs(userId?: string, startDate?: string, end
         return [];
     }
 
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
         id: row.id,
         userId: row.user_id,
         userName: row.profiles?.full_name,
@@ -778,7 +785,7 @@ export async function syncOvertimeToAttendance(userId: string, date: string) {
 
     // 2. Calculate total minutes
     let totalMinutes = 0;
-    logs?.forEach(log => {
+    logs?.forEach((log: any) => {
         const start = new Date(`${date}T${log.start_time}`);
         const end = new Date(`${date}T${log.end_time}`);
         const diff = Math.floor((end.getTime() - start.getTime()) / 60000);
@@ -921,7 +928,7 @@ export async function deleteTripAttendanceRecords(
 // ============================================
 
 export async function fetchBusinessTrips(userId?: string, startDate?: string, endDate?: string): Promise<BusinessTrip[]> {
-    let query = supabase.from("business_trips").select(`
+    let query: any = supabase.from("business_trips").select(`
         *,
         profiles:user_id (full_name)
     `);
@@ -944,7 +951,7 @@ export async function fetchBusinessTrips(userId?: string, startDate?: string, en
         return [];
     }
 
-    return (data || []).map(row => ({
+    return (data || []).map((row: any) => ({
         id: row.id,
         userId: row.user_id,
         userName: row.profiles?.full_name,

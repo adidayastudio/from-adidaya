@@ -82,13 +82,13 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
         }));
 
         // Find sessions that don't have a matching record in 'attendance'
-        const orphanedSessions = (sessions || []).filter(s =>
+        const orphanedSessions = (sessions || []).filter((s: any) =>
             !attendance.some(a => a.userId === s.userId && a.date === s.date)
         );
 
         // Group sessions by userId and date to avoid multiple entries per day in the same view
         const groupedOrphans: Record<string, any> = {};
-        orphanedSessions.forEach(s => {
+        orphanedSessions.forEach((s: any) => {
             const key = `${s.userId}-${s.date}`;
             if (!groupedOrphans[key]) {
                 const member = teamMembers.find(m => m.id === s.userId);
