@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "../components/sidebar/Sidebar";
 import MobileBottomBar from "../components/layout/MobileBottomBar";
@@ -27,7 +27,9 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
       >
         {children}
       </main>
-      <MobileBottomBar />
+      <Suspense fallback={null}>
+        <MobileBottomBar />
+      </Suspense>
     </>
   );
 }
