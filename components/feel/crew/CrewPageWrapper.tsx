@@ -90,9 +90,8 @@ export default function CrewPageWrapper({
                         role={role}
                         fabAction={fabAction}
                     />
-                } isTransparent>
+                } isTransparent header={header}>
                     <div className="flex flex-col h-full pb-28 lg:pb-0">
-                        {header}
                         {children}
                     </div>
                 </PageWrapper>

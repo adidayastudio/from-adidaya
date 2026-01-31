@@ -1,8 +1,7 @@
 import { useState } from "react";
 import clsx from "clsx";
-import { Sparkles, ChevronRight, Users, UserCheck, UserX, Briefcase, User, BarChart, LayoutDashboard, Target, Settings, TrendingUp } from "lucide-react";
+import { Sparkles, Users, Briefcase, User, BarChart, LayoutDashboard, Target, Settings } from "lucide-react";
 import useUserProfile from "@/hooks/useUserProfile";
-import type { LucideIcon } from "lucide-react";
 
 /* ======================
    TYPES
@@ -13,11 +12,11 @@ export type PeopleSection =
   | "directory"
   | "performance"
   | "analytics"
-  | "management"
+  | "setup"
   | "personal-profile"
   | "personal-performance";
 
-type PeopleQuickView =
+export type PeopleQuickView =
   | "all"
   | "active"
   | "inactive"
@@ -31,7 +30,7 @@ type PeopleQuickView =
 interface PeopleSidebarProps {
   activeSection?: PeopleSection;
   onSectionChange?: (section: PeopleSection) => void;
-  // Directory filter props
+  // Directory filter props (kept for prop compatibility but unused in UI)
   activeFilter?: PeopleQuickView;
   onFilterChange?: (filter: PeopleQuickView) => void;
 }
@@ -39,8 +38,8 @@ interface PeopleSidebarProps {
 export default function PeopleSidebar({
   activeSection = "directory",
   onSectionChange = () => { },
-  activeFilter = "all",
-  onFilterChange = () => { }
+  activeFilter = "all", // kept for compatibility
+  onFilterChange = () => { } // kept for compatibility
 }: PeopleSidebarProps) {
 
   const { profile } = useUserProfile();
@@ -93,18 +92,12 @@ export default function PeopleSidebar({
   }
 
   // GLOBAL VIEW (ADMIN/SUPERVISOR)
-  const orgItems = [
-    { id: "overview" as PeopleSection, label: "Overview", shortLabel: "Overview", icon: LayoutDashboard },
-    { id: "directory" as PeopleSection, label: "Directory", shortLabel: "People", icon: Users },
-    { id: "performance" as PeopleSection, label: "Performance", shortLabel: "Perform", icon: Target },
-    { id: "analytics" as PeopleSection, label: "Analytics", shortLabel: "Analytics", icon: BarChart },
-  ];
-
   return (
     <>
       {/* DESKTOP SIDEBAR */}
       <aside className="w-full h-full hidden md:block">
         <div className="space-y-6 pt-2">
+          {/* Header Card */}
           <button className="w-full flex items-center gap-2 px-3 py-3 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 transition-all group">
             <div className="w-8 h-8 rounded-lg bg-white/50 flex items-center justify-center group-hover:bg-white transition-colors">
               <Sparkles className="w-4 h-4" />
@@ -115,72 +108,28 @@ export default function PeopleSidebar({
             </div>
           </button>
 
+          {/* ME Section */}
           <div className="space-y-1 mb-6">
             <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-1 mb-2">Me</div>
             <NavItem label="My Profile" active={activeSection === "personal-profile"} onClick={() => onSectionChange("personal-profile")} icon={<User className="w-4 h-4" />} />
             <NavItem label="My Performance" active={activeSection === "personal-performance"} onClick={() => onSectionChange("personal-performance")} icon={<Briefcase className="w-4 h-4" />} />
           </div>
 
+          {/* ORGANIZATION Section */}
           <div className="space-y-1">
             <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-1 mb-2">Organization</div>
             <NavItem label="Overview" active={activeSection === "overview"} onClick={() => onSectionChange("overview")} icon={<LayoutDashboard className="w-4 h-4" />} />
             <NavItem label="Directory" active={activeSection === "directory"} onClick={() => onSectionChange("directory")} icon={<Users className="w-4 h-4" />} />
             <NavItem label="Performance Index" active={activeSection === "performance"} onClick={() => onSectionChange("performance")} icon={<Target className="w-4 h-4" />} />
             <NavItem label="Team Analytics" active={activeSection === "analytics"} onClick={() => onSectionChange("analytics")} icon={<BarChart className="w-4 h-4" />} />
-            <NavItem label="Management" active={activeSection === "management"} onClick={() => onSectionChange("management")} icon={<Settings className="w-4 h-4" />} />
+            <NavItem label="Setup" active={activeSection === "setup"} onClick={() => onSectionChange("setup")} icon={<Settings className="w-4 h-4" />} />
           </div>
 
-          <div className="border-t border-neutral-100" />
-
-          {activeSection === "directory" && (
-            <>
-              <div className="space-y-1">
-                <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-1 mb-2">Filters</div>
-                <NavItem label="All Staff" active={activeFilter === "all"} onClick={() => onFilterChange("all")} icon={<Users className="w-4 h-4" />} />
-                <NavItem label="Active" active={activeFilter === "active"} onClick={() => onFilterChange("active")} icon={<UserCheck className="w-4 h-4" />} />
-                <NavItem label="Inactive" active={activeFilter === "inactive"} onClick={() => onFilterChange("inactive")} icon={<UserX className="w-4 h-4" />} />
-                <NavItem label="Full Time" active={activeFilter === "full-time"} onClick={() => onFilterChange("full-time")} icon={<Briefcase className="w-4 h-4" />} />
-                <NavItem label="Freelance" active={activeFilter === "freelance"} onClick={() => onFilterChange("freelance")} icon={<User className="w-4 h-4" />} />
-              </div>
-              <div className="space-y-1 pt-4">
-                <Accordion title="Role">
-                  <FilterItem label="Architect" />
-                  <FilterItem label="Interior Designer" />
-                  <FilterItem label="Structural Engineer" />
-                  <FilterItem label="MEP Engineer" />
-                  <FilterItem label="Project Manager" />
-                  <FilterItem label="Admin / Finance" />
-                </Accordion>
-                <Accordion title="Project Assignment">
-                  <FilterItem label="Precision Gym" />
-                  <FilterItem label="Padel JPF" />
-                  <FilterItem label="+ More" />
-                </Accordion>
-              </div>
-            </>
-          )}
-
-          {activeSection === "performance" && (
-            <div className="space-y-1">
-              <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-1 mb-2">Focus</div>
-              <NavItem label="High Performers" icon={<TrendingUpIcon />} />
-              <NavItem label="Needs Support" icon={<AlertIcon />} />
-              <NavItem label="Project Leaders" icon={<Target className="w-4 h-4" />} />
-            </div>
-          )}
         </div>
       </aside>
 
     </>
   );
-}
-
-function TrendingUpIcon() {
-  return <TrendingUp className="w-4 h-4" />
-}
-
-function AlertIcon() {
-  return <div className="w-4 h-4 rounded-full bg-red-100 border-2 border-red-500" />
 }
 
 /* ======================
@@ -208,40 +157,5 @@ function NavItem({ label, active, onClick, icon, count }: { label: string; activ
         </span>
       )}
     </button>
-  );
-}
-
-function Accordion({ title, children }: { title: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div>
-      <button
-        onClick={() => setOpen(!open)}
-        className={clsx(
-          "w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all",
-          open ? "text-neutral-900" : "text-neutral-600 hover:bg-neutral-50"
-        )}
-      >
-        <span>{title}</span>
-        <ChevronRight
-          size={14}
-          className={clsx(
-            "transition-transform text-neutral-400",
-            open && "rotate-90"
-          )}
-        />
-      </button>
-
-      {open && <div className="mt-1 space-y-0.5 pl-3 border-l border-neutral-100 ml-3">{children}</div>}
-    </div>
-  );
-}
-
-function FilterItem({ label }: { label: string }) {
-  return (
-    <div className="cursor-pointer rounded-md px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50 transition-colors">
-      {label}
-    </div>
   );
 }

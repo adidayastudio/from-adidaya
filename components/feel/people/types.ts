@@ -1,4 +1,4 @@
-export type PersonRole = "admin" | "supervisor" | "staff";
+export type PersonRole = "admin" | "hr" | "supervisor" | "staff" | "intern" | "management";
 export type PersonStatus = "Active" | "Inactive" | "On Leave" | "Probation";
 export type EmploymentType = "Full Time" | "Contract" | "Freelance" | "Intern";
 

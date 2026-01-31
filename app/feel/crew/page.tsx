@@ -13,6 +13,7 @@ import { CrewRequests } from "@/components/feel/crew/CrewRequests";
 import { CrewDetail } from "@/components/feel/crew/CrewDetail";
 import PageWrapper from "@/components/layout/PageWrapper";
 import { PageHeader } from "@/shared/ui/headers/PageHeader";
+import { Button } from "@/shared/ui/primitives/button/button";
 import { Plus } from "lucide-react";
 
 export default function CrewPage() {
@@ -84,6 +85,8 @@ export default function CrewPage() {
 
   const fab = getFabConfig();
 
+  // Import Button (add this to imports if not present, otherwise just use it)
+  // But wait, I need to check imports first. usage:
   const header = (
     <PageHeader
       title={
@@ -103,6 +106,17 @@ export default function CrewPage() {
                 activeSection === "requests" ? "Leave, Cash Advance, and Reimbursement." :
                   activeSection === "directory" && selectedCrewId ? "View and edit crew details." :
                     "Manage field workers."
+      }
+      actions={
+        fab && (
+          <Button
+            variant="primary"
+            icon={fab.icon}
+            onClick={fab.onClick}
+          >
+            {fab.title}
+          </Button>
+        )
       }
     />
   );

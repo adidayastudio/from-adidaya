@@ -92,6 +92,19 @@ export default function MobileBottomBar() {
             if (section === "business-trip") return { id: 'CLOCK_NEW_TRIP', label: 'New Trip', icon: Plus, color: 'red' };
         }
 
+        // People Setup - Structure
+        if (pathname === "/feel/people" && searchParams.get("section") === "setup" && searchParams.get("tab") === "structure") {
+            return { id: 'STRUCTURE_ADD', label: 'Add', icon: Plus, color: 'blue' };
+        }
+
+        // People Setup - Employment (hide FAB on policies subtab)
+        if (pathname === "/feel/people" && searchParams.get("section") === "setup" && searchParams.get("tab") === "employment") {
+            const subtab = searchParams.get("subtab");
+            // Hide FAB for policies tab (no add action)
+            if (subtab === "policies") return null;
+            return { id: 'EMPLOYMENT_ADD', label: 'Add', icon: Plus, color: 'blue' };
+        }
+
         return null;
     };
 

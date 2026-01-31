@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 
-export type UserRole = "superadmin" | "admin" | "administrator" | "supervisor" | "pm" | "management" | "staff";
+export type UserRole = "superadmin" | "admin" | "administrator" | "supervisor" | "hr" | "pm" | "management" | "staff";
 
 export interface UserProfile {
     id: string;
@@ -49,7 +49,7 @@ export default function useUserProfile() {
                 const userMeta = user.user_metadata || {};
                 const candidates = [meta.role, meta.roles, userMeta.role, userMeta.roles];
                 candidates.forEach(c => {
-                    if (Array.isArray(c)) c.forEach(r => optimisticRoles.push(String(r)));
+                    if (Array.isArray(c)) c.forEach((r: any) => optimisticRoles.push(String(r)));
                     else if (c) optimisticRoles.push(String(c));
                 });
 
@@ -113,7 +113,7 @@ export default function useUserProfile() {
 
             // C. Roles Table (Source of Truth)
             if (rolesData) {
-                rolesData.forEach(r => fetchedRoles.push(r.role));
+                rolesData.forEach((r: any) => fetchedRoles.push(r.role));
             }
 
             // Normalize
@@ -124,7 +124,7 @@ export default function useUserProfile() {
             console.log("🔍 [useUserProfile] Resolved Roles:", normalizedRoles);
 
             // Priority determination
-            const rolePriority: UserRole[] = ["superadmin", "admin", "administrator", "management", "supervisor", "pm", "staff"];
+            const rolePriority: UserRole[] = ["superadmin", "admin", "administrator", "hr", "management", "supervisor", "pm", "staff"];
             let finalRole: UserRole = "staff";
 
             for (const p of rolePriority) {
@@ -160,7 +160,7 @@ export default function useUserProfile() {
     useEffect(() => {
         fetchProfile();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event: string, session: any) => {
             if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
                 // Background verify on token updates
                 fetchProfile(true);

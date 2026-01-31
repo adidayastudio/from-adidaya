@@ -19,6 +19,7 @@ interface PeoplePageWrapperProps {
     header?: React.ReactNode;
     children: React.ReactNode;
     sidebar?: React.ReactNode;
+    tabs?: { id: string; label: string; href: string }[];
 }
 
 export default function PeoplePageWrapper({
@@ -26,6 +27,7 @@ export default function PeoplePageWrapper({
     header,
     children,
     sidebar,
+    tabs = PEOPLE_TABS,
 }: PeoplePageWrapperProps) {
     return (
         <>
@@ -37,7 +39,7 @@ export default function PeoplePageWrapper({
                     parentHref="/feel"
                     parentLabel="Feel"
                     siblingApps={FEEL_APPS}
-                    tabs={PEOPLE_TABS}
+                    tabs={tabs}
                     accentColor="text-blue-500"
                 />
 
