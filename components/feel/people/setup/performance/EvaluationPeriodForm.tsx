@@ -6,7 +6,7 @@ import { Lock, AlertCircle, Calendar, Save, Clock } from "lucide-react";
 import { fetchCurrentPerformanceRule, savePerformanceRule, type PerformanceRule } from "@/lib/api/performance";
 import { toast } from "react-hot-toast";
 
-export default function EvaluationPeriodForm({ isLocked }: { isLocked?: boolean }) {
+export default function EvaluationPeriodForm({ isLocked, rule, ruleLoading, onRuleUpdate }: { isLocked?: boolean, rule?: PerformanceRule | null, ruleLoading?: boolean, onRuleUpdate?: () => void }) {
     // Evaluation Period Configuration
     const [period, setPeriod] = useState<'weekly' | 'monthly'>('monthly');
     const [snapshotDay, setSnapshotDay] = useState<string>('last'); // '1', '15', 'last' or 'monday', 'friday'
@@ -39,8 +39,20 @@ export default function EvaluationPeriodForm({ isLocked }: { isLocked?: boolean 
     };
 
 
-    // Load existing settings
+    // Sync with Rule Prop
     useEffect(() => {
+        if (rule) {
+            setPeriod(rule.period_type);
+            setSnapshotDay(rule.snapshot_day_trigger);
+            setAutoLock(rule.auto_lock_enabled);
+            setEffectiveDate(new Date().toISOString()); // Default to now for new edits
+        }
+    }, [rule]);
+
+    // Load existing settings (Fallback if no prop)
+    useEffect(() => {
+        if (rule !== undefined) return;
+
         const loadRules = async () => {
             setLoading(true);
             try {
@@ -64,7 +76,7 @@ export default function EvaluationPeriodForm({ isLocked }: { isLocked?: boolean 
             }
         };
         loadRules();
-    }, []);
+    }, [rule]);
 
     const handleSave = async () => {
         setLoading(true);
@@ -89,9 +101,11 @@ export default function EvaluationPeriodForm({ isLocked }: { isLocked?: boolean 
 
             await savePerformanceRule(newRule);
 
-            // Reload to verify persistence
-            const savedRule = await fetchCurrentPerformanceRule();
-            console.log("Verified Save:", savedRule);
+            if (onRuleUpdate) onRuleUpdate();
+
+            // Reload to verify persistence - Optional if onRuleUpdate does it
+            // const savedRule = await fetchCurrentPerformanceRule();
+            // console.log("Verified Save:", savedRule);
 
             toast.success("Evaluation cycle updated", {
                 id: loadingToast,

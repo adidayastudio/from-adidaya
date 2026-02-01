@@ -7,7 +7,7 @@ import { Save, Lock, Unlock, Percent } from "lucide-react";
 import { fetchCurrentPerformanceRule, savePerformanceRule, type PerformanceRule } from "@/lib/api/performance";
 import { toast, Toaster } from "react-hot-toast";
 
-export default function WeightingForm({ isLocked }: { isLocked?: boolean }) {
+export default function WeightingForm({ isLocked, rule, ruleLoading, onRuleUpdate }: { isLocked?: boolean, rule?: PerformanceRule | null, ruleLoading?: boolean, onRuleUpdate?: () => void }) {
     // Core weights state
     const [weights, setWeights] = useState({
         attendance: 25,
@@ -28,8 +28,24 @@ export default function WeightingForm({ isLocked }: { isLocked?: boolean }) {
 
     const [loading, setLoading] = useState(false);
 
-    // Fetch current configuration on mount
+    // Sync with rule prop
     useEffect(() => {
+        if (rule) {
+            setWeights({
+                attendance: rule.weight_attendance,
+                taskCompletion: rule.weight_task_completion,
+                taskQuality: rule.weight_task_quality,
+                peerReview: rule.weight_peer_review,
+                includeOvertime: rule.overtime_bonus_enabled,
+                overtimeMaxBonus: rule.overtime_max_bonus
+            });
+        }
+    }, [rule]);
+
+    // Fetch current configuration on mount ONLY if not provided via props (setup vs standalone)
+    useEffect(() => {
+        if (rule !== undefined) return; // Skip if parent manages data
+
         const loadRules = async () => {
             setLoading(true);
             try {
@@ -52,7 +68,7 @@ export default function WeightingForm({ isLocked }: { isLocked?: boolean }) {
             }
         };
         loadRules();
-    }, []);
+    }, [rule]);
 
     const handleReset = () => {
         setWeights({
@@ -96,6 +112,9 @@ export default function WeightingForm({ isLocked }: { isLocked?: boolean }) {
             };
 
             await savePerformanceRule(newRule);
+
+            if (onRuleUpdate) onRuleUpdate();
+
             toast.success("Configuration saved successfully!", {
                 duration: 4000,
                 style: {

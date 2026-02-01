@@ -9,53 +9,66 @@ export function useClock() {
     const [isCheckedIn, setIsCheckedIn] = useState(false);
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [elapsed, setElapsed] = useState(0);
+    const [loading, setLoading] = useState(true);
     const supabase = useMemo(() => createClient(), []);
 
     const checkActiveSession = useCallback(async () => {
-        if (!profile?.id) return;
+        if (!profile?.id) {
+            // If we don't have a profile yet, we can't check session.
+            // But if useUserProfile is loading, we should probably stay loading.
+            // However, useUserProfile is now optimistic, so we should have an ID fast.
+            // If ID is missing after load, it means not logged in or error.
+            return;
+        }
 
-        // Use local YYYY-MM-DD to match api/clock.ts logic and avoid UTC mismatch around midnight
-        const dateStr = new Date().toLocaleDateString('en-CA');
+        try {
+            // Use local YYYY-MM-DD to match api/clock.ts logic and avoid UTC mismatch around midnight
+            const dateStr = new Date().toLocaleDateString('en-CA');
 
-        // Try new sessions table first, fallback to old records table
-        let { data, error } = await supabase
-            .from("attendance_sessions")
-            .select("id, clock_in, clock_out, session_number")
-            .eq("user_id", profile.id)
-            .eq("date", dateStr)
-            .is("clock_out", null)
-            .maybeSingle();
-
-        // Fallback to attendance_records if sessions table doesn't exist
-        if (error?.code === "42P01" || error?.message?.includes("does not exist")) {
-            const fallback = await supabase
-                .from("attendance_records")
-                .select("clock_in, clock_out")
+            // Try new sessions table first, fallback to old records table
+            let { data, error } = await supabase
+                .from("attendance_sessions")
+                .select("id, clock_in, clock_out, session_number")
                 .eq("user_id", profile.id)
                 .eq("date", dateStr)
+                .is("clock_out", null)
                 .maybeSingle();
 
-            if (fallback.data && fallback.data.clock_in && !fallback.data.clock_out) {
+            // Fallback to attendance_records if sessions table doesn't exist
+            if (error?.code === "42P01" || error?.message?.includes("does not exist")) {
+                const fallback = await supabase
+                    .from("attendance_records")
+                    .select("clock_in, clock_out")
+                    .eq("user_id", profile.id)
+                    .eq("date", dateStr)
+                    .maybeSingle();
+
+                if (fallback.data && fallback.data.clock_in && !fallback.data.clock_out) {
+                    setIsCheckedIn(true);
+                    setStartTime(new Date(fallback.data.clock_in));
+                } else {
+                    setIsCheckedIn(false);
+                    setStartTime(null);
+                }
+                return;
+            }
+
+            if (error) {
+                console.error("❌ Error checking active session:", error.message);
+                return;
+            }
+
+            if (data && data.clock_in) {
                 setIsCheckedIn(true);
-                setStartTime(new Date(fallback.data.clock_in));
+                setStartTime(new Date(data.clock_in));
             } else {
                 setIsCheckedIn(false);
                 setStartTime(null);
             }
-            return;
-        }
-
-        if (error) {
-            console.error("❌ Error checking active session:", error.message);
-            return;
-        }
-
-        if (data && data.clock_in) {
-            setIsCheckedIn(true);
-            setStartTime(new Date(data.clock_in));
-        } else {
-            setIsCheckedIn(false);
-            setStartTime(null);
+        } catch (error) {
+            console.error("Error in checkActiveSession:", error);
+        } finally {
+            setLoading(false);
         }
     }, [profile?.id, supabase]);
 
@@ -66,11 +79,16 @@ export function useClock() {
     const handleClock = useCallback(async (metadata?: clockApi.ClockActionMetadata) => {
         if (!profile?.id) return;
 
-        const type = isCheckedIn ? "OUT" : "IN";
-        await clockApi.clockAction(profile.id, type, metadata);
-
-        // Refresh state
-        await checkActiveSession();
+        setLoading(true);
+        try {
+            const type = isCheckedIn ? "OUT" : "IN";
+            await clockApi.clockAction(profile.id, type, metadata);
+            // Refresh state
+            await checkActiveSession();
+        } catch (error) {
+            console.error("Error toggling clock:", error);
+            setLoading(false); // Ensure we stop loading on error
+        }
     }, [profile?.id, isCheckedIn, checkActiveSession]);
 
     // Timer Logic
@@ -123,6 +141,6 @@ export function useClock() {
 
     const status = getStatus();
 
-    return { isCheckedIn, startTime, elapsed, toggleClock: handleClock, formatTime, status, refresh: checkActiveSession };
+    return { isCheckedIn, startTime, elapsed, toggleClock: handleClock, formatTime, status, refresh: checkActiveSession, loading };
 }
 

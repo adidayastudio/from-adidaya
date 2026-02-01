@@ -4,14 +4,46 @@ export const PEOPLE_DATA: Person[] = [
     {
         id: "usr_001",
         name: "Manu Stravo",
+        nickname: "Manu",
+        account_type: "human_account",
+        id_number: "51122001",
+        display_id: "ADY-V-AID-AR-22001",
         email: "manu@adidaya.com",
         role: "admin",
         title: "Principal Architect",
         department: "Management",
+        level: "Principal",
         status: "Active",
         joinedAt: "Jan 2020",
         type: "Full Time",
         initials: "MS",
+
+        // Personal Data
+        birthday: "1990-05-15",
+        nik: "3171000000000001",
+        phone: "+62 812 3456 7890",
+        address: {
+            current: "Jl. Sudirman No. 1, Jakarta Pusat",
+            home: "Jl. Damai No. 10, Jakarta Selatan"
+        },
+        emergency_contact: {
+            name: "Jane Doe",
+            relationship: "Spouse",
+            phone: "+62 812 9876 5432"
+        },
+        social_links: {
+            linkedin: "manustravo",
+            instagram: "manustravo.arch",
+            twitter: "manustravo"
+        },
+        bank_info: {
+            bank_name: "BCA",
+            account_number: "1234567890",
+            account_holder: "MANU STRAVO"
+        },
+
+        include_in_timesheet: false, // Owner usually excluded
+        include_in_performance: false,
         attendance: {
             attendanceRate: 98,
             totalDays: 240,
@@ -36,10 +68,14 @@ export const PEOPLE_DATA: Person[] = [
     {
         id: "usr_002",
         name: "Sarah Chen",
+        account_type: "human_account",
+        id_number: "51122002",
+        display_id: "ADY-IV-PCC-PM-21045",
         email: "sarah@adidaya.com",
         role: "supervisor",
         title: "Project Manager",
         department: "Construction",
+        level: "Lead",
         status: "Active",
         joinedAt: "Mar 2021",
         type: "Full Time",
@@ -68,10 +104,14 @@ export const PEOPLE_DATA: Person[] = [
     {
         id: "usr_003",
         name: "Budi Santoso",
+        account_type: "human_account",
+        id_number: "51122003",
+        display_id: "ADY-III-AID-GD-21088",
         email: "budi@adidaya.com",
         role: "staff",
         title: "Senior Drafter",
         department: "Design",
+        level: "Senior",
         status: "Active",
         joinedAt: "Jun 2021",
         type: "Contract",
@@ -100,10 +140,14 @@ export const PEOPLE_DATA: Person[] = [
     {
         id: "usr_004",
         name: "Anya Geraldine",
+        account_type: "human_account",
+        id_number: "51122004",
+        display_id: "ADY-I-AID-ID-24005",
         email: "anya@adidaya.com",
         role: "staff",
         title: "Interior Intern",
         department: "Design",
+        level: "Junior",
         status: "Probation",
         joinedAt: "Jan 2024",
         type: "Intern",
@@ -132,10 +176,14 @@ export const PEOPLE_DATA: Person[] = [
     {
         id: "usr_005",
         name: "Michael Wong",
+        account_type: "human_account",
+        id_number: "51122005",
+        display_id: "ADY-II-PCC-SM-22077",
         email: "mike@adidaya.com",
         role: "staff",
         title: "Site Supervisor",
         department: "Construction",
+        level: "Mid",
         status: "On Leave",
         joinedAt: "Sep 2022",
         type: "Full Time",
@@ -159,6 +207,45 @@ export const PEOPLE_DATA: Person[] = [
             presenceScore: 70,
             engagementScore: 85,
             overallScore: 81
+        }
+    },
+    {
+        id: "sys_001",
+        name: "Adidaya Admin",
+        account_type: "system_account",
+        id_number: "00000000",
+        display_id: "SYSTEM-ROOT",
+        email: "admin@adidaya.com",
+        role: "admin",
+        title: "System Administrator",
+        department: "System",
+        status: "Active",
+        joinedAt: "Jan 2020",
+        type: "Full Time",
+        initials: "AA",
+        include_in_timesheet: false,
+        include_in_attendance: false,
+        include_in_performance: false,
+        include_in_people_analytics: false,
+        attendance: {
+            attendanceRate: 0,
+            totalDays: 0,
+            lateDays: 0,
+            absentDays: 0,
+            overtimeHours: 0
+        },
+        performance: {
+            tasksCompleted: 0,
+            avgTaskCompletionTime: "0 days",
+            performanceScore: 0,
+            productivityTrend: "stable",
+            activeProjects: 0
+        },
+        kpi: {
+            projectInvolvement: 0,
+            presenceScore: 0,
+            engagementScore: 0,
+            overallScore: 0
         }
     }
 ];

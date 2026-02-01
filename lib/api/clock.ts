@@ -111,7 +111,10 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
         return [];
     }
 
-    // Optimization: Fetch roles ONLY for the users in the result set
+    // Optimization: Skip fetching roles manually to speed up response. 
+    // The role is rarely used in the list view (only for filtering which is partly client side or based on profile).
+    // If needed, we should JOIN or rely on profiles.
+    /*
     const userIds = Array.from(new Set((data || []).map((r: any) => r.user_id as string).filter(Boolean)));
     const roleMap = new Map<string, string>();
 
@@ -127,6 +130,8 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
             console.warn("⚠️ Failed to fetch roles for attendance list:", rolesError.message);
         }
     }
+    */
+    const roleMap = new Map<string, string>();
 
     return (data || []).map((row: any) => {
         // Enforce 3-tier 09:00 rule for status consistency

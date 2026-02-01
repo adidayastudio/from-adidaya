@@ -8,7 +8,9 @@ import {
     SkillLevel,
     WorkloadStatus,
     WorkloadSource,
-    FeedbackVisibility
+    FeedbackVisibility,
+    SkillCategory,
+    SkillLibraryItem
 } from "@/lib/types/people-types";
 import { Person } from "@/components/feel/people/types";
 import { OrganizationRolePermission } from "@/lib/types/organization";
@@ -20,11 +22,29 @@ const supabase = createClient();
 export async function fetchPeopleDirectory(): Promise<Person[]> {
     console.log("Fetching People Directory...");
 
-    // 1. Fetch Profiles and Roles in parallel to avoid relation issues
-    // Using simple select('*') to ensure we get data even if relations are broken
-    const [profilesResult, rolesResult] = await Promise.all([
-        supabase.from('profiles').select('*'),
-        supabase.from('user_roles').select('*')
+    // 1. Fetch Profiles and related data in parallel to avoid relation issues and perform manual joins
+    const [
+        profilesResult,
+        rolesResult,
+        deptsResult,
+        posResult,
+        levelsResult,
+        empTypesResult,
+        workStatusesResult,
+        workSchedulesResult,
+        historyResult,
+        perfSnapshotsResult
+    ] = await Promise.all([
+        supabase.from('profiles').select('*').order('full_name', { ascending: true }),
+        supabase.from('user_roles').select('*'),
+        supabase.from('organization_departments').select('id, name'),
+        supabase.from('organization_positions').select('id, name'),
+        supabase.from('organization_levels').select('id, name, roman_code'),
+        supabase.from('employment_types').select('id, name'),
+        supabase.from('work_status').select('id, name'),
+        supabase.from('work_schedules').select('id, name'),
+        supabase.from('career_history').select('*').order('event_date', { ascending: false }),
+        supabase.from('people_performance_snapshots').select('*').order('period', { ascending: false })
     ]);
 
     if (profilesResult.error) {
@@ -34,31 +54,101 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
 
     const profiles = profilesResult.data || [];
     const roles = rolesResult.data || [];
+    const departments = deptsResult.data || [];
+    const positions = posResult.data || [];
+    const levels = levelsResult.data || [];
+    const empTypes = empTypesResult.data || [];
+    const workStatuses = workStatusesResult.data || [];
+    const schedules = workSchedulesResult.data || [];
+    const allHistory = historyResult.data || [];
+    const allSnapshots = perfSnapshotsResult.data || [];
 
-    console.log(`Fetched ${profiles.length} profiles and ${roles.length} roles.`);
+    console.log(`Fetched ${profiles.length} profiles.`);
 
-    // 2. Map to Person Type
     return profiles.map((p: any) => {
-        // Find role for this user (linking by user_id which is typically the id in profiles if 1:1, or a field)
-        // In most Supabase setups, profiles.id IS the auth.user.id
         const userRoleObj = roles.find((r: any) => r.user_id === p.id);
         const role = userRoleObj?.role || 'staff';
 
-        return {
-            id: p.id,
-            name: p.full_name || p.email?.split('@')[0] || 'Unknown',
-            email: p.email || '',
-            role: role as any,
-            title: p.job_title || 'Team Member',
-            department: p.department || 'General',
-            status: 'Active',
-            joinedAt: p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Unknown',
-            type: 'Full Time',
-            initials: (p.full_name || '').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || '??',
-            avatarUrl: p.avatar_url,
+        // Resolve names from IDs
+        const deptObj = departments.find((d: any) => d.id === p.department_id);
+        const posObj = positions.find((pos: any) => pos.id === p.position_id);
+        const levelObj = levels.find((l: any) => l.id === p.level_id);
+        const empTypeObj = empTypes.find((et: any) => et.id === p.employment_type_id);
+        const workStatusObj = workStatuses.find((ws: any) => ws.id === p.work_status_id);
+        const scheduleObj = schedules.find((s: any) => s.id === p.schedule_id);
+        const userHistory = allHistory.filter((h: any) => h.user_id === p.id);
+        const userSnapshot = allSnapshots.find((s: any) => s.user_id === p.id); // Latest because sorted
 
-            // Default Empty Stats (will fetch real ones later)
-            // We set attendanceRate to 0 to indicate "no data" rather than a fake 100%
+        const person: Person = {
+            id: p.id,
+            // New field names
+            id_number: p.id_number || p.system_id || p.employee_id || '00000000',
+            id_code: p.id_code || p.display_id || `ADY-0-STAFF-${new Date().getFullYear()}000`,
+            // Backward compatibility
+            system_id: p.id_number || p.system_id || p.employee_id || '00000000',
+            display_id: p.id_code || p.display_id || `ADY-0-STAFF-${new Date().getFullYear()}000`,
+            account_type: p.account_type || 'human_account',
+
+            name: p.full_name || p.email?.split('@')[0] || 'Unknown',
+            nickname: (p.nickname || p.full_name?.split(' ')[0] || '').charAt(0).toUpperCase() + (p.nickname || p.full_name?.split(' ')[0] || '').slice(1),
+            email: p.email || '',
+
+            role: role as any,
+            title: posObj?.name || p.job_title || 'Team Member',
+            department: deptObj?.name || p.department || 'General',
+            level: levelObj ? `${levelObj.roman_code} - ${levelObj.name}` : (p.level || 'Junior'),
+
+            status: workStatusObj?.name || p.status || 'Active',
+            joinedAt: p.join_date ? new Date(p.join_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) :
+                (p.created_at ? new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown'),
+            join_date: p.join_date,
+            type: empTypeObj?.name || p.employment_type || 'Full Time',
+            office: p.office || 'Jakarta HQ',
+
+            avatarUrl: p.avatar_url,
+            initials: (p.full_name || '').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() || '??',
+
+            // IDs for editing
+            department_id: p.department_id,
+            position_id: p.position_id,
+            level_id: p.level_id,
+            employment_type_id: p.employment_type_id,
+            work_status_id: p.work_status_id,
+            schedule_id: p.schedule_id,
+            schedule_name: scheduleObj?.name,
+
+            // Contract
+            contract_end_date: p.contract_end_date,
+            probation_status: p.probation_status,
+
+            // History
+            history: userHistory.map((h: any) => ({
+                id: h.id,
+                title: h.title,
+                event_date: h.event_date,
+                type: h.type,
+                is_manual: h.is_manual
+            })),
+
+            // Personal Data
+            birthday: p.birth_date || p.birthday,
+            birth_date: p.birth_date,
+            nik: p.nik,
+            personal_email: p.personal_email,
+            whatsapp: p.whatsapp,
+            phone: p.phone_number || p.phone,
+            phone_number: p.phone_number,
+            address: p.address,
+            emergency_contact: p.emergency_contact,
+            social_links: p.social_links,
+            bank_info: p.bank_info,
+
+            // Module Flags
+            include_in_timesheet: p.include_in_timesheet !== false,
+            include_in_performance: p.include_in_performance !== false,
+            include_in_attendance: p.include_in_attendance !== false,
+            include_in_people_analytics: p.include_in_people_analytics !== false,
+
             attendance: {
                 attendanceRate: 0,
                 totalDays: 0,
@@ -71,16 +161,132 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
                 avgTaskCompletionTime: "N/A",
                 performanceScore: 0,
                 productivityTrend: "stable",
-                activeProjects: 0
+                activeProjects: 0,
+                performanceStatus: "No Data"
             },
             kpi: {
-                projectInvolvement: 0,
-                presenceScore: 0,
-                engagementScore: 0,
-                overallScore: 0
+                projectInvolvement: userSnapshot?.project_involvement_score || 75,
+                presenceScore: userSnapshot?.attendance_score || 75,
+                engagementScore: userSnapshot?.engagement_score || 75,
+                peerReviewScore: userSnapshot?.peer_review_score || 75,
+                qualityScore: userSnapshot?.quality_score || 75,
+                taskCompletionScore: userSnapshot?.task_completion_score || 75,
+                bonusScore: userSnapshot?.bonus_score || 0,
+                overallScore: userSnapshot?.computed_index || 75
             }
         };
+        return person;
     });
+}
+
+export async function updatePeopleProfile(userId: string, updates: {
+    account_type?: string;
+    include_in_performance?: boolean;
+    name?: string;
+    nickname?: string;
+    email?: string;
+    birth_date?: string;
+    nik?: string;
+    personal_email?: string;
+    whatsapp?: string;
+    phone_number?: string;
+    social_links?: any;
+    address?: any;
+    emergency_contact?: any;
+    bank_info?: any;
+    department_id?: string;
+    position_id?: string;
+    level_id?: string;
+    employment_type_id?: string;
+    work_status_id?: string;
+    display_id?: string;
+    id_number?: string;
+    join_date?: string;
+    schedule_id?: string;
+    office?: string;
+    contract_end_date?: string;
+    probation_status?: string;
+}): Promise<boolean> {
+
+    // Map frontend fields to DB columns
+    const dbUpdates: any = {};
+    if (updates.account_type) dbUpdates.account_type = updates.account_type;
+    if (updates.include_in_performance !== undefined) dbUpdates.include_in_performance = updates.include_in_performance;
+    if (updates.name) dbUpdates.full_name = updates.name;
+    if (updates.nickname) dbUpdates.nickname = updates.nickname;
+    if (updates.email) dbUpdates.email = updates.email;
+
+    // Employment
+    if (updates.department_id) dbUpdates.department_id = updates.department_id;
+    if (updates.position_id) dbUpdates.position_id = updates.position_id;
+    if (updates.level_id) dbUpdates.level_id = updates.level_id;
+    if (updates.employment_type_id) dbUpdates.employment_type_id = updates.employment_type_id;
+    if (updates.work_status_id) dbUpdates.work_status_id = updates.work_status_id;
+    if (updates.display_id) dbUpdates.id_code = updates.display_id; // Map to new column name
+    if (updates.id_number) dbUpdates.id_number = updates.id_number; // Map to new column name
+    if (updates.join_date) dbUpdates.join_date = updates.join_date;
+    if (updates.schedule_id) dbUpdates.schedule_id = updates.schedule_id;
+    if (updates.office) dbUpdates.office = updates.office;
+    if (updates.contract_end_date !== undefined) dbUpdates.contract_end_date = updates.contract_end_date; // Allow null
+    if (updates.probation_status) dbUpdates.probation_status = updates.probation_status;
+
+    // New fields
+    if (updates.birth_date) dbUpdates.birth_date = updates.birth_date;
+    if (updates.nik) dbUpdates.nik = updates.nik;
+    if (updates.personal_email) dbUpdates.personal_email = updates.personal_email;
+    if (updates.whatsapp) dbUpdates.whatsapp = updates.whatsapp;
+    if (updates.phone_number) dbUpdates.phone_number = updates.phone_number;
+    if (updates.social_links) dbUpdates.social_links = updates.social_links;
+    if (updates.address) dbUpdates.address = updates.address;
+    if (updates.emergency_contact) dbUpdates.emergency_contact = updates.emergency_contact;
+    if (updates.bank_info) dbUpdates.bank_info = updates.bank_info;
+
+    if (Object.keys(dbUpdates).length === 0) return true;
+
+    const { error } = await supabase
+        .from('profiles')
+        .update(dbUpdates)
+        .eq('id', userId);
+
+    if (error) {
+        console.error('Error updating profile:', JSON.stringify(error, null, 2));
+        return false;
+    }
+    return true;
+}
+
+export async function addCareerHistory(history: {
+    user_id: string;
+    title: string;
+    event_date: string;
+    type: string;
+    description?: string;
+}): Promise<boolean> {
+    const { error } = await supabase
+        .from('career_history')
+        .insert({
+            ...history,
+            is_manual: true
+        });
+
+    if (error) {
+        console.error('Error adding career history:', error);
+        return false;
+    }
+    return true;
+}
+
+export async function deleteCareerHistory(id: string): Promise<boolean> {
+    const { error } = await supabase
+        .from('career_history')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error deleting career history:', error);
+        return false;
+    }
+    return true;
 }
 
 // -- SKILLS --
@@ -101,8 +307,9 @@ export async function fetchPeopleSkills(userId: string): Promise<PeopleSkill[]> 
 
 export async function upsertPeopleSkill(skill: {
     user_id: string;
+    category_id?: string;
     skill_name: string;
-    skill_level: SkillLevel;
+    skill_level: string;
 }): Promise<PeopleSkill | null> {
     const { data, error } = await supabase
         .from('people_skills')
@@ -111,12 +318,17 @@ export async function upsertPeopleSkill(skill: {
         .single();
 
     if (error) {
-        console.error('Error upserting people skill:', error);
+        console.error('Error upserting people skill:', JSON.stringify({
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            fullError: error
+        }, null, 2));
         return null;
     }
     return data;
 }
-
 export async function deletePeopleSkill(skillId: string): Promise<boolean> {
     const { error } = await supabase
         .from('people_skills')
@@ -128,6 +340,34 @@ export async function deletePeopleSkill(skillId: string): Promise<boolean> {
         return false;
     }
     return true;
+}
+
+export async function fetchSkillCategories(): Promise<SkillCategory[]> {
+    const { data, error } = await supabase
+        .from('skill_categories')
+        .select('*')
+        .eq('status', 'active')
+        .order('name');
+
+    if (error) {
+        console.error('Error fetching skill categories:', error);
+        return [];
+    }
+    return data || [];
+}
+
+export async function fetchSkillLibrary(): Promise<SkillLibraryItem[]> {
+    const { data, error } = await supabase
+        .from('skill_library')
+        .select('*')
+        .eq('status', 'active')
+        .order('name');
+
+    if (error) {
+        console.error('Error fetching skill library:', error);
+        return [];
+    }
+    return data || [];
 }
 
 // -- AVAILABILITY --
@@ -230,6 +470,7 @@ export async function fetchPeoplePerformance(userId: string, period?: string): P
         console.error('Error fetching people performance:', error);
         return [];
     }
+
     return data || [];
 }
 
@@ -250,6 +491,21 @@ export async function fetchTeamPerformance(department: string, period?: string):
         console.error('Error fetching team performance:', error);
         return [];
     }
+    return data || [];
+}
+
+export async function fetchTeamBenchmark(period: string): Promise<any> {
+    const { data, error } = await supabase
+        .from('team_performance_snapshots')
+        .select('*')
+        .eq('period', period);
+
+    if (error) {
+        console.error('Error fetching team benchmark:', error);
+        return null;
+    }
+
+    // If multiple departments, average them or just return all for specific processing
     return data || [];
 }
 
@@ -320,6 +576,109 @@ export async function updateRolePermissions(permission: Partial<OrganizationRole
 
     if (error) {
         console.error('Error updating role permissions:', error);
+        return false;
+    }
+    return true;
+}
+
+// -- DOCUMENTS --
+
+export async function fetchUserDocuments(userId: string) {
+    const { data, error } = await supabase
+        .from('user_documents')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching user documents:', error);
+        return [];
+    }
+    return data;
+}
+
+export async function uploadUserDocument(userId: string, category: string, file: File) {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${category}_${Date.now()}.${fileExt}`;
+    const filePath = fileName;
+
+    // 1. Upload to Storage
+    const { error: uploadError } = await supabase.storage
+        .from('profile-documents')
+        .upload(filePath, file);
+
+    if (uploadError) {
+        console.error('Error uploading file:', uploadError);
+        return null;
+    }
+
+    // 2. Create Database Record
+    const { data, error: dbError } = await supabase
+        .from('user_documents')
+        .insert({
+            user_id: userId,
+            name: file.name,
+            category: category,
+            file_path: filePath,
+            file_type: file.type,
+            size: file.size,
+            status: 'Pending'
+        })
+        .select()
+        .single();
+
+    if (dbError) {
+        console.error('Error creating document record:', JSON.stringify(dbError, null, 2));
+        // Cleanup storage on error
+        await supabase.storage.from('profile-documents').remove([filePath]);
+        return null;
+    }
+
+    return data;
+}
+
+export async function deleteUserDocument(docId: string, filePath: string) {
+    // 1. Delete from Storage
+    const { error: storageError } = await supabase.storage
+        .from('profile-documents')
+        .remove([filePath]);
+
+    if (storageError) {
+        console.error('Error deleting from storage:', storageError);
+    }
+
+    // 2. Delete from DB
+    const { error: dbError } = await supabase
+        .from('user_documents')
+        .delete()
+        .eq('id', docId);
+
+    if (dbError) {
+        console.error('Error deleting from DB:', dbError);
+        return false;
+    }
+
+    return true;
+}
+
+export async function getDocumentUrl(filePath: string) {
+    const { data } = await supabase.storage
+        .from('profile-documents')
+        .createSignedUrl(filePath, 3600); // 1 hour
+
+    return data?.signedUrl;
+}
+
+export async function updateUserRole(userId: string, roleCode: string): Promise<boolean> {
+    const { error } = await supabase
+        .from('user_roles')
+        .upsert({
+            user_id: userId,
+            role: roleCode.toLowerCase()
+        }, { onConflict: 'user_id' });
+
+    if (error) {
+        console.error('Error updating user role:', JSON.stringify(error, null, 2));
         return false;
     }
     return true;

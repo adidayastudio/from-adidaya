@@ -2,13 +2,14 @@
 
 import { useState, useMemo, useEffect } from "react";
 import clsx from "clsx";
-import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, startOfMonth, endOfMonth, isSunday, isSaturday, min, isWeekend } from "date-fns";
+import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, startOfMonth, endOfMonth, isSunday, isSaturday, min, isWeekend, subMonths } from "date-fns";
 import { HOLIDAYS_2026 } from "@/lib/constants/holidays";
 import { Download, ChevronDown, ChevronUp, Clock, AlertCircle, CheckCircle, Search, List, Grid3X3, ArrowUpDown, BarChart3, Calendar, User, Users, ChevronLeft, ChevronRight, Check, AlertTriangle, Loader2, X, MapPin } from "lucide-react";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ReferenceLine, ReferenceArea, ComposedChart, Line, Bar, BarChart, LabelList } from "recharts";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
-import { calculateStats, formatMinutes, ClockStats } from "@/lib/clock-data-logic";
+import { calculateStats, formatMinutes, ClockStats, calculateAdidayaScore } from "@/lib/clock-data-logic";
 import { useClockData } from "@/hooks/useClockData";
 import useUserProfile from "@/hooks/useUserProfile";
 import { AttendanceRecord } from "@/lib/api/clock";
@@ -63,22 +64,225 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
 
     const { profile } = useUserProfile();
     const isManager = canViewTeamData(role || profile?.role);
+
+    const [rule, setRule] = useState<any>(null);
+    const [lastMonthStats, setLastMonthStats] = useState<any>(null);
+
     // -- DATA FETCHING --
-    // Now receiving currentMonth to filter fetching by month
     const { attendance, leaves, overtime: otLogs, businessTrips: trips, teamMembers, sessions, logs, loading: loadingData, refresh } = useClockData(profile?.id, personalTeamView === "team", currentMonth);
+
+    // Fetch Rule and Last Month Data
+    useEffect(() => {
+        const loadHistory = async () => {
+            try {
+                // Determine previous month string (YYYY-MM-01)
+                const prevMonthDate = subMonths(currentMonth, 1);
+                const prevMonthStr = format(prevMonthDate, "yyyy-MM-01");
+
+                // 1. Fetch Performance Rule (Always needed)
+                const activeRule = await import("@/lib/api/performance").then(m => m.fetchCurrentPerformanceRule());
+
+                // Update Rule State
+                setRule((prev: any) => {
+                    if (JSON.stringify(prev) === JSON.stringify(activeRule)) return prev;
+                    return activeRule;
+                });
+
+                let finalStats = null;
+
+                // 2. BRANCH LOGIC: Personal vs Team
+                if (personalTeamView === "team") {
+                    // --- TEAM VIEW: USE SNAPSHOTS ---
+                    const teamSnaps = await import("@/lib/api/people").then(m => m.fetchTeamPerformance(profile?.department || "General", prevMonthStr));
+                    finalStats = teamSnaps?.[0] || null;
+                    console.log("DEBUG TEAM HISTORY (Snapshot):", finalStats);
+
+                } else {
+                    // --- PERSONAL VIEW: ALWAYS CALCULATE DYNAMICALLY ---
+                    // CRITICAL: Ignore stored snapshots. Calculate fresh from raw data.
+                    if (profile?.id) {
+                        try {
+                            const { start, end } = {
+                                start: format(startOfMonth(prevMonthDate), "yyyy-MM-dd"),
+                                end: format(endOfMonth(prevMonthDate), "yyyy-MM-dd")
+                            };
+
+                            const [clockData, logic] = await Promise.all([
+                                import("@/lib/api/clock/index").then(m => m.fetchClockBundle(profile.id, start, end)),
+                                import("@/lib/clock-data-logic")
+                            ]);
+
+                            // NOTE: We no longer use fallbackData directly.
+                            // Instead, we build densePrevMonthData below which fills all gaps.
+
+                            // DEBUG: Log raw fetched records
+                            console.log("🔍 DEBUG RAW FETCH:", {
+                                dateRange: { start, end },
+                                rawRecordCount: clockData.attendance.length,
+                                rawRecordDates: clockData.attendance.map((r: any) => r.date),
+                                sessionCount: clockData.sessions?.length || 0,
+                                sessionDates: clockData.sessions?.map((s: any) => s.date) || [],
+                                logCount: clockData.logs?.length || 0,
+                                clockInLogs: clockData.logs?.filter((l: any) => l.type === "clock_in").map((l: any) => l.timestamp?.substring(0, 10)) || []
+                            });
+
+                            // Config
+                            const config = {
+                                late_penalty_per: activeRule?.scoring_params?.attendance?.late_penalty || 2,
+                                late_penalty_cap: activeRule?.scoring_params?.attendance?.max_late_penalty || 20,
+                                ot_bonus_cap: activeRule?.overtime_max_bonus || 10,
+                                ot_target_value: activeRule?.ot_target_hours || 40
+                            };
+
+                            // --- BUILD DENSE DATA FOR SCORING ---
+                            // We must replicate the exact "dense" logic used in the main view
+                            // merging holidays, absences, and logs to ensure the denominator matches.
+                            const densePrevMonthData = (() => {
+                                const start = startOfMonth(prevMonthDate);
+                                const end = endOfMonth(prevMonthDate);
+                                const days = eachDayOfInterval({ start, end });
+
+                                return days.map(day => {
+                                    const dateStr = format(day, "yyyy-MM-dd");
+
+                                    // 1. Check for valid attendance record
+                                    const record = clockData.attendance.find((r: any) => r.date === dateStr);
+                                    if (record) return record;
+
+                                    // 2. Check for Sessions (clock-in without finalized record)
+                                    // If there's a session with clock_in, treat as "intime" (present)
+                                    const session = clockData.sessions?.find((s: any) => s.date === dateStr);
+                                    if (session && session.clockIn) {
+                                        console.log("🎯 FOUND SESSION FOR:", dateStr, session);
+                                        return {
+                                            id: `session-${dateStr}`,
+                                            userId: profile.id,
+                                            date: dateStr,
+                                            status: "intime", // Has clock-in = present
+                                            clockIn: session.clockIn,
+                                            clockOut: session.clockOut || null,
+                                            totalMinutes: session.durationMinutes || 0,
+                                            overtimeMinutes: 0
+                                        };
+                                    }
+
+                                    // 2b. Check for Logs (clock_in event without session/record)
+                                    // This catches "Raw Activity" cases like 29 Jan
+                                    const clockInLog = clockData.logs?.find((l: any) =>
+                                        l.type === "clock_in" &&
+                                        l.timestamp?.startsWith(dateStr)
+                                    );
+                                    if (clockInLog) {
+                                        console.log("🎯 FOUND LOG FOR:", dateStr, clockInLog);
+                                        return {
+                                            id: `log-${dateStr}`,
+                                            userId: profile.id,
+                                            date: dateStr,
+                                            status: "intime", // Has clock-in log = present
+                                            clockIn: clockInLog.timestamp,
+                                            clockOut: null,
+                                            totalMinutes: 0,
+                                            overtimeMinutes: 0
+                                        };
+                                    }
+
+                                    // 3. Check for Holidays
+                                    const holiday = HOLIDAYS_2026.find(h => h.date === dateStr);
+                                    if (holiday) {
+                                        return {
+                                            id: `holiday-${dateStr}`,
+                                            userId: profile.id,
+                                            date: dateStr,
+                                            status: holiday.type === "collective_leave" ? "leave" : "holiday",
+                                            clockIn: null,
+                                            clockOut: null,
+                                            totalMinutes: 0,
+                                            overtimeMinutes: 0
+                                        };
+                                    }
+
+                                    // 4. Check for Sunday (Normalized Weekend)
+                                    if (isSunday(day)) {
+                                        return {
+                                            id: `sunday-${dateStr}`,
+                                            userId: profile.id,
+                                            date: dateStr,
+                                            status: "holiday", // Treat as holiday/off
+                                            clockIn: null,
+                                            clockOut: null,
+                                            totalMinutes: 0,
+                                            overtimeMinutes: 0
+                                        };
+                                    }
+
+                                    // 5. Default: ABSENT
+                                    return {
+                                        id: `absent-${dateStr}`,
+                                        userId: profile.id,
+                                        date: dateStr,
+                                        status: "absent",
+                                        clockIn: null,
+                                        clockOut: null,
+                                        totalMinutes: 0,
+                                        overtimeMinutes: 0
+                                    };
+                                });
+                            })();
+
+                            // Calculate Score using DENSE data
+                            // Now the denominator is naturally correct because we supply 31 rows of data (some holes filled as absent/holiday)
+                            const calculatedScore = logic.calculateAdidayaScore(densePrevMonthData as any, config, prevMonthDate);
+
+                            finalStats = {
+                                user_id: profile.id,
+                                period: prevMonthStr,
+                                attendance_score: calculatedScore.attendance_score,
+                                avg_attendance_rate: 0,
+                                final_rating: "CALCULATED",
+                                debug_days: null
+                            };
+                            console.log("✅ Personal History Calculated (DENSE):", {
+                                score: finalStats.attendance_score,
+                                denseRecords: densePrevMonthData.length,
+                                presentDays: densePrevMonthData.filter(r => ["ontime", "intime", "late"].includes(r.status)).length
+                            });
+
+                        } catch (err) {
+                            console.error("Failed to calculate personal history:", err);
+                        }
+                    }
+                }
+
+                setLastMonthStats((prev: any) => {
+                    if (JSON.stringify(prev) === JSON.stringify(finalStats)) return prev;
+                    return finalStats;
+                });
+
+            } catch (e) {
+                console.warn("Failed to load history", e);
+            }
+        };
+        loadHistory();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [personalTeamView, profile?.id, profile?.department, currentMonth.getTime()]);
 
     // -- MAP DATA TO UI FORMAT --
     const rawData = useMemo(() => {
-        const base = attendance.map(r => ({
-            ...r,
-            employee: r.userName || "Unknown",
-            day: format(new Date(r.date), "EEE"),
-            schedule: "-", // We could derive this from shift settings later
-            duration: r.totalMinutes ? formatMinutes(r.totalMinutes) : "-",
-            overtime: r.overtimeMinutes ? formatMinutes(r.overtimeMinutes) : "-",
-            clockIn: r.clockIn ? format(new Date(r.clockIn), "HH:mm") : "-",
-            clockOut: r.clockOut ? format(new Date(r.clockOut), "HH:mm") : "-",
-        }));
+        const base = attendance.map(r => {
+            const member = teamMembers.find(m => m.id === r.userId);
+            const employeeName = member?.username || r.userName || "Unknown";
+
+            return {
+                ...r,
+                employee: employeeName,
+                day: format(new Date(r.date), "EEE"),
+                schedule: "-", // We could derive this from shift settings later
+                duration: r.totalMinutes ? formatMinutes(r.totalMinutes) : "-",
+                overtime: r.overtimeMinutes ? formatMinutes(r.overtimeMinutes) : "-",
+                clockIn: r.clockIn ? format(new Date(r.clockIn), "HH:mm") : "-",
+                clockOut: r.clockOut ? format(new Date(r.clockOut), "HH:mm") : "-",
+            };
+        });
 
         // Find sessions that don't have a matching record in 'attendance'
         const orphanedSessions = (sessions || []).filter((s: any) =>
@@ -117,6 +321,8 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
     // -- STATS CALCULATION --
     const [stats, setStats] = useState<ClockStats | null>(null);
     const [weeklyLateCount, setWeeklyLateCount] = useState(0);
+    const [adidayaResult, setAdidayaResult] = useState<any>(null);
+    const [teamAverageStats, setTeamAverageStats] = useState<any>(null);
 
     // Get unique list of employees
     const uniqueEmployees = useMemo(() => {
@@ -132,14 +338,17 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
         }
     };
 
-    const EXCLUDED_USERS = ["Adidaya Admin", "Adidaya IT", "Adidaya Finance", "Adidaya Staff", "harryadin", "Adidaya Studio", "Harryadin Mahardika"];
-
+    // const EXCLUDED_USERS = ["Adidaya Admin", "Adidaya IT", "Adidaya Finance", "Adidaya Staff", "harryadin", "Adidaya Studio", "Harryadin Mahardika"];
     const filteredData = useMemo(() => {
         let baseData = [...rawData];
 
-        // EXCLUDE SYSTEM ACCOUNTS - ONLY FOR TEAM VIEW
+        // EXCLUDE SYSTEM ACCOUNTS & EXCLUDED PROFILES - ONLY FOR TEAM VIEW
         if (personalTeamView === "team") {
-            baseData = baseData.filter(d => !EXCLUDED_USERS.includes(d.employee || ""));
+            const excludedIds = teamMembers
+                .filter(m => m.account_type !== 'human_account' || m.include_in_performance === false)
+                .map(m => m.id);
+
+            baseData = baseData.filter(d => !excludedIds.includes(d.userId));
         }
 
         // DENSE DATA GENERATION (Personal View Only)
@@ -262,19 +471,104 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             }
             return 0;
         });
-    }, [rawData, sessions, logs, sortBy, sortOrder, selectedPerson, dateFrom, dateTo, searchQuery, personalTeamView, currentMonth, userName, profile]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [rawData, sessions, logs, sortBy, sortOrder, selectedPerson, dateFrom, dateTo, searchQuery, personalTeamView, currentMonth.getTime(), userName, profile?.id, profile?.department]);
 
-    // Update stats when filtered data changes
     useEffect(() => {
-        // cast because of slight type mismatch (mapped fields above make it compatible)
-        setStats(calculateStats(filteredData as any));
+        const config = {
+            late_penalty_per: rule?.scoring_params?.attendance?.late_penalty || 2,
+            late_penalty_cap: rule?.scoring_params?.attendance?.max_late_penalty || 20,
+            ot_bonus_cap: rule?.overtime_max_bonus || 10,
+            ot_target_value: rule?.ot_target_hours || 40 // DYNAMIC TARGET FROM SETUP
+        };
+
+        import("@/lib/clock-data-logic").then(m => {
+            const res = m.calculateAdidayaScore(filteredData as any, config, currentMonth);
+            setAdidayaResult((prev: any) => {
+                if (JSON.stringify(prev) === JSON.stringify(res)) return prev;
+                return res;
+            });
+
+            const newStats = m.calculateStats(filteredData as any, currentMonth);
+            setStats((prev) => {
+                if (JSON.stringify(prev) === JSON.stringify(newStats)) return prev;
+                return newStats;
+            });
+        });
+
         if (personalTeamView === "personal") {
             const today = new Date();
             const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 1 });
             const lateCount = filteredData.filter(r => r.status === "late" && new Date(r.date) >= startOfCurrentWeek).length;
-            setWeeklyLateCount(lateCount);
+            setWeeklyLateCount(prev => prev === lateCount ? prev : lateCount);
         }
-    }, [filteredData, personalTeamView]);
+
+        // Calculate TEAM AVERAGE stats (for team view)
+        if (personalTeamView === "team" && teamMembers.length > 0) {
+            import("@/lib/clock-data-logic").then(m => {
+                const validMembers = teamMembers.filter(mem =>
+                    mem.account_type === 'human_account' &&
+                    mem.include_in_performance !== false
+                );
+
+                if (validMembers.length === 0) {
+                    setTeamAverageStats(null);
+                    return;
+                }
+
+                const config = {
+                    late_penalty_per: rule?.scoring_params?.attendance?.late_penalty || 2,
+                    late_penalty_cap: rule?.scoring_params?.attendance?.max_late_penalty || 20,
+                    ot_bonus_cap: rule?.overtime_max_bonus || 10,
+                    ot_target_value: rule?.ot_target_hours || 40
+                };
+
+                // Calculate individual scores for each member
+                const memberResults = validMembers.map(member => {
+                    const memberData = rawData.filter(d =>
+                        d.userId === member.id || d.employee === member.username
+                    );
+                    return m.calculateAdidayaScore(memberData as any, config, currentMonth);
+                }).filter(r => r && r.total_days > 0); // Only include members with data
+
+                if (memberResults.length === 0) {
+                    setTeamAverageStats(null);
+                    return;
+                }
+
+                // Calculate averages
+                const avgStats = {
+                    days_present: Math.round(memberResults.reduce((sum, r) => sum + r.days_present, 0) / memberResults.length * 10) / 10,
+                    total_days: Math.round(memberResults.reduce((sum, r) => sum + r.total_days, 0) / memberResults.length * 10) / 10,
+                    late_arrivals: Math.round(memberResults.reduce((sum, r) => sum + r.late_arrivals, 0) / memberResults.length * 10) / 10,
+                    late_penalty: Math.round(memberResults.reduce((sum, r) => sum + r.late_penalty, 0) / memberResults.length * 10) / 10,
+                    overtime_hours: Math.round(memberResults.reduce((sum, r) => sum + r.overtime_hours, 0) / memberResults.length * 10) / 10,
+                    ot_bonus: Math.round(memberResults.reduce((sum, r) => sum + r.ot_bonus, 0) / memberResults.length * 10) / 10,
+                    present_points: Math.round(memberResults.reduce((sum, r) => sum + r.present_points, 0) / memberResults.length * 10) / 10,
+                    attendance_raw_score: Math.round(memberResults.reduce((sum, r) => sum + r.attendance_raw_score, 0) / memberResults.length * 10) / 10,
+                    attendance_score: Math.round(memberResults.reduce((sum, r) => sum + r.attendance_score, 0) / memberResults.length),
+                    attendance_quality_category: "",
+                    member_count: validMembers.length,
+                    members_with_data: memberResults.length
+                };
+
+                // Determine quality category from average score
+                const avgScore = avgStats.attendance_score;
+                avgStats.attendance_quality_category =
+                    avgScore >= 95 ? "Perfect" :
+                        avgScore >= 90 ? "Excellent" :
+                            avgScore >= 80 ? "Very Good" :
+                                avgScore >= 70 ? "Good" :
+                                    avgScore >= 60 ? "Fair" : "Poor";
+
+                setTeamAverageStats((prev: any) => {
+                    if (JSON.stringify(prev) === JSON.stringify(avgStats)) return prev;
+                    return avgStats;
+                });
+            });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filteredData, personalTeamView, currentMonth.getTime(), rule, teamMembers, rawData]);
 
     // -- PAGINATION LOGIC --
     // For Team List View: We paginate by DATE (Day), not by items.
@@ -299,7 +593,8 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             return days.map(d => format(d, "yyyy-MM-dd")).reverse();
         }
         return [];
-    }, [currentMonth, personalTeamView, viewMode]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentMonth.getTime(), personalTeamView, viewMode]);
 
     const totalPages = useMemo(() => {
         if (personalTeamView === "team" && viewMode === "list") {
@@ -317,8 +612,11 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             // 1. Get existing records for this day
             const dayRecords = filteredData.filter(d => d.date === dateToShow);
 
-            // 2. Hydrate with ALL team members (Excluding System Accounts)
-            const validMembers = teamMembers.filter(m => !EXCLUDED_USERS.includes(m.username));
+            // 2. Hydrate with ALL team members: Only HUMAN + INCLUDED
+            const validMembers = teamMembers.filter(m =>
+                m.account_type === 'human_account' &&
+                m.include_in_performance !== false
+            );
 
             // 3. Find "Ghost" Members: Users who have a record but are NOT in the validMembers list
             // (e.g. Raka, or new users not yet synchronized to profiles, or permission issues)
@@ -326,14 +624,23 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                 const isInData = validMembers.some(m => m.id === record.userId || m.username === record.employee);
                 const isAlreadyAdded = acc.some(m => m.id === record.userId);
 
-                if (!isInData && !isAlreadyAdded && !EXCLUDED_USERS.includes(record.employee || "")) {
-                    acc.push({
-                        id: record.userId || `ghost-${record.employee}`,
-                        username: record.employee || "Unknown User",
-                        avatar_url: record.avatar, // Use avatar from record if available
-                        department: record.userDepartment, // Use dept from record if available
-                        role: record.userRole || "staff"
-                    });
+                if (!isInData && !isAlreadyAdded) {
+                    // Check if user is excluded dynamically - only allow human + included
+                    const memberProfile = teamMembers.find(m => m.username === record.employee);
+                    const isNotHumanOrExcluded = memberProfile && (
+                        memberProfile.account_type !== 'human_account' ||
+                        memberProfile.include_in_performance === false
+                    );
+
+                    if (!isNotHumanOrExcluded) {
+                        acc.push({
+                            id: record.userId || `ghost-${record.employee}`,
+                            username: record.employee || "Unknown User",
+                            avatar_url: record.avatar, // Use avatar from record if available
+                            department: record.userDepartment, // Use dept from record if available
+                            role: record.userRole || "staff"
+                        });
+                    }
                 }
                 return acc;
             }, []);
@@ -347,7 +654,7 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                 const isAlreadyAdded = acc.some(m => m.id === log.userId);
 
                 if (!hasRecord && !isAlreadyAdded) {
-                    if (!isInData && !isInGhostRecords && !EXCLUDED_USERS.includes(log.userName || "")) {
+                    if (!isInData && !isInGhostRecords) {
                         acc.push({
                             id: log.userId,
                             username: log.userName || "Unknown User",
@@ -417,7 +724,8 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
     // Reset page on month/view change
     useEffect(() => {
         setCurrentPage(1);
-    }, [currentMonth, personalTeamView, viewMode, searchQuery]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentMonth.getTime(), personalTeamView, viewMode, searchQuery]);
 
     // EXPORT FUNCTIONALITY
     const [exporting, setExporting] = useState(false);
@@ -575,125 +883,81 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                 </>
             )}
 
-            {/* SUMMARY STATS (Payroll / KPI Logic) */}
-            {stats && (() => {
-                // For Team View: Calculate AVERAGES across all team members from Jan 12
-                if (personalTeamView === "team" && isManager) {
-                    const activeMembers = teamMembers.filter(m => !EXCLUDED_USERS.includes(m.username));
-                    const memberCount = activeMembers.length || 1;
+            {/* SUMMARY STATS (Adidaya OS Specs) */}
+            {(() => {
+                // Use team average stats for team view, personal stats for personal view
+                const displayStats = personalTeamView === "team" ? teamAverageStats : adidayaResult;
+                if (!displayStats) return null;
 
-                    // Filter data from Jan 12 onwards (first clock-in date)
-                    const startDate = "2026-01-12";
-                    const today = new Date();
-                    const allDays = eachDayOfInterval({
-                        start: new Date(startDate),
-                        end: min([today, endOfMonth(currentMonth)])
-                    });
-                    const workDayDates = allDays.filter(d => !isSunday(d) && !HOLIDAYS_2026.find(h => h.date === format(d, "yyyy-MM-dd")));
+                const lastScore = Number(lastMonthStats?.attendance_score || lastMonthStats?.avg_attendance_rate || 0);
+                const delta = displayStats.attendance_score - lastScore;
+                const isTeamView = personalTeamView === "team";
 
-                    const teamData = filteredData.filter(d => d.date >= startDate);
-
-                    // Calculate totals across all team members
-                    const totalPresent = teamData.filter(d => d.status === "ontime" || d.status === "intime" || d.status === "late").length;
-                    const totalLate = teamData.filter(d => d.status === "late").length;
-                    const totalOT = teamData.reduce((sum, d) => sum + (d.overtimeMinutes || 0), 0);
-
-                    // Calculate ABSENT: For each workday, count members who have NO record
-                    let totalAbsent = 0;
-                    workDayDates.forEach(dayDate => {
-                        const dateStr = format(dayDate, "yyyy-MM-dd");
-                        activeMembers.forEach(member => {
-                            const hasRecord = teamData.some(d => d.date === dateStr && (d.userId === member.id || d.employee === member.username));
-                            if (!hasRecord) totalAbsent++;
-                        });
-                    });
-
-                    // Calculate averages (round up to 1 decimal)
-                    const avgPresent = Math.ceil((totalPresent / memberCount) * 10) / 10;
-                    const avgLate = Math.ceil((totalLate / memberCount) * 10) / 10;
-                    const avgAbsent = Math.ceil((totalAbsent / memberCount) * 10) / 10;
-                    const avgOTMinutes = Math.round(totalOT / memberCount);
-
-                    // Format overtime as Xh Ym
-                    const otHours = Math.floor(avgOTMinutes / 60);
-                    const otMins = Math.round(avgOTMinutes % 60);
-                    const avgOTFormatted = otHours > 0 ? `${otHours}h ${otMins}m` : `${otMins}m`;
-
-                    // Attendance Score
-                    const workDays = workDayDates.length;
-                    const avgScore = workDays > 0 ? Math.round((totalPresent / (workDays * memberCount)) * 100) : 0;
-
-                    return (
-                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
-                            <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Avg Days Present</div>
-                                <div className="text-xl font-bold text-neutral-900 mt-1">{avgPresent.toFixed(1)}</div>
-                            </div>
-                            <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Avg Late Arrivals</div>
-                                <div className={clsx("text-xl font-bold mt-1", avgLate > 0 ? "text-rose-600" : "text-neutral-900")}>
-                                    {avgLate.toFixed(1)}
-                                </div>
-                            </div>
-                            <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Avg Absent/Leave</div>
-                                <div className={clsx("text-xl font-bold mt-1", avgAbsent > 0 ? "text-rose-600" : "text-neutral-900")}>
-                                    {avgAbsent.toFixed(1)}
-                                </div>
-                            </div>
-                            <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Avg Overtime</div>
-                                <div className="text-xl font-bold text-emerald-600 mt-1">
-                                    {avgOTFormatted}
-                                </div>
-                            </div>
-                            <div className="bg-white border rounded-xl p-3 shadow-sm">
-                                <div className="text-xs text-neutral-500">Avg Attendance Score</div>
-                                <div className={clsx(
-                                    "text-xl font-bold mt-1",
-                                    avgScore >= 90 ? "text-emerald-600" :
-                                        avgScore >= 75 ? "text-yellow-600" : "text-rose-600"
-                                )}>
-                                    {avgScore}%
-                                </div>
-                            </div>
-                        </div>
-                    );
-                }
-
-                // Personal View: Show individual totals (existing logic)
                 return (
                     <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
-                        <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Days Present</div>
-                            <div className="text-xl font-bold text-neutral-900 mt-1">{stats.totalDaysPresent}</div>
-                        </div>
-                        <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Late Arrivals</div>
-                            <div className={clsx("text-xl font-bold mt-1", stats.totalDaysLate > 0 ? "text-rose-600" : "text-neutral-900")}>
-                                {stats.totalDaysLate}
+                        <div className="bg-white border rounded-xl p-3 shadow-sm relative overflow-hidden">
+                            <div className="text-xs text-neutral-500">{isTeamView ? "Avg Days Present" : "Days Present"}</div>
+                            <div className="text-xl font-bold text-neutral-900 mt-1">{displayStats.days_present} <span className="text-xs font-normal text-neutral-400">/ {displayStats.total_days}</span></div>
+                            <div className="text-[10px] text-neutral-400 mt-1">
+                                {isTeamView ? `${displayStats.members_with_data} members` : `Present Points: ${displayStats.present_points}`}
                             </div>
                         </div>
                         <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Absent/Leave</div>
-                            <div className="text-xl font-bold text-neutral-900 mt-1">
-                                {stats.totalDaysAbsent + stats.totalDaysLeave + stats.totalDaysSick}
+                            <div className="text-xs text-neutral-500">{isTeamView ? "Avg Late Arrivals" : "Late Arrivals"}</div>
+                            <div className={clsx("text-xl font-bold mt-1", displayStats.late_arrivals > 0 ? "text-rose-600" : "text-neutral-900")}>
+                                {displayStats.late_arrivals}
                             </div>
+                            <div className="text-[10px] text-neutral-400 mt-1">Penalty: -{displayStats.late_penalty}</div>
                         </div>
                         <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Overtime Hours</div>
+                            <div className="text-xs text-neutral-500">{isTeamView ? "Avg Overtime" : "Overtime"}</div>
                             <div className="text-xl font-bold text-emerald-600 mt-1">
-                                {formatMinutes(stats.totalOvertimeMinutes)}
+                                {displayStats.overtime_hours.toFixed(1)}h
                             </div>
+                            <div className="text-[10px] text-neutral-400 mt-1">Bonus: +{displayStats.ot_bonus}</div>
                         </div>
-                        <div className="bg-white border rounded-xl p-3 shadow-sm">
-                            <div className="text-xs text-neutral-500">Attendance Score</div>
-                            <div className={clsx(
-                                "text-xl font-bold mt-1",
-                                stats.attendanceScore >= 90 ? "text-emerald-600" :
-                                    stats.attendanceScore >= 75 ? "text-yellow-600" : "text-rose-600"
-                            )}>
-                                {stats.attendanceScore}%
+                        <div className="bg-white border rounded-xl p-3 shadow-sm flex flex-col justify-between">
+                            <div>
+                                <div className="text-xs text-neutral-500">{isTeamView ? "Team Quality" : "Quality Category"}</div>
+                                <div className={clsx(
+                                    "mt-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider w-fit",
+                                    displayStats.attendance_quality_category === "Excellent" || displayStats.attendance_quality_category === "Perfect" ? "bg-emerald-100 text-emerald-700" :
+                                        displayStats.attendance_quality_category === "Very Good" || displayStats.attendance_quality_category === "Good" ? "bg-blue-100 text-blue-700" :
+                                            displayStats.attendance_quality_category === "Fair" ? "bg-orange-100 text-orange-700" : "bg-rose-100 text-rose-700"
+                                )}>
+                                    {displayStats.attendance_quality_category}
+                                </div>
+                            </div>
+                            <div className="text-[10px] text-neutral-400 mt-1">Raw: {displayStats.attendance_raw_score.toFixed(1)}</div>
+                        </div>
+                        <div className="bg-white border rounded-xl p-3 shadow-sm relative">
+                            <div className="text-xs text-neutral-500">{isTeamView ? "Team Avg Score" : "Attendance Score"}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                                <div className={clsx(
+                                    "text-2xl font-black tracking-tight",
+                                    displayStats.attendance_score >= 90 ? "text-emerald-600" :
+                                        displayStats.attendance_score >= 75 ? "text-blue-600" : "text-rose-600"
+                                )}>
+                                    {displayStats.attendance_score}%
+                                </div>
+                                {!isTeamView && lastScore > 0 && (
+                                    <div className={clsx(
+                                        "text-[10px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5",
+                                        delta >= 0 ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                                    )}>
+                                        {delta >= 0 ? "▲" : "▼"} {Math.abs(delta)}%
+                                    </div>
+                                )}
+                            </div>
+                            <div className="text-[10px] text-neutral-400 mt-1">
+                                {isTeamView
+                                    ? `${displayStats.member_count} team members`
+                                    : `Last Month: ${lastScore}%`}
+                                {!isTeamView && (
+                                    <span className="ml-1 opacity-70">
+                                        (calculated)
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -827,7 +1091,7 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                     row.status === 'ontime' ? 'bg-emerald-50 border-emerald-100' :
                                         'bg-white border-neutral-200';
                                 return (
-                                    <div key={row.id} className={clsx("rounded-2xl border p-3.5 shadow-sm bg-white border-neutral-200", statusColor)}>
+                                    <div key={`${row.id}-${row.date}-${row.userId}`} className={clsx("rounded-2xl border p-3.5 shadow-sm bg-white border-neutral-200", statusColor)}>
                                         <div className="flex items-center gap-4">
                                             {/* Left: Date Circle */}
                                             <div className="flex flex-col items-center justify-center w-[52px] h-[52px] rounded-full bg-neutral-100/80 border border-neutral-200/60 shrink-0">
@@ -998,14 +1262,16 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                                 : "#";
 
                                             return (
-                                                <tr key={row.id} className="group hover:bg-neutral-50 transition-colors">
+                                                <tr key={`${row.id}-${row.date}-${idx}`} className="group hover:bg-neutral-50 transition-colors">
                                                     {isManager && personalTeamView === "team" && (
                                                         <td className="px-6 py-4 whitespace-nowrap font-medium text-neutral-900">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-500">
-                                                                    {row.employee?.split(' ').map((n: string) => n[0]).join('')}
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white shadow-sm">
+                                                                    {row.employee?.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
                                                                 </div>
-                                                                {row.employee}
+                                                                <div>
+                                                                    <div className="font-medium text-neutral-900">{row.employee}</div>
+                                                                </div>
                                                             </div>
                                                         </td>
                                                     )}
@@ -1093,6 +1359,9 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                     </>
                 )
             }
+
+
+
 
 
             {/* GRID VIEW */}
@@ -1278,7 +1547,13 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                         end: end
                                     }).reverse(); // Latest first
 
-                                    const activeMembers = teamMembers.filter(m => !EXCLUDED_USERS.includes(m.username)).sort((a, b) => (a.username || "").localeCompare(b.username || ""));
+                                    // Filter active members: Only HUMAN + INCLUDED (not system, not excluded)
+                                    const activeMembers = teamMembers
+                                        .filter(m =>
+                                            m.account_type === 'human_account' &&
+                                            m.include_in_performance !== false
+                                        )
+                                        .sort((a, b) => (a.username || "").localeCompare(b.username || ""));
 
                                     return days.map(dayDate => {
                                         const dateStr = format(dayDate, "yyyy-MM-dd");
@@ -1360,21 +1635,21 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                                             let status = record?.status || "absent";
                                                             if (!record) status = "absent";
 
-                                                            let borderColor = "border-neutral-200";
-                                                            let textColor = "text-neutral-600";
-                                                            let initials = member.username?.split(' ').map((n: any) => n[0]).slice(0, 2).join('') || "??";
+                                                            let gradientClass = "from-neutral-400 to-neutral-500"; // default absent
+                                                            let initials = member.username?.split(' ').map((n: any) => n[0]).slice(0, 2).join('').toUpperCase() || "??";
 
-                                                            if (status === "ontime") { borderColor = "border-emerald-500"; textColor = "text-emerald-700"; }
-                                                            else if (status === "intime") { borderColor = "border-orange-500"; textColor = "text-orange-700"; }
-                                                            else if (status === "late") { borderColor = "border-rose-500"; textColor = "text-rose-700"; }
-                                                            else if (status === "leave") { borderColor = "border-purple-500"; textColor = "text-purple-700"; }
-                                                            else if (status === "sick") { borderColor = "border-orange-500"; textColor = "text-orange-700"; }
+                                                            if (status === "ontime") { gradientClass = "from-emerald-400 to-emerald-600"; }
+                                                            else if (status === "intime") { gradientClass = "from-amber-400 to-amber-600"; }
+                                                            else if (status === "late") { gradientClass = "from-rose-400 to-rose-600"; }
+                                                            else if (status === "leave") { gradientClass = "from-purple-400 to-purple-600"; }
+                                                            else if (status === "sick") { gradientClass = "from-orange-400 to-orange-600"; }
 
                                                             return (
                                                                 <div key={member.id} className="group relative">
                                                                     <div className={clsx(
-                                                                        "w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-bold bg-white cursor-help transition-transform hover:scale-110 shadow-sm",
-                                                                        borderColor, textColor
+                                                                        "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold cursor-help transition-transform hover:scale-110 shadow-sm",
+                                                                        "bg-gradient-to-br text-white",
+                                                                        gradientClass
                                                                     )}>
                                                                         {record?.avatar ? (
                                                                             <img src={record.avatar} alt={member.username} className="w-full h-full rounded-full object-cover" />
@@ -1383,27 +1658,36 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                                                         )}
                                                                     </div>
 
-                                                                    {/* HOVER TOOLTIP */}
-                                                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-900 text-white text-xs rounded-lg py-2 px-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 shadow-xl pointer-events-none">
-                                                                        <div className="font-bold text-sm mb-1">{member.username}</div>
-                                                                        <div className="bg-white/10 h-px w-full my-1.5" />
-                                                                        <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1 text-gray-300">
+                                                                    {/* HOVER TOOLTIP - iOS Glassy Light */}
+                                                                    <div
+                                                                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 text-xs rounded-2xl py-3 px-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 pointer-events-none"
+                                                                        style={{
+                                                                            backdropFilter: 'blur(20px)',
+                                                                            WebkitBackdropFilter: 'blur(20px)',
+                                                                            background: 'rgba(255,255,255,0.65)',
+                                                                            border: '1px solid rgba(255,255,255,0.4)',
+                                                                            boxShadow: '0 8px 32px rgba(0,0,0,0.1)'
+                                                                        }}
+                                                                    >
+                                                                        <div className="font-bold text-sm text-neutral-900 mb-2">{member.username}</div>
+                                                                        <div className="bg-neutral-200/50 h-px w-full my-2" />
+                                                                        <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1.5 text-neutral-500">
                                                                             <span>Status:</span>
-                                                                            <span className="capitalize text-white font-medium">{getStatusBadge(status, false)}</span>
+                                                                            <span className="capitalize font-medium">{getStatusBadge(status, false)}</span>
 
                                                                             <span>Clock In:</span>
-                                                                            <span className="font-mono text-white">{record?.clockIn || "--:--"}</span>
+                                                                            <span className="font-mono text-neutral-900 font-medium">{record?.clockIn || "--:--"}</span>
 
                                                                             <span>Clock Out:</span>
-                                                                            <span className="font-mono text-white">{record?.clockOut || "--:--"}</span>
+                                                                            <span className="font-mono text-neutral-900 font-medium">{record?.clockOut || "--:--"}</span>
 
                                                                             {record?.notes && (
                                                                                 <>
-                                                                                    <span className="col-span-2 pt-1 text-gray-400 italic">"{record.notes}"</span>
+                                                                                    <span className="col-span-2 pt-1 text-neutral-400 italic">"{record.notes}"</span>
                                                                                 </>
                                                                             )}
                                                                         </div>
-                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1.5 border-4 border-transparent border-t-gray-900" />
+                                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1.5 border-4 border-transparent border-t-white/80" />
                                                                     </div>
                                                                 </div>
                                                             );
@@ -1438,110 +1722,229 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             {/* CHART VIEW */}
             {
                 viewMode === "chart" && (
-                    <div className="bg-white rounded-xl border border-neutral-200 p-6 shadow-sm space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-neutral-900">Attendance Overview</h3>
-                            <div className="flex items-center gap-4 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                                    <span className="text-neutral-600">On Time</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-orange-500" />
-                                    <span className="text-neutral-600">In Time</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full bg-rose-500" />
-                                    <span className="text-neutral-600">Late</span>
-                                </div>
-                            </div>
-                        </div>
+                    <div className="backdrop-blur-xl bg-white/60 rounded-2xl border border-white/40 p-4 shadow-lg" style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.08)' }}>
+                        {personalTeamView === "personal" ? (
+                            // PERSONAL: LINE CHART (Clock In/Out)
+                            <div className="w-full">
+                                <h3 className="text-lg font-semibold text-neutral-900 mb-3">Monthly Attendance Trends</h3>
+                                <ResponsiveContainer width="100%" height={320}>
+                                    <ComposedChart
+                                        data={filteredData.slice().reverse().map(d => {
+                                            // Convert 08:30 to 8.5 for plotting
+                                            const timeToFloat = (t: string | null) => {
+                                                if (!t || t === "-") return null;
+                                                const [h, m] = t.split(':').map(Number);
+                                                return h + m / 60;
+                                            };
+                                            return {
+                                                date: format(new Date(d.date), "d"),
+                                                fullDate: format(new Date(d.date), "d MMM"),
+                                                clockIn: timeToFloat(d.clockIn),
+                                                clockOut: timeToFloat(d.clockOut),
+                                                status: d.status
+                                            };
+                                        })}
+                                        margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                                    >
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                        <XAxis
+                                            dataKey="date"
+                                            tick={{ fontSize: 10 }}
+                                            axisLine={false}
+                                            tickLine={false}
+                                        />
+                                        <YAxis
+                                            domain={[6, 22]}
+                                            tick={{ fontSize: 10 }}
+                                            ticks={[6, 8, 10, 12, 14, 16, 18, 20, 22]}
+                                            tickFormatter={(value) => `${value}`}
+                                            width={25}
+                                            axisLine={false}
+                                            tickLine={false}
+                                        />
+                                        <RechartsTooltip
+                                            content={({ active, payload, label }) => {
+                                                if (!active || !payload?.length) return null;
+                                                const formatTime = (value: number) => {
+                                                    const h = Math.floor(value);
+                                                    const m = Math.round((value - h) * 60);
+                                                    return `${h}:${m.toString().padStart(2, '0')}`;
+                                                };
+                                                const dataPoint = payload[0]?.payload;
+                                                return (
+                                                    <div style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', background: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '16px', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+                                                        <p style={{ fontSize: '13px', fontWeight: 600, color: '#1f2937', marginBottom: '8px' }}>{dataPoint?.fullDate || label}</p>
+                                                        {payload.map((item: any, idx: number) => (
+                                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', marginBottom: '4px' }}>
+                                                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: item.color }} />
+                                                                <span style={{ color: '#6b7280' }}>{item.name}:</span>
+                                                                <span style={{ fontWeight: 500, color: '#111827' }}>{formatTime(item.value)}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                );
+                                            }}
+                                        />
 
-                        {/* Bar Chart - Grouped by Employee */}
-                        <div className="space-y-4">
-                            {teamMembers
-                                .filter(m => !EXCLUDED_USERS.includes(m.username))
-                                .sort((a, b) => (a.username || "").localeCompare(b.username || ""))
-                                .map((member, idx) => {
+
+                                        {/* Reference Areas for Shift Zones */}
+                                        <ReferenceArea y1={0} y2={9} fill="#10b981" fillOpacity={0.1} label={{ position: 'insideTopLeft', value: 'On Time', fill: '#059669', fontSize: 10 }} />
+                                        <ReferenceArea y1={9} y2={9.25} fill="#f59e0b" fillOpacity={0.1} label={{ position: 'insideLeft', value: 'In Time', fill: '#d97706', fontSize: 10 }} />
+                                        <ReferenceArea y1={9.25} y2={24} fill="#f43f5e" fillOpacity={0.05} label={{ position: 'insideTopLeft', value: 'Late', fill: '#e11d48', fontSize: 10 }} />
+
+                                        <Line type="monotone" dataKey="clockIn" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} name="Clock In" connectNulls />
+                                        <Line type="monotone" dataKey="clockOut" stroke="#6366f1" strokeWidth={3} dot={{ r: 4 }} name="Clock Out" connectNulls />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </div>
+                        ) : (() => {
+                            // PRE-CALCULATE TEAM PERFORMANCE DATA FOR SYNCED AXES
+                            const teamPerformanceData = teamMembers
+                                .filter(m => m.account_type === 'human_account' && m.include_in_performance !== false)
+                                .map(member => {
                                     const employeeRecords = filteredData.filter(d => d.userId === member.id || d.employee === member.username);
-                                    const onTimeCount = employeeRecords.filter(d => d.status === "ontime").length;
-                                    const intimeCount = employeeRecords.filter(d => d.status === "intime").length;
-                                    const lateCount = employeeRecords.filter(d => d.status === "late").length;
-                                    const totalWork = onTimeCount + intimeCount + lateCount;
-                                    const onTimePercent = totalWork > 0 ? (onTimeCount / totalWork) * 100 : 0;
-                                    const intimePercent = totalWork > 0 ? (intimeCount / totalWork) * 100 : 0;
-                                    const latePercent = totalWork > 0 ? (lateCount / totalWork) * 100 : 0;
+                                    const rawNickname = member.nickname || member.username.split(' ')[0] || "User";
+                                    const nickname = rawNickname.charAt(0).toUpperCase() + rawNickname.slice(1).toLowerCase();
+                                    const config = {
+                                        late_penalty_per: rule?.scoring_params?.attendance?.late_penalty || 2,
+                                        late_penalty_cap: rule?.scoring_params?.attendance?.max_late_penalty || 20,
+                                        ot_bonus_cap: rule?.overtime_max_bonus || 10,
+                                        ot_target_value: rule?.ot_target_hours || 40
+                                    };
+                                    const adidayaResult = calculateAdidayaScore(employeeRecords, config, currentMonth);
+                                    return {
+                                        name: nickname,
+                                        fullName: member.username,
+                                        ontime: adidayaResult.days_present - adidayaResult.late_arrivals,
+                                        late: adidayaResult.late_arrivals,
+                                        leave: Math.max(0, adidayaResult.total_days - adidayaResult.days_present),
+                                        overtime: adidayaResult.overtime_hours,
+                                        score: adidayaResult.attendance_score
+                                    };
+                                })
+                                .sort((a, b) => b.score - a.score);
 
-                                    return (
-                                        <div key={member.id || idx} className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium text-neutral-900 truncate max-w-[200px]">{member.username}</span>
-                                                <span className="text-xs text-neutral-500">{totalWork > 0 ? `${onTimeCount} on time, ${lateCount} late` : "No records"}</span>
-                                            </div>
-                                            <div className="flex h-6 rounded-full overflow-hidden bg-neutral-100">
-                                                {onTimePercent > 0 && (
-                                                    <div
-                                                        className="bg-emerald-500 h-full flex items-center justify-center text-xs text-white font-medium"
-                                                        style={{ width: `${onTimePercent}%` }}
-                                                    >
-                                                        {onTimePercent > 20 && `${Math.round(onTimePercent)}%`}
-                                                    </div>
-                                                )}
-                                                {intimePercent > 0 && (
-                                                    <div
-                                                        className="bg-orange-500 h-full flex items-center justify-center text-xs text-white font-medium"
-                                                        style={{ width: `${intimePercent}%` }}
-                                                    >
-                                                        {intimePercent > 20 && `${Math.round(intimePercent)}%`}
-                                                    </div>
-                                                )}
-                                                {latePercent > 0 && (
-                                                    <div
-                                                        className="bg-rose-500 h-full flex items-center justify-center text-xs text-white font-medium"
-                                                        style={{ width: `${latePercent}%` }}
-                                                    >
-                                                        {latePercent > 20 && `${Math.round(latePercent)}%`}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                        </div>
+                            return (
+                                // TEAM: BAR CHART (Attendance Scores)
+                                <div className="w-full h-[600px] flex flex-col">
+                                    <h3 className="text-lg font-semibold text-neutral-900 mb-6 px-2">Team Attendance Performance</h3>
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart
+                                            layout="vertical"
+                                            data={teamPerformanceData}
+                                            margin={{ top: 5, right: 5, left: 15, bottom: 20 }}
+                                            barSize={24}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} strokeOpacity={0.05} />
+                                            <XAxis type="number" hide />
+                                            <YAxis
+                                                dataKey="name"
+                                                type="category"
+                                                width={90}
+                                                tick={{ fontSize: 11, fontWeight: 500, fill: '#737373' }}
+                                                axisLine={false}
+                                                tickLine={false}
+                                            />
+                                            <YAxis
+                                                yAxisId="right"
+                                                dataKey="name"
+                                                type="category"
+                                                orientation="right"
+                                                width={35}
+                                                tick={(props: any) => {
+                                                    const { x, y, payload } = props;
+                                                    const item = teamPerformanceData.find(s => s.name === payload.value);
+                                                    if (!item) return null;
+                                                    const score = item.score;
+                                                    const color = score >= 75 ? '#10b981' : score >= 50 ? '#3b82f6' : score >= 25 ? '#f59e0b' : '#f43f5e';
+                                                    return (
+                                                        <text
+                                                            x={x - 2}
+                                                            y={y}
+                                                            fill={color}
+                                                            textAnchor="end"
+                                                            dominantBaseline="middle"
+                                                            style={{ fontSize: '13px', fontWeight: 900 }}
+                                                        >
+                                                            {score}%
+                                                        </text>
+                                                    );
+                                                }}
+                                                axisLine={false}
+                                                tickLine={false}
+                                            />
+                                            <RechartsTooltip
+                                                cursor={{ fill: 'rgba(0,0,0,0.02)', radius: 12 }}
+                                                content={({ active, payload, label }) => {
+                                                    if (!active || !payload?.length) return null;
+                                                    const data = payload[0].payload;
+                                                    return (
+                                                        <div style={{ backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '16px', padding: '12px 16px', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+                                                            <p style={{ fontSize: '14px', fontWeight: 700, color: '#171717', marginBottom: '8px' }}>{data.fullName}</p>
+                                                            <div className="space-y-1.5">
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                                                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#72caaf' }} />
+                                                                    <span style={{ color: '#525252', flex: 1 }}>On Time:</span>
+                                                                    <span style={{ fontWeight: 600, color: '#059669' }}>{data.ontime} days</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                                                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#e85d75' }} />
+                                                                    <span style={{ color: '#525252', flex: 1 }}>Late:</span>
+                                                                    <span style={{ fontWeight: 600, color: '#e11d48' }}>{data.late} days</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                                                                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#f1f5f9' }} />
+                                                                    <span style={{ color: '#525252', flex: 1 }}>Leave:</span>
+                                                                    <span style={{ fontWeight: 600, color: '#737373' }}>{data.leave} days</span>
+                                                                </div>
+                                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px' }}>
+                                                                    <Clock className="w-3.5 h-3.5 text-neutral-400" />
+                                                                    <span style={{ color: '#525252', flex: 1 }}>Overtime:</span>
+                                                                    <span style={{ fontWeight: 600, color: '#10b981' }}>{data.overtime.toFixed(1)}h</span>
+                                                                </div>
+                                                                <div className="pt-2 mt-2 border-t border-neutral-200/50 flex items-center justify-between">
+                                                                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#525252' }}>Performance:</span>
+                                                                    <span style={{ fontSize: '13px', fontWeight: 800, color: data.score >= 75 ? '#059669' : data.score >= 50 ? '#2563eb' : data.score >= 25 ? '#d97706' : '#dc2626' }}>{data.score}%</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }}
+                                            />
 
-                        {/* Summary Stats */}
-                        {stats && (
-                            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-neutral-100">
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-emerald-600">
-                                        {stats.totalDaysPresent - stats.totalDaysLate}
-                                    </div>
-                                    <div className="text-xs text-neutral-500">Pure On Time</div>
+                                            <Bar
+                                                dataKey="ontime"
+                                                stackId="a"
+                                                fill="#72caaf"
+                                                name="On Time"
+                                                radius={[12, 0, 0, 12]}
+                                                activeBar={{ fill: '#10b981', stroke: '#059669', strokeWidth: 1.5 }}
+                                            />
+                                            <Bar
+                                                dataKey="late"
+                                                stackId="a"
+                                                fill="#e85d75"
+                                                name="Late"
+                                                activeBar={{ fill: '#f43f5e', stroke: '#e11d48', strokeWidth: 1.5 }}
+                                            />
+                                            <Bar
+                                                dataKey="leave"
+                                                stackId="a"
+                                                fill="#f8fafc"
+                                                name="Leave"
+                                                radius={[0, 12, 12, 0]}
+                                                activeBar={{ fill: '#ffffff', stroke: '#f1f5f9', strokeWidth: 1.5 }}
+                                            />
+                                        </BarChart>
+                                    </ResponsiveContainer>
                                 </div>
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-rose-600">
-                                        {stats.totalDaysLate}
-                                    </div>
-                                    <div className="text-xs text-neutral-500">Late Days</div>
-                                </div>
-                                <div className="text-center">
-                                    <div className={clsx(
-                                        "text-2xl font-bold",
-                                        stats.attendanceScore < 50 ? "text-rose-600" :
-                                            stats.attendanceScore < 80 ? "text-orange-600" : "text-emerald-600"
-                                    )}>
-                                        {stats.attendanceScore}%
-                                    </div>
-                                    <div className="text-xs text-neutral-500">Score</div>
-                                </div>
-                            </div>
-                        )}
+                            );
+                        })()}
                     </div>
-                )
-            }
+                )}
 
             {/* SUMMARY FOOTER */}
-            <div className="flex items-center justify-between text-sm text-neutral-500 px-2">
+            <div className="flex items-center justify-between text-sm text-neutral-500 px-2 mt-4">
                 <span>
                     Showing {paginatedData.length} records
                     {dateFrom || dateTo ? ` (${dateFrom || 'Start'} to ${dateTo || 'Now'})` : ''}
@@ -1552,6 +1955,6 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                     </span>
                 )}
             </div>
-        </div >
+        </div>
     );
 }

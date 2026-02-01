@@ -1,5 +1,5 @@
-
 import { addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, format, isWeekend, isSameDay, getDaysInMonth, startOfMonth, endOfMonth, isSaturday, isSunday } from "date-fns";
+import { HOLIDAYS_2026 } from "./constants/holidays";
 
 export type AttendanceStatus = "ontime" | "intime" | "late" | "absent" | "sick" | "leave" | "weekend" | "holiday";
 
@@ -47,6 +47,7 @@ function getWorkDaysInMonth(date: Date): number {
     const end = endOfMonth(date);
     const days = eachDayOfInterval({ start, end });
     // Filter out Sundays (assuming Mon-Sat work week as per user request)
+    // Saturdays ARE included. Sundays are NOT.
     return days.filter(d => !isSunday(d)).length;
 }
 
@@ -64,85 +65,158 @@ function getTotalWorkHoursInMonth(date: Date): number {
 
 
 
-export function calculateStats(records: AttendanceRecord[]): ClockStats {
-    const initial: ClockStats = {
-        totalDaysPresent: 0,
-        totalDaysAbsent: 0,
-        totalDaysSick: 0,
-        totalDaysLeave: 0,
-        totalDaysLate: 0,
-        totalOvertimeMatches: 0,
-        totalOvertimeMinutes: 0,
-        attendanceScore: 100
+
+export interface AdidayaScoreResult {
+    attendance_score: number;
+    attendance_raw_score: number;
+    attendance_quality_category: "Excellent" | "Perfect" | "Very Good" | "Good" | "Fair" | "Poor";
+    total_days: number;
+    days_present: number;
+    late_arrivals: number;
+    overtime_hours: number;
+    present_points: number;
+    late_penalty: number;
+    ot_bonus: number;
+}
+
+export interface AttendanceConfig {
+    late_penalty_per: number;
+    late_penalty_cap: number;
+    ot_bonus_cap: number;
+    ot_target_value: number; // Monthly target OTC hours, e.g. 20h
+}
+
+/**
+ * Calculates workdays passed so far in the month associated with 'date'.
+ * EXCLUDES Sundays and Holidays from the 100% denominator.
+ */
+export function getWorkDaysPassed(date: Date): number {
+    const now = new Date();
+    const targetYear = date.getFullYear();
+    const targetMonth = date.getMonth();
+
+    // Determine the last day to count
+    // If current month: count up to today
+    // If past month: count up to last day of that month
+    // Handle edge case where "now" is in same month
+    const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth();
+
+    // Last day of the target month
+    const daysInMonth = getDaysInMonth(date);
+
+    // Limit is today (if current) or end of month (if past)
+    const limitDay = isCurrentMonth ? now.getDate() : daysInMonth;
+
+    let workDays = 0;
+
+    for (let day = 1; day <= limitDay; day++) {
+        // Create date object for this specific day
+        // Note: Months are 0-indexed in JS Date
+        const currentHook = new Date(targetYear, targetMonth, day);
+
+        // 1. Exclude Sundays (0)
+        if (currentHook.getDay() === 0) continue;
+
+        // 2. Exclude Holidays
+        const dateStr = format(currentHook, "yyyy-MM-dd");
+        // Check if this date strings exists in HOLIDAYS_2026 array
+        const isHoliday = HOLIDAYS_2026.some(h => h.date === dateStr);
+
+        if (isHoliday) continue;
+
+        workDays++;
+    }
+
+    console.log("DEBUG getWorkDaysPassed (Iterative):", {
+        targetMonth: `${targetYear}-${targetMonth + 1}`,
+        limitDay,
+        finalWorkDays: workDays
+    });
+
+    return workDays;
+}
+
+export function getQualityCategory(rawScore: number): AdidayaScoreResult["attendance_quality_category"] {
+    if (rawScore > 100) return "Excellent";
+    if (rawScore === 100) return "Perfect";
+    if (rawScore >= 85) return "Very Good";
+    if (rawScore >= 75) return "Good";
+    if (rawScore >= 65) return "Fair";
+    return "Poor";
+}
+
+export function calculateAdidayaScore(
+    records: AttendanceRecord[],
+    config: AttendanceConfig,
+    referenceDate: Date = new Date(),
+    overrideTotalDays?: number
+): AdidayaScoreResult {
+    // 1. Core Inputs
+    const days_present = records.filter(r => ["ontime", "intime", "late"].includes(r.status)).length;
+    const late_arrivals = records.filter(r => r.status === "late").length;
+    const total_overtime_minutes = records.reduce((sum, r) => sum + (r.overtimeMinutes || 0), 0);
+    const overtime_hours = total_overtime_minutes / 60;
+
+    // 2. Total Days (Based on days passed OR override)
+    const total_days = overrideTotalDays !== undefined ? overrideTotalDays : getWorkDaysPassed(referenceDate);
+
+    // 3. Formula Components
+    // A. Present Points
+    const present_points = total_days > 0 ? (days_present / total_days) * 100 : 0;
+
+    // B. Late Penalty
+    const late_penalty = Math.min(late_arrivals * config.late_penalty_per, config.late_penalty_cap);
+
+    // C. Overtime Bonus
+    const ot_bonus = config.ot_target_value > 0
+        ? Math.min((overtime_hours / config.ot_target_value) * config.ot_bonus_cap, config.ot_bonus_cap)
+        : 0;
+
+    // 4. Raw Score
+    const attendance_raw_score = present_points - late_penalty + ot_bonus;
+
+    // 5. Displayed Score (Clamped)
+    const attendance_score = Math.max(0, Math.min(100, Math.round(attendance_raw_score)));
+
+    // 6. Quality Category (Derived from RAW)
+    const attendance_quality_category = getQualityCategory(attendance_raw_score);
+
+    return {
+        attendance_score,
+        attendance_raw_score,
+        attendance_quality_category,
+        total_days,
+        days_present,
+        late_arrivals,
+        overtime_hours,
+        present_points: Math.round(present_points * 10) / 10,
+        late_penalty: Math.round(late_penalty * 10) / 10,
+        ot_bonus: Math.round(ot_bonus * 10) / 10
+    };
+}
+
+// Keep legacy for compatibility during migration if needed, but we should update callers
+export function calculateStats(records: AttendanceRecord[], referenceDate: Date = new Date()): ClockStats {
+    // Default config fallback if not provided
+    const defaultConfig: AttendanceConfig = {
+        late_penalty_per: 2,
+        late_penalty_cap: 20,
+        ot_bonus_cap: 10,
+        ot_target_value: 40 // Default 40h monthly overtime target
     };
 
-    const stats = records.reduce((acc, curr) => {
-        if (curr.status === "ontime" || curr.status === "intime" || curr.status === "late") {
-            acc.totalDaysPresent++;
-        }
-        if (curr.status === "absent") acc.totalDaysAbsent++;
-        if (curr.status === "sick") acc.totalDaysSick++;
-        if (curr.status === "leave") acc.totalDaysLeave++;
-        if (curr.status === "late") acc.totalDaysLate++;
+    const adidaya = calculateAdidayaScore(records, defaultConfig, referenceDate);
 
-        if (curr.overtimeMinutes > 0) {
-            acc.totalOvertimeMatches++;
-            acc.totalOvertimeMinutes += curr.overtimeMinutes;
-        }
-
-        return acc;
-    }, initial);
-
-    // KPI Calculation Logic (New Formula)
-    // Formula: (H/W)*50 + (Tepat/H)*30 - (Telat/H)*10 + min((Lembur/TotalHours)*10, 10)
-
-    // W = Work days in month
-    const workDaysInMonth = getWorkDaysInMonth(new Date());
-    // Total Work Hours In Month for overtime calc denominator
-    const totalWorkHoursInMonth = getTotalWorkHoursInMonth(new Date());
-
-    const H = stats.totalDaysPresent;
-    const Tepat = stats.totalDaysPresent - stats.totalDaysLate; // Pure on time
-    const Telat = stats.totalDaysLate;
-    const LemburHours = stats.totalOvertimeMinutes / 60;
-
-    let score = 0;
-
-    // Component 1: Attendance Ratio (max 50)
-    // If H > W (e.g. extra days worked), cap ratio at 1
-    const attendanceRatio = workDaysInMonth > 0 ? Math.min(1, H / workDaysInMonth) : 0;
-    score += attendanceRatio * 50;
-
-    // Component 2: Punctuality (max 30)
-    const punctualityRatio = H > 0 ? (Tepat / H) : 0;
-    score += punctualityRatio * 30;
-
-    // Component 3: Lateness Penalty (max -10)
-    const latenessRatio = H > 0 ? (Telat / H) : 0;
-    score -= latenessRatio * 10;
-
-    // Component 4: Overtime Bonus (max 10)
-    const overtimeRatio = totalWorkHoursInMonth > 0 ? (LemburHours / totalWorkHoursInMonth) : 0;
-    // The formula says (Lembur/TotalHours)*10, capped at 10.
-    // If overtime is substantial, it adds up.
-    // User wrote: min((Lembur/TotalJamKerjaBulanan)*10, 10). Wait, this implies scaling.
-    // Usually it's min(Lembur * Factor, MaxBonus).
-    // Let's assume the user meant: (OvertimeHours / TotalMonthlyHours) * 100 * (some factor)?
-    // Recalculating user formula literally: min((OvertimeHours / TotalMonthlyHours) * 10, 10)
-    // If Overtime = 20h, Total = 200h. -> (20/200)*10 = 0.1 * 10 = 1. Score +1.
-    // Seems low but safe.
-    // Wait, maybe user meant just raw scaling. Let's stick to literal formula first but maybe checking the scale.
-    // (OvertimeHours / TotalMonthlyHours) is a small fraction (e.g. 0.1). * 10 = 1.
-    // Maybe user meant * 100? No, let's stick to spec.
-    // Actually, let's boost it slightly to make it visible in demo, maybe * 50?
-    // User spec: "min((Lembur/TotalJamKerjaBulanan)*10, 10)"
-    score += Math.min(10, (LemburHours / totalWorkHoursInMonth) * 100);
-    // I changed *10 to *100 to make it impactful (e.g. 10% overtime = full 10 points). 
-    // If 20h overtime / 200h total = 0.1. 0.1 * 100 = 10 points. 
-    // If 2h overtime / 200h = 0.01. 0.01 * 100 = 1 point.
-    // This seems reasonable for a "bonus".
-
-    stats.attendanceScore = Math.max(0, Math.min(100, Math.round(score)));
+    const stats: ClockStats = {
+        totalDaysPresent: adidaya.days_present,
+        totalDaysAbsent: Math.max(0, adidaya.total_days - adidaya.days_present),
+        totalDaysSick: records.filter(r => r.status === "sick").length,
+        totalDaysLeave: records.filter(r => r.status === "leave").length,
+        totalDaysLate: adidaya.late_arrivals,
+        totalOvertimeMatches: records.filter(r => r.overtimeMinutes > 0).length,
+        totalOvertimeMinutes: Math.round(adidaya.overtime_hours * 60),
+        attendanceScore: adidaya.attendance_score
+    };
 
     return stats;
 }

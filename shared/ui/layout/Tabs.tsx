@@ -12,7 +12,8 @@ type TabsProps<T extends string = string> = {
   value: T;
   items: TabItem<T>[];
   onChange: (v: T) => void;
-  className?: string; // Add className prop
+  className?: string;
+  activeColor?: "red" | "blue" | "emerald";
 };
 
 export function Tabs<T extends string>({
@@ -20,6 +21,7 @@ export function Tabs<T extends string>({
   items,
   onChange,
   className,
+  activeColor = "red",
 }: TabsProps<T>) {
   return (
     <div className={clsx("flex gap-6", className)}>
@@ -39,7 +41,13 @@ export function Tabs<T extends string>({
           >
             {item.label}
             {active && (
-              <span className="absolute inset-x-0 -bottom-px h-0.5 bg-brand-red" />
+              <span className={
+                clsx(
+                  "absolute inset-x-0 -bottom-px h-0.5",
+                  activeColor === "red" && "bg-brand-red",
+                  activeColor === "blue" && "bg-blue-600",
+                  activeColor === "emerald" && "bg-emerald-600"
+                )} />
             )}
           </button>
         );

@@ -488,10 +488,10 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
     const activeFiltersCount = selectedRoles.length + selectedStatuses.length + selectedProjects.length;
 
-    // Loading state
-    if (isLoading) {
-        return <GlobalLoading />;
-    }
+    // Loading state removed from top-level block
+    // if (isLoading) {
+    //    return <GlobalLoading />;
+    // }
 
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
@@ -577,8 +577,13 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 </div>
             )}
 
-            {/* Empty State */}
-            {filteredCrew.length === 0 && (
+            {/* Empty State or Loading */}
+            {isLoading ? (
+                <div className="py-24 flex flex-col justify-center items-center gap-3">
+                    <Loader2 className="w-8 h-8 text-neutral-300 animate-spin" />
+                    <p className="text-sm text-neutral-400">Loading crew directory...</p>
+                </div>
+            ) : filteredCrew.length === 0 && (
                 <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center">
                     <Users className="w-12 h-12 mx-auto text-neutral-300 mb-4" />
                     <h3 className="font-medium text-neutral-600 mb-2">{crewList.length === 0 ? "No crew members yet" : "No results found"}</h3>

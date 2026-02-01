@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import * as clockApi from "@/lib/api/clock";
+import { useState, useCallback, useEffect, useRef } from "react";
+import * as clockApi from "@/lib/api/clock/index";
 import { fetchTeamMembers, TeamMemberProfile } from "@/lib/api/clock_team";
-import { AttendanceRecord, LeaveRequest, OvertimeLog, AttendanceSession, BusinessTrip } from "@/lib/api/clock";
+import { AttendanceRecord, LeaveRequest, OvertimeLog, AttendanceSession, BusinessTrip, AttendanceLog } from "@/lib/api/clock/clock.types";
 
 // Helper to get start/end of month
 const getMonthRange = (date: Date) => {
@@ -29,7 +29,19 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
     const [teamMembers, setTeamMembers] = useState<TeamMemberProfile[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Use ref to track if we've already fetched for this key
+    const lastFetchKey = useRef<string>("");
+
     const fetchData = useCallback(async () => {
+        // Create a stable key for the current fetch parameters
+        const fetchKey = `${userId}-${isTeam}-${targetDate.getFullYear()}-${targetDate.getMonth()}`;
+
+        // Skip if we already fetched for this key
+        if (fetchKey === lastFetchKey.current) {
+            return;
+        }
+        lastFetchKey.current = fetchKey;
+
         setLoading(true);
         try {
             // Calculate date range for the target month
@@ -38,47 +50,22 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
             // If isTeam is true, we pass undefined as userId to fetch all (RLS will filter if not admin)
             const targetId = isTeam ? undefined : userId;
 
-            // Fetch independent data streams
-            const clockPromise = Promise.all([
-                clockApi.fetchAttendanceRecords(targetId, startDate, endDate),
-                clockApi.fetchLeaveRequests(targetId, startDate, endDate),
-                clockApi.fetchOvertimeLogs(targetId, startDate, endDate),
-                clockApi.fetchBusinessTrips(targetId, startDate, endDate),
-                // Fetch sessions for the WHOLE MONTH now instead of single day
-                clockApi.fetchAttendanceSessions(targetId, startDate, endDate).catch(e => {
-                    console.warn("⚠️ Independent session fetch failed", e);
-                    return [];
-                }),
-                // Fetch raw logs
-                clockApi.fetchAttendanceLogs(targetId, startDate, endDate)
-            ]);
+            // USE BUNDLE FETCH
+            const bundle = await clockApi.fetchClockBundle(targetId, startDate, endDate);
 
-            // 2. Team data (optional/conditional)
-            const teamPromise = isTeam ? fetchTeamMembers() : Promise.resolve([]);
+            setAttendance(bundle.attendance);
+            setLeaves(bundle.leaves);
+            setOvertime(bundle.overtime);
+            setBusinessTrips(bundle.trips);
+            setSessions(bundle.sessions);
+            setLogs(bundle.logs);
 
-            // Execute
-            const [clockResults, teamResult] = await Promise.allSettled([clockPromise, teamPromise]);
-
-            // Handle Core Data
-            if (clockResults.status === 'fulfilled') {
-                const [attData, leaveData, otData, tripData, sessionsData, logsData] = clockResults.value;
-                setAttendance(attData);
-                setLeaves(leaveData);
-                setOvertime(otData);
-                setBusinessTrips(tripData);
-                setSessions(sessionsData);
-                setLogs(logsData);
-            } else {
-                console.error("❌ Critical: Failed to fetch clock data", clockResults.reason);
+            // Team members still separate if needed or can be added to bundle if pure fetch
+            if (isTeam) {
+                const members = await fetchTeamMembers();
+                setTeamMembers(members);
             }
 
-            // Handle Team Data
-            if (teamResult.status === 'fulfilled') {
-                setTeamMembers(teamResult.value as TeamMemberProfile[]);
-            } else {
-                console.error("⚠️ Failed to fetch team members", teamResult.reason);
-                setTeamMembers([]);
-            }
         } catch (error) {
             console.error("❌ Error fetching clock module data:", error);
         } finally {
@@ -90,7 +77,14 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
         if (userId || isTeam) {
             fetchData();
         }
-    }, [userId, isTeam, fetchData]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userId, isTeam, targetDate.getTime()]);
+
+    const refresh = useCallback(() => {
+        // Force refresh by clearing the key
+        lastFetchKey.current = "";
+        fetchData();
+    }, [fetchData]);
 
     return {
         attendance,
@@ -101,6 +95,6 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
         logs,
         teamMembers,
         loading,
-        refresh: fetchData
+        refresh
     };
 }

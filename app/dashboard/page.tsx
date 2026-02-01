@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const supabase = createClient();
   const { profile } = useUserProfile();
-  const { isCheckedIn, elapsed, toggleClock, formatTime, status: clockStatus, startTime } = useClock();
+  const { isCheckedIn, elapsed, toggleClock, formatTime, status: clockStatus, startTime, loading: clockLoading } = useClock();
   const { unreadCount } = useNotifications();
 
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -227,38 +227,57 @@ export default function DashboardPage() {
             <div className="md:hidden relative z-10 -mt-10 mx-2 mb-8">
               <div className="backdrop-blur-xl bg-white/70 rounded-[24px] shadow-lg shadow-black/[0.03] border border-white/60 p-2.5 flex items-center"
                 style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.65) 100%)' }}>
-                <div className="flex-1 flex items-center gap-3">
-                  <div className={clsx(
-                    "w-[44px] h-[44px] rounded-[14px] flex items-center justify-center transition-all backdrop-blur-sm",
-                    isCheckedIn
-                      ? "bg-gradient-to-br from-blue-100/80 to-blue-50/40 border border-blue-200/30 text-blue-600"
-                      : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 border border-neutral-200/30 text-neutral-400"
-                  )}>
-                    <Clock className="w-5 h-5" strokeWidth={1.5} />
-                  </div>
-                  <div>
-                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest leading-none mb-1">
-                      {isCheckedIn ? "On Duty" : "Offline"}
+
+                {clockLoading ? (
+                  /* SKELETON STATE */
+                  <div className="flex-1 flex items-center gap-3 animate-pulse">
+                    <div className="w-[44px] h-[44px] rounded-[14px] bg-neutral-200/50" />
+                    <div className="space-y-1.5">
+                      <div className="w-12 h-2.5 bg-neutral-200/50 rounded-full" />
+                      <div className="w-20 h-4 bg-neutral-200/50 rounded-full" />
                     </div>
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center gap-3">
                     <div className={clsx(
-                      "text-xl font-bold tracking-tighter tabular-nums leading-none",
-                      isCheckedIn ? "text-neutral-800" : "text-neutral-300"
+                      "w-[44px] h-[44px] rounded-[14px] flex items-center justify-center transition-all backdrop-blur-sm",
+                      isCheckedIn
+                        ? "bg-gradient-to-br from-blue-100/80 to-blue-50/40 border border-blue-200/30 text-blue-600"
+                        : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 border border-neutral-200/30 text-neutral-400"
                     )}>
-                      {isCheckedIn ? formatTime(elapsed) : "00:00:00"}
+                      <Clock className="w-5 h-5" strokeWidth={1.5} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest leading-none mb-1">
+                        {isCheckedIn ? "On Duty" : "Offline"}
+                      </div>
+                      <div className={clsx(
+                        "text-xl font-bold tracking-tighter tabular-nums leading-none",
+                        isCheckedIn ? "text-neutral-800" : "text-neutral-300"
+                      )}>
+                        {isCheckedIn ? formatTime(elapsed) : "00:00:00"}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
+
 
                 <button
                   onClick={() => setIsClockModalOpen(true)}
+                  disabled={clockLoading}
                   className={clsx(
                     "flex items-center gap-2 px-5 py-3.5 rounded-[18px] text-xs font-bold transition-all active:scale-95 ml-2",
-                    isCheckedIn
-                      ? "bg-gradient-to-b from-red-50 to-red-100/70 text-red-600 border border-red-200/40 shadow-sm"
-                      : "bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-300/40"
+                    clockLoading ? "opacity-50 cursor-not-allowed bg-neutral-100 text-neutral-400" :
+                      isCheckedIn
+                        ? "bg-gradient-to-b from-red-50 to-red-100/70 text-red-600 border border-red-200/40 shadow-sm"
+                        : "bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-300/40"
                   )}
                 >
-                  {isCheckedIn ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />}
+                  {clockLoading ? (
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  ) : (
+                    isCheckedIn ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />
+                  )}
                   {isCheckedIn ? "Clock Out" : "Clock In"}
                 </button>
               </div>
@@ -282,10 +301,10 @@ export default function DashboardPage() {
               </div>
               <div className="text-right">
                 <div className={clsx("text-3xl font-bold tabular-nums tracking-tight", phase.color)}>
-                  {currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                  {isMounted ? currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "--:-- --"}
                 </div>
                 <div className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mt-1">
-                  {currentTime.toLocaleDateString("en-US", { weekday: 'long', day: 'numeric', month: 'long' })}
+                  {isMounted ? currentTime.toLocaleDateString("en-US", { weekday: 'long', day: 'numeric', month: 'long' }) : "Loading..."}
                 </div>
               </div>
             </div>

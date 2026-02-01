@@ -13,6 +13,7 @@ export interface PerformanceRule {
     snapshot_day_trigger: string;
     auto_lock_enabled: boolean;
     is_active: boolean;
+    ot_target_hours?: number; // Monthly target for overtime bonus
     scoring_params: {
         attendance: {
             late_penalty: number;
@@ -68,6 +69,7 @@ export interface ProjectIncentiveParticipant {
 }
 
 export async function fetchCurrentPerformanceRule() {
+    console.log("[fetchCurrentPerformanceRule] START");
     const supabase = createClient();
     const { data, error } = await supabase
         .from('performance_rules')
@@ -78,6 +80,8 @@ export async function fetchCurrentPerformanceRule() {
         .limit(1)
         .single();
 
+    console.log("[fetchCurrentPerformanceRule] END", { data, error });
+
     if (error && error.code !== 'PGRST116') { // Ignore no rows found
         console.error('Error fetching performance rule:', error);
         return null; // Return null if not found or error
@@ -86,6 +90,7 @@ export async function fetchCurrentPerformanceRule() {
 }
 
 export async function savePerformanceRule(rule: Partial<PerformanceRule>) {
+    console.log("[savePerformanceRule] START", rule);
     const supabase = createClient();
     // Always create a new version for history tracking
     // We explicitly exclude 'id' so Postgres generates a new one
@@ -100,6 +105,8 @@ export async function savePerformanceRule(rule: Partial<PerformanceRule>) {
         }])
         .select()
         .single();
+
+    console.log("[savePerformanceRule] END", { data, error });
 
     if (error) throw error;
     return data;
@@ -256,4 +263,41 @@ export async function calculateProjectIncentives(projectId: string) {
 
     if (error) throw error;
     return data;
+}
+
+/**
+ * Calculates attendance score from records based on rule
+ */
+export function calculateAttendanceScore(records: any[], rule: PerformanceRule): number {
+    if (!records.length) return 75; // Default if no data
+
+    const lateCount = records.filter(r => r.status === 'late').length;
+    const penalty = lateCount * (rule.scoring_params.attendance.late_penalty || 0);
+    const totalDeduction = Math.min(penalty, rule.scoring_params.attendance.max_late_penalty || 100);
+
+    return Math.max(0, 100 - totalDeduction);
+}
+
+/**
+ * Calculates overall index based on multiple component scores and rules
+ */
+export function calculateOverallIndex(components: {
+    attendance: number;
+    taskCompletion: number;
+    taskQuality: number;
+    peerReview: number;
+}, rule: PerformanceRule): number {
+    const totalWeight = (rule.weight_attendance || 0) +
+        (rule.weight_task_completion || 0) +
+        (rule.weight_task_quality || 0) +
+        (rule.weight_peer_review || 0);
+
+    if (totalWeight === 0) return 75;
+
+    const weightedScore = (components.attendance * (rule.weight_attendance || 0)) +
+        (components.taskCompletion * (rule.weight_task_completion || 0)) +
+        (components.taskQuality * (rule.weight_task_quality || 0)) +
+        (components.peerReview * (rule.weight_peer_review || 0));
+
+    return Math.round(weightedScore / totalWeight);
 }

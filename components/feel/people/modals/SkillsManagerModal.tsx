@@ -1,148 +1,223 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ModalRoot, ModalHeader, ModalFooter } from "@/shared/ui/modal";
+import { ModalRoot } from "@/shared/ui/modal";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { Input } from "@/shared/ui/primitives/input/input";
 import { Select } from "@/shared/ui/primitives/select/select";
-import { Trash2, Plus, Star } from "lucide-react";
-import { PeopleSkill, SkillLevel } from "@/lib/types/people-types";
-import { fetchPeopleSkills, upsertPeopleSkill, deletePeopleSkill } from "@/lib/api/people";
+import { SkillLibraryItem, SkillCategory, PeopleSkill } from "@/lib/types/people-types";
+import { upsertPeopleSkill, fetchSkillLibrary, fetchSkillCategories, deletePeopleSkill } from "@/lib/api/people";
 import { toast } from "react-hot-toast";
 import clsx from "clsx";
+import * as Dialog from "@radix-ui/react-dialog";
+import DeleteSkillConfirmationModal from "./DeleteSkillConfirmationModal";
 
 interface SkillsManagerModalProps {
     isOpen: boolean;
     onClose: () => void;
     userId: string;
     onUpdate?: () => void;
+    initialSkill?: PeopleSkill | null;
 }
 
-export default function SkillsManagerModal({ isOpen, onClose, userId, onUpdate }: SkillsManagerModalProps) {
-    const [skills, setSkills] = useState<PeopleSkill[]>([]);
+export default function SkillsManagerModal({ isOpen, onClose, userId, onUpdate, initialSkill }: SkillsManagerModalProps) {
+    const [library, setLibrary] = useState<SkillLibraryItem[]>([]);
+    const [categories, setCategories] = useState<SkillCategory[]>([]);
     const [loading, setLoading] = useState(false);
-    const [newSkillName, setNewSkillName] = useState("");
-    const [newSkillLevel, setNewSkillLevel] = useState<SkillLevel>("intermediate");
+    const [selectedCategoryId, setSelectedCategoryId] = useState("");
+    const [selectedSkillId, setSelectedSkillId] = useState("");
+    const [rating, setRating] = useState("5");
+    const [isDeleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     useEffect(() => {
         if (isOpen && userId) {
-            loadSkills();
+            loadInitialData();
         }
     }, [isOpen, userId]);
 
-    const loadSkills = async () => {
+    useEffect(() => {
+        if (isOpen && initialSkill) {
+            setSelectedCategoryId(initialSkill.category_id || "");
+            setRating(initialSkill.skill_level);
+        } else if (isOpen) {
+            setSelectedCategoryId("");
+            setSelectedSkillId("");
+            setRating("5");
+        }
+    }, [isOpen, initialSkill]);
+
+    const loadInitialData = async () => {
         setLoading(true);
-        const data = await fetchPeopleSkills(userId);
-        setSkills(data);
+        const [skillLib, catLib] = await Promise.all([
+            fetchSkillLibrary(),
+            fetchSkillCategories()
+        ]);
+        setLibrary(skillLib);
+        setCategories(catLib);
+
+        if (initialSkill) {
+            const skillInLib = skillLib.find(s => s.name === initialSkill.skill_name);
+            if (skillInLib) {
+                setSelectedSkillId(skillInLib.id);
+            }
+        }
         setLoading(false);
     };
 
     const handleAddSkill = async () => {
-        if (!newSkillName.trim()) return;
+        const skillItem = library.find(s => s.id === selectedSkillId);
+        if (!skillItem) return;
 
         try {
+            setLoading(true);
             const result = await upsertPeopleSkill({
                 user_id: userId,
-                skill_name: newSkillName.trim(),
-                skill_level: newSkillLevel
+                category_id: selectedCategoryId || undefined,
+                skill_name: skillItem.name,
+                skill_level: rating
             });
 
             if (result) {
-                toast.success(`${newSkillName} added`);
-                setNewSkillName("");
-                loadSkills();
+                toast.success(initialSkill ? `${skillItem.name} updated` : `${skillItem.name} added`);
                 onUpdate?.();
+                onClose();
             }
         } catch (error) {
-            toast.error("Failed to add skill");
+            toast.error(initialSkill ? "Failed to update skill" : "Failed to add skill");
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleDeleteSkill = async (id: string, name: string) => {
-        if (confirm(`Remove ${name}?`)) {
-            const success = await deletePeopleSkill(id);
+    const confirmDelete = async () => {
+        if (!initialSkill) return;
+        try {
+            setLoading(true);
+            const success = await deletePeopleSkill(initialSkill.id);
             if (success) {
-                loadSkills();
+                toast.success(`${initialSkill.skill_name} removed`);
+                setDeleteConfirmOpen(false);
                 onUpdate?.();
+                onClose();
             }
-        }
-    };
-
-    const getLevelColor = (level: SkillLevel) => {
-        switch (level) {
-            case "expert": return "text-purple-600 bg-purple-50 border-purple-100";
-            case "advanced": return "text-blue-600 bg-blue-50 border-blue-100";
-            case "intermediate": return "text-emerald-600 bg-emerald-50 border-emerald-100";
-            case "beginner": return "text-neutral-600 bg-neutral-50 border-neutral-100";
+        } catch (error) {
+            toast.error("Failed to delete skill");
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
-        <ModalRoot open={isOpen} onOpenChange={onClose}>
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-                <ModalHeader title="Manage Skills" onClose={onClose} />
-
-                <div className="p-6 space-y-6">
-                    {/* ADD NEW */}
-                    <div className="flex gap-2 items-end">
-                        <div className="flex-1 space-y-1.5">
-                            <Input
-                                label="New Skill"
-                                value={newSkillName}
-                                onChange={(e) => setNewSkillName(e.target.value)}
-                                placeholder="e.g. React Native"
-                            />
-                        </div>
-                        <div className="w-40 space-y-1.5">
-                            <Select
-                                label="Level"
-                                value={newSkillLevel}
-                                onChange={(v) => setNewSkillLevel(v as SkillLevel)}
-                                options={[
-                                    { label: "Beginner", value: "beginner" },
-                                    { label: "Intermediate", value: "intermediate" },
-                                    { label: "Advanced", value: "advanced" },
-                                    { label: "Expert", value: "expert" },
-                                ]}
-                            />
-                        </div>
-                        <Button variant="primary" size="md" iconOnly={<Plus className="w-4 h-4" />} onClick={handleAddSkill} />
+        <>
+            <ModalRoot open={isOpen} onOpenChange={onClose}>
+                <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+                    <div className="px-8 pt-8 pb-2">
+                        <Dialog.Title asChild>
+                            <h2 className="text-2xl font-bold text-neutral-900 leading-tight">
+                                {initialSkill ? "Update Proficiency" : "Add New Skill"}
+                            </h2>
+                        </Dialog.Title>
                     </div>
 
-                    <div className="border-t border-neutral-100" />
+                    <div className="p-8 space-y-8">
+                        <div className="space-y-6">
+                            {/* Row 1: Category */}
+                            <Select
+                                label="SKILL CATEGORY"
+                                value={selectedCategoryId}
+                                onChange={(v) => {
+                                    setSelectedCategoryId(v);
+                                    setSelectedSkillId("");
+                                }}
+                                options={categories.map(c => ({ label: c.name, value: c.id }))}
+                                placeholder="Choose category..."
+                                className="rounded-2xl h-12"
+                                accentColor="blue"
+                                searchable
+                            />
 
-                    {/* LIST */}
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                        {loading ? (
-                            <div className="text-center text-sm text-neutral-400 py-4">Loading skills...</div>
-                        ) : skills.length === 0 ? (
-                            <div className="text-center text-sm text-neutral-400 py-4">No skills added yet.</div>
-                        ) : (
-                            skills.map((skill) => (
-                                <div key={skill.id} className="flex items-center justify-between p-2 rounded-lg border border-neutral-100 hover:border-blue-100 transition-colors group">
-                                    <div className="flex items-center gap-3">
-                                        <div className={clsx("text-[10px] uppercase font-bold px-1.5 py-0.5 rounded border", getLevelColor(skill.skill_level))}>
-                                            {skill.skill_level}
-                                        </div>
-                                        <div className="text-sm font-medium text-neutral-700">{skill.skill_name}</div>
-                                    </div>
-                                    <Button
-                                        variant="text"
-                                        size="sm"
-                                        className="text-neutral-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        iconOnly={<Trash2 className="w-4 h-4" />}
-                                        onClick={() => handleDeleteSkill(skill.id, skill.skill_name)}
-                                    />
+                            {/* Row 2: Skill */}
+                            <Select
+                                label="SKILL"
+                                value={selectedSkillId}
+                                onChange={setSelectedSkillId}
+                                options={library
+                                    .filter(s => !selectedCategoryId || s.category_id === selectedCategoryId)
+                                    .map(s => ({ label: s.name, value: s.id }))}
+                                placeholder={selectedCategoryId ? "Select skill..." : "Choose category first"}
+                                disabled={!selectedCategoryId}
+                                className="rounded-2xl h-12"
+                                accentColor="blue"
+                                searchable
+                            />
+
+                            {/* Row 3: Rating (1-10) - 2 Row Grid for Space */}
+                            <div className="space-y-3">
+                                <label className="text-xs font-black text-neutral-400 uppercase tracking-widest">
+                                    SKILL LEVEL / RATING (1-10)
+                                </label>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                                        <button
+                                            key={num}
+                                            type="button"
+                                            onClick={() => setRating(num.toString())}
+                                            className={clsx(
+                                                "h-10 rounded-xl text-sm font-black transition-all border shadow-sm",
+                                                rating === num.toString()
+                                                    ? "bg-blue-600 border-blue-600 text-white scale-105 z-10"
+                                                    : "bg-white border-neutral-100 text-neutral-400 hover:border-blue-200"
+                                            )}
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
                                 </div>
-                            ))
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="px-8 pb-8 flex flex-col gap-4">
+                        <div className="flex gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={onClose}
+                                className="flex-1 rounded-2xl h-12 font-bold text-neutral-500 border-neutral-200 hover:bg-neutral-50 transition-all"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleAddSkill}
+                                disabled={!selectedSkillId || loading}
+                                className={clsx(
+                                    "flex-1 rounded-2xl h-12 font-bold transition-all shadow-md !border-none",
+                                    selectedSkillId
+                                        ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                        : "bg-neutral-100 text-neutral-300 cursor-not-allowed"
+                                )}
+                            >
+                                {loading ? (initialSkill ? "Saving..." : "Adding...") : (initialSkill ? "Update Level" : "Add Skill")}
+                            </Button>
+                        </div>
+
+                        {initialSkill && (
+                            <button
+                                type="button"
+                                onClick={() => setDeleteConfirmOpen(true)}
+                                className="text-xs font-bold text-red-500 hover:text-red-600 hover:bg-red-50 py-2 rounded-xl transition-all uppercase tracking-widest active:scale-95"
+                            >
+                                Delete Skill
+                            </button>
                         )}
                     </div>
                 </div>
+            </ModalRoot>
 
-                <div className="p-4 border-t border-neutral-100 bg-neutral-50 flex justify-end">
-                    <Button variant="outline" onClick={onClose}>Done</Button>
-                </div>
-            </div>
-        </ModalRoot>
+            <DeleteSkillConfirmationModal
+                isOpen={isDeleteConfirmOpen}
+                onClose={() => setDeleteConfirmOpen(false)}
+                onConfirm={confirmDelete}
+                skillName={initialSkill?.skill_name || ""}
+            />
+        </>
     );
 }

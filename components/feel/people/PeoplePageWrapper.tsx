@@ -20,6 +20,12 @@ interface PeoplePageWrapperProps {
     children: React.ReactNode;
     sidebar?: React.ReactNode;
     tabs?: { id: string; label: string; href: string }[];
+    fabAction?: {
+        icon: React.ReactNode;
+        onClick: () => void;
+        title: string;
+        highlight?: boolean;
+    };
 }
 
 export default function PeoplePageWrapper({
@@ -28,6 +34,7 @@ export default function PeoplePageWrapper({
     children,
     sidebar,
     tabs = PEOPLE_TABS,
+    fabAction
 }: PeoplePageWrapperProps) {
     return (
         <>
@@ -47,13 +54,25 @@ export default function PeoplePageWrapper({
                     {header}
                     {children}
                 </div>
+
+                {/* Mobile FAB */}
+                {fabAction && (
+                    <div className="fixed bottom-6 right-4 z-50">
+                        <button
+                            onClick={fabAction.onClick}
+                            className={`w-14 h-14 flex items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 text-white ${fabAction.highlight ? "bg-red-500" : "bg-blue-600"}`}
+                        >
+                            {fabAction.icon}
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* DESKTOP LAYOUT */}
             <div className="hidden lg:block min-h-screen bg-neutral-50 p-6">
                 <Breadcrumb items={breadcrumbItems} />
                 <PageWrapper sidebar={sidebar} isTransparent>
-                    <div className="space-y-8 w-full animate-in fade-in duration-500">
+                    <div className="space-y-8 w-full animate-in fade-in duration-500 pb-28 lg:pb-0">
                         {header}
                         {children}
                     </div>

@@ -30,11 +30,11 @@ export function Input({
 
   const variants: Record<InputVariant, string> = {
     default:
-      "border-neutral-200 hover:border-neutral-300 focus-within:border-red-500 focus-within:outline-none focus-within:ring-0",
+      "border-neutral-200 hover:border-neutral-300 focus-within:border-blue-600 focus-within:outline-none focus-within:ring-0",
     filled:
-      "bg-neutral-50 border-neutral-200 hover:border-neutral-300 focus-within:border-red-500 focus-within:outline-none focus-within:ring-0",
+      "bg-neutral-50 border-neutral-200 hover:border-neutral-300 focus-within:border-blue-600 focus-within:outline-none focus-within:ring-0",
     subtle:
-      "bg-neutral-50 border-neutral-200 hover:border-neutral-300 focus-within:border-red-500 focus-within:outline-none focus-within:ring-0",
+      "bg-neutral-50 border-neutral-200 hover:border-neutral-300 focus-within:border-blue-600 focus-within:outline-none focus-within:ring-0",
   };
 
   // Fixed heights to match Button component
@@ -58,7 +58,7 @@ export function Input({
           variants[variant],
           sizes[inputSize],
           error &&
-          "border-red-500 text-red-600 focus-within:border-red-500",
+          "border-blue-600 text-blue-600 focus-within:border-blue-600",
           className
         )}
       >
@@ -81,7 +81,7 @@ export function Input({
       </div>
 
       {error ? (
-        <p className="text-sm text-red-600">{error}</p>
+        <p className="text-sm text-blue-600">{error}</p>
       ) : helperText ? (
         <p className="text-sm text-gray-500">{helperText}</p>
       ) : null}

@@ -6,8 +6,9 @@ export type FeedbackVisibility = 'private' | 'management';
 export interface PeopleSkill {
     id: string;
     user_id: string;
+    category_id?: string;
     skill_name: string;
-    skill_level: SkillLevel;
+    skill_level: string; // "1" to "10" or legacy enums
     created_at: string;
 }
 
@@ -48,4 +49,18 @@ export interface TeamPerformanceSnapshot {
     attendance_rate: number;
     utilization_rate: number;
     created_at: string;
+}
+
+export interface SkillCategory {
+    id: string;
+    name: string;
+    description: string;
+    status: 'active' | 'archived';
+}
+
+export interface SkillLibraryItem {
+    id: string;
+    name: string;
+    category_id: string;
+    status: 'active' | 'draft' | 'archived';
 }

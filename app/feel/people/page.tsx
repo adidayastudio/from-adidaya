@@ -16,9 +16,10 @@ import GlobalDirectory from "@/components/feel/people/GlobalDirectory";
 import PerformanceView from "@/components/feel/people/PerformanceView";
 import PeopleSetup from "@/components/feel/people/setup/PeopleSetup";
 import { EmptyState } from "@/shared/ui/overlays/EmptyState";
-import { BarChart, Settings } from "lucide-react";
+import { BarChart, Settings, Plus } from "lucide-react";
 import { PageHeader } from "@/shared/ui/headers/PageHeader";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
+import { Button } from "@/shared/ui/primitives/button/button";
 
 export default function FeelPeoplePage() {
    const { profile, loading: profileLoading } = useUserProfile();
@@ -30,26 +31,35 @@ export default function FeelPeoplePage() {
    const pathname = usePathname();
 
    const sectionParam = searchParams.get("section");
+   const uidParam = searchParams.get("uid");
    const currentSection: PeopleSection = (sectionParam as PeopleSection) || "overview";
+
+   // Trigger for Add People Drawer
+   const [triggerAddPerson, setTriggerAddPerson] = useState(0);
+
+   const loadDirectory = async () => {
+      try {
+         const data = await fetchPeopleDirectory();
+         setPeople(data);
+      } catch (error) {
+         console.error("Failed to load people directory", error);
+      } finally {
+         setLoadingData(false);
+      }
+   };
 
    // Fetch Directory Data
    useEffect(() => {
-      const loadDirectory = async () => {
-         try {
-            const data = await fetchPeopleDirectory();
-            setPeople(data);
-         } catch (error) {
-            console.error("Failed to load people directory", error);
-         } finally {
-            setLoadingData(false);
-         }
-      };
       loadDirectory();
    }, []);
 
    const handleSectionChange = (section: PeopleSection) => {
       const params = new URLSearchParams(searchParams);
       params.set("section", section);
+      // If switching to directory or overview, clear UID to avoid stuck profile
+      if (section === "directory" || section === "overview") {
+         params.delete("uid");
+      }
       router.push(`${pathname}?${params.toString()}`);
    };
 
@@ -65,7 +75,11 @@ export default function FeelPeoplePage() {
 
    const [directoryFilter, setDirectoryFilter] = useState("all");
 
-   // Find ME in the real list
+   // Determine Target Person (Defaults to "Me" if no UID)
+   // If I am admin/HR, I can view anyone. If I am staff, I can only view myself really (unless directory is public)
+   // For now assuming directory is public to logged in users.
+   const targetPersonId = uidParam || profile?.id;
+   const targetPersonData = people.find(p => p.id === targetPersonId);
    const myPersonData = people.find(p => p.id === profile?.id);
 
    // Determine View Access
@@ -78,11 +92,14 @@ export default function FeelPeoplePage() {
          case "performance": return "Performance Index";
          case "analytics": return "Team Analytics";
          case "setup": return "Setup";
-         case "personal-profile": return "My Profile";
-         case "personal-performance": return "My Performance";
+         case "personal-profile": return targetPersonData ? (targetPersonData.id === profile?.id ? "My Profile" : targetPersonData.name) : "Profile";
+         case "personal-performance": return targetPersonData ? (targetPersonData.id === profile?.id ? "My Performance" : `${targetPersonData.name}'s Performance`) : "Performance";
          default: return "Directory";
       }
    };
+
+   // FAB / Action Config
+   const onAddPerson = () => setTriggerAddPerson(prev => prev + 1);
 
    let header;
    if (currentSection === "setup") {
@@ -98,11 +115,25 @@ export default function FeelPeoplePage() {
             />
          );
       }
+   } else if (currentSection === "personal-profile" || currentSection === "personal-performance") {
+      header = null; // Let the profile component handle its own header or rely on breadcrumbs
    } else {
       header = (
          <PageHeader
             title="People Directory"
             description="Manage your team, view profiles, and track performance."
+            actions={
+               (currentSection === "directory" && isGlobalView) ? (
+                  <Button
+                     variant="primary"
+                     onClick={onAddPerson}
+                     icon={<Plus className="w-4 h-4" />}
+                     className="hidden md:flex !rounded-full !px-4 bg-blue-600 hover:bg-blue-700 text-white shadow-sm gap-2"
+                  >
+                     Add People
+                  </Button>
+               ) : null
+            }
          />
       );
    }
@@ -122,6 +153,12 @@ export default function FeelPeoplePage() {
       { id: "personal-performance", label: "My Performance", href: "/feel/people?section=personal-performance" },
    ];
 
+   const fabAction = (currentSection === "directory" && isGlobalView) ? {
+      icon: <Plus className="w-6 h-6" />,
+      onClick: onAddPerson,
+      title: "Add People"
+   } : undefined;
+
    return (
       <PeoplePageWrapper
          breadcrumbItems={[
@@ -139,23 +176,29 @@ export default function FeelPeoplePage() {
             />
          }
          tabs={mobileTabs}
+         fabAction={fabAction}
       >
-         {isLoading ? (
-            <GlobalLoading />
-         ) : isGlobalView ? (
+         {isGlobalView ? (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                {/* 1. OVERVIEW - METRICS ONLY */}
                {currentSection === "overview" && (
-                  <OrgOverview people={people} onNavigate={handleDrillDown} />
+                  isLoading ? <div className="p-8 flex justify-center"><GlobalLoading /></div> :
+                     <OrgOverview people={people} onNavigate={handleDrillDown} />
                )}
 
                {/* 2. DIRECTORY - LIST ONLY */}
                {currentSection === "directory" && (
-                  <GlobalDirectory people={people} role={profile?.role || "admin"} />
+                  isLoading ? <div className="p-8 flex justify-center"><GlobalLoading /></div> :
+                     <GlobalDirectory
+                        people={people}
+                        role={profile?.role || "admin"}
+                        triggerAddPerson={triggerAddPerson}
+                     />
                )}
 
                {currentSection === "performance" && (
-                  <PerformanceView people={people} />
+                  isLoading ? <div className="p-8 flex justify-center"><GlobalLoading /></div> :
+                     <PerformanceView people={people} />
                )}
                {currentSection === "analytics" && (
                   <EmptyState icon={BarChart} title="Team Analytics" description="Advanced charts and team distribution metrics." />
@@ -166,24 +209,27 @@ export default function FeelPeoplePage() {
 
                {/* ADMIN PERSONAL VIEW */}
                {(currentSection === "personal-profile") && (
-                  myPersonData ? (
-                     <PersonalProfile person={myPersonData} />
-                  ) : (
-                     <div className="p-8 border border-red-200 bg-red-50 rounded-xl text-center">
-                        <h3 className="text-lg font-bold text-red-700 mb-2">My Profile Not Found</h3>
-                        <p className="text-sm text-red-600 mb-4">
-                           Your user ID <strong>{profile?.id}</strong> was not found in the directory list.
-                        </p>
-                     </div>
-                  )
+                  // If loading, show spinner. If loaded and no target, show error.
+                  isLoading ? <div className="p-8 flex justify-center"><GlobalLoading /></div> :
+                     targetPersonData ? (
+                        <PersonalProfile person={targetPersonData} onUpdate={loadDirectory} />
+                     ) : (
+                        <div className="p-8 border border-red-200 bg-red-50 rounded-xl text-center">
+                           <h3 className="text-lg font-bold text-red-700 mb-2">Profile Not Found</h3>
+                           <p className="text-sm text-red-600 mb-4">
+                              The user ID <strong>{targetPersonId}</strong> was not found in the directory.
+                           </p>
+                        </div>
+                     )
                )}
 
                {(currentSection === "personal-performance") && (
-                  myPersonData ? (
-                     <PersonalPerformance person={myPersonData} />
-                  ) : (
-                     <div className="p-8 text-center text-neutral-400">Profile data missing for performance view.</div>
-                  )
+                  isLoading ? <div className="p-8 flex justify-center"><GlobalLoading /></div> :
+                     targetPersonData ? (
+                        <PersonalPerformance person={targetPersonData} />
+                     ) : (
+                        <div className="p-8 text-center text-neutral-400">Profile data missing for performance view.</div>
+                     )
                )}
 
             </div>
@@ -192,15 +238,17 @@ export default function FeelPeoplePage() {
             currentSection === 'personal-performance' ? (
                <PersonalPerformance person={myPersonData} />
             ) : (
-               <PersonalProfile person={myPersonData} />
+               <PersonalProfile person={myPersonData} onUpdate={loadDirectory} />
             )
          ) : (
-            <div className="p-12 text-center flex flex-col items-center gap-4">
-               <div className="text-red-400">Profile Not Found</div>
-               <div className="text-sm text-neutral-500 max-w-md">
-                  Your user account (ID: {profile?.id}) was not found in the people directory.
+            // Fallback if myPersonData missing but not loading (or optimistic profile exists but not in directory yet)
+            isLoading ? <div className="p-8 flex justify-center"><GlobalLoading /></div> :
+               <div className="p-12 text-center flex flex-col items-center gap-4">
+                  <div className="text-red-400">Profile Not Found</div>
+                  <div className="text-sm text-neutral-500 max-w-md">
+                     Your user account (ID: {profile?.id}) was not found in the people directory.
+                  </div>
                </div>
-            </div>
          )}
       </PeoplePageWrapper>
    );

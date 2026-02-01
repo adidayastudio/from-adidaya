@@ -14,10 +14,13 @@ export function useDataControl() {
     const [loading, setLoading] = useState(true);
 
     const fetchLocks = useCallback(async () => {
+        console.log("[useDataControl] fetchLocks START");
         const supabase = createClient();
         const { data } = await supabase
             .from('data_control_settings')
             .select('domain, sub_domain, is_locked');
+
+        console.log("[useDataControl] fetchLocks END", { data });
 
         if (data) {
             setLocks(data);

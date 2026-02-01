@@ -28,27 +28,52 @@ const DEFAULT_PARAMS: ScoringParams = {
     }
 };
 
-export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) {
+export default function ScoringLogicPanel({ isLocked, rule, ruleLoading, onRuleUpdate }: { isLocked?: boolean, rule?: PerformanceRule | null, ruleLoading?: boolean, onRuleUpdate?: () => void }) {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [rule, setRule] = useState<PerformanceRule | null>(null);
+    const [internalRule, setInternalRule] = useState<PerformanceRule | null>(null);
     const [params, setParams] = useState<ScoringParams>(DEFAULT_PARAMS);
+    const [otTarget, setOtTarget] = useState<number>(40);
 
+    // Sync from prop
     useEffect(() => {
+        if (rule) {
+            setInternalRule(rule);
+            if (rule.scoring_params) {
+                setParams({
+                    attendance: { ...DEFAULT_PARAMS.attendance, ...rule.scoring_params.attendance },
+                    task_quality: { ...DEFAULT_PARAMS.task_quality, ...rule.scoring_params.task_quality }
+                });
+            }
+            if (rule.ot_target_hours) {
+                setOtTarget(rule.ot_target_hours);
+            }
+            setLoading(false);
+        } else if (rule === null && ruleLoading === false) {
+            setLoading(false); // Loaded but empty
+        }
+    }, [rule, ruleLoading]);
+
+    // Fallback Fetch
+    useEffect(() => {
+        if (rule !== undefined) return;
         loadRule();
-    }, []);
+    }, [rule]);
 
     const loadRule = async () => {
         try {
             setLoading(true);
             const data = await fetchCurrentPerformanceRule();
-            setRule(data);
+            setInternalRule(data);
             if (data?.scoring_params) {
                 // Merge with defaults to ensure structure exists
                 setParams({
                     attendance: { ...DEFAULT_PARAMS.attendance, ...data.scoring_params.attendance },
                     task_quality: { ...DEFAULT_PARAMS.task_quality, ...data.scoring_params.task_quality }
                 });
+            }
+            if (data?.ot_target_hours) {
+                setOtTarget(data.ot_target_hours);
             }
         } catch (error) {
             console.error("Error loading rules:", error);
@@ -59,13 +84,14 @@ export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) 
     };
 
     const handleSave = async () => {
-        if (!rule) return;
+        if (!internalRule) return;
 
         try {
             setSaving(true);
             await savePerformanceRule({
-                ...rule,
-                scoring_params: params
+                ...internalRule,
+                scoring_params: params,
+                ot_target_hours: otTarget
             });
             toast.success("Scoring logic updated successfully", {
                 style: {
@@ -77,7 +103,8 @@ export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) 
                 }
             });
             // Refresh logic to ensure sync
-            loadRule();
+            if (onRuleUpdate) onRuleUpdate();
+            else loadRule();
         } catch (error) {
             console.error("Error saving rules:", JSON.stringify(error, null, 2));
             toast.error(`Failed to update: ${(error as any)?.message || 'Unknown error'}`);
@@ -161,7 +188,7 @@ export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) 
                                             ...prev,
                                             attendance: { ...prev.attendance, max_late_penalty: parseFloat(e.target.value) || 0 }
                                         }))}
-                                        className="w-full pl-3 pr-12 py-2 bg-white border border-neutral-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none font-semibold text-neutral-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-neutral-50"
+                                        className="w-full pl-3 pr-12 py-2 bg-white border border-neutral-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-semibold text-neutral-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-neutral-50"
                                         disabled={isLocked}
                                     />
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">%</span>
@@ -226,7 +253,7 @@ export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) 
                                             ...prev,
                                             task_quality: { ...prev.task_quality, max_deduction: parseFloat(e.target.value) || 0 }
                                         }))}
-                                        className="w-full pl-3 pr-12 py-2 bg-white border border-neutral-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none font-semibold text-neutral-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-neutral-50"
+                                        className="w-full pl-3 pr-12 py-2 bg-white border border-neutral-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 outline-none font-semibold text-neutral-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-neutral-50"
                                         disabled={isLocked}
                                     />
                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">%</span>
@@ -235,6 +262,41 @@ export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) 
                                     Maximum percentage that can be deducted from the total Quality Score.
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Overtime Configuration */}
+            <div className="bg-white/50 backdrop-blur-sm border border-neutral-200/60 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100">
+                        <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-neutral-900">Overtime Bonus Configuration</h4>
+                        <p className="text-xs text-neutral-500">Target hours for maximum attendance bonus</p>
+                    </div>
+                </div>
+
+                <div className="bg-neutral-50 rounded-xl p-4 border border-neutral-100 max-w-md">
+                    <div className="flex justify-between items-start mb-2">
+                        <label className="text-sm font-semibold text-neutral-700">Monthly Overtime Target</label>
+                        <span className="text-xs font-medium bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Bonus Goal</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="relative flex-1">
+                            <input
+                                type="number"
+                                value={otTarget}
+                                onChange={(e) => setOtTarget(parseFloat(e.target.value) || 0)}
+                                className="w-full pl-3 pr-12 py-2 bg-white border border-neutral-200 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none font-semibold text-neutral-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:bg-neutral-50"
+                                disabled={isLocked}
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">HRS</span>
+                        </div>
+                        <div className="text-xs text-neutral-500 w-1/2 leading-tight">
+                            Total monthly overtime hours required to receive the full performance bonus.
                         </div>
                     </div>
                 </div>
@@ -261,7 +323,7 @@ export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) 
                             <span className="text-slate-400">(</span>
                             <span className="text-orange-700 font-medium">Attendance_Rate</span>
                             <span className="text-slate-400">*</span>
-                            <span className="text-slate-900 font-bold">{rule?.weight_attendance || 0}%</span>
+                            <span className="text-slate-900 font-bold">{internalRule?.weight_attendance || 0}%</span>
                             <span className="text-slate-400">)</span>
                             <span className="text-slate-400 font-light">+</span>
                             <span className="text-xs text-slate-500 ml-2 italic">// Derived from present days - ({params.attendance.late_penalty}pts * lates)</span>
@@ -271,7 +333,7 @@ export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) 
                             <span className="text-slate-400">(</span>
                             <span className="text-blue-700 font-medium">Completion_Rate</span>
                             <span className="text-slate-400">*</span>
-                            <span className="text-slate-900 font-bold">{rule?.weight_task_completion || 0}%</span>
+                            <span className="text-slate-900 font-bold">{internalRule?.weight_task_completion || 0}%</span>
                             <span className="text-slate-400">)</span>
                             <span className="text-slate-400 font-light">+</span>
                             <span className="text-xs text-slate-500 ml-2 italic">// (Completed / Assigned) * 100</span>
@@ -281,7 +343,7 @@ export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) 
                             <span className="text-slate-400">(</span>
                             <span className="text-emerald-700 font-medium">Quality_Score</span>
                             <span className="text-slate-400">*</span>
-                            <span className="text-slate-900 font-bold">{rule?.weight_task_quality || 0}%</span>
+                            <span className="text-slate-900 font-bold">{internalRule?.weight_task_quality || 0}%</span>
                             <span className="text-slate-400">)</span>
                             <span className="text-slate-400 font-light">+</span>
                             <span className="text-xs text-slate-500 ml-2 italic">// 100 - ({params.task_quality.revision_deduction}pts * revisions)</span>
@@ -291,16 +353,16 @@ export default function ScoringLogicPanel({ isLocked }: { isLocked?: boolean }) 
                             <span className="text-slate-400">(</span>
                             <span className="text-indigo-700 font-medium">Peer_Review</span>
                             <span className="text-slate-400">*</span>
-                            <span className="text-slate-900 font-bold">{rule?.weight_peer_review || 0}%</span>
+                            <span className="text-slate-900 font-bold">{internalRule?.weight_peer_review || 0}%</span>
                             <span className="text-slate-400">)</span>
                             <span className="text-slate-400 font-light">+</span>
                             <span className="text-xs text-slate-500 ml-2 italic">// Normalized 1-5 rating to 0-100 scale</span>
                         </div>
 
-                        {rule?.overtime_bonus_enabled && (
+                        {internalRule?.overtime_bonus_enabled && (
                             <div className="flex items-center gap-2 transition-all hover:translate-x-1 duration-200">
                                 <span className="text-purple-700 font-medium">Overtime_Bonus</span>
-                                <span className="text-xs text-slate-500 ml-2 italic">// Capped at {rule.overtime_max_bonus}% of Total Score</span>
+                                <span className="text-xs text-slate-500 ml-2 italic">// Capped at {internalRule.overtime_max_bonus}% of Total Score</span>
                             </div>
                         )}
                     </div>

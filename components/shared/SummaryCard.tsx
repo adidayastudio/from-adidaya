@@ -34,7 +34,7 @@ export function SummaryCard({
     icon: React.ReactNode;
     iconBg: string;
     label: string;
-    value: string;
+    value: string | number;
     subtext?: string;
     trend?: 'up' | 'down';
     onClick?: () => void;
@@ -85,7 +85,7 @@ export function SummaryCard({
 }
 
 // Horizontal scrollable wrapper for mobile summary cards
-export function SummaryCardsRow({ children }: { children: React.ReactNode }) {
+export function SummaryCardsRow({ children, className }: { children: React.ReactNode; className?: string }) {
     return (
         <>
             {/* Mobile: horizontal scroll */}
@@ -96,7 +96,7 @@ export function SummaryCardsRow({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Desktop: grid */}
-            <div className="hidden lg:grid lg:grid-cols-4 gap-6">
+            <div className={clsx("hidden lg:grid gap-6", className || "lg:grid-cols-4")}>
                 {children}
             </div>
         </>

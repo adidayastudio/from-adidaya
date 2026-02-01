@@ -102,6 +102,9 @@ DO $$ BEGIN
   CREATE POLICY "managers_manage_skills" ON people_skills
       USING (
           EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role::text IN ('admin', 'supervisor', 'superadmin', 'hr'))
+      )
+      WITH CHECK (
+          EXISTS (SELECT 1 FROM user_roles WHERE user_id = auth.uid() AND role::text IN ('admin', 'supervisor', 'superadmin', 'hr'))
       );
 EXCEPTION WHEN duplicate_object THEN null; END $$;
 

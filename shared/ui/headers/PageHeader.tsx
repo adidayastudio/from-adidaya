@@ -1,9 +1,11 @@
 // shared/ui/headers/PageHeader.tsx
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import clsx from "clsx";
+import React from "react";
+import { ChevronLeft } from "lucide-react";
+import { Button } from "@/shared/ui/primitives/button/button";
 
 type BreadcrumbItem = {
   label: string;
@@ -11,12 +13,15 @@ type BreadcrumbItem = {
 };
 
 type PageHeaderProps = {
-  title: string;
+  title?: string;
   description?: string;
   breadcrumbs?: BreadcrumbItem[];
   meta?: React.ReactNode;
   actions?: React.ReactNode;
   className?: string;
+  allowBack?: boolean;
+  onBack?: () => void;
+  backLabel?: string;
 };
 
 /**
@@ -35,6 +40,9 @@ export function PageHeader({
   meta,
   actions,
   className,
+  allowBack,
+  onBack,
+  backLabel,
 }: PageHeaderProps) {
   return (
     <div className={clsx("space-y-3", className)}>
@@ -80,22 +88,51 @@ export function PageHeader({
       {/* Header Row */}
       <div className="flex items-start justify-between gap-4 border-b border-neutral-200 pb-4">
         {/* LEFT */}
-        <div className="min-w-0">
-          <h1 className="text-lg md:text-2xl font-bold text-neutral-900 truncate">
-            {title}
-          </h1>
+        <div className="flex items-start gap-3 min-w-0">
 
-          {description && (
-            <p className="mt-1 text-sm text-neutral-500 leading-relaxed">
-              {description}
-            </p>
+          {/* Back Button */}
+          {allowBack && (
+            backLabel ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onBack}
+                icon={<ChevronLeft className="w-4 h-4 text-neutral-400 group-hover:text-neutral-600 transition-colors" />}
+                className="mt-0.5 group pl-2.5 pr-3.5 rounded-full border-neutral-200/60 bg-white/50 hover:bg-white text-neutral-600 hover:text-neutral-900 shadow-sm hover:shadow transition-all whitespace-nowrap"
+              >
+                <span className="text-xs font-medium">{backLabel}</span>
+              </Button>
+            ) : (
+              <Button
+                variant="text"
+                size="sm"
+                onClick={onBack}
+                iconOnly={<ChevronLeft className="w-5 h-5" />}
+                className="mt-0.5 -ml-2 text-neutral-500 hover:text-neutral-900 rounded-full"
+              >
+              </Button>
+            )
           )}
 
-          {meta && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-neutral-500">
-              {meta}
-            </div>
-          )}
+          <div className="min-w-0">
+            {title && (
+              <h1 className="text-lg md:text-2xl font-bold text-neutral-900 truncate">
+                {title}
+              </h1>
+            )}
+
+            {description && (
+              <p className="mt-1 text-sm text-neutral-500 leading-relaxed">
+                {description}
+              </p>
+            )}
+
+            {meta && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-sm text-neutral-500">
+                {meta}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* RIGHT */}

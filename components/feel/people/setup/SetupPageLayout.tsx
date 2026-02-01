@@ -25,9 +25,10 @@ interface SetupPageLayoutProps {
     icon: React.ElementType;
     tabs: SetupTab[];
     onBack: () => void;
+    childProps?: any; // Optional props to pass to the active component
 }
 
-export default function SetupPageLayout({ title, description, icon: Icon, tabs, onBack }: SetupPageLayoutProps) {
+export default function SetupPageLayout({ title, description, icon: Icon, tabs, onBack, childProps }: SetupPageLayoutProps) {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -109,7 +110,7 @@ export default function SetupPageLayout({ title, description, icon: Icon, tabs, 
                 {currentIsLocked && activeTab.domain && activeTab.subDomain && (
                     <LockBanner domain={activeTab.domain} subDomain={activeTab.subDomain} />
                 )}
-                <ActiveComponent isLocked={currentIsLocked} />
+                <ActiveComponent isLocked={currentIsLocked} {...childProps} />
             </div>
         </div>
     );
