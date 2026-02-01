@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
 import { useFinance } from "./FinanceContext";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import {
     Plus,
     Landmark,
@@ -164,14 +165,7 @@ export default function FundingSourcesClient() {
     const archivedCount = sources.filter(s => s.is_archived).length;
 
     if (isLoading) {
-        return (
-            <FinancePageWrapper
-                breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Funding Sources" }]}
-                header={<FinanceHeader title="Funding Sources" subtitle="Loading..." />}
-            >
-                <div className="animate-pulse h-96 bg-neutral-100 rounded-xl" />
-            </FinancePageWrapper>
-        );
+        return <GlobalLoading />;
     }
 
     // Team-only page - show message for personal view

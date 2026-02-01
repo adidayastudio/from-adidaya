@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ArrowLeft, Save, FileCog, Loader2 } from "lucide-react";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // Correct import for App Router
 import CostSystemTabs from "../components/CostSystemTabs";
@@ -141,8 +142,8 @@ export default function SettingsDetailClient({ id }: { id: string }) {
 
     if (isLoading) {
         return (
-            <div className="flex h-screen items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-brand-red" />
+            <div className="flex h-[400px] items-center justify-center">
+                <GlobalLoading />
             </div>
         );
     }

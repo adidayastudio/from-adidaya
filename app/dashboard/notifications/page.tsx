@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import PageWrapper from "@/components/layout/PageWrapper";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import NotificationsContent, { NotificationSection } from "@/components/dashboard/notifications/NotificationsContent";
 
@@ -38,7 +39,7 @@ function NotificationsPageContent() {
 
 export default function NotificationsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-neutral-50 p-6 flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<GlobalLoading />}>
       <NotificationsPageContent />
     </Suspense>
   );

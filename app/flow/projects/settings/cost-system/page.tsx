@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Plus, Search, FileCog, Building2, MoreHorizontal, ArrowLeft, Loader2, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { useRouter } from "next/navigation";
 import PageWrapper from "@/components/layout/PageWrapper";
 import ProjectsSidebar from "@/components/flow/projects/ProjectsSidebar";
@@ -135,8 +136,8 @@ export default function CostSystemPage() {
                     {/* Table / List */}
                     <div className="bg-white border border-neutral-200 rounded-xl shadow-sm overflow-visible">
                         {isLoading ? (
-                            <div className="flex items-center justify-center h-48">
-                                <Loader2 className="w-8 h-8 animate-spin text-neutral-300" />
+                            <div className="flex items-center justify-center p-20">
+                                <GlobalLoading />
                             </div>
                         ) : filteredTemplates.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-48 text-neutral-500">

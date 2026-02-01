@@ -109,18 +109,11 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$
 DECLARE
     -- Category IDs
-    cat_design UUID;
-    cat_technical UUID;
-    cat_software UUID;
-    cat_construction UUID;
-    cat_project UUID;
-    cat_research UUID;
-    cat_comms UUID;
-    cat_finance UUID;
-    cat_digital UUID;
+    cat_id UUID;
     
     -- Skill IDs (temp)
     s_id UUID;
+    skill_name TEXT;
 BEGIN
     -- Insert Categories
     INSERT INTO skill_categories (name, description) VALUES
@@ -133,35 +126,21 @@ BEGIN
         ('Communication & Media', 'Visual and verbal communication skills'),
         ('Finance & Administration', 'Budgeting and administrative management'),
         ('Digital & IT', 'Information technology and system support')
-    ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
-    RETURNING id INTO s_id; -- Just to handle the return, we'll fetch IDs below
-
-    -- Fetch IDs for seeding
-    SELECT id INTO cat_design FROM skill_categories WHERE name = 'Design & Concept';
-    SELECT id INTO cat_technical FROM skill_categories WHERE name = 'Technical & Engineering';
-    SELECT id INTO cat_software FROM skill_categories WHERE name = 'Software & Tools';
-    SELECT id INTO cat_construction FROM skill_categories WHERE name = 'Construction & Site';
-    SELECT id INTO cat_project FROM skill_categories WHERE name = 'Project & Management';
-    SELECT id INTO cat_research FROM skill_categories WHERE name = 'Research & Analysis';
-    SELECT id INTO cat_comms FROM skill_categories WHERE name = 'Communication & Media';
-    SELECT id INTO cat_finance FROM skill_categories WHERE name = 'Finance & Administration';
-    SELECT id INTO cat_digital FROM skill_categories WHERE name = 'Digital & IT';
+    ON CONFLICT (name) DO NOTHING;
 
     -- --- Design & Concept ---
-    IF cat_design IS NOT NULL THEN
-        -- Insert Skills
-        FOREACH s_id IN ARRAY ARRAY(
-            INSERT INTO skill_library (name, category_id) VALUES
-                ('Architectural Design', cat_design),
-                ('Interior Design', cat_design),
-                ('Space Planning', cat_design),
-                ('Concept Development', cat_design),
-                ('Design Presentation', cat_design),
-                ('Visual Storytelling', cat_design)
-            ON CONFLICT (name, category_id) DO NOTHING
-            RETURNING id
-        ) LOOP
-            -- Related Departments
+    SELECT id INTO cat_id FROM skill_categories WHERE name = 'Design & Concept';
+    IF cat_id IS NOT NULL THEN
+        FOREACH skill_name IN ARRAY ARRAY['Architectural Design', 'Interior Design', 'Space Planning', 'Concept Development', 'Design Presentation', 'Visual Storytelling']
+        LOOP
+            INSERT INTO skill_library (name, category_id) VALUES (skill_name, cat_id)
+            ON CONFLICT (name, category_id) DO UPDATE SET updated_at = now()
+            RETURNING id INTO s_id;
+            
+            IF s_id IS NULL THEN
+                SELECT id INTO s_id FROM skill_library WHERE name = skill_name AND category_id = cat_id;
+            END IF;
+
             INSERT INTO skill_related_departments (skill_id, department_name) VALUES
                 (s_id, 'Architecture, Interior, and Design'),
                 (s_id, 'Urban Design and Landscape')
@@ -170,17 +149,18 @@ BEGIN
     END IF;
 
     -- --- Technical & Engineering ---
-    IF cat_technical IS NOT NULL THEN
-        FOREACH s_id IN ARRAY ARRAY(
-            INSERT INTO skill_library (name, category_id) VALUES
-                ('Structural Analysis', cat_technical),
-                ('MEP System Design', cat_technical),
-                ('Construction Detailing', cat_technical),
-                ('Shop Drawing Review', cat_technical),
-                ('Material Specification', cat_technical)
-            ON CONFLICT (name, category_id) DO NOTHING
-            RETURNING id
-        ) LOOP
+    SELECT id INTO cat_id FROM skill_categories WHERE name = 'Technical & Engineering';
+    IF cat_id IS NOT NULL THEN
+        FOREACH skill_name IN ARRAY ARRAY['Structural Analysis', 'MEP System Design', 'Construction Detailing', 'Shop Drawing Review', 'Material Specification']
+        LOOP
+            INSERT INTO skill_library (name, category_id) VALUES (skill_name, cat_id)
+            ON CONFLICT (name, category_id) DO UPDATE SET updated_at = now()
+            RETURNING id INTO s_id;
+            
+            IF s_id IS NULL THEN
+                 SELECT id INTO s_id FROM skill_library WHERE name = skill_name AND category_id = cat_id;
+            END IF;
+
             INSERT INTO skill_related_departments (skill_id, department_name) VALUES
                 (s_id, 'Structure and MEP Engineering'),
                 (s_id, 'Procurement and Construction')
@@ -189,20 +169,18 @@ BEGIN
     END IF;
 
     -- --- Software & Tools ---
-    IF cat_software IS NOT NULL THEN
-        FOREACH s_id IN ARRAY ARRAY(
-            INSERT INTO skill_library (name, category_id) VALUES
-                ('AutoCAD', cat_software),
-                ('SketchUp', cat_software),
-                ('Archicad', cat_software),
-                ('Revit', cat_software),
-                ('Rhino', cat_software),
-                ('Enscape / Lumion', cat_software),
-                ('Microsoft Excel', cat_software),
-                ('Project Management Tools', cat_software)
-            ON CONFLICT (name, category_id) DO NOTHING
-            RETURNING id
-        ) LOOP
+    SELECT id INTO cat_id FROM skill_categories WHERE name = 'Software & Tools';
+    IF cat_id IS NOT NULL THEN
+        FOREACH skill_name IN ARRAY ARRAY['AutoCAD', 'SketchUp', 'Archicad', 'Revit', 'Rhino', 'Enscape / Lumion', 'Microsoft Excel', 'Project Management Tools']
+        LOOP
+            INSERT INTO skill_library (name, category_id) VALUES (skill_name, cat_id)
+            ON CONFLICT (name, category_id) DO UPDATE SET updated_at = now()
+            RETURNING id INTO s_id;
+             
+            IF s_id IS NULL THEN
+                 SELECT id INTO s_id FROM skill_library WHERE name = skill_name AND category_id = cat_id;
+            END IF;
+
             INSERT INTO skill_related_positions (skill_id, position_name) VALUES
                 (s_id, 'Architect'),
                 (s_id, 'Architectural Designer'),
@@ -214,17 +192,18 @@ BEGIN
     END IF;
 
     -- --- Construction & Site ---
-    IF cat_construction IS NOT NULL THEN
-        FOREACH s_id IN ARRAY ARRAY(
-            INSERT INTO skill_library (name, category_id) VALUES
-                ('Site Supervision', cat_construction),
-                ('Construction Scheduling', cat_construction),
-                ('Quality Control', cat_construction),
-                ('Safety Management (K3)', cat_construction),
-                ('BOQ & Cost Control', cat_construction)
-            ON CONFLICT (name, category_id) DO NOTHING
-            RETURNING id
-        ) LOOP
+    SELECT id INTO cat_id FROM skill_categories WHERE name = 'Construction & Site';
+    IF cat_id IS NOT NULL THEN
+        FOREACH skill_name IN ARRAY ARRAY['Site Supervision', 'Construction Scheduling', 'Quality Control', 'Safety Management (K3)', 'BOQ & Cost Control']
+        LOOP
+            INSERT INTO skill_library (name, category_id) VALUES (skill_name, cat_id)
+            ON CONFLICT (name, category_id) DO UPDATE SET updated_at = now()
+            RETURNING id INTO s_id;
+            
+             IF s_id IS NULL THEN
+                 SELECT id INTO s_id FROM skill_library WHERE name = skill_name AND category_id = cat_id;
+            END IF;
+
             INSERT INTO skill_related_positions (skill_id, position_name) VALUES
                 (s_id, 'Site Manager'),
                 (s_id, 'Procurement Officer'),
@@ -234,17 +213,18 @@ BEGIN
     END IF;
 
     -- --- Project & Management ---
-    IF cat_project IS NOT NULL THEN
-        FOREACH s_id IN ARRAY ARRAY(
-            INSERT INTO skill_library (name, category_id) VALUES
-                ('Project Planning', cat_project),
-                ('Team Coordination', cat_project),
-                ('Risk Management', cat_project),
-                ('Client Management', cat_project),
-                ('Decision Making', cat_project)
-            ON CONFLICT (name, category_id) DO NOTHING
-            RETURNING id
-        ) LOOP
+    SELECT id INTO cat_id FROM skill_categories WHERE name = 'Project & Management';
+    IF cat_id IS NOT NULL THEN
+        FOREACH skill_name IN ARRAY ARRAY['Project Planning', 'Team Coordination', 'Risk Management', 'Client Management', 'Decision Making']
+        LOOP
+            INSERT INTO skill_library (name, category_id) VALUES (skill_name, cat_id)
+            ON CONFLICT (name, category_id) DO UPDATE SET updated_at = now()
+            RETURNING id INTO s_id;
+            
+             IF s_id IS NULL THEN
+                 SELECT id INTO s_id FROM skill_library WHERE name = skill_name AND category_id = cat_id;
+            END IF;
+
             INSERT INTO skill_related_positions (skill_id, position_name) VALUES
                 (s_id, 'Project Manager'),
                 (s_id, 'Supervisor'),
@@ -254,17 +234,18 @@ BEGIN
     END IF;
 
      -- --- Research & Analysis ---
-    IF cat_research IS NOT NULL THEN
-        FOREACH s_id IN ARRAY ARRAY(
-            INSERT INTO skill_library (name, category_id) VALUES
-                ('Design Research', cat_research),
-                ('Feasibility Study', cat_research),
-                ('Site Analysis', cat_research),
-                ('Market Research', cat_research),
-                ('Data Analysis', cat_research)
-            ON CONFLICT (name, category_id) DO NOTHING
-            RETURNING id
-        ) LOOP
+    SELECT id INTO cat_id FROM skill_categories WHERE name = 'Research & Analysis';
+    IF cat_id IS NOT NULL THEN
+        FOREACH skill_name IN ARRAY ARRAY['Design Research', 'Feasibility Study', 'Site Analysis', 'Market Research', 'Data Analysis']
+        LOOP
+            INSERT INTO skill_library (name, category_id) VALUES (skill_name, cat_id)
+            ON CONFLICT (name, category_id) DO UPDATE SET updated_at = now()
+            RETURNING id INTO s_id;
+            
+             IF s_id IS NULL THEN
+                 SELECT id INTO s_id FROM skill_library WHERE name = skill_name AND category_id = cat_id;
+            END IF;
+
             INSERT INTO skill_related_departments (skill_id, department_name) VALUES
                 (s_id, 'Research and Business Development'),
                 (s_id, 'Urban Design and Landscape')
@@ -273,17 +254,18 @@ BEGIN
     END IF;
 
     -- --- Communication & Media ---
-    IF cat_comms IS NOT NULL THEN
-        FOREACH s_id IN ARRAY ARRAY(
-            INSERT INTO skill_library (name, category_id) VALUES
-                ('Graphic Design', cat_comms),
-                ('Branding', cat_comms),
-                ('Social Media Management', cat_comms),
-                ('Presentation Design', cat_comms),
-                ('Copywriting', cat_comms)
-            ON CONFLICT (name, category_id) DO NOTHING
-            RETURNING id
-        ) LOOP
+    SELECT id INTO cat_id FROM skill_categories WHERE name = 'Communication & Media';
+    IF cat_id IS NOT NULL THEN
+        FOREACH skill_name IN ARRAY ARRAY['Graphic Design', 'Branding', 'Social Media Management', 'Presentation Design', 'Copywriting']
+        LOOP
+            INSERT INTO skill_library (name, category_id) VALUES (skill_name, cat_id)
+            ON CONFLICT (name, category_id) DO UPDATE SET updated_at = now()
+            RETURNING id INTO s_id;
+            
+             IF s_id IS NULL THEN
+                 SELECT id INTO s_id FROM skill_library WHERE name = skill_name AND category_id = cat_id;
+            END IF;
+
             INSERT INTO skill_related_positions (skill_id, position_name) VALUES
                 (s_id, 'Graphics Designer'),
                 (s_id, 'Social Media Specialist'),
@@ -293,17 +275,18 @@ BEGIN
     END IF;
 
     -- --- Finance & Administration ---
-    IF cat_finance IS NOT NULL THEN
-        FOREACH s_id IN ARRAY ARRAY(
-            INSERT INTO skill_library (name, category_id) VALUES
-                ('Budgeting', cat_finance),
-                ('Financial Reporting', cat_finance),
-                ('Payroll Administration', cat_finance),
-                ('Procurement Administration', cat_finance),
-                ('Contract Management', cat_finance)
-            ON CONFLICT (name, category_id) DO NOTHING
-            RETURNING id
-        ) LOOP
+    SELECT id INTO cat_id FROM skill_categories WHERE name = 'Finance & Administration';
+    IF cat_id IS NOT NULL THEN
+        FOREACH skill_name IN ARRAY ARRAY['Budgeting', 'Financial Reporting', 'Payroll Administration', 'Procurement Administration', 'Contract Management']
+        LOOP
+            INSERT INTO skill_library (name, category_id) VALUES (skill_name, cat_id)
+            ON CONFLICT (name, category_id) DO UPDATE SET updated_at = now()
+            RETURNING id INTO s_id;
+            
+             IF s_id IS NULL THEN
+                 SELECT id INTO s_id FROM skill_library WHERE name = skill_name AND category_id = cat_id;
+            END IF;
+
             INSERT INTO skill_related_departments (skill_id, department_name) VALUES
                 (s_id, 'Human Capital, Finance, and Resources'),
                 (s_id, 'Procurement and Construction')
@@ -312,17 +295,18 @@ BEGIN
     END IF;
 
     -- --- Digital & IT ---
-    IF cat_digital IS NOT NULL THEN
-        FOREACH s_id IN ARRAY ARRAY(
-            INSERT INTO skill_library (name, category_id) VALUES
-                ('System Administration', cat_digital),
-                ('Web Development', cat_digital),
-                ('Database Management', cat_digital),
-                ('Automation & Integration', cat_digital),
-                ('IT Support', cat_digital)
-            ON CONFLICT (name, category_id) DO NOTHING
-            RETURNING id
-        ) LOOP
+    SELECT id INTO cat_id FROM skill_categories WHERE name = 'Digital & IT';
+    IF cat_id IS NOT NULL THEN
+        FOREACH skill_name IN ARRAY ARRAY['System Administration', 'Web Development', 'Database Management', 'Automation & Integration', 'IT Support']
+        LOOP
+            INSERT INTO skill_library (name, category_id) VALUES (skill_name, cat_id)
+            ON CONFLICT (name, category_id) DO UPDATE SET updated_at = now()
+            RETURNING id INTO s_id;
+            
+             IF s_id IS NULL THEN
+                 SELECT id INTO s_id FROM skill_library WHERE name = skill_name AND category_id = cat_id;
+            END IF;
+
             INSERT INTO skill_related_positions (skill_id, position_name) VALUES
                 (s_id, 'IT Development Officer')
             ON CONFLICT DO NOTHING;

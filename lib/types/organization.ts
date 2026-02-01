@@ -21,6 +21,8 @@ export interface OrganizationPosition {
     department_name?: string;
     department_abbr?: string;
     department_full_code?: string;
+    system_role_id?: string;
+    system_role_name?: string;
     usageCount?: number;
 }
 
@@ -43,6 +45,28 @@ export interface OrganizationSystemRole {
     order_index: number;
     status: EntityStatus;
     usageCount?: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export type VisibilityLevel = 'Public' | 'Internal' | 'Restricted' | 'Sensitive';
+export type VisibilityScope = 'Self' | 'Team' | 'Global';
+
+export interface OrganizationRolePermission {
+    id: string;
+    role_id: string;
+    // Capabilities
+    can_view_directory: boolean;
+    can_manage_people: boolean;
+    can_view_performance_summary: boolean;
+    can_view_performance_detail: boolean;
+    // Data Visibility
+    visibility_level: VisibilityLevel;
+    visibility_scope: VisibilityScope;
+    // Approval Authority
+    can_approve_leave: boolean;
+    can_approve_overtime: boolean;
+    can_approve_expense: boolean;
     created_at?: string;
     updated_at?: string;
 }

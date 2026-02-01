@@ -9,6 +9,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { useProject } from "@/components/flow/project-context";
 import { Download, Save, Send, Plus, RotateCcw } from "lucide-react";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 import type {
   WBSMode,
@@ -323,7 +324,7 @@ export default function ProjectSetupWBSPage() {
 
   // === CONDITIONAL RETURNS (must be after all hooks) ===
   if (isLoading) {
-    return <div className="p-12 text-center text-neutral-500">Loading project...</div>;
+    return <GlobalLoading />;
   }
 
   if (error || !project) {

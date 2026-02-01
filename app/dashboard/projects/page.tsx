@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Breadcrumb, PageHeader } from "@/shared/ui/headers/PageHeader";
 import PageWrapper from "@/components/layout/PageWrapper";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import MyProjectsContent, { MyProjectsSection } from "@/components/dashboard/my-projects/MyProjectsContent";
 
@@ -46,7 +47,7 @@ function ProjectsPageContent() {
 
 export default function MyProjectsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-neutral-50 p-6 flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<GlobalLoading />}>
       <ProjectsPageContent />
     </Suspense>
   );

@@ -23,6 +23,7 @@ import {
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { generateSmartInitials } from "@/lib/initials";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 interface CrewDirectoryProps {
     role?: string;
@@ -489,11 +490,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
     // Loading state
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            </div>
-        );
+        return <GlobalLoading />;
     }
 
     return (

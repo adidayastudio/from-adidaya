@@ -18,6 +18,7 @@ import PeopleSetup from "@/components/feel/people/setup/PeopleSetup";
 import { EmptyState } from "@/shared/ui/overlays/EmptyState";
 import { BarChart, Settings } from "lucide-react";
 import { PageHeader } from "@/shared/ui/headers/PageHeader";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 export default function FeelPeoplePage() {
    const { profile, loading: profileLoading } = useUserProfile();
@@ -140,7 +141,7 @@ export default function FeelPeoplePage() {
          tabs={mobileTabs}
       >
          {isLoading ? (
-            <div className="p-12 text-center text-neutral-400">Loading directory...</div>
+            <GlobalLoading />
          ) : isGlobalView ? (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                {/* 1. OVERVIEW - METRICS ONLY */}

@@ -13,6 +13,7 @@ import StagePC from "@/components/flow/projects/project-detail/setup/stages/Stag
 import StageCN from "@/components/flow/projects/project-detail/setup/stages/StageCN";
 import StageHO from "@/components/flow/projects/project-detail/setup/stages/StageHO";
 import { useProject } from "@/components/flow/project-context";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Download, Plus } from "lucide-react";
 
@@ -33,7 +34,7 @@ export default function ProjectSetupStagesPage() {
   const [activeStage, setActiveStage] = useState<StageKey>("KO");
 
   if (isLoading) {
-    return <div className="p-12 text-center text-neutral-500">Loading...</div>;
+    return <GlobalLoading />;
   }
 
   if (error || !project) {

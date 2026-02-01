@@ -13,7 +13,10 @@ export interface Skill {
     category?: SkillCategory; // joined
     status: "active" | "draft" | "archived";
     related_departments?: string[]; // aggregated from join
-    related_positions?: string[]; // aggregated from join
+    related_positions: string[];
+    created_at?: string;
+    // Joined fields
+    category_name?: string;
 }
 
 export interface SkillFormData {

@@ -25,6 +25,7 @@ import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 import { RequestTypeSelector, RequestType } from "./modules/RequestTypeSelector";
 import { PersonalPurchaseRow, PersonalReimburseRow } from "./modules/PersonalTransactionRows";
 import { fetchFinanceDashboardData } from "@/lib/client/finance-api";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 // Sort by: 1) deadline closest (expired first), 2) highest amount
 function sortAttentionItems(items: any[]): any[] {
@@ -79,7 +80,7 @@ export default function FinanceOverviewClient() {
     const isLoading = isAuthLoading || isLoadingData || !data;
 
     if (isLoading) {
-        return <div className="p-8 text-center text-neutral-500">Loading finance data...</div>;
+        return <GlobalLoading />;
     }
 
     return (

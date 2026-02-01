@@ -24,6 +24,7 @@ import { useClock } from "@/hooks/useClock";
 import { useClockData } from "@/hooks/useClockData";
 import { LeaveRequest, OvertimeLog, BusinessTrip } from "@/lib/api/clock";
 import { PageHeader } from "@/shared/ui/headers/PageHeader";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 const VALID_SECTIONS: ClockSection[] = ["overview", "timesheets", "leaves", "overtime", "business-trip", "approvals"];
 
@@ -382,7 +383,7 @@ function ClockPageContent() {
 
 export default function ClockPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-neutral-50 p-6 flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<GlobalLoading />}>
       <ClockPageContent />
     </Suspense>
   );

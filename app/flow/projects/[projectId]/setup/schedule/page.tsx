@@ -14,6 +14,7 @@ import ScheduleTimelineView from "@/components/flow/projects/project-detail/setu
 import ScheduleGanttView from "@/components/flow/projects/project-detail/setup/schedule/views/ScheduleGanttView";
 import ScheduleSCurveView from "@/components/flow/projects/project-detail/setup/schedule/views/ScheduleSCurveView";
 import { useProject } from "@/components/flow/project-context";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 // RAB IMPORTS
 import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
@@ -200,7 +201,7 @@ export default function ProjectSetupSchedulePage() {
 
   // === CONDITIONAL RETURNS (must be after all hooks) ===
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center bg-neutral-50 text-neutral-500">Loading...</div>;
+    return <GlobalLoading />;
   }
 
   if (error || !project) {

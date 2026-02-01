@@ -12,7 +12,7 @@ import {
 } from "@/lib/api/organization";
 import { SortableTable, Column } from "../components/SortableTable";
 
-export default function DepartmentsTable() {
+export default function DepartmentsTable({ isLocked }: { isLocked?: boolean }) {
     const [departments, setDepartments] = useState<OrganizationDepartment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -186,6 +186,7 @@ export default function DepartmentsTable() {
                         size="sm"
                         icon={<Pencil className="w-4 h-4 text-neutral-500" />}
                         onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                        disabled={isLocked}
                     />
                     <Button
                         variant="text"
@@ -193,6 +194,7 @@ export default function DepartmentsTable() {
                         className="text-red-500 hover:bg-red-50"
                         icon={<Trash2 className="w-4 h-4" />}
                         onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
+                        disabled={isLocked}
                     />
                 </div>
             )
@@ -246,6 +248,7 @@ export default function DepartmentsTable() {
                             iconOnly={<Pencil className="w-4 h-4 text-blue-600" />}
                             className="!p-1.5 h-8 w-8 hover:bg-blue-50 bg-blue-50/50 rounded-full"
                             onClick={() => handleEdit(item)}
+                            disabled={isLocked}
                         />
                         <Button
                             variant="text"
@@ -253,6 +256,7 @@ export default function DepartmentsTable() {
                             iconOnly={<Trash2 className="w-4 h-4 text-red-600" />}
                             className="!p-1.5 h-8 w-8 hover:bg-red-50 bg-red-50/50 rounded-full"
                             onClick={() => handleDeleteClick(item)}
+                            disabled={isLocked}
                         />
                     </div>
                 </div>
@@ -283,6 +287,7 @@ export default function DepartmentsTable() {
                     className="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 !rounded-full"
                     icon={<Plus className="w-4 h-4" />}
                     onClick={handleAdd}
+                    disabled={isLocked}
                 >
                     Add Department
                 </Button>
@@ -386,11 +391,11 @@ export default function DepartmentsTable() {
                                 <Button
                                     type="submit"
                                     loading={isSaving}
-                                    disabled={isSaving}
+                                    disabled={isSaving || isLocked}
                                     className="bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 border-transparent min-w-[160px] relative overflow-hidden"
                                 >
                                     <span className={isSaving ? "opacity-0" : "opacity-100"}>
-                                        {editingDepartment ? "Update Department" : "Save Changes"}
+                                        {isLocked ? "Governance Locked" : editingDepartment ? "Update Department" : "Save Changes"}
                                     </span>
                                 </Button>
                             </div>

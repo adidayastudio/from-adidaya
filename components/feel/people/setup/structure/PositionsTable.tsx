@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Archive as ArchiveIcon, Undo2, Pencil, Trash2, AlertTriangle, X } from "lucide-react";
+import { Plus, Archive as ArchiveIcon, Undo2, Pencil, Trash2, AlertTriangle, X, ShieldCheck } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { OrganizationPosition, OrganizationDepartment, EntityStatus } from "@/lib/types/organization";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/lib/api/organization";
 import { SortableTable, Column } from "../components/SortableTable";
 
-export default function PositionsTable() {
+export default function PositionsTable({ isLocked }: { isLocked?: boolean }) {
     const [positions, setPositions] = useState<OrganizationPosition[]>([]);
     const [departments, setDepartments] = useState<OrganizationDepartment[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -178,6 +178,7 @@ export default function PositionsTable() {
                         size="sm"
                         icon={<Pencil className="w-4 h-4 text-neutral-500" />}
                         onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                        disabled={isLocked}
                     />
                     <Button
                         variant="text"
@@ -185,6 +186,7 @@ export default function PositionsTable() {
                         className="text-red-500 hover:bg-red-50"
                         icon={<Trash2 className="w-4 h-4" />}
                         onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
+                        disabled={isLocked}
                     />
                 </div>
             )
@@ -202,8 +204,11 @@ export default function PositionsTable() {
 
                 {/* Middle: Info */}
                 <div className="flex-1 min-w-0">
-                    <div className="text-[10px] font-mono font-bold text-neutral-400 mb-0.5 tracking-wider uppercase">
-                        {item.department_abbr} · {item.category_code}
+                    <div className="text-[10px] font-mono font-bold text-neutral-400 mb-1 tracking-wider uppercase flex items-center gap-2">
+                        <span>{item.department_abbr} · {item.category_code}</span>
+                        {item.system_role_name && (
+                            <span className="px-1.5 py-0.5 bg-blue-50 text-blue-500 rounded font-bold">{item.system_role_name}</span>
+                        )}
                     </div>
                     <h4 className="font-semibold text-neutral-900 text-sm leading-snug truncate">
                         {item.name}
@@ -225,6 +230,7 @@ export default function PositionsTable() {
                             iconOnly={<Pencil className="w-4 h-4 text-blue-600" />}
                             className="!p-1.5 h-8 w-8 hover:bg-blue-50 bg-blue-50/50 rounded-full"
                             onClick={() => handleEdit(item)}
+                            disabled={isLocked}
                         />
                         <Button
                             variant="text"
@@ -232,6 +238,7 @@ export default function PositionsTable() {
                             iconOnly={<Trash2 className="w-4 h-4 text-red-600" />}
                             className="!p-1.5 h-8 w-8 hover:bg-red-50 bg-red-50/50 rounded-full"
                             onClick={() => handleDeleteClick(item)}
+                            disabled={isLocked}
                         />
                     </div>
                 </div>
@@ -261,6 +268,7 @@ export default function PositionsTable() {
                     className="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 !rounded-full"
                     icon={<Plus className="w-4 h-4" />}
                     onClick={handleAdd}
+                    disabled={isLocked}
                 >
                     Add Position
                 </Button>
@@ -380,11 +388,11 @@ export default function PositionsTable() {
                                 <Button
                                     type="submit"
                                     loading={isSaving}
-                                    disabled={isSaving}
+                                    disabled={isSaving || isLocked}
                                     className="bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 border-transparent min-w-[160px] relative overflow-hidden"
                                 >
                                     <span className={isSaving ? "opacity-0" : "opacity-100"}>
-                                        {editingPosition ? "Update Position" : "Save Changes"}
+                                        {isLocked ? "Governance Locked" : editingPosition ? "Update Position" : "Save Changes"}
                                     </span>
                                 </Button>
                             </div>

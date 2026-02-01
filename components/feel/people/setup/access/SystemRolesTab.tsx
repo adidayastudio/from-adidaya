@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from 'react';
 import {
     Plus,
@@ -8,7 +6,8 @@ import {
     ShieldCheck,
     Loader2,
     X,
-    AlertCircle
+    AlertCircle,
+    Info
 } from 'lucide-react';
 import {
     fetchSystemRoles,
@@ -20,7 +19,7 @@ import { OrganizationSystemRole } from '@/lib/types/organization';
 import { SortableTable } from '../components/SortableTable';
 import { Button } from '@/shared/ui/primitives/button/button';
 
-export default function SystemRolesTable() {
+export default function SystemRolesTab({ isLocked }: { isLocked?: boolean }) {
     const [roles, setRoles] = useState<OrganizationSystemRole[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -30,23 +29,13 @@ export default function SystemRolesTable() {
     const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
-        loadRoles();
+        loadData();
+    }, []);
 
-        // Mobile FAB listener
-        const handleFabAction = (e: CustomEvent) => {
-            if (e.detail?.id === 'STRUCTURE_ADD') {
-                handleAdd();
-            }
-        };
-
-        window.addEventListener('fab-action', handleFabAction as EventListener);
-        return () => window.removeEventListener('fab-action', handleFabAction as EventListener);
-    }, [roles.length]); // Dependencies to ensure roles.length is accessible in handleAdd
-
-    const loadRoles = async () => {
+    const loadData = async () => {
         setIsLoading(true);
-        const data = await fetchSystemRoles();
-        setRoles(data);
+        const roleData = await fetchSystemRoles();
+        setRoles(roleData);
         setIsLoading(false);
     };
 
@@ -105,7 +94,7 @@ export default function SystemRolesTable() {
         await updateSystemRoleOrder(itemsWithIndex);
     };
 
-    const columns = [
+    const roleColumns = [
         {
             header: "Code",
             key: "code" as keyof OrganizationSystemRole,
@@ -158,6 +147,7 @@ export default function SystemRolesTable() {
                         size="sm"
                         onClick={(e) => { e.stopPropagation(); handleEdit(role); }}
                         className="h-8 w-8 p-0 rounded-full hover:bg-neutral-100"
+                        disabled={isLocked}
                     >
                         <Pencil className="w-4 h-4 text-neutral-400 hover:text-blue-600" />
                     </Button>
@@ -166,6 +156,7 @@ export default function SystemRolesTable() {
                         size="sm"
                         onClick={(e) => { e.stopPropagation(); handleDeleteClick(role); }}
                         className="h-8 w-8 p-0 rounded-full hover:bg-red-50 text-red-600"
+                        disabled={isLocked}
                     >
                         <Trash2 className="w-4 h-4" />
                     </Button>
@@ -175,37 +166,35 @@ export default function SystemRolesTable() {
     ];
 
     const MobileCard = ({ role }: { role: OrganizationSystemRole }) => (
-        <div className="bg-white rounded-xl p-4 border border-neutral-200 shadow-sm flex items-center gap-5">
-            {/* Left: Icon Circle */}
-            <div className="w-12 h-12 rounded-full bg-neutral-100 border border-neutral-200 flex items-center justify-center shrink-0">
-                <ShieldCheck className="w-6 h-6 text-neutral-700" />
+        <div className="bg-white rounded-2xl p-4 border border-neutral-200 shadow-sm flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-5 h-5" />
             </div>
 
-            {/* Middle: Info */}
-            <div className="flex-1 min-w-0">
-                <div className="text-[10px] font-mono font-bold text-neutral-400 mb-0.5 tracking-wider uppercase truncate">
-                    {role.code}
-                </div>
-                <h4 className="font-semibold text-neutral-900 text-sm leading-snug truncate">
+            <div className="flex-1 min-w-0 flex flex-col">
+                <span className="font-bold text-neutral-900 text-sm leading-tight truncate">
                     {role.name}
-                </h4>
+                </span>
+                <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest truncate">
+                    {role.code}
+                </span>
             </div>
 
-            {/* Right: Status & Actions */}
             <div className="flex flex-col items-end gap-2 shrink-0">
-                <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${role.status === 'Active'
+                <span className={`text-[10px] uppercase font-black tracking-widest px-2 py-0.5 rounded-full ${role.status === 'Active'
                     ? "bg-green-50 text-green-700 border border-green-100"
                     : "bg-neutral-100 text-neutral-500 border border-neutral-200"
                     }`}>
                     {role.status}
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                     <Button
                         variant="text"
                         size="sm"
                         iconOnly={<Pencil className="w-4 h-4 text-blue-600" />}
                         className="!p-1.5 h-8 w-8 hover:bg-blue-50 bg-blue-50/50 rounded-full"
                         onClick={() => handleEdit(role)}
+                        disabled={isLocked}
                     />
                     <Button
                         variant="text"
@@ -213,6 +202,7 @@ export default function SystemRolesTable() {
                         iconOnly={<Trash2 className="w-4 h-4 text-red-600" />}
                         className="!p-1.5 h-8 w-8 hover:bg-red-50 bg-red-50/50 rounded-full"
                         onClick={() => handleDeleteClick(role)}
+                        disabled={isLocked}
                     />
                 </div>
             </div>
@@ -220,42 +210,61 @@ export default function SystemRolesTable() {
     );
 
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <h2 className="text-lg font-bold text-neutral-900">System Roles</h2>
-                <Button
-                    className="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 !rounded-full"
-                    icon={<Plus className="w-4 h-4" />}
-                    onClick={handleAdd}
-                >
-                    Add Role
-                </Button>
+        <div className="space-y-12">
+            <div className="space-y-6">
+                <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 flex items-start gap-4 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shrink-0 shadow-lg shadow-blue-200">
+                        <Info className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-bold text-blue-900 mb-1">System Roles Policy</h3>
+                        <p className="text-xs text-blue-700/80 leading-relaxed">
+                            System Roles control access policies. They are independent from organizational positions.
+                            <span className="block mt-1 font-semibold">Editing roles here affects all mapped users regardless of their department.</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h2 className="text-lg font-bold text-neutral-900 tracking-tight">Configured Roles</h2>
+                        <p className="text-xs text-neutral-500">Manage definitions and priority order of system roles.</p>
+                    </div>
+                    <Button
+                        className="flex bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 !rounded-xl h-10"
+                        icon={<Plus className="w-4 h-4" />}
+                        onClick={handleAdd}
+                        disabled={isLocked}
+                    >
+                        Add Role
+                    </Button>
+                </div>
+
+                <div className="hidden md:block">
+                    <SortableTable<OrganizationSystemRole>
+                        data={roles}
+                        columns={roleColumns}
+                        isLoading={isLoading}
+                        onReorder={handleReorder}
+                    />
+                </div>
+
+                <div className="md:hidden space-y-3">
+                    {isLoading ? (
+                        <div className="text-center py-8 text-neutral-500">Loading...</div>
+                    ) : roles.length === 0 ? (
+                        <div className="text-center py-8 text-neutral-500">No roles found</div>
+                    ) : (
+                        roles.map(role => (
+                            <MobileCard key={role.id} role={role} />
+                        ))
+                    )}
+                </div>
             </div>
 
-            <div className="hidden md:block">
-                <SortableTable<OrganizationSystemRole>
-                    data={roles}
-                    columns={columns}
-                    isLoading={isLoading}
-                    onReorder={handleReorder}
-                />
-            </div>
-
-            <div className="md:hidden space-y-3">
-                {isLoading ? (
-                    <div className="text-center py-8 text-neutral-500">Loading...</div>
-                ) : roles.length === 0 ? (
-                    <div className="text-center py-8 text-neutral-500">No roles found</div>
-                ) : (
-                    roles.map(role => (
-                        <MobileCard key={role.id} role={role} />
-                    ))
-                )}
-            </div>
-
-            {/* Add/Edit Modal */}
+            {/* Modals */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden ring-1 ring-black/5">
                         <div className="px-6 py-4 border-b border-neutral-200/50 flex justify-between items-center bg-white/50">
                             <h3 className="font-bold text-lg text-neutral-900">{editingRole?.id ? 'Edit Role' : 'Add Role'}</h3>
@@ -318,10 +327,10 @@ export default function SystemRolesTable() {
                                 <Button
                                     type="submit"
                                     loading={isSaving}
-                                    disabled={isSaving}
+                                    disabled={isSaving || isLocked}
                                     className="bg-blue-600 text-white min-w-[140px]"
                                 >
-                                    {editingRole?.id ? "Update Role" : "Save Role"}
+                                    {isSaving ? "Saving..." : isLocked ? "Governance Locked" : editingRole?.id ? "Update Role" : "Save Role"}
                                 </Button>
                             </div>
                         </form>
@@ -329,10 +338,9 @@ export default function SystemRolesTable() {
                 </div>
             )}
 
-            {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-                    <div className="bg-white/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center space-y-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white/90 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl w-full max-sm p-6 text-center space-y-4">
                         <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600">
                             <AlertCircle className="w-6 h-6" />
                         </div>

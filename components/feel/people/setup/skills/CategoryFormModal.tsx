@@ -12,9 +12,10 @@ interface CategoryFormModalProps {
     onClose: () => void;
     category?: SkillCategory; // If present, we are editing
     onSuccess: () => void;
+    isLocked?: boolean;
 }
 
-export default function CategoryFormModal({ isOpen, onClose, category, onSuccess }: CategoryFormModalProps) {
+export default function CategoryFormModal({ isOpen, onClose, category, onSuccess, isLocked }: CategoryFormModalProps) {
     const supabase = createClient();
     const [loading, setLoading] = useState(false);
     const [name, setName] = useState("");
@@ -99,8 +100,8 @@ export default function CategoryFormModal({ isOpen, onClose, category, onSuccess
                             <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={loading} className="bg-blue-600 text-white">
-                                {loading ? "Saving..." : category ? "Save Changes" : "Create Category"}
+                            <Button type="submit" disabled={loading || isLocked} className="bg-blue-600 text-white">
+                                {loading ? "Saving..." : isLocked ? "Governance Locked" : category ? "Save Changes" : "Create Category"}
                             </Button>
                         </div>
                     </form>

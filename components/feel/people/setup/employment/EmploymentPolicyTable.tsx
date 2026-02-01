@@ -6,7 +6,7 @@ import { fetchEmploymentPolicies, upsertEmploymentPolicy, fetchEmploymentTypes }
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 
-export default function EmploymentPolicyTable() {
+export default function EmploymentPolicyTable({ isLocked }: { isLocked?: boolean }) {
     const [policies, setPolicies] = useState<EmploymentPolicy[]>([]);
     const [types, setTypes] = useState<EmploymentType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -145,10 +145,11 @@ export default function EmploymentPolicyTable() {
                                         <div className="relative">
                                             <input
                                                 type="number"
-                                                className="w-full px-2 py-1.5 border border-neutral-200 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                                className="w-full px-2 py-1.5 border border-neutral-200 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-neutral-50"
                                                 value={defaultHours}
                                                 onChange={(e) => handleUpdate(type.id, 'default_working_hours', parseFloat(e.target.value))}
                                                 onBlur={(e) => handleBlur(type.id, 'default_working_hours', parseFloat(e.target.value))}
+                                                disabled={isLocked}
                                             />
                                             <span className="absolute right-8 top-1.5 text-xs text-neutral-400 pointer-events-none">hrs</span>
                                         </div>
@@ -160,8 +161,9 @@ export default function EmploymentPolicyTable() {
                                                 className="sr-only peer"
                                                 checked={overtime}
                                                 onChange={(e) => handleUpdate(type.id, 'overtime_eligible', e.target.checked)}
+                                                disabled={isLocked}
                                             />
-                                            <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                            <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
                                         </label>
                                     </td>
                                     <td className="px-4 py-3 text-center">
@@ -171,14 +173,15 @@ export default function EmploymentPolicyTable() {
                                                 className="sr-only peer"
                                                 checked={benefits}
                                                 onChange={(e) => handleUpdate(type.id, 'benefits_eligible', e.target.checked)}
+                                                disabled={isLocked}
                                             />
-                                            <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                            <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
                                         </label>
                                     </td>
                                     <td className="px-4 py-3">
                                         <input
                                             type="text"
-                                            className="w-full px-2 py-1.5 border border-neutral-200 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                                            className="w-full px-2 py-1.5 border border-neutral-200 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-neutral-50"
                                             placeholder="Add notes..."
                                             value={notes}
                                             onChange={(e) => {
@@ -186,6 +189,7 @@ export default function EmploymentPolicyTable() {
                                                 handleUpdate(type.id, 'notes', val);
                                             }}
                                             onBlur={(e) => handleBlur(type.id, 'notes', e.target.value)}
+                                            disabled={isLocked}
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-right">
@@ -219,10 +223,11 @@ export default function EmploymentPolicyTable() {
                                 <div className="relative w-24 shrink-0">
                                     <input
                                         type="number"
-                                        className="w-full pl-2 pr-7 py-1.5 border border-neutral-200 rounded-lg text-sm text-right focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-neutral-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        className="w-full pl-2 pr-7 py-1.5 border border-neutral-200 rounded-lg text-sm text-right focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-neutral-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
                                         value={defaultHours}
                                         onChange={(e) => handleUpdate(type.id, 'default_working_hours', parseFloat(e.target.value))}
                                         onBlur={(e) => handleBlur(type.id, 'default_working_hours', parseFloat(e.target.value))}
+                                        disabled={isLocked}
                                     />
                                     <span className="absolute right-2 top-1.5 text-xs text-neutral-400 pointer-events-none">hrs</span>
                                 </div>
@@ -238,8 +243,9 @@ export default function EmploymentPolicyTable() {
                                             className="sr-only peer"
                                             checked={overtime}
                                             onChange={(e) => handleUpdate(type.id, 'overtime_eligible', e.target.checked)}
+                                            disabled={isLocked}
                                         />
-                                        <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
                                     </label>
                                 </div>
                                 <div className={`flex justify-between items-center px-2.5 py-2 rounded-lg border transition-colors ${benefits ? 'bg-blue-50 border-blue-100' : 'bg-neutral-50 border-neutral-100'}`}>
@@ -250,8 +256,9 @@ export default function EmploymentPolicyTable() {
                                             className="sr-only peer"
                                             checked={benefits}
                                             onChange={(e) => handleUpdate(type.id, 'benefits_eligible', e.target.checked)}
+                                            disabled={isLocked}
                                         />
-                                        <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
                                     </label>
                                 </div>
                             </div>
@@ -259,11 +266,12 @@ export default function EmploymentPolicyTable() {
                             {/* Row 3: Notes */}
                             <input
                                 type="text"
-                                className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white placeholder:text-neutral-400"
+                                className="w-full px-3 py-2 border border-neutral-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white placeholder:text-neutral-400 disabled:opacity-50"
                                 placeholder="Add notes..."
                                 value={notes}
                                 onChange={(e) => handleUpdate(type.id, 'notes', e.target.value)}
                                 onBlur={(e) => handleBlur(type.id, 'notes', e.target.value)}
+                                disabled={isLocked}
                             />
                         </div>
                     );

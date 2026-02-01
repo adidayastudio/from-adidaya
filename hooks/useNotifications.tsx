@@ -37,12 +37,12 @@ export function useNotifications() {
     // 1. Auth Sync
     useEffect(() => {
         const fetchUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
-            setCurrentUserId(user?.id || null);
+            const { data: { session } } = await supabase.auth.getSession();
+            setCurrentUserId(session?.user?.id || null);
         };
         fetchUser();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
             setCurrentUserId(session?.user?.id || null);
         });
 
@@ -55,7 +55,7 @@ export function useNotifications() {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchNotifications();
+            const data = await fetchNotifications(currentUserId);
             setNotifications(data.map(mapNotification));
         } catch (err: any) {
             setError(err.message || "Failed to load notifications");

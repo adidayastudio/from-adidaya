@@ -18,7 +18,7 @@ const getRoman = (n: number) => {
     return lookup[n] || n.toString();
 };
 
-export default function EmploymentTypesTable() {
+export default function EmploymentTypesTable({ isLocked }: { isLocked?: boolean }) {
     const [types, setTypes] = useState<EmploymentType[]>([]);
     const [levels, setLevels] = useState<OrganizationLevel[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -189,6 +189,7 @@ export default function EmploymentTypesTable() {
                         size="sm"
                         icon={<Pencil className="w-4 h-4 text-neutral-500" />}
                         onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                        disabled={isLocked}
                     />
                     <Button
                         variant="text"
@@ -196,6 +197,7 @@ export default function EmploymentTypesTable() {
                         className="text-red-500 hover:bg-red-50"
                         icon={<Trash2 className="w-4 h-4" />}
                         onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
+                        disabled={isLocked}
                     />
                 </div>
             )
@@ -227,6 +229,7 @@ export default function EmploymentTypesTable() {
                         iconOnly={<Pencil className="w-4 h-4 text-blue-600" />}
                         className="!p-1.5 h-8 w-8 hover:bg-blue-50 bg-blue-50/50 rounded-full"
                         onClick={() => handleEdit(item)}
+                        disabled={isLocked}
                     />
                 </div>
             </div>
@@ -241,6 +244,7 @@ export default function EmploymentTypesTable() {
                     className="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 !rounded-full"
                     icon={<Plus className="w-4 h-4" />}
                     onClick={handleAdd}
+                    disabled={isLocked}
                 >
                     Add Type
                 </Button>
@@ -347,10 +351,10 @@ export default function EmploymentTypesTable() {
                                 <Button
                                     type="submit"
                                     loading={isSaving}
-                                    disabled={isSaving}
+                                    disabled={isSaving || isLocked}
                                     className="bg-blue-600 text-white min-w-[140px]"
                                 >
-                                    {editingType ? "Update Type" : "Save Type"}
+                                    {isLocked ? "Governance Locked" : editingType ? "Update Type" : "Save Type"}
                                 </Button>
                             </div>
                         </form>

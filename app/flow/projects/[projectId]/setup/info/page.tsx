@@ -13,6 +13,7 @@ import ProjectDetailHeader from "@/components/flow/projects/project-detail/Proje
 import { mapProjectToHeader } from "@/lib/flow/mappers/project-header";
 import { updateProject } from "@/lib/api/projects";
 import { useState, useEffect } from "react";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 /* ================= TYPES ================= */
 
@@ -198,7 +199,7 @@ export default function ProjectInfoPage() {
 
     // ================= LOADING / ERROR =================
     if (isLoading) {
-        return <div className="flex h-screen items-center justify-center bg-neutral-50 text-neutral-500">Loading...</div>;
+        return <GlobalLoading />;
     }
 
     if (error || !project) {

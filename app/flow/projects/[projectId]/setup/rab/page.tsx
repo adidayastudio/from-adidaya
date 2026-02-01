@@ -29,6 +29,7 @@ import RABBreakdownTable from "@/components/flow/projects/project-detail/setup/r
 import { getNodeTotalPerM2 } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-utils";
 import { getLocationFactor as getLocationFactorList } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-factors";
 import { useProject } from "@/components/flow/project-context";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 import type { RABItem } from "@/components/flow/projects/project-detail/setup/rab/ballpark/types/rab.types";
 
@@ -402,7 +403,7 @@ export default function ProjectSetupRABPage() {
 
   // === CONDITIONAL RETURNS (must be after all hooks) ===
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center bg-neutral-50 text-neutral-500">Loading...</div>;
+    return <GlobalLoading />;
   }
 
   if (error || !project) {

@@ -7,17 +7,14 @@ import ProjectDetailOverviewContent from "@/components/flow/projects/project-det
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { useProject } from "@/components/flow/project-context";
 import { mapProjectToHeader } from "@/lib/flow/mappers/project-header";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 export default function ProjectOverviewPage() {
   const { project, isLoading, error } = useProject();
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-neutral-50">
-        <div className="animate-pulse text-neutral-500">Loading project...</div>
-      </div>
-    );
+    return <GlobalLoading />;
   }
 
   // Error state

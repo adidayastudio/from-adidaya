@@ -23,44 +23,44 @@ const SECTIONS = [
     {
         id: "structure",
         title: "Organization Structure",
-        description: "Define roles, departments, and hierarchy levels.",
+        description: "Define departments, positions, and hierarchy levels.",
         icon: LayoutTemplate,
-        tags: ["Roles", "Departments", "Levels"]
+        tags: ["Departments", "Positions", "Levels"]
     },
     {
         id: "employment",
         title: "Employment",
-        description: "Manage employment types and work status definitions.",
+        description: "Manage contract types, work statuses, and policies.",
         icon: Briefcase,
-        tags: ["Types", "Work Status"]
+        tags: ["Types", "Work Status", "Policy", "Schedule", "Leave"]
     },
     {
         id: "skills",
         title: "Skills & Capability",
         description: "Maintain skill library and competency categories.",
         icon: Zap,
-        tags: ["Library", "Categories"]
+        tags: ["Skill Category", "Skill Library"]
     },
     {
         id: "performance",
         title: "Performance Rules",
-        description: "Configure weighting, scoring logic, and evaluation periods.",
+        description: "Configure scoring logic, weightings, and evaluation periods.",
         icon: Scale,
-        tags: ["Weighting", "Scoring"]
+        tags: ["Weighting", "Evaluation", "Scoring", "Incentives"]
     },
     {
         id: "access",
         title: "Access & Visibility",
-        description: "Control role permissions and data visibility scopes.",
+        description: "Control platform roles, capabilities, and data access.",
         icon: Shield,
-        tags: ["Permissions", "Scope"]
+        tags: ["System Roles", "Capabilities", "Visibility", "Approvals"]
     },
     {
         id: "data",
         title: "Data Control",
-        description: "Manage data archiving, locking, and audit logs.",
+        description: "Manage governance locks, archiving, and audit trials.",
         icon: Database,
-        tags: ["Archive", "Audit Log"]
+        tags: ["Governance", "Archive", "Audit Log"]
     }
 ];
 

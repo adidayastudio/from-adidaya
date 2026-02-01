@@ -17,6 +17,7 @@ import {
 } from "@/lib/api/clock";
 import { ClockConfirmationModal } from "./ClockConfirmationModal";
 import { getOvertimeStart, getWorkMinutes } from "@/lib/work-hours-utils";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 interface ClockOvertimeProps {
     role?: UserRole;
@@ -617,10 +618,7 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
                                 <tr>
                                     <td colSpan={isManager && viewMode === "team" ? 8 : 7} className="px-6 py-16 text-center">
                                         {loading ? (
-                                            <div className="flex flex-col items-center justify-center gap-3">
-                                                <Loader2 className="w-8 h-8 text-action-primary animate-spin" />
-                                                <p className="text-neutral-500">Loading overtime records...</p>
-                                            </div>
+                                            <GlobalLoading />
                                         ) : (
                                             <div className="flex flex-col items-center justify-center gap-4">
                                                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">

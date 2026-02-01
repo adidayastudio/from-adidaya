@@ -50,6 +50,7 @@ import { fetchTeamMembers } from "@/lib/api/clock_team";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 import { uploadFinanceFileExact, getFinanceFileUrl } from "@/lib/api/storage";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 // -- MODALS --
 // (kept as is)
@@ -1029,6 +1030,10 @@ export default function ReimburseClient() {
             setIsExporting(false);
         }
     };
+
+    if (isAuthLoading || isLoadingData) {
+        return <GlobalLoading />;
+    }
 
     return (
         <FinancePageWrapper

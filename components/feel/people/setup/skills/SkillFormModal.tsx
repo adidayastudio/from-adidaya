@@ -14,9 +14,10 @@ interface SkillFormModalProps {
     skill?: Skill;
     onSuccess: () => void;
     categories: SkillCategory[];
+    isLocked?: boolean;
 }
 
-export default function SkillFormModal({ isOpen, onClose, skill, onSuccess, categories }: SkillFormModalProps) {
+export default function SkillFormModal({ isOpen, onClose, skill, onSuccess, categories, isLocked }: SkillFormModalProps) {
     const supabase = createClient();
     const [loading, setLoading] = useState(false);
 
@@ -27,8 +28,14 @@ export default function SkillFormModal({ isOpen, onClose, skill, onSuccess, cate
     const [departments, setDepartments] = useState<string[]>([]);
     const [positions, setPositions] = useState<string[]>([]);
 
-    const [deptInput, setDeptInput] = useState("");
-    const [posInput, setPosInput] = useState("");
+    const [availableDepartments, setAvailableDepartments] = useState<{ label: string, value: string }[]>([]);
+    const [availablePositions, setAvailablePositions] = useState<{ label: string, value: string }[]>([]);
+
+    useEffect(() => {
+        if (isOpen) {
+            fetchOptions();
+        }
+    }, [isOpen]);
 
     useEffect(() => {
         if (skill) {
@@ -46,17 +53,41 @@ export default function SkillFormModal({ isOpen, onClose, skill, onSuccess, cate
         }
     }, [skill, isOpen, categories]);
 
-    const handleAddDept = () => {
-        if (deptInput.trim() && !departments.includes(deptInput.trim())) {
-            setDepartments([...departments, deptInput.trim()]);
-            setDeptInput("");
+    const fetchOptions = async () => {
+        const { data: deptData } = await supabase
+            .from("organization_departments")
+            .select("id, name")
+            .eq("status", "Active")
+            .order("name");
+
+        if (deptData) {
+            setAvailableDepartments(deptData.map((d: { name: string }) => ({ label: d.name, value: d.name })));
+        }
+
+        const { data: posData } = await supabase
+            .from("organization_positions")
+            .select("id, name")
+            .eq("status", "Active")
+            .order("name");
+
+        if (posData) {
+            // Filter unique names since positions can duplicate across departments if designed that way, 
+            // but usually position names are distinct enough or we want global list.
+            const uniquePos = Array.from(new Set(posData.map((p: { name: string }) => p.name)))
+                .map(name => ({ label: name as string, value: name as string }));
+            setAvailablePositions(uniquePos);
         }
     };
 
-    const handleAddPos = () => {
-        if (posInput.trim() && !positions.includes(posInput.trim())) {
-            setPositions([...positions, posInput.trim()]);
-            setPosInput("");
+    const handleAddDept = (val: string) => {
+        if (val && !departments.includes(val)) {
+            setDepartments([...departments, val]);
+        }
+    };
+
+    const handleAddPos = (val: string) => {
+        if (val && !positions.includes(val)) {
+            setPositions([...positions, val]);
         }
     };
 
@@ -135,18 +166,21 @@ export default function SkillFormModal({ isOpen, onClose, skill, onSuccess, cate
                     </button>
                 </div>
 
-                <div className="overflow-y-auto p-6">
+                <div className="overflow-y-auto p-6 pb-64">
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Skill Name - Full Width */}
+                        <div className="space-y-1.5">
+                            <Label>Skill Name</Label>
+                            <Input
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="e.g. React.js"
+                                required
+                            />
+                        </div>
+
+                        {/* Category & Status - Side by Side */}
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <Label>Skill Name</Label>
-                                <Input
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    placeholder="e.g. React.js"
-                                    required
-                                />
-                            </div>
                             <div className="space-y-1.5">
                                 <Label>Category</Label>
                                 <Select
@@ -157,33 +191,30 @@ export default function SkillFormModal({ isOpen, onClose, skill, onSuccess, cate
                                     accentColor="blue"
                                 />
                             </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <Label>Status</Label>
-                            <Select
-                                options={statusOptions}
-                                value={status}
-                                onChange={(val: any) => setStatus(val)}
-                                placeholder="Select Status"
-                                accentColor="blue"
-                            />
+                            <div className="space-y-1.5">
+                                <Label>Status</Label>
+                                <Select
+                                    options={statusOptions}
+                                    value={status}
+                                    onChange={(val: any) => setStatus(val)}
+                                    placeholder="Select Status"
+                                    accentColor="blue"
+                                />
+                            </div>
                         </div>
 
                         {/* Related Departments */}
                         <div className="space-y-2">
                             <Label>Related Departments</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    className="flex-1"
-                                    value={deptInput}
-                                    onChange={e => setDeptInput(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddDept(); } }}
-                                    placeholder="Add department tag and press Enter..."
-                                />
-                                <Button type="button" variant="secondary" onClick={handleAddDept}>Add</Button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
+                            <Select
+                                searchable
+                                placeholder="Select to add department..."
+                                options={availableDepartments.filter(d => !departments.includes(d.value))}
+                                onChange={handleAddDept}
+                                value={""} // Always reset
+                                accentColor="blue"
+                            />
+                            <div className="flex flex-wrap gap-2 mt-2">
                                 {departments.map(d => (
                                     <span key={d} className="inline-flex items-center gap-1 bg-neutral-100 px-2 py-1 rounded text-sm text-neutral-700">
                                         {d}
@@ -191,22 +222,21 @@ export default function SkillFormModal({ isOpen, onClose, skill, onSuccess, cate
                                     </span>
                                 ))}
                             </div>
+                            <p className="text-xs text-neutral-500">Related departments are used for suggestion context.</p>
                         </div>
 
                         {/* Related Positions */}
                         <div className="space-y-2">
                             <Label>Related Positions</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    className="flex-1"
-                                    value={posInput}
-                                    onChange={e => setPosInput(e.target.value)}
-                                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddPos(); } }}
-                                    placeholder="Add position tag..."
-                                />
-                                <Button type="button" variant="secondary" onClick={handleAddPos}>Add</Button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
+                            <Select
+                                searchable
+                                placeholder="Select to add position..."
+                                options={availablePositions.filter(p => !positions.includes(p.value))}
+                                onChange={handleAddPos}
+                                value={""} // Always reset
+                                accentColor="blue"
+                            />
+                            <div className="flex flex-wrap gap-2 mt-2">
                                 {positions.map(p => (
                                     <span key={p} className="inline-flex items-center gap-1 bg-neutral-100 px-2 py-1 rounded text-sm text-neutral-700">
                                         {p}
@@ -214,14 +244,15 @@ export default function SkillFormModal({ isOpen, onClose, skill, onSuccess, cate
                                     </span>
                                 ))}
                             </div>
+                            <p className="text-xs text-neutral-500">Related positions are used for suggestion context.</p>
                         </div>
 
                         <div className="pt-4 flex justify-end gap-3 border-t border-neutral-100 bg-white/50 -mx-6 -mb-6 p-6 backdrop-blur-sm sticky bottom-0">
                             <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={loading} className="bg-blue-600 text-white">
-                                {loading ? "Saving..." : skill ? "Save Changes" : "Create Skill"}
+                            <Button type="submit" disabled={loading || isLocked} className="bg-blue-600 text-white">
+                                {loading ? "Saving..." : isLocked ? "Governance Locked" : skill ? "Save Changes" : "Create Skill"}
                             </Button>
                         </div>
                     </form>

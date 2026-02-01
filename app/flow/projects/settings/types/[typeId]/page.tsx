@@ -9,6 +9,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { Input } from "@/shared/ui/primitives/input/input";
 import { ArrowLeft, Save, Plus, GripVertical, Trash2, X, Check, Building2, PenTool, Hammer, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import {
     fetchProjectTypes,
     fetchStageTemplates,
@@ -39,7 +40,7 @@ function AddStageModal({ isOpen, onClose, onAdd }: { isOpen: boolean; onClose: (
         if (!code.trim() || !name.trim()) return;
         onAdd({
             stageCode: code.toUpperCase(),
-            displayCode: `0X-${code.toUpperCase()}`,
+            displayCode: `0X - ${code.toUpperCase()} `,
             stageName: name,
             stageNameId: nameId || undefined,
             weightDefault: parseFloat(weight) || 10,
@@ -169,7 +170,7 @@ export default function TypeDetailPage() {
             const orderedStages = stages.map((s, idx) => ({
                 ...s,
                 position: idx + 1,
-                displayCode: `${String(idx + 1).padStart(2, "0")}-${s.stageCode}`
+                displayCode: `${String(idx + 1).padStart(2, "0")} -${s.stageCode} `
             }));
 
             await bulkUpdateStageTemplates(WORKSPACE_ID, currentType.projectTypeId, orderedStages);
@@ -189,13 +190,13 @@ export default function TypeDetailPage() {
         const position = stages.length + 1;
         // Create a temporary stage object
         const newStage: StageTemplate = {
-            id: `temp-${Date.now()}`, // temp ID
+            id: `temp - ${Date.now()} `, // temp ID
             workspaceId: WORKSPACE_ID,
             projectTypeId: currentType.projectTypeId,
             stageCode: newStagePartial.stageCode || "XX",
             stageName: newStagePartial.stageName || "",
             stageNameId: newStagePartial.stageNameId,
-            displayCode: `${String(position).padStart(2, "0")}-${newStagePartial.stageCode}`,
+            displayCode: `${String(position).padStart(2, "0")} -${newStagePartial.stageCode} `,
             position: position,
             weightDefault: newStagePartial.weightDefault || 0,
             isActive: true,
@@ -223,8 +224,8 @@ export default function TypeDetailPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-neutral-50 p-6 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
+            <div className="p-20 text-center">
+                <GlobalLoading />
             </div>
         );
     }
@@ -369,7 +370,7 @@ export default function TypeDetailPage() {
                         {/* Total */}
                         <div className="px-6 py-3 bg-neutral-50 border-t border-neutral-200">
                             <div className="flex justify-end text-sm">
-                                Total Weight: <span className={`font-semibold ml-2 ${Math.abs(totalWeight - 100) > 0.01 ? "text-red-600" : "text-green-600"}`}>{totalWeight.toFixed(2)}%</span>
+                                Total Weight: <span className={`font - semibold ml - 2 ${Math.abs(totalWeight - 100) > 0.01 ? "text-red-600" : "text-green-600"} `}>{totalWeight.toFixed(2)}%</span>
                             </div>
                         </div>
                     </div>

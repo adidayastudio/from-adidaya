@@ -11,6 +11,7 @@ import {
     FeedbackVisibility
 } from "@/lib/types/people-types";
 import { Person } from "@/components/feel/people/types";
+import { OrganizationRolePermission } from "@/lib/types/organization";
 
 const supabase = createClient();
 
@@ -250,4 +251,76 @@ export async function fetchTeamPerformance(department: string, period?: string):
         return [];
     }
     return data || [];
+}
+
+// -- ACCESS & VISIBILITY --
+
+export async function fetchAllRolePermissions(): Promise<(OrganizationRolePermission & { role_name: string, role_code: string })[]> {
+    const { data, error } = await supabase
+        .from('organization_role_permissions')
+        .select(`
+            *,
+            organization_system_roles!inner (
+                name,
+                code
+            )
+        `);
+
+    if (error) {
+        console.error('Error fetching all role permissions:', error.message || error);
+        return [];
+    }
+
+    return (data || []).map((item: any) => ({
+        ...item,
+        role_name: item.organization_system_roles.name,
+        role_code: item.organization_system_roles.code
+    }));
+}
+
+export async function fetchMyRolePermissions(): Promise<OrganizationRolePermission | null> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Get active role code from user_roles
+    const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+
+    if (!userRole) return null;
+
+    // Get permissions by matching role code
+    const { data, error } = await supabase
+        .from('organization_role_permissions')
+        .select(`
+            *,
+            organization_system_roles!inner (
+                code
+            )
+        `)
+        .eq('organization_system_roles.code', userRole.role.toUpperCase())
+        .maybeSingle();
+
+    if (error) {
+        console.error('Error fetching my permissions:', error);
+        return null;
+    }
+    return data;
+}
+
+export async function updateRolePermissions(permission: Partial<OrganizationRolePermission>): Promise<boolean> {
+    if (!permission.role_id) return false;
+
+    const { error } = await supabase
+        .from('organization_role_permissions')
+        .upsert(permission)
+        .eq('role_id', permission.role_id);
+
+    if (error) {
+        console.error('Error updating role permissions:', error);
+        return false;
+    }
+    return true;
 }

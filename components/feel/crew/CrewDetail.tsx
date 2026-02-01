@@ -11,6 +11,7 @@ import {
     CrewMember,
     CrewProjectHistory,
 } from "@/lib/api/crew";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 interface CrewDetailProps {
     crewId: string;
@@ -106,11 +107,7 @@ export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
 
     // Loading state
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            </div>
-        );
+        return <GlobalLoading />;
     }
 
     // Not found

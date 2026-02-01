@@ -16,18 +16,24 @@ export interface Notification {
 
 const supabase = createClient();
 
-export const fetchNotifications = async () => {
+export const fetchNotifications = async (userId?: string) => {
     console.log("🛠️ [API] fetchNotifications started");
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log("🛠️ [API] Authenticated user:", user?.id);
-        if (!user) return [];
+        let currentUserId = userId;
+
+        if (!currentUserId) {
+            const { data: { user } } = await supabase.auth.getUser();
+            console.log("🛠️ [API] Authenticated user:", user?.id);
+            currentUserId = user?.id;
+        }
+
+        if (!currentUserId) return [];
 
         // Cast to any to avoid type errors since 'notifications' isn't in generated types yet
         const { data, error } = await (supabase
             .from("notifications") as any)
             .select("*")
-            .eq("user_id", user.id)
+            .eq("user_id", currentUserId)
             .order("created_at", { ascending: false })
             .limit(50);
 
@@ -53,15 +59,21 @@ export const markNotificationAsRead = async (id: string) => {
     }
 };
 
-export const markAllNotificationsAsRead = async () => {
+export const markAllNotificationsAsRead = async (userId?: string) => {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return false;
+        let currentUserId = userId;
+
+        if (!currentUserId) {
+            const { data: { user } } = await supabase.auth.getUser();
+            currentUserId = user?.id;
+        }
+
+        if (!currentUserId) return false;
 
         const { error } = await (supabase
             .from("notifications") as any)
             .update({ is_read: true })
-            .eq("user_id", user.id)
+            .eq("user_id", currentUserId)
             .eq("is_read", false);
 
         if (error) throw error;

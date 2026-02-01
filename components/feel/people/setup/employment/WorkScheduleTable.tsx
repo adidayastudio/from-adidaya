@@ -9,7 +9,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Info, Pencil, Trash2, Plus, AlertTriangle, X, Clock, Calendar } from "lucide-react";
 
-export default function WorkScheduleTable() {
+export default function WorkScheduleTable({ isLocked }: { isLocked?: boolean }) {
     const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -286,6 +286,7 @@ export default function WorkScheduleTable() {
                         size="sm"
                         icon={<Pencil className="w-4 h-4 text-neutral-500" />}
                         onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                        disabled={isLocked}
                     />
                     <Button
                         variant="text"
@@ -293,6 +294,7 @@ export default function WorkScheduleTable() {
                         className="text-red-500 hover:bg-red-50"
                         icon={<Trash2 className="w-4 h-4" />}
                         onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
+                        disabled={isLocked}
                     />
                 </div>
             )
@@ -386,6 +388,7 @@ export default function WorkScheduleTable() {
                             iconOnly={<Pencil className="w-4 h-4 text-blue-600" />}
                             className="!p-1.5 h-8 w-8 hover:bg-blue-50 bg-blue-50/50 rounded-full"
                             onClick={() => handleEdit(item)}
+                            disabled={isLocked}
                         />
                     </div>
                 </div>
@@ -407,6 +410,7 @@ export default function WorkScheduleTable() {
                     className="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 !rounded-full"
                     icon={<Plus className="w-4 h-4" />}
                     onClick={handleAdd}
+                    disabled={isLocked}
                 >
                     Add Schedule
                 </Button>
@@ -597,10 +601,10 @@ export default function WorkScheduleTable() {
                                     <Button
                                         type="submit"
                                         loading={isSaving}
-                                        disabled={isSaving}
+                                        disabled={isSaving || isLocked}
                                         className="bg-blue-600 text-white min-w-[140px]"
                                     >
-                                        {editingSchedule ? "Update" : "Save"}
+                                        {isLocked ? "Governance Locked" : editingSchedule ? "Update" : "Save"}
                                     </Button>
                                 </div>
                             </form>

@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { fetchTypologies, Typology } from "@/lib/api/templates-extended";
 import { fetchDefaultWorkspaceId, fetchProjectTypes, ProjectTypeTemplate } from "@/lib/api/templates";
 import { Select } from "@/shared/ui/primitives/select/select";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 interface ProjectListItem {
     id: string;
@@ -326,7 +327,7 @@ export default function ProjectsListPage() {
                 </div>
 
                 {/* Loading */}
-                {isLoading && (<div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>)}
+                {isLoading && <GlobalLoading />}
 
                 {/* Empty */}
                 {!isLoading && projects.length === 0 && (

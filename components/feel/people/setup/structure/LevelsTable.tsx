@@ -23,7 +23,7 @@ const getRoman = (n: number) => {
     return lookup[n] || n.toString();
 };
 
-export default function LevelsTable() {
+export default function LevelsTable({ isLocked }: { isLocked?: boolean }) {
     const [levels, setLevels] = useState<OrganizationLevel[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -174,6 +174,7 @@ export default function LevelsTable() {
                         size="sm"
                         icon={<Pencil className="w-4 h-4 text-neutral-500" />}
                         onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                        disabled={isLocked}
                     />
                     <Button
                         variant="text"
@@ -181,6 +182,7 @@ export default function LevelsTable() {
                         className="text-red-500 hover:bg-red-50"
                         icon={<Trash2 className="w-4 h-4" />}
                         onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
+                        disabled={isLocked}
                     />
                 </div>
             )
@@ -220,6 +222,7 @@ export default function LevelsTable() {
                             iconOnly={<Pencil className="w-4 h-4 text-blue-600" />}
                             className="!p-1.5 h-8 w-8 hover:bg-blue-50 bg-blue-50/50 rounded-full"
                             onClick={() => handleEdit(item)}
+                            disabled={isLocked}
                         />
                         <Button
                             variant="text"
@@ -227,6 +230,7 @@ export default function LevelsTable() {
                             iconOnly={<Trash2 className="w-4 h-4 text-red-600" />}
                             className="!p-1.5 h-8 w-8 hover:bg-red-50 bg-red-50/50 rounded-full"
                             onClick={() => handleDeleteClick(item)}
+                            disabled={isLocked}
                         />
                     </div>
                 </div>
@@ -253,6 +257,7 @@ export default function LevelsTable() {
                     className="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 !rounded-full"
                     icon={<Plus className="w-4 h-4" />}
                     onClick={handleAdd}
+                    disabled={isLocked}
                 >
                     Add Level
                 </Button>
@@ -366,10 +371,10 @@ export default function LevelsTable() {
                                 <Button
                                     type="submit"
                                     loading={isSaving}
-                                    disabled={isSaving}
+                                    disabled={isSaving || isLocked}
                                     className="bg-blue-600 text-white min-w-[140px]"
                                 >
-                                    {editingLevel ? "Update Level" : "Save Level"}
+                                    {isLocked ? "Governance Locked" : editingLevel ? "Update Level" : "Save Level"}
                                 </Button>
                             </div>
                         </form>

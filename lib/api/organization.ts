@@ -1,5 +1,5 @@
 import { createClient } from "@/utils/supabase/client";
-import { OrganizationDepartment, OrganizationLevel, OrganizationPosition, OrganizationSystemRole } from "../types/organization";
+import { OrganizationDepartment, OrganizationLevel, OrganizationPosition, OrganizationSystemRole, OrganizationRolePermission } from "../types/organization";
 
 const supabase = createClient();
 
@@ -83,34 +83,30 @@ export async function deleteDepartment(id: string): Promise<boolean> {
 // -- POSITIONS --
 
 export async function fetchPositions(departmentId?: string): Promise<OrganizationPosition[]> {
-    let query = supabase
-        .from('organization_positions')
-        .select(`
-            *,
-            organization_departments (
-                name,
-                code
-            )
-        `)
-        .order('code', { ascending: true });
+    // Fetch all related data in parallel to perform a manual join
+    // This avoids issues with ambiguous database joins returning error {}
+    const [positionsRes, departmentsRes] = await Promise.all([
+        supabase.from('organization_positions').select('*').order('code', { ascending: true }),
+        supabase.from('organization_departments').select('id, name, code')
+    ]);
 
-    if (departmentId) {
-        query = query.eq('department_id', departmentId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error('Error fetching positions:', error);
+    if (positionsRes.error) {
+        console.error('Error fetching positions (Manual Join):', positionsRes.error);
         return [];
     }
 
-    return (data || []).map((pos: any) => ({
-        ...pos,
-        department_name: pos.organization_departments?.name,
-        department_abbr: pos.organization_departments?.code?.split('-')[1],
-        department_full_code: pos.organization_departments?.code
-    }));
+    const departments = departmentsRes.data || [];
+
+    return (positionsRes.data || []).map((pos: any) => {
+        const dept = departments.find((d: any) => d.id === pos.department_id);
+
+        return {
+            ...pos,
+            department_name: dept?.name,
+            department_abbr: dept?.code?.split('-')[1],
+            department_full_code: dept?.code
+        };
+    });
 }
 
 export async function upsertPosition(position: Partial<OrganizationPosition>): Promise<OrganizationPosition | null> {
@@ -119,7 +115,8 @@ export async function upsertPosition(position: Partial<OrganizationPosition>): P
         name: position.name,
         department_id: position.department_id,
         category_code: position.category_code,
-        status: position.status
+        status: position.status,
+        system_role_id: position.system_role_id
     };
 
     if (position.id) {
@@ -133,7 +130,7 @@ export async function upsertPosition(position: Partial<OrganizationPosition>): P
         .upsert(payload, { onConflict: 'id' })
         .select(`
             *,
-            organization_departments (
+            dept:organization_departments (
                 name,
                 code
             )
@@ -158,9 +155,9 @@ export async function upsertPosition(position: Partial<OrganizationPosition>): P
 
     return data ? {
         ...data,
-        department_name: data.organization_departments?.name,
-        department_abbr: data.organization_departments?.code?.split('-')[1],
-        department_full_code: data.organization_departments?.code
+        department_name: data.dept?.name,
+        department_abbr: data.dept?.code?.split('-')[1],
+        department_full_code: data.dept?.code
     } : null;
 }
 
@@ -282,7 +279,12 @@ export async function upsertSystemRole(role: Partial<OrganizationSystemRole>): P
         .maybeSingle();
 
     if (error) {
-        console.error('Error saving system role:', error);
+        console.error('Error saving system role:', {
+            message: error.message,
+            hint: error.hint,
+            details: error.details,
+            code: error.code
+        });
         return null;
     }
 
@@ -312,6 +314,49 @@ export async function updateDepartmentOrder(items: OrganizationDepartment[]) {
             .update({ order_index: item.order_index })
             .eq('id', item.id);
     }
+}
+// -- ROLE PERMISSIONS --
+
+export async function fetchRolePermissions(roleId?: string): Promise<OrganizationRolePermission[]> {
+    let query = supabase
+        .from('organization_role_permissions')
+        .select('*');
+
+    if (roleId) {
+        query = query.eq('role_id', roleId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        console.error('Error fetching role permissions:', {
+            message: error.message,
+            hint: error.hint,
+            details: error.details,
+            code: error.code
+        });
+        return [];
+    }
+    return data || [];
+}
+
+export async function upsertRolePermission(permission: Partial<OrganizationRolePermission>): Promise<OrganizationRolePermission | null> {
+    const { data, error } = await supabase
+        .from('organization_role_permissions')
+        .upsert(permission, { onConflict: 'role_id' })
+        .select()
+        .maybeSingle();
+
+    if (error) {
+        console.error('Error saving role permission:', {
+            message: error.message,
+            hint: error.hint,
+            details: error.details,
+            code: error.code
+        });
+        return null;
+    }
+    return data;
 }
 
 export async function updateLevelOrder(items: OrganizationLevel[]) {

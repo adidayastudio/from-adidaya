@@ -12,7 +12,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Pencil, Trash2, Plus, AlertTriangle, X, Heart, Plane, AlertCircle, Info } from "lucide-react";
 
-export default function LeavePolicyTable() {
+export default function LeavePolicyTable({ isLocked }: { isLocked?: boolean }) {
     const [policies, setPolicies] = useState<LeavePolicy[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -184,6 +184,7 @@ export default function LeavePolicyTable() {
                         size="sm"
                         icon={<Pencil className="w-4 h-4 text-neutral-500" />}
                         onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                        disabled={isLocked}
                     />
                     <Button
                         variant="text"
@@ -191,6 +192,7 @@ export default function LeavePolicyTable() {
                         className="text-red-500 hover:bg-red-50"
                         icon={<Trash2 className="w-4 h-4" />}
                         onClick={(e) => { e.stopPropagation(); handleDeleteClick(item); }}
+                        disabled={isLocked}
                     />
                 </div>
             )
@@ -236,6 +238,7 @@ export default function LeavePolicyTable() {
                         iconOnly={<Pencil className="w-4 h-4 text-blue-600" />}
                         className="!p-1.5 h-8 w-8 hover:bg-blue-50 bg-blue-50/50 rounded-full"
                         onClick={() => handleEdit(item)}
+                        disabled={isLocked}
                     />
                 </div>
             </div>
@@ -261,6 +264,7 @@ export default function LeavePolicyTable() {
                     className="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 !rounded-full"
                     icon={<Plus className="w-4 h-4" />}
                     onClick={handleAdd}
+                    disabled={isLocked}
                 >
                     Add Policy
                 </Button>
@@ -422,10 +426,10 @@ export default function LeavePolicyTable() {
                                     <Button
                                         type="submit"
                                         loading={isSaving}
-                                        disabled={isSaving}
+                                        disabled={isSaving || isLocked}
                                         className="bg-blue-600 text-white min-w-[140px]"
                                     >
-                                        {editingPolicy ? "Update" : "Save"}
+                                        {isLocked ? "Governance Locked" : editingPolicy ? "Update" : "Save"}
                                     </Button>
                                 </div>
                             </form>

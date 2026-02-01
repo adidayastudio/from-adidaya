@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Loader2, Play } from "lucide-react";
+import { Plus, X, Pencil, Trash2, Save, ArrowUpDown, ChevronDown, ChevronRight, CheckCircle2, Clock, AlertCircle, Loader2, Play } from "lucide-react";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { useParams } from "next/navigation";
 import { ScheduleTable } from "./views/ScheduleTable";
 import { ScheduleGantt } from "./views/ScheduleGantt";
@@ -140,7 +141,11 @@ export default function ScheduleSystem() {
     };
 
     if (isLoading) {
-        return <div className="flex h-64 items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>;
+        return (
+            <div className="flex h-[300px] items-center justify-center">
+                <GlobalLoading />
+            </div>
+        );
     }
 
     return (

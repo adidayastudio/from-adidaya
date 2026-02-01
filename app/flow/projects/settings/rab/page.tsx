@@ -16,6 +16,7 @@ import {
     RabPriceTemplate, Discipline, ClassTemplate, fetchDefaultWorkspaceId
 } from "@/lib/api/templates";
 import clsx from "clsx";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 // Fallback if no workspace found
 const DEFAULT_WORKSPACE_ID = "00000000-0000-0000-0000-000000000001";
@@ -272,8 +273,8 @@ export default function SettingsRABPage() {
                     {/* Content */}
                     <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden min-h-[400px]">
                         {isLoading ? (
-                            <div className="flex items-center justify-center h-40">
-                                <Loader2 className="w-6 h-6 animate-spin text-neutral-400" />
+                            <div className="flex items-center justify-center p-20">
+                                <GlobalLoading />
                             </div>
                         ) : (
                             <>

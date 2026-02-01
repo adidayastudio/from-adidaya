@@ -10,6 +10,7 @@ import { ArrowLeft, Plus, ChevronRight, ChevronDown, FileText, Save, Trash2, Edi
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { fetchProjectTypes, fetchWbsTemplate, saveWbsTemplate, fetchDefaultWorkspaceId, ProjectTypeTemplate } from "@/lib/api/templates";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 const DEFAULT_WORKSPACE_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -368,8 +369,8 @@ export default function SettingsWBSPage() {
                     {/* WBS Tree */}
                     <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden min-h-[400px]">
                         {isLoading ? (
-                            <div className="flex items-center justify-center h-40 text-neutral-400">
-                                <Loader2 className="w-6 h-6 animate-spin mr-2" /> Loading WBS...
+                            <div className="flex items-center justify-center p-20">
+                                <GlobalLoading />
                             </div>
                         ) : wbsData.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-60 text-neutral-400">

@@ -5,6 +5,8 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { ArrowLeft } from "lucide-react";
 import { clsx } from "clsx";
+import { useDataControl } from "@/hooks/useDataControl";
+import LockBanner from "@/shared/ui/feedback/LockBanner";
 
 export interface SetupTab {
     id: string;
@@ -13,6 +15,8 @@ export interface SetupTab {
     actionLabel?: string;
     icon?: React.ElementType;
     component: React.ComponentType<any>;
+    domain?: string; // Optional domain for governance
+    subDomain?: string; // Optional subDomain for governance
 }
 
 interface SetupPageLayoutProps {
@@ -27,6 +31,7 @@ export default function SetupPageLayout({ title, description, icon: Icon, tabs, 
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { isLocked } = useDataControl();
 
     // Get subtab from URL or default to first tab
     const subtabFromUrl = searchParams.get("subtab");
@@ -35,6 +40,11 @@ export default function SetupPageLayout({ title, description, icon: Icon, tabs, 
 
     const activeTab = tabs.find(t => t.id === activeTabId) || tabs[0];
     const ActiveComponent = activeTab.component;
+
+    // Check governance lock
+    const currentIsLocked = activeTab.domain && activeTab.subDomain
+        ? isLocked(activeTab.domain, activeTab.subDomain)
+        : false;
 
     // Update URL when tab changes
     const handleTabChange = (tabId: string) => {
@@ -54,20 +64,23 @@ export default function SetupPageLayout({ title, description, icon: Icon, tabs, 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             {/* Header */}
-            <div className="flex items-center gap-4">
-                <Button variant="secondary" onClick={onBack} icon={<ArrowLeft className="w-4 h-4" />}>
-                    Back
-                </Button>
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center">
-                        <Icon className="w-5 h-5 text-neutral-600" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-neutral-900">{title}</h1>
-                        <p className="text-sm text-neutral-500">{description}</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <Button variant="secondary" onClick={onBack} icon={<ArrowLeft className="w-4 h-4" />}>
+                        Back
+                    </Button>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center border border-neutral-200 shadow-sm">
+                            <Icon className="w-5 h-5 text-neutral-600" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-neutral-900 tracking-tight">{title}</h1>
+                            <p className="text-sm text-neutral-500">{description}</p>
+                        </div>
                     </div>
                 </div>
             </div>
+
 
             {/* Tabs */}
             <div className="border-b border-neutral-200 overflow-x-auto">
@@ -79,7 +92,7 @@ export default function SetupPageLayout({ title, description, icon: Icon, tabs, 
                             className={clsx(
                                 "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
                                 activeTabId === tab.id
-                                    ? "border-blue-600 text-blue-600"
+                                    ? "border-blue-600 text-blue-600 bg-blue-50/30"
                                     : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
                             )}
                         >
@@ -91,8 +104,12 @@ export default function SetupPageLayout({ title, description, icon: Icon, tabs, 
             </div>
 
             {/* Content - extra bottom padding for mobile bottom bar */}
-            <div className="min-h-[400px] pb-24 md:pb-0">
-                <ActiveComponent />
+            <div className="min-h-[400px] pb-24 md:pb-0 space-y-6">
+                {/* Governance Banner moved inside content to prevent tab shifting */}
+                {currentIsLocked && activeTab.domain && activeTab.subDomain && (
+                    <LockBanner domain={activeTab.domain} subDomain={activeTab.subDomain} />
+                )}
+                <ActiveComponent isLocked={currentIsLocked} />
             </div>
         </div>
     );

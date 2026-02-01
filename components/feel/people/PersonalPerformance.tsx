@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { fetchPeopleFeedback, fetchPeoplePerformance } from "@/lib/api/people";
 import { PeopleFeedback, PeoplePerformanceSnapshot } from "@/lib/types/people-types";
 import { format } from "date-fns";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 export default function PersonalPerformance({ person }: { person: Person }) {
     const [feedback, setFeedback] = useState<PeopleFeedback[]>([]);
@@ -131,7 +132,7 @@ export default function PersonalPerformance({ person }: { person: Person }) {
                         </h3>
 
                         {loading ? (
-                            <div className="text-center text-sm text-neutral-400 py-10">Loading feedback...</div>
+                            <GlobalLoading />
                         ) : feedback.length === 0 ? (
                             <div className="text-center py-12 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
                                 <p className="text-neutral-400 text-sm">No feedback notes yet.</p>

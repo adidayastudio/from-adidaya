@@ -7,6 +7,8 @@ import { Input } from "@/shared/ui/primitives/input/input";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { supabase } from "@/lib/supabaseClient";
 import * as Dialog from "@radix-ui/react-dialog";
+import Link from "next/link";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import clsx from "clsx";
 
 type Resource = {
@@ -242,9 +244,10 @@ export default function ResourcesPage() {
                     <tbody className="divide-y divide-neutral-200">
                         {isLoading ? (
                             <tr>
-                                <td colSpan={6} className="p-12 text-center text-neutral-400">
-                                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-                                    Loading resources...
+                                <td colSpan={6} className="p-12 text-center">
+                                    <div className="py-20 text-center">
+                                        <GlobalLoading />
+                                    </div>
                                 </td>
                             </tr>
                         ) : filteredData.length === 0 ? (

@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import PageWrapper from "@/components/layout/PageWrapper";
 import ProjectDetailSidebar from "@/components/flow/projects/project-detail/ProjectDetailSidebar";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import ProjectDetailHeader from "@/components/flow/projects/project-detail/ProjectDetailHeader";
 import ProjectDetailTrackingContent from "@/components/flow/projects/project-detail/tracking/ProjectDetailTrackingContent";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
@@ -15,7 +16,7 @@ export default function ProjectTrackingPage() {
   const { project, isLoading, error } = useProject();
 
   if (isLoading) {
-    return <div className="flex h-screen items-center justify-center bg-neutral-50 text-neutral-500">Loading...</div>;
+    return <GlobalLoading />;
   }
 
   if (error || !project) {

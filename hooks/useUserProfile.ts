@@ -45,8 +45,8 @@ export default function useUserProfile() {
             // We use whatever data we have in the token to render the UI instantly.
             if (!isBackgroundVerification) {
                 const optimisticRoles: string[] = [];
-                const meta = user.app_metadata || {};
-                const userMeta = user.user_metadata || {};
+                const meta = (user as any).app_metadata || {};
+                const userMeta = (user as any).user_metadata || {};
                 const candidates = [meta.role, meta.roles, userMeta.role, userMeta.roles];
                 candidates.forEach(c => {
                     if (Array.isArray(c)) c.forEach((r: any) => optimisticRoles.push(String(r)));
@@ -64,17 +64,13 @@ export default function useUserProfile() {
                     name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
                     email: user.email || "",
                     role: simpleRole,
-                    avatarUrl: user.user_metadata?.avatar_url,
+                    avatarUrl: user.user_metadata?.avatar_url as string || undefined,
                     department: "Loading...",
                     joinDate: new Date().toISOString()
                 });
 
-                // ONLY stop loading if we are sure it's an admin/finance user.
-                // If we detected "staff", it might be a false negative (missing metadata),
-                // so we keep loading=true to wait for the DB fetch to confirm.
-                if (simpleRole !== "staff") {
-                    setLoading(false);
-                }
+                // Set loading false as soon as we have session data to render initial UI
+                setLoading(false);
             }
 
             // 2. PARALLEL: Fetch Fresh DB Data (Background)

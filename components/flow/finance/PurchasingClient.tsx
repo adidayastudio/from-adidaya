@@ -34,6 +34,7 @@ import { fetchTeamMembers } from "@/lib/api/clock_team";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 import { getFinanceFileUrl, uploadFinanceFile, uploadFinanceFileExact } from "@/lib/api/storage";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 // Status Badge Helper
 function StatusBadge({ status }: { status: any }) {
@@ -1177,14 +1178,7 @@ export default function PurchasingClient() {
     }, [baseItems, statusFilter, sortConfig, STATUS_ORDER]);
 
     if (isAuthLoading || isLoadingData) {
-        return (
-            <FinancePageWrapper
-                breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Purchasing" }]}
-                header={<FinanceHeader title="Purchasing" subtitle="Loading..." />}
-            >
-                <div className="animate-pulse h-96 bg-neutral-100 rounded-xl" />
-            </FinancePageWrapper>
-        );
+        return <GlobalLoading />;
     }
 
     return (
