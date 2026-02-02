@@ -618,8 +618,10 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             const dayRecords = filteredData.filter(d => d.date === dateToShow);
 
             // 2. Hydrate with ALL team members: Only HUMAN + INCLUDED
+            // 2. Hydrate with ALL team members: Exclude System & Explicitly Excluded
             const validMembers = teamMembers.filter(m =>
-                m.account_type === 'human_account' &&
+                m.account_type !== 'system' &&
+                m.status !== 'terminated' &&
                 m.include_in_performance !== false
             );
 
@@ -633,7 +635,6 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                     // Check if user is excluded dynamically - only allow human + included
                     const memberProfile = teamMembers.find(m => m.username === record.employee);
                     const isNotHumanOrExcluded = memberProfile && (
-                        memberProfile.account_type !== 'human_account' ||
                         memberProfile.include_in_performance === false
                     );
 
@@ -650,46 +651,87 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                 return acc;
             }, []);
 
-            // 4. Find "Ghost" Members from LOGS (Fallback)
+            // 4. Find "Ghost" Members from Logs AND Sessions (Fallback)
             const dayLogs = logs?.filter(l => {
                 if (l.type !== 'IN') return false;
-                // Robust date comparison handling timezone
                 const logDate = new Date(l.timestamp);
                 return format(logDate, "yyyy-MM-dd") === dateToShow;
             }) || [];
-            const ghostMembersFromLogs = dayLogs.reduce((acc: any[], log) => {
-                const hasRecord = dayRecords.some(r => r.userId === log.userId);
-                const isInData = validMembers.some(m => m.id === log.userId);
-                const isInGhostRecords = ghostMembersFromRecords.some(m => m.id === log.userId);
-                const isAlreadyAdded = acc.some(m => m.id === log.userId);
 
-                if (!hasRecord && !isAlreadyAdded) {
-                    if (!isInData && !isInGhostRecords) {
-                        acc.push({
-                            id: log.userId,
-                            username: log.userName || "Unknown User",
-                            avatar_url: log.avatar,
-                            department: "Unknown",
-                            role: "staff"
-                        });
-                    }
+            const daySessions = sessions?.filter(s => s.date === dateToShow) || [];
+
+            const ghostMembersFromLogsAndSessions = [...dayLogs, ...daySessions].reduce((acc: any[], item: any) => {
+                // Determine ID based on item type (log vs session)
+                const userId = (item as any).userId || (item as any).employeeId; // Session logic might need adjustment if userId isn't direct
+                const itemUserId = userId || item.userId;
+
+                // Check redundancy
+                const hasRecord = dayRecords.some(r => r.userId === itemUserId);
+                const isInData = validMembers.some(m => m.id === itemUserId);
+                const isInGhostRecords = ghostMembersFromRecords.some(m => m.id === itemUserId);
+                const isAlreadyAdded = acc.some(m => m.id === itemUserId);
+
+                if (!hasRecord && !isAlreadyAdded && !isInData && !isInGhostRecords) {
+                    acc.push({
+                        id: itemUserId,
+                        username: item.userName || item.employeeName || "Unknown User",
+                        avatar_url: item.avatar || null,
+                        department: "Unknown",
+                        role: "staff"
+                    });
                 }
                 return acc;
             }, []);
 
             // Combine valid members and ghosts, ensuring uniqueness by ID
             const allMembersToDisplay = Array.from(new Map(
-                [...validMembers, ...ghostMembersFromRecords, ...ghostMembersFromLogs]
+                [...validMembers, ...ghostMembersFromRecords, ...ghostMembersFromLogsAndSessions]
                     .map(m => [m.id, m])
             ).values());
 
             const fullList = allMembersToDisplay.map(member => {
-                // Try to match by userId first, then username fallback
-                const record = dayRecords.find(r => r.userId === member.id || r.employee === member.username);
-                if (record) return record;
+                // strict match priority: if record has userId, it must match member.id
+                // otherwise fallback to name match only if record has no userId
+                let record = dayRecords.find(r => {
+                    if (r.userId) return r.userId === member.id;
+                    return r.employee === member.username;
+                });
 
-                // FALLBACK: Check Logs if no record exists
+                // FALLBACK DATA SOURCES
+                const userSession = daySessions.find(s => s.userId === member.id);
                 const userLog = dayLogs.find(l => l.userId === member.id && l.type === 'IN');
+
+                // PATCHING: If record exists but is missing Clock In time, try to patch it from Session or Log
+                if (record) {
+                    const isMissingTime = !record.clockIn || record.clockIn === "-";
+                    if (isMissingTime) {
+                        if (userSession?.clockIn) {
+                            return {
+                                ...record,
+                                clockIn: format(new Date(userSession.clockIn), "HH:mm"),
+                                clockOut: userSession.clockOut ? format(new Date(userSession.clockOut), "HH:mm") : record.clockOut,
+                                // Patch location if missing in record but present in session
+                                checkInLocationCode: record.checkInLocationCode || userSession.locationCode,
+                                checkInLocationType: record.checkInLocationType || userSession.locationType,
+                                notes: record.notes || "Patched from Session"
+                            };
+                        }
+                        if (userLog?.timestamp) {
+                            return {
+                                ...record,
+                                clockIn: format(new Date(userLog.timestamp), "HH:mm"),
+                                // Patch location from log
+                                checkInLocationCode: record.checkInLocationCode || userLog.detectedLocationCode,
+                                checkInLatitude: record.checkInLatitude || userLog.latitude,
+                                checkInLongitude: record.checkInLongitude || userLog.longitude,
+                                notes: record.notes || "Patched from Log"
+                            };
+                        }
+                    }
+                    return record;
+                }
+
+                // FALLBACK 1: Check LOGS if no record exists
                 if (userLog) {
                     return {
                         id: `log-${member.id}-${dateToShow}`,
@@ -702,7 +744,37 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                         status: "intime" as any, // Visual indicator
                         overtime: "-",
                         day: format(new Date(dateToShow), "EEE"),
-                        notes: "Raw Log (Record Missing)"
+                        notes: "Raw Log (Record Missing)",
+                        // Add Location Data
+                        checkInLocationCode: userLog.detectedLocationCode,
+                        checkInLatitude: userLog.latitude,
+                        checkInLongitude: userLog.longitude,
+                        checkInLocationType: "office", // Assumption
+                        checkInLocationStatus: userLog.locationStatus
+                    };
+                }
+
+                // FALLBACK 2: Check SESSIONS if no record AND no log exists
+                if (userSession) {
+                    return {
+                        id: `session-${member.id}-${dateToShow}`,
+                        date: dateToShow,
+                        employee: member.username || "Unknown",
+                        userId: member.id,
+                        clockIn: userSession.clockIn ? format(new Date(userSession.clockIn), "HH:mm") : "-",
+                        clockOut: userSession.clockOut ? format(new Date(userSession.clockOut), "HH:mm") : "-",
+                        duration: userSession.durationMinutes ? formatMinutes(userSession.durationMinutes) : "-",
+                        status: "intime" as any, // Visual indicator fallback
+                        overtime: "-",
+                        day: format(new Date(dateToShow), "EEE"),
+                        notes: "Raw Session (Record Missing)",
+                        // Add Location Data
+                        checkInLocationCode: userSession.locationCode,
+                        checkInLatitude: userSession.latitude,
+                        checkInLongitude: userSession.longitude,
+                        checkInLocationType: userSession.locationType,
+                        checkInLocationStatus: userSession.locationStatus,
+                        checkInRemoteMode: userSession.remoteMode
                     };
                 }
 

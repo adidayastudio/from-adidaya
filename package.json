@@ -17,7 +17,7 @@
     "@radix-ui/react-popover": "^1.1.15",
     "@sparticuz/chromium": "^143.0.4",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.81.1",
+    "@supabase/supabase-js": "^2.93.3",
     "@tiptap/core": "^3.11.0",
     "@tiptap/extension-blockquote": "^3.10.7",
     "@tiptap/extension-bullet-list": "^3.10.7",

@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import * as clockApi from "@/lib/api/clock/index";
 import { fetchTeamMembers, TeamMemberProfile } from "@/lib/api/clock_team";
-import { AttendanceRecord, LeaveRequest, OvertimeLog, AttendanceSession, BusinessTrip, AttendanceLog, RequestStatus } from "@/lib/api/clock/clock.types";
+import { formatMinutes } from "@/lib/clock-data-logic";
+import { AttendanceRecord, LeaveRequest, OvertimeLog, AttendanceSession, BusinessTrip, AttendanceLog, RequestStatus, AttendanceStatus } from "@/lib/api/clock/clock.types";
 
 // Helper to get start/end of month
 const getMonthRange = (date: Date) => {
@@ -53,7 +54,69 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
             // USE BUNDLE FETCH
             const bundle = await clockApi.fetchClockBundle(targetId, startDate, endDate);
 
-            setAttendance(bundle.attendance);
+            // --- CENTRALIZED DATA PATCHING ---
+            // 1. Patch Existing Records (if missing time but has session/log)
+            let patchedAttendance = bundle.attendance.map(record => {
+                const dayStr = record.date; // already YYYY-MM-DD
+                const isMissingTime = !record.clockIn || record.clockIn === "-";
+
+                if (isMissingTime) {
+                    const session = bundle.sessions.find(s => s.date === dayStr && s.userId === record.userId);
+                    const log = bundle.logs.find(l => {
+                        // Log timestamp is ISO, need to check date match
+                        if (l.type !== 'IN' || l.userId !== record.userId) return false;
+                        const logDate = new Date(l.timestamp);
+                        const y = logDate.getFullYear();
+                        const m = String(logDate.getMonth() + 1).padStart(2, '0');
+                        const d = String(logDate.getDate()).padStart(2, '0');
+                        return `${y}-${m}-${d}` === dayStr;
+                    });
+
+                    if (session?.clockIn) {
+                        return {
+                            ...record,
+                            clockIn: session.clockIn, // RETURN ISO
+                            clockOut: session.clockOut ? session.clockOut : record.clockOut, // RETURN ISO
+                            status: "intime" as AttendanceStatus
+                        };
+                    } else if (log?.timestamp) {
+                        return {
+                            ...record,
+                            clockIn: log.timestamp, // RETURN ISO
+                            status: "intime" as AttendanceStatus
+                        };
+                    }
+                }
+                return record;
+            });
+
+            // 2. Inject Missing Records (from Sessions that have no Attendance Record)
+            bundle.sessions.forEach(session => {
+                const dayStr = session.date;
+                const exists = patchedAttendance.some(r => r.userId === session.userId && r.date === dayStr);
+
+                if (!exists) {
+                    patchedAttendance.push({
+                        id: `fallback-session-${session.id}`,
+                        userId: session.userId,
+                        date: dayStr,
+                        day: new Date(dayStr).toLocaleDateString('en-US', { weekday: 'short' }),
+                        employee: session.userName || "Unknown",
+                        schedule: "09:00 - 18:00", // Default assumption
+                        clockIn: session.clockIn, // RETURN ISO
+                        clockOut: session.clockOut ? session.clockOut : null, // RETURN ISO
+                        duration: session.durationMinutes ? formatMinutes(session.durationMinutes) : "-", // Keep formatted or number?
+                        // AttendanceRecord expects "duration" as string.
+                        overtime: "-",
+                        status: "intime" as AttendanceStatus,
+                        totalMinutes: session.durationMinutes || 0,
+                        overtimeMinutes: 0,
+                        avatar: session.avatar
+                    });
+                }
+            });
+
+            setAttendance(patchedAttendance);
             setLeaves(bundle.leaves);
             setOvertime(bundle.overtime);
             setBusinessTrips(bundle.trips);
