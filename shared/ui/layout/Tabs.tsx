@@ -23,17 +23,34 @@ export function Tabs<T extends string>({
   className,
   activeColor = "red",
 }: TabsProps<T>) {
+  const tabsRef = React.useRef<Map<string, HTMLButtonElement>>(new Map());
+
+  React.useEffect(() => {
+    const activeTab = tabsRef.current.get(value);
+    if (activeTab) {
+      activeTab.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  }, [value]);
+
   return (
-    <div className={clsx("flex gap-6", className)}>
+    <div className={clsx("flex gap-6 flex-nowrap", className)}>
       {items.map((item) => {
         const active = item.key === value;
 
         return (
           <button
             key={item.key}
+            ref={(el) => {
+              if (el) tabsRef.current.set(item.key, el);
+              else tabsRef.current.delete(item.key);
+            }}
             onClick={() => onChange(item.key)}
             className={clsx(
-              "relative h-9 flex items-center justify-center text-sm transition px-1",
+              "relative h-9 flex items-center justify-center text-sm transition px-1 whitespace-nowrap shrink-0",
               active
                 ? "font-medium text-neutral-900"
                 : "text-neutral-500 hover:text-neutral-900"

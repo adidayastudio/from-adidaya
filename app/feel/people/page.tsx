@@ -32,7 +32,7 @@ export default function FeelPeoplePage() {
 
    const sectionParam = searchParams.get("section");
    const uidParam = searchParams.get("uid");
-   const currentSection: PeopleSection = (sectionParam as PeopleSection) || "overview";
+   const currentSection: PeopleSection = (sectionParam as PeopleSection) || "personal-profile";
 
    // Trigger for Add People Drawer
    const [triggerAddPerson, setTriggerAddPerson] = useState(0);
@@ -48,10 +48,22 @@ export default function FeelPeoplePage() {
       }
    };
 
-   // Fetch Directory Data
+   // Initial Data Fetch
    useEffect(() => {
       loadDirectory();
    }, []);
+
+   // Redirect removed to prevent auto-loading Personal Profile
+   // Default view will be handled by the render logic (likely showing Directory or Empty State)
+   /* 
+   useEffect(() => {
+      if (!sectionParam) {
+         const params = new URLSearchParams(searchParams);
+         params.set("section", "personal-profile");
+         router.replace(`${pathname}?${params.toString()}`);
+      }
+   }, [sectionParam, pathname, router, searchParams]);
+   */
 
    const handleSectionChange = (section: PeopleSection) => {
       const params = new URLSearchParams(searchParams);
@@ -79,8 +91,8 @@ export default function FeelPeoplePage() {
    // If I am admin/HR, I can view anyone. If I am staff, I can only view myself really (unless directory is public)
    // For now assuming directory is public to logged in users.
    const targetPersonId = uidParam || profile?.id;
-   const targetPersonData = people.find(p => p.id === targetPersonId);
-   const myPersonData = people.find(p => p.id === profile?.id);
+   const targetPersonData = people.find(p => p?.id === targetPersonId);
+   const myPersonData = people.find(p => p?.id === profile?.id);
 
    // Determine View Access
    const isGlobalView = profile?.role === "admin" || profile?.role === "supervisor" || profile?.role === "hr" || profile?.role === "superadmin";
@@ -140,7 +152,16 @@ export default function FeelPeoplePage() {
 
    const isLoading = profileLoading || loadingData;
 
-   const mobileTabs = isGlobalView ? [
+   const PROFILE_TABS = [
+      { id: "account", label: "Account", href: `${pathname}?section=personal-profile&tab=account` },
+      { id: "profile", label: "Profile", href: `${pathname}?section=personal-profile&tab=profile` },
+      { id: "employment", label: "Employment", href: `${pathname}?section=personal-profile&tab=employment` },
+      { id: "skills", label: "Skills", href: `${pathname}?section=personal-profile&tab=skills` },
+      { id: "performance", label: "Performance", href: `${pathname}?section=personal-profile&tab=performance` },
+      { id: "access", label: "Access", href: `${pathname}?section=personal-profile&tab=access` },
+   ];
+
+   const mobileTabs = (currentSection === "personal-profile") ? PROFILE_TABS : isGlobalView ? [
       { id: "personal-profile", label: "My Profile", href: "/feel/people?section=personal-profile" },
       { id: "personal-performance", label: "My Performance", href: "/feel/people?section=personal-performance" },
       { id: "overview", label: "Overview", href: "/feel/people?section=overview" },

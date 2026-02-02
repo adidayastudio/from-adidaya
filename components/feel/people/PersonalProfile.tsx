@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Person } from "./types";
 import { Settings, Shield, User, Briefcase, Star, ChartBar, Lock } from "lucide-react";
 import clsx from "clsx";
 import { Tabs } from "@/shared/ui/layout/Tabs";
-import { fetchPeopleAvailability } from "@/lib/api/people";
+import { fetchPeopleAvailability, fetchPersonDetails } from "@/lib/api/people";
 import { PeopleAvailability } from "@/lib/types/people-types";
 import StatusUpdateModal from "./modals/StatusUpdateModal";
 
@@ -18,22 +19,64 @@ import AccessTab from "./profile/AccessTab";
 import AccountTab from "./profile/AccountTab";
 
 export default function PersonalProfile({ person, isMe = false, onUpdate }: { person: Person, isMe?: boolean, onUpdate?: () => void }) {
-    const [activeTab, setActiveTab] = useState("account");
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    // State to hold enriched person data (history, kpi, etc.)
+    // We initialize with 'person' which has the basic info
+    const [fullPerson, setFullPerson] = useState<Person>(person);
+
+    // Tab State from URL
+    const activeTab = searchParams.get("tab") || "account";
+
     const [availability, setAvailability] = useState<PeopleAvailability | null>(null);
     const [isStatusModalOpen, setStatusModalOpen] = useState(false);
 
     // System Account Logic
     const isSystem = person.account_type === "system_account";
 
+    // 1. Update fullPerson base when prop changes
     useEffect(() => {
-        if (person.id && !isSystem) {
-            fetchPeopleAvailability(person.id).then(setAvailability);
+        setFullPerson(prev => ({ ...prev, ...person }));
+    }, [person]);
+
+    // 2. Fetch detailed data (History, KPI) on mount or id change
+    useEffect(() => {
+        if (person.id) {
+            fetchPersonDetails(person.id)
+                .then(({ history, kpi }) => {
+                    setFullPerson(prev => ({
+                        ...prev,
+                        history: history || [],
+                        kpi: kpi || prev.kpi // Keep default if null
+                    }));
+                })
+                .catch(err => console.error("Failed to fetch person details:", err));
+
+            if (!isSystem) {
+                fetchPeopleAvailability(person.id)
+                    .then(setAvailability)
+                    .catch(err => console.error("Failed to fetch availability:", err));
+            }
         }
     }, [person.id, isSystem]);
+
+    const setActiveTab = (tab: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("tab", tab);
+        router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    };
 
     const refreshData = () => {
         if (!isSystem) {
             fetchPeopleAvailability(person.id).then(setAvailability);
+        }
+        // Also refresh details if needed
+        if (person.id) {
+            fetchPersonDetails(person.id).then(({ history, kpi }) => {
+                setFullPerson(prev => ({ ...prev, history, kpi }));
+            });
         }
     };
 
@@ -131,32 +174,34 @@ export default function PersonalProfile({ person, isMe = false, onUpdate }: { pe
             </div>
 
             {/* TABS NAVIGATION */}
-            <div className="border-b border-neutral-200 overflow-x-auto no-scrollbar">
-                <div className="min-w-max">
-                    <Tabs
-                        value={activeTab}
-                        onChange={setActiveTab}
-                        activeColor="blue"
-                        items={[
-                            { key: "account", label: <div className="flex items-center gap-2"><Settings className="w-4 h-4" /> Account</div> },
-                            { key: "profile", label: <div className="flex items-center gap-2"><User className="w-4 h-4" /> Profile</div> },
-                            { key: "employment", label: <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Employment</div> },
-                            { key: "skills", label: <div className="flex items-center gap-2"><Star className="w-4 h-4" /> Skills</div> },
-                            ...(!isSystem ? [{ key: "performance", label: <div className="flex items-center gap-2"><ChartBar className="w-4 h-4" /> Performance</div> }] : []),
-                            { key: "access", label: <div className="flex items-center gap-2"><Lock className="w-4 h-4" /> Access</div> },
-                        ]}
-                    />
-                </div>
+            <div
+                className="hidden lg:block border-b border-neutral-200 overflow-x-auto scrollbar-hide sticky top-0 z-20 bg-white transition-all"
+                style={{ WebkitOverflowScrolling: "touch" }}
+            >
+                <Tabs
+                    value={activeTab}
+                    onChange={setActiveTab}
+                    className="min-w-max px-4 md:px-0"
+                    activeColor="blue"
+                    items={[
+                        { key: "account", label: <div className="flex items-center gap-2"><Settings className="w-4 h-4" /> Account</div> },
+                        { key: "profile", label: <div className="flex items-center gap-2"><User className="w-4 h-4" /> Profile</div> },
+                        { key: "employment", label: <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Employment</div> },
+                        { key: "skills", label: <div className="flex items-center gap-2"><Star className="w-4 h-4" /> Skills</div> },
+                        ...(!isSystem ? [{ key: "performance", label: <div className="flex items-center gap-2"><ChartBar className="w-4 h-4" /> Performance</div> }] : []),
+                        { key: "access", label: <div className="flex items-center gap-2"><Lock className="w-4 h-4" /> Access</div> },
+                    ]}
+                />
             </div>
 
             {/* TAB CONTENT */}
             <div className="min-h-[400px]">
-                {activeTab === "account" && <AccountTab person={person} isMe={isMe} onUpdate={onUpdate} />}
-                {activeTab === "profile" && <ProfileTab person={person} isSystem={isSystem} isMe={isMe} onUpdate={onUpdate} />}
-                {activeTab === "employment" && <EmploymentTab person={person} isSystem={isSystem} isMe={isMe} onUpdate={onUpdate} />}
-                {activeTab === "skills" && <SkillsTab person={person} isSystem={isSystem} isMe={isMe} />}
-                {activeTab === "performance" && <PerformanceTab person={person} isSystem={isSystem} isMe={isMe} />}
-                {activeTab === "access" && <AccessTab person={person} isMe={isMe} />}
+                {activeTab === "account" && <AccountTab person={fullPerson} isMe={isMe} onUpdate={onUpdate} />}
+                {activeTab === "profile" && <ProfileTab person={fullPerson} isSystem={isSystem} isMe={isMe} onUpdate={onUpdate} />}
+                {activeTab === "employment" && <EmploymentTab person={fullPerson} isSystem={isSystem} isMe={isMe} onUpdate={onUpdate} />}
+                {activeTab === "skills" && <SkillsTab person={fullPerson} isSystem={isSystem} isMe={isMe} />}
+                {activeTab === "performance" && <PerformanceTab person={fullPerson} isSystem={isSystem} isMe={isMe} />}
+                {activeTab === "access" && <AccessTab person={fullPerson} isMe={isMe} />}
             </div>
 
             {/* Modals */}
@@ -168,7 +213,7 @@ export default function PersonalProfile({ person, isMe = false, onUpdate }: { pe
                 onUpdate={refreshData}
             />
 
-        </div>
+        </div >
     );
 }
 

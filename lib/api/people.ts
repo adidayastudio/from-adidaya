@@ -31,9 +31,7 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
         levelsResult,
         empTypesResult,
         workStatusesResult,
-        workSchedulesResult,
-        historyResult,
-        perfSnapshotsResult
+        workSchedulesResult
     ] = await Promise.all([
         supabase.from('profiles').select('*').order('full_name', { ascending: true }),
         supabase.from('user_roles').select('*'),
@@ -42,9 +40,7 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
         supabase.from('organization_levels').select('id, name, roman_code'),
         supabase.from('employment_types').select('id, name'),
         supabase.from('work_status').select('id, name'),
-        supabase.from('work_schedules').select('id, name'),
-        supabase.from('career_history').select('*').order('event_date', { ascending: false }),
-        supabase.from('people_performance_snapshots').select('*').order('period', { ascending: false })
+        supabase.from('work_schedules').select('id, name')
     ]);
 
     if (profilesResult.error) {
@@ -52,16 +48,23 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
         return [];
     }
 
-    const profiles = profilesResult.data || [];
-    const roles = rolesResult.data || [];
-    const departments = deptsResult.data || [];
-    const positions = posResult.data || [];
-    const levels = levelsResult.data || [];
-    const empTypes = empTypesResult.data || [];
-    const workStatuses = workStatusesResult.data || [];
-    const schedules = workSchedulesResult.data || [];
-    const allHistory = historyResult.data || [];
-    const allSnapshots = perfSnapshotsResult.data || [];
+    const profiles = (profilesResult.data || []).filter(p => !!p);
+
+    // DEBUG: Check for the missing user
+    const missingId = "056164a2-3936-4e5e-ae1a-13c5bb83e158";
+    const found = profiles.find(p => p.id === missingId);
+    console.log(`[DEBUG] fetchPeopleDirectory: Total Profiles: ${profiles.length}. Missing ID ${missingId} found? ${found ? 'YES' : 'NO'}`);
+    if (!found) {
+        console.log(`[DEBUG] First 5 IDs:`, profiles.slice(0, 5).map(p => p.id));
+    }
+
+    const roles = (rolesResult.data || []).filter(r => !!r);
+    const departments = (deptsResult.data || []).filter(d => !!d);
+    const positions = (posResult.data || []).filter(p => !!p);
+    const levels = (levelsResult.data || []).filter(l => !!l);
+    const empTypes = (empTypesResult.data || []).filter(e => !!e);
+    const workStatuses = (workStatusesResult.data || []).filter(w => !!w);
+    const schedules = (workSchedulesResult.data || []).filter(s => !!s);
 
     console.log(`Fetched ${profiles.length} profiles.`);
 
@@ -76,8 +79,6 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
         const empTypeObj = empTypes.find((et: any) => et.id === p.employment_type_id);
         const workStatusObj = workStatuses.find((ws: any) => ws.id === p.work_status_id);
         const scheduleObj = schedules.find((s: any) => s.id === p.schedule_id);
-        const userHistory = allHistory.filter((h: any) => h.user_id === p.id);
-        const userSnapshot = allSnapshots.find((s: any) => s.user_id === p.id); // Latest because sorted
 
         const person: Person = {
             id: p.id,
@@ -121,14 +122,8 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
             contract_end_date: p.contract_end_date,
             probation_status: p.probation_status,
 
-            // History
-            history: userHistory.map((h: any) => ({
-                id: h.id,
-                title: h.title,
-                event_date: h.event_date,
-                type: h.type,
-                is_manual: h.is_manual
-            })),
+            // History - Fetched on demand
+            history: [],
 
             // Personal Data
             birthday: p.birth_date || p.birthday,
@@ -165,18 +160,74 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
                 performanceStatus: "No Data"
             },
             kpi: {
-                projectInvolvement: userSnapshot?.project_involvement_score || 75,
-                presenceScore: userSnapshot?.attendance_score || 75,
-                engagementScore: userSnapshot?.engagement_score || 75,
-                peerReviewScore: userSnapshot?.peer_review_score || 75,
-                qualityScore: userSnapshot?.quality_score || 75,
-                taskCompletionScore: userSnapshot?.task_completion_score || 75,
-                bonusScore: userSnapshot?.bonus_score || 0,
-                overallScore: userSnapshot?.computed_index || 75
+                projectInvolvement: 75,
+                presenceScore: 75,
+                engagementScore: 75,
+                peerReviewScore: 75,
+                qualityScore: 75,
+                taskCompletionScore: 75,
+                bonusScore: 0,
+                overallScore: 75
             }
         };
         return person;
-    });
+    }).filter(p => !!p);
+}
+
+// On-demand fetch for detailed profile view
+export async function fetchPersonDetails(userId: string): Promise<{ history: any[], kpi: any }> {
+    try {
+        const [historyResult, perfResult] = await Promise.all([
+            supabase.from('career_history').select('*').eq('user_id', userId).order('event_date', { ascending: false }),
+            supabase.from('people_performance_snapshots').select('*').eq('user_id', userId).order('period', { ascending: false }).limit(1).single()
+        ]);
+
+        if (historyResult.error) {
+            console.error("Error fetching history:", historyResult.error);
+        }
+        if (perfResult.error && perfResult.code !== 'PGRST116') { // Ignore 'no rows' error
+            // console.warn("Performance snapshot fetch info:", perfResult.error.message || perfResult.error);
+        }
+
+        const history = (historyResult.data || []).map((h: any) => ({
+            id: h.id,
+            title: h.title,
+            event_date: h.event_date,
+            type: h.type,
+            is_manual: h.is_manual
+        }));
+
+        const userSnapshot = perfResult.data;
+
+        const kpi = {
+            projectInvolvement: userSnapshot?.project_involvement_score || 75,
+            presenceScore: userSnapshot?.attendance_score || 75,
+            engagementScore: userSnapshot?.engagement_score || 75,
+            peerReviewScore: userSnapshot?.peer_review_score || 75,
+            qualityScore: userSnapshot?.quality_score || 75,
+            taskCompletionScore: userSnapshot?.task_completion_score || 75,
+            bonusScore: userSnapshot?.bonus_score || 0,
+            overallScore: userSnapshot?.computed_index || 75
+        };
+
+        return { history, kpi };
+    } catch (error) {
+        console.error("Critical error in fetchPersonDetails:", error);
+        // Return safe defaults to prevent UI crash
+        return {
+            history: [],
+            kpi: {
+                projectInvolvement: 75,
+                presenceScore: 75,
+                engagementScore: 75,
+                peerReviewScore: 75,
+                qualityScore: 75,
+                taskCompletionScore: 75,
+                bonusScore: 0,
+                overallScore: 75
+            }
+        };
+    }
 }
 
 export async function updatePeopleProfile(userId: string, updates: {
