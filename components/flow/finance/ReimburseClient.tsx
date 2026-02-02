@@ -42,8 +42,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format, addMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO, isBefore } from "date-fns";
 import { ReimburseRequest, ReimburseStatus, FundingSource } from "@/lib/types/finance-types";
 import { formatCurrency, STATUS_THEMES, cleanEntityName, getPrimaryStatus, formatStatus } from "./modules/utils";
+import { REIMBURSE_CATEGORY_OPTIONS } from "./modules/constants";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { fetchReimburseRequests, updateReimburseStatus, deleteReimburseRequest, fetchFundingSources } from "@/lib/client/finance-api";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { fetchTeamMembers } from "@/lib/api/clock_team";
@@ -95,6 +96,73 @@ function RejectModal({ item, onClose, onReject }: { item: any, onClose: () => vo
     );
 }
 
+// Pagination Component
+function Pagination({
+    currentPage,
+    totalItems,
+    itemsPerPage,
+    onPageChange
+}: {
+    currentPage: number,
+    totalItems: number,
+    itemsPerPage: number,
+    onPageChange: (page: number) => void
+}) {
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    if (totalItems === 0) return null;
+
+    return (
+        <div className="flex items-center justify-between px-6 py-4 bg-white/50 backdrop-blur-sm border-t border-neutral-100">
+            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                Showing <span className="text-neutral-900">{startItem}-{endItem}</span> of <span className="text-neutral-900">{totalItems}</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="p-2 hover:bg-neutral-100 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                    <ChevronLeft className="w-4 h-4 text-neutral-600" />
+                </button>
+                <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                        // Show first, last, and current +/- 1
+                        if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                            return (
+                                <button
+                                    key={page}
+                                    onClick={() => onPageChange(page)}
+                                    className={clsx(
+                                        "w-8 h-8 rounded-full text-xs font-bold transition-all",
+                                        currentPage === page
+                                            ? "bg-neutral-900 text-white shadow-lg shadow-neutral-200"
+                                            : "text-neutral-500 hover:bg-neutral-100"
+                                    )}
+                                >
+                                    {page}
+                                </button>
+                            );
+                        } else if (page === currentPage - 2 || page === currentPage + 2) {
+                            return <span key={page} className="text-neutral-300 mx-1">...</span>;
+                        }
+                        return null;
+                    })}
+                </div>
+                <button
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 hover:bg-neutral-100 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                    <ChevronRight className="w-4 h-4 text-neutral-600" />
+                </button>
+            </div>
+        </div>
+    );
+}
+
 function ReviseModal({ item, onClose, onRevise }: { item: any, onClose: () => void, onRevise: (reason: string) => void }) {
     const [reason, setReason] = useState("");
     return (
@@ -115,6 +183,76 @@ function ReviseModal({ item, onClose, onRevise }: { item: any, onClose: () => vo
                 <div className="flex gap-3">
                     <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
                     <button onClick={() => { if (reason) onRevise(reason); }} disabled={!reason} className="flex-1 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all disabled:opacity-50">Request Revision</button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+// Delete Confirmation Modal - Premium Design
+function DeleteConfirmModal({
+    item,
+    onClose,
+    onConfirm,
+    isDeleting
+}: {
+    item: { description?: string },
+    onClose: () => void,
+    onConfirm: () => void,
+    isDeleting?: boolean
+}) {
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden"
+            >
+                {/* Icon */}
+                <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                    <Trash2 className="w-7 h-7 text-red-500" />
+                </div>
+
+                <h3 className="text-lg font-bold text-neutral-900 mb-2 text-center">
+                    Delete Request?
+                </h3>
+                <p className="text-sm text-neutral-500 mb-6 text-center font-medium">
+                    Are you sure you want to delete this request? This action <span className="text-red-500 font-bold">cannot be undone</span>.
+                </p>
+
+                {item.description && (
+                    <div className="bg-neutral-50 rounded-xl p-3 mb-6 border border-neutral-100">
+                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Request</div>
+                        <div className="text-sm font-medium text-neutral-700 truncate">{item.description}</div>
+                    </div>
+                )}
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={isDeleting}
+                        className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isDeleting}
+                        className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {isDeleting ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Deleting...
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                            </>
+                        )}
+                    </button>
                 </div>
             </motion.div>
         </div>
@@ -574,7 +712,11 @@ function ViewModal({
 
                         <div>
                             <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Description</div>
-                            <div className="text-sm font-medium text-neutral-900">{item.description}</div>
+                            <div className="text-sm font-medium text-neutral-900">
+                                {item.description || (item.items && item.items.length > 0
+                                    ? item.items.map((i: any) => i.name).join(', ')
+                                    : "No description")}
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -765,15 +907,22 @@ function ViewModal({
 // -- MAIN CLIENT --
 
 export default function ReimburseClient() {
-    const { viewMode, userId, isLoading: isAuthLoading } = useFinance();
+    const { viewMode, setViewMode, canAccessTeam, userId, userRole, isLoading: isAuthLoading } = useFinance();
+    const router = useRouter();
     const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState("");
 
     // Filters
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [showAllMonths, setShowAllMonths] = useState(false);
     const [selectedProject, setSelectedProject] = useState("ALL");
     const [statusFilter, setStatusFilter] = useState<ReimburseStatus | "ALL">("ALL");
     const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 50;
 
     const [items, setItems] = useState<any[]>([]);
     const [fundingSources, setFundingSources] = useState<FundingSource[]>([]);
@@ -783,6 +932,9 @@ export default function ReimburseClient() {
     const [isLoadingSources, setIsLoadingSources] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [globalStats, setGlobalStats] = useState<any>(null);
+
+    const isTeamView = viewMode === "team";
 
     // States
     const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -791,10 +943,12 @@ export default function ReimburseClient() {
     const [rejectingItem, setRejectingItem] = useState<any | null>(null);
     const [payingItem, setPayingItem] = useState<any | null>(null);
     const [viewingItem, setViewingItem] = useState<any | null>(null);
+    const [deletingItem, setDeletingItem] = useState<any | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [previewingDocument, setPreviewingDocument] = useState<{ item: any, initialTab: 'invoice' | 'proof' } | null>(null);
 
     // Sorting
-    const [sortColumn, setSortColumn] = useState<'created_at' | 'project_name' | 'amount' | 'status' | 'submitter' | null>('created_at');
+    const [sortColumn, setSortColumn] = useState<'date' | 'project_name' | 'amount' | 'status' | 'submitter' | null>('date');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
     const STATUS_ORDER = ['DRAFT', 'PENDING', 'NEED_REVISION', 'APPROVED', 'PAID', 'REJECTED'];
@@ -806,7 +960,7 @@ export default function ReimburseClient() {
         return ['ALL', ...Array.from(cats)].sort();
     }, [items]);
 
-    const handleSort = (column: 'created_at' | 'project_name' | 'amount' | 'status' | 'submitter') => {
+    const handleSort = (column: 'date' | 'project_name' | 'amount' | 'status' | 'submitter') => {
         if (sortColumn === column) {
             setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
         } else {
@@ -814,8 +968,6 @@ export default function ReimburseClient() {
             setSortDirection('asc');
         }
     };
-
-    const isTeamView = viewMode === "team";
     const initialStatus = searchParams.get("status") as ReimburseStatus | "ALL" | null;
 
     // FAB Action Listener
@@ -830,19 +982,31 @@ export default function ReimburseClient() {
     }, []);
 
     // Load Data
-    const loadData = async () => {
-        setIsLoadingData(true);
+    const loadData = async (isInitial = false) => {
+        if (isInitial) setIsLoadingData(true);
         try {
-            const [requests, profiles, projectList] = await Promise.all([
-                fetchReimburseRequests(),
+            const offset = (currentPage - 1) * itemsPerPage;
+            const [{ data: rawItems, total, stats }, profiles, projectList] = await Promise.all([
+                fetchReimburseRequests({
+                    limit: itemsPerPage,
+                    offset: offset,
+                    project_id: selectedProject !== "ALL" ? selectedProject : undefined,
+                    status: statusFilter !== "ALL" ? statusFilter : undefined,
+                    q: searchTerm || undefined,
+                    month: showAllMonths ? "ALL" : (currentMonth.getMonth() + 1),
+                    year: currentMonth.getFullYear(),
+                    my_requests: !isTeamView
+                }),
                 fetchTeamMembers(),
                 fetchAllProjects()
             ]);
 
-            const profileMap = new Map(profiles.map(p => [p.id, p]));
-            setProjects(projectList);
+            setTotalItems(total || 0);
+            setGlobalStats(stats);
+            const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+            setProjects(projectList || []);
 
-            const mapped = requests.map((req: any) => {
+            const mapped = (rawItems || []).map((req: any) => {
                 const creator = profileMap.get(req.created_by);
                 return {
                     ...req,
@@ -870,12 +1034,23 @@ export default function ReimburseClient() {
         finally { setIsLoadingSources(false); }
     }
 
+    // Initial load and filters change
     useEffect(() => {
         if (!isAuthLoading && userId) {
-            loadData();
+            loadData(items.length === 0);
+        }
+    }, [isAuthLoading, userId, currentPage, statusFilter, selectedProject, searchTerm, currentMonth, showAllMonths, isTeamView]);
+
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [statusFilter, selectedProject, searchTerm, currentMonth, showAllMonths]);
+
+    useEffect(() => {
+        if (!isAuthLoading && userId) {
             loadFundingSources();
         }
-    }, [isAuthLoading, userId]);
+    }, [isAuthLoading, userId, isTeamView]);
 
     // Helpers
     const handleMonthChange = (direction: "prev" | "next") => {
@@ -884,47 +1059,50 @@ export default function ReimburseClient() {
 
 
 
-    // Stats
-    const summaryStats = useMemo(() => {
-        return {
-            total: items.length,
-            pending: items.filter(i => i.status === "PENDING").length,
-            approved: items.filter(i => i.status === "APPROVED").length,
-            paid: items.filter(i => i.status === "PAID").length,
-            rejected: items.filter(i => i.status === "REJECTED").length
-        };
+    // 1. Base Items: Now just current page items (already filtered by backend)
+    const baseItems = useMemo(() => {
+        return items;
     }, [items]);
 
-    // Derived
+    // 2. Summary Stats derived from API globalStats
+    const summaryStats = useMemo(() => {
+        if (globalStats) {
+            return {
+                total: globalStats.totalCount,
+                totalAmount: globalStats.totalAmount,
+                pending: globalStats.pendingCount,
+                pendingAmount: globalStats.pendingAmount,
+                approved: globalStats.approvedCount,
+                approvedAmount: globalStats.approvedAmount,
+                paid: globalStats.paidCount,
+                paidAmount: globalStats.paidAmount,
+                rejected: globalStats.rejectedCount
+            };
+        }
+        return {
+            total: 0,
+            totalAmount: 0,
+            pending: 0,
+            pendingAmount: 0,
+            approved: 0,
+            approvedAmount: 0,
+            paid: 0,
+            paidAmount: 0,
+            rejected: 0
+        };
+    }, [globalStats]);
+
+    // 3. Final Filtered Items: Now just items (already filtered by backend)
     const filteredItems = useMemo(() => {
-        const start = startOfMonth(currentMonth);
-        const end = endOfMonth(currentMonth);
-
-        let result = items.filter(item => {
-            const matchesSearch =
-                item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.staff_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.project?.project_name?.toLowerCase().includes(searchTerm.toLowerCase());
-
-            const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
-
-            // Allow project_id string matching or if selectedProject is ALL
-            const matchesProject = selectedProject === "ALL" || item.project_id === selectedProject;
-
-            // Date filtering
-            const itemDate = item.date ? parseISO(item.date) : parseISO(item.created_at);
-            const matchesDate = isWithinInterval(itemDate, { start, end });
-
-            return matchesSearch && matchesStatus && matchesProject && matchesDate;
-        });
+        let result = [...items];
 
         // Apply sorting
         if (sortColumn) {
             result = [...result].sort((a, b) => {
                 let comparison = 0;
                 switch (sortColumn) {
-                    case 'created_at':
-                        comparison = new Date(a.date || a.created_at).getTime() - new Date(b.date || b.created_at).getTime();
+                    case 'date':
+                        comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
                         break;
                     case 'project_name':
                         comparison = (a.project?.project_name || '').localeCompare(b.project?.project_name || '');
@@ -944,7 +1122,7 @@ export default function ReimburseClient() {
         }
 
         return result;
-    }, [items, searchTerm, statusFilter, selectedProject, currentMonth, sortColumn, sortDirection, STATUS_ORDER]);
+    }, [baseItems, statusFilter, sortColumn, sortDirection, STATUS_ORDER]);
 
     const handleExport = async () => {
         if (filteredItems.length === 0) return;
@@ -1050,12 +1228,13 @@ export default function ReimburseClient() {
 
             <div className="flex flex-col gap-6">
                 {/* SUMMARY CARDS */}
-                <SummaryCardsRow>
+                <SummaryCardsRow className="lg:grid-cols-5">
                     <SummaryCard
                         icon={<Package className="w-5 h-5 text-red-600" />}
                         iconBg="bg-red-50"
                         label="Total Requests"
                         value={summaryStats.total.toString()}
+                        subtext={formatCurrency(summaryStats.totalAmount)}
                         onClick={() => setStatusFilter("ALL")}
                         isActive={statusFilter === "ALL"}
                         activeColor="ring-red-500"
@@ -1066,6 +1245,7 @@ export default function ReimburseClient() {
                         iconBg="bg-orange-50"
                         label="Pending"
                         value={summaryStats.pending.toString()}
+                        subtext={formatCurrency(summaryStats.pendingAmount)}
                         onClick={() => setStatusFilter("PENDING")}
                         isActive={statusFilter === "PENDING"}
                         activeColor="ring-orange-500"
@@ -1076,6 +1256,7 @@ export default function ReimburseClient() {
                         iconBg="bg-blue-50"
                         label="Approved"
                         value={summaryStats.approved.toString()}
+                        subtext={formatCurrency(summaryStats.approvedAmount)}
                         onClick={() => setStatusFilter("APPROVED")}
                         isActive={statusFilter === "APPROVED"}
                         activeColor="ring-blue-500"
@@ -1086,6 +1267,7 @@ export default function ReimburseClient() {
                         iconBg="bg-emerald-50"
                         label="Paid"
                         value={summaryStats.paid.toString()}
+                        subtext={formatCurrency(summaryStats.paidAmount)}
                         onClick={() => setStatusFilter("PAID")}
                         isActive={statusFilter === "PAID"}
                         activeColor="ring-emerald-500"
@@ -1125,13 +1307,25 @@ export default function ReimburseClient() {
 
                     {/* Month Selector - iOS Glassy */}
                     <div className="flex items-center gap-0.5 p-1 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 shadow-sm">
-                        <button onClick={() => handleMonthChange("prev")} className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors">
+                        <button
+                            onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
+                            className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
+                        >
                             <ChevronLeft className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-[11px] font-bold text-neutral-700 min-w-[42px] text-center">
-                            {format(currentMonth, "MMM-yy")}
-                        </span>
-                        <button onClick={() => handleMonthChange("next")} className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors">
+                        <button
+                            onClick={() => setShowAllMonths(!showAllMonths)}
+                            className={clsx(
+                                "text-[11px] font-bold min-w-[42px] text-center transition-colors",
+                                showAllMonths ? "text-red-600" : "text-neutral-700"
+                            )}
+                        >
+                            {showAllMonths ? "ALL" : format(currentMonth, "MMM-yy")}
+                        </button>
+                        <button
+                            onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
+                            className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
+                        >
                             <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                     </div>
@@ -1154,24 +1348,25 @@ export default function ReimburseClient() {
                         </select>
                     </div>
 
-                    {/* Category Filter (Native) */}
+                    {/* Category Dropdown (Native) */}
                     <div className="relative">
-                        <div className={clsx(
-                            "p-2.5 rounded-full backdrop-blur-sm border shadow-sm transition-all flex items-center justify-center",
-                            categoryFilter !== "ALL"
-                                ? "bg-neutral-900 text-white border-neutral-800"
-                                : "bg-white/80 border-white/60 text-neutral-500"
-                        )}>
-                            <Filter className="w-4 h-4" />
+                        <div className="h-9 px-3 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-[11px] font-bold text-neutral-700 shadow-sm flex items-center gap-1">
+                            <span>
+                                {categoryFilter === "ALL"
+                                    ? "All Categories"
+                                    : REIMBURSE_CATEGORY_OPTIONS.find(c => c.value === categoryFilter)?.label || categoryFilter}
+                            </span>
+                            <ChevronDown className="w-3 h-3 text-neutral-400" />
                         </div>
                         <select
                             value={categoryFilter}
                             onChange={(e) => setCategoryFilter(e.target.value)}
                             className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
                         >
-                            {availableCategories.map(cat => (
-                                <option key={cat} value={cat}>
-                                    {cat === 'ALL' ? 'All Types' : cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase().replace(/_/g, ' ')}
+                            <option value="ALL">All Categories</option>
+                            {REIMBURSE_CATEGORY_OPTIONS.map(cat => (
+                                <option key={cat.value} value={cat.value}>
+                                    {cat.label}
                                 </option>
                             ))}
                         </select>
@@ -1193,14 +1388,15 @@ export default function ReimburseClient() {
                     </button>
 
                     {/* New Icon - Red Accent */}
-                    {!isBefore(currentMonth, startOfMonth(new Date())) && (
+                    {/* New Icon - Red Accent (Hidden on mobile as requested) */}
+                    {/* {!isBefore(currentMonth, startOfMonth(new Date())) && (
                         <button
                             onClick={() => { setEditingItem(null); setIsDrawerOpen(true); }}
                             className="p-2.5 bg-red-600 rounded-full text-white shadow-md shadow-red-200/50 hover:bg-red-700 transition-colors"
                         >
                             <Plus className="w-4 h-4" />
                         </button>
-                    )}
+                    )} */}
                 </div>
 
                 {/* Mobile Search Input (Hidden by default) - iOS Glassy */}
@@ -1229,13 +1425,25 @@ export default function ReimburseClient() {
                         </div>
 
                         <div className="h-10 flex items-center gap-1 p-1 bg-white rounded-xl border border-neutral-200 shadow-sm">
-                            <button onClick={() => handleMonthChange("prev")} className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all">
+                            <button
+                                onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
+                                className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
+                            >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
-                            <div className="px-2 text-sm font-bold text-neutral-700 whitespace-nowrap min-w-[100px] text-center">
-                                {format(currentMonth, "MMM yyyy")}
-                            </div>
-                            <button onClick={() => handleMonthChange("next")} className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all">
+                            <button
+                                onClick={() => setShowAllMonths(!showAllMonths)}
+                                className={clsx(
+                                    "px-2 text-sm font-bold whitespace-nowrap min-w-[100px] text-center transition-colors hover:text-red-500",
+                                    showAllMonths ? "text-red-600" : "text-neutral-700"
+                                )}
+                            >
+                                {showAllMonths ? "All Time" : format(currentMonth, "MMM yyyy")}
+                            </button>
+                            <button
+                                onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
+                                className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
+                            >
                                 <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
@@ -1260,15 +1468,16 @@ export default function ReimburseClient() {
                             <select
                                 value={categoryFilter}
                                 onChange={(e) => setCategoryFilter(e.target.value)}
-                                className="h-10 pl-3 pr-8 bg-white rounded-xl border border-neutral-200 shadow-sm text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 hover:border-red-500/30 transition-all appearance-none cursor-pointer min-w-[150px]"
+                                className="appearance-none h-10 pl-3 pr-8 bg-white border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/50 transition-all cursor-pointer min-w-[100px] max-w-[140px] lg:max-w-[180px] truncate"
                             >
-                                {availableCategories.map(cat => (
-                                    <option key={cat} value={cat}>
-                                        {cat === 'ALL' ? 'All Categories' : cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase().replace(/_/g, ' ')}
+                                <option value="ALL">All Categories</option>
+                                {REIMBURSE_CATEGORY_OPTIONS.map(cat => (
+                                    <option key={cat.value} value={cat.value}>
+                                        {cat.label}
                                     </option>
                                 ))}
                             </select>
-                            <ChevronDown className="w-4 h-4 text-neutral-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
                         </div>
                     </div>
 
@@ -1344,7 +1553,9 @@ export default function ReimburseClient() {
                                     {/* Line 1: Item + Amount + Status */}
                                     <div className="flex items-center justify-between gap-2 mb-1.5">
                                         <div className="text-[12px] font-semibold text-neutral-900 leading-tight flex-1 min-w-0">
-                                            {item.description}
+                                            {item.items && item.items.length > 1
+                                                ? `${item.items[0].name} + ${item.items.length - 1} more`
+                                                : (item.items?.[0]?.name || item.description)}
                                         </div>
                                         <span className="text-[12px] font-bold text-neutral-900 tabular-nums whitespace-nowrap">{formatCurrency(item.amount)}</span>
                                         <StatusBadge status={item.status} />
@@ -1355,7 +1566,7 @@ export default function ReimburseClient() {
                                         <div className="flex items-center gap-1 text-[10px] text-neutral-400">
                                             <span className="font-bold text-neutral-500">{item.project?.project_code || "N/A"}</span>
                                             <span>•</span>
-                                            <span>{format(new Date(item.created_at), "dd MMM")}</span>
+                                            <span>{format(new Date(item.date), "dd MMM")}</span>
                                             <span>•</span>
                                             <span className="capitalize">{item.category?.replace(/_/g, ' ').toLowerCase() || 'Uncategorized'}</span>
                                             {isTeamView && (
@@ -1378,7 +1589,18 @@ export default function ReimburseClient() {
                                             )}
                                             {/* Edit for owner */}
                                             {!isTeamView && (item.status === "DRAFT" || item.status === "NEED_REVISION" || item.status === "PENDING" || item.status === "REJECTED") && (
-                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1 text-neutral-500 bg-neutral-100 rounded"><Pencil className="w-3.5 h-3.5" /></button>
+                                                <>
+                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1 text-neutral-500 bg-neutral-100 rounded"><Pencil className="w-3.5 h-3.5" /></button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setDeletingItem(item);
+                                                        }}
+                                                        className="p-1 text-red-500 bg-red-50 rounded"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </>
                                             )}
                                             <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1 text-blue-600 bg-blue-50 rounded"><Eye className="w-3.5 h-3.5" /></button>
                                         </div>
@@ -1394,11 +1616,11 @@ export default function ReimburseClient() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-neutral-100 bg-white/20">
-                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('created_at')}>
+                                <tr className="border-b border-neutral-100 bg-neutral-50/50 backdrop-blur-sm">
+                                    <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('date')}>
                                         <span className="flex items-center gap-1">
                                             Date
-                                            {sortColumn === 'created_at' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                            {sortColumn === 'date' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                                         </span>
                                     </th>
                                     <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('project_name')}>
@@ -1446,7 +1668,7 @@ export default function ReimburseClient() {
                                                 }
                                             }}
                                         >
-                                            <td className="px-6 py-4 text-xs font-medium text-neutral-500">{format(new Date(item.created_at), "dd MMM yyyy")}</td>
+                                            <td className="px-6 py-4 text-xs font-medium text-neutral-500 tabular-nums">{format(new Date(item.date), "dd MMM yyyy")}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] font-bold bg-neutral-100 px-1.5 py-0.5 rounded w-fit text-neutral-500 mb-1">{item.project?.project_code || "N/A"}</span>
@@ -1454,7 +1676,11 @@ export default function ReimburseClient() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-xs font-semibold text-neutral-900">{item.description}</div>
+                                                <div className="text-xs font-semibold text-neutral-900 mb-1">
+                                                    {item.items && item.items.length > 1
+                                                        ? `${item.items[0].name} + ${item.items.length - 1} more`
+                                                        : (item.items?.[0]?.name || item.description)}
+                                                </div>
                                                 <span className="text-[10px] text-neutral-400 uppercase font-bold tracking-wider flex items-center gap-1">
                                                     {item.category?.replace(/_/g, " ")}
                                                     {item.subcategory && (
@@ -1512,14 +1738,22 @@ export default function ReimburseClient() {
                                                         <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1.5 hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 rounded-full" title="Pay"><CreditCard className="w-4 h-4" /></button>
                                                     )}
 
-                                                    {!isTeamView && (item.status === "PENDING" || item.status === "REJECTED" || item.status === "DRAFT" || item.status === "NEED_REVISION") && (
+                                                    {/* Admin Delete Button - Visible in Team View for all statuses */}
+                                                    {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                        <button onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setDeletingItem(item);
+                                                        }} className="p-1.5 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded-full" title="Delete Request"><Trash2 className="w-4 h-4" /></button>
+                                                    )}
+
+                                                    {(!isTeamView || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (["DRAFT", "NEED_REVISION", "PENDING", "REJECTED"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
                                                         <>
-                                                            <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-full"><Pencil className="w-4 h-4" /></button>
+                                                            {(!isTeamView && (["DRAFT", "NEED_REVISION", "PENDING"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || ""))) && (
+                                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-full"><Pencil className="w-4 h-4" /></button>
+                                                            )}
                                                             <button onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                if (confirm("Are you sure you want to delete this request?")) {
-                                                                    deleteReimburseRequest(item.id).then(() => loadData());
-                                                                }
+                                                                setDeletingItem(item);
                                                             }} className="p-1.5 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded-full"><Trash2 className="w-4 h-4" /></button>
                                                         </>
                                                     )}
@@ -1532,6 +1766,13 @@ export default function ReimburseClient() {
                         </table>
                     </div>
                 </div>
+
+                <Pagination
+                    currentPage={currentPage}
+                    totalItems={totalItems}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                />
             </div>
 
             {/* DRAWERS & MODALS (kept as is) */}
@@ -1542,6 +1783,17 @@ export default function ReimburseClient() {
                 initialData={editingItem || undefined}
                 onClose={() => { setIsDrawerOpen(false); setEditingItem(null); }}
                 onSuccess={() => { setIsDrawerOpen(false); setEditingItem(null); loadData(); }}
+                onDelete={editingItem ? async () => {
+                    try {
+                        await deleteReimburseRequest(editingItem.id);
+                        loadData();
+                        setIsDrawerOpen(false);
+                        setEditingItem(null);
+                    } catch (error) {
+                        console.error("Delete failed:", error);
+                        alert("Failed to delete request.");
+                    }
+                } : undefined}
             />
 
             {approvingItem && (
@@ -1625,6 +1877,27 @@ export default function ReimburseClient() {
                     item={previewingDocument.item}
                     initialTab={previewingDocument.initialTab}
                     onClose={() => setPreviewingDocument(null)}
+                />
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deletingItem && (
+                <DeleteConfirmModal
+                    item={deletingItem}
+                    onClose={() => setDeletingItem(null)}
+                    onConfirm={async () => {
+                        setIsDeleting(true);
+                        try {
+                            await deleteReimburseRequest(deletingItem.id);
+                            loadData();
+                        } catch (error) {
+                            console.error("Failed to delete:", error);
+                        } finally {
+                            setIsDeleting(false);
+                            setDeletingItem(null);
+                        }
+                    }}
+                    isDeleting={isDeleting}
                 />
             )}
         </FinancePageWrapper>

@@ -267,6 +267,68 @@ export async function updatePeopleProfile(userId: string, updates: {
     if (updates.nickname) dbUpdates.nickname = updates.nickname;
     if (updates.email) dbUpdates.email = updates.email;
 
+    // --- Auto-Generate ID Code if relevant fields change ---
+    if (updates.id_number || updates.level_id || updates.department_id || updates.position_id) {
+        try {
+            // 1. Get current values for missing fields
+            const { data: current, error: currErr } = await supabase
+                .from('profiles')
+                .select('level_id, department_id, position_id, join_date, id_number')
+                .eq('id', userId)
+                .single();
+
+            if (!currErr && current) {
+                const targetLevelId = updates.level_id || current.level_id;
+                const targetDeptId = updates.department_id || current.department_id;
+                const targetPosId = updates.position_id || current.position_id;
+                const targetJoinDate = updates.join_date || current.join_date;
+                const targetIdNumber = updates.id_number || current.id_number;
+
+                // 2. Fetch Codes
+                const [levelRes, deptRes, posRes] = await Promise.all([
+                    targetLevelId ? supabase.from('organization_levels').select('roman_code').eq('id', targetLevelId).single() : { data: null },
+                    targetDeptId ? supabase.from('organization_departments').select('code').eq('id', targetDeptId).single() : { data: null },
+                    targetPosId ? supabase.from('organization_positions').select('code').eq('id', targetPosId).single() : { data: null }
+                ]);
+
+                const roman = levelRes.data?.roman_code || '0';
+                const deptCodeFull = deptRes.data?.code || '';
+                const posCode = posRes.data?.code || '';
+
+                // Extract Dept Abbreviation (e.g. "D-TECH" -> "TECH")
+                const deptCode = deptCodeFull.includes('-') ? deptCodeFull.split('-')[1] : deptCodeFull;
+
+                // 3. Extract Sequence (Last 3 digits of ID Number)
+                let sequence = '000';
+                if (targetIdNumber && targetIdNumber.length >= 3) {
+                    sequence = targetIdNumber.substring(targetIdNumber.length - 3);
+                }
+
+                // 4. Year Suffix
+                const yearSuffix = targetJoinDate
+                    ? new Date(targetJoinDate).getFullYear().toString().slice(-2)
+                    : new Date().getFullYear().toString().slice(-2);
+
+                // 5. Construct ID Code: ADY-{ROMAN}-{DEPT}{POS}-20{YY}{SEQ}
+                let newIdCode = '';
+                if (!deptCode && !posCode) {
+                    newIdCode = `ADY-${roman}-STAFF-20${yearSuffix}${sequence}`;
+                } else {
+                    newIdCode = `ADY-${roman}-${deptCode}${posCode}-20${yearSuffix}${sequence}`;
+                }
+
+                console.log(`[Auto-ID] Regenerated ID Code for ${userId}: ${newIdCode}`);
+                dbUpdates.id_code = newIdCode;
+
+                // Also ensure id_number is updated in DB if it was passed
+                if (updates.id_number) dbUpdates.id_number = updates.id_number;
+            }
+        } catch (err) {
+            console.error("Failed to auto-generate ID Code:", err);
+            // Fallback: Don't update id_code if generation fails, just proceed with other updates
+        }
+    }
+
     // Employment
     if (updates.department_id) dbUpdates.department_id = updates.department_id;
     if (updates.position_id) dbUpdates.position_id = updates.position_id;

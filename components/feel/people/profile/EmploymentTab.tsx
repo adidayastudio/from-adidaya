@@ -214,7 +214,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                 updates.id_number = ids.idNumber;
                 updates.display_id = ids.idCode;
             } else if (editingSection === "identification") {
-                updates.display_id = idCode || ids.idCode; // Will be mapped to id_code in API
+                updates.display_id = ids.idCode; // Always use calculated ID code
                 updates.id_number = ids.idNumber;
             } else if (editingSection === "schedule") {
                 updates.schedule_id = scheduleId; // Will need backend support if not already

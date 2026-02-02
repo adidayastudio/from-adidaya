@@ -15,7 +15,7 @@ import { Project } from "@/types/project";
 import { createReimburseRequest, updateReimburseRequest, fetchBeneficiaryAccounts, saveBeneficiaryAccount, BeneficiaryAccount } from "@/lib/api/finance";
 import { uploadFinanceFile, getFinanceFileUrl } from "@/lib/api/storage";
 import { useFinance } from "../FinanceContext";
-import { CreditCard, Save, FileText, Send } from "lucide-react";
+import { CreditCard, Save, FileText, Send, Trash2 } from "lucide-react";
 
 // Standard Mileage Rates (can be adjusted)
 const MILEAGE_RATES: Record<string, number> = {
@@ -35,10 +35,12 @@ interface LineItem {
 export function ReimburseRequestForm({
     onClose,
     onSuccess,
+    onDelete,
     initialData
 }: {
     onClose: () => void;
     onSuccess?: () => void;
+    onDelete?: () => Promise<void> | void; // Add onDelete prop
     initialData?: any;
 }) {
     // -- CONTEXT & STATE --
@@ -74,6 +76,7 @@ export function ReimburseRequestForm({
     const isReadOnly = initialData && ["APPROVED", "PAID", "REJECTED", "CANCELLED"].includes(initialData.status);
     const isEditMode = !!initialData;
     const canEdit = !isReadOnly || (initialData?.status === "DRAFT" || initialData?.status === "NEED_REVISION");
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
         console.log("[DEBUG] ReimburseRequestForm - savedAccounts length:", savedAccounts.length);
@@ -689,6 +692,17 @@ export function ReimburseRequestForm({
                     >
                         Cancel
                     </button>
+                    {canEdit && initialData && onDelete && (
+                        <button
+                            type="button"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            disabled={isSubmitting}
+                            className="h-11 w-11 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                            title="Delete Request"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    )}
                     {canEdit && (
                         <>
                             <button
@@ -709,6 +723,46 @@ export function ReimburseRequestForm({
                     )}
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+                    <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl">
+                        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                            <Trash2 className="w-7 h-7 text-red-500" />
+                        </div>
+                        <h3 className="text-lg font-bold text-neutral-900 mb-2 text-center">Delete Request?</h3>
+                        <p className="text-sm text-neutral-500 mb-6 text-center font-medium">
+                            Are you sure you want to delete this request? This action <span className="text-red-500 font-bold">cannot be undone</span>.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                disabled={isSubmitting}
+                                className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        setIsSubmitting(true);
+                                        await onDelete?.();
+                                    } catch (e) {
+                                        setIsSubmitting(false);
+                                        setShowDeleteConfirm(false);
+                                    }
+                                }}
+                                disabled={isSubmitting}
+                                className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isSubmitting ? "Deleting..." : "Delete"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

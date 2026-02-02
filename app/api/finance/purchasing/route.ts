@@ -44,7 +44,8 @@ const PURCHASING_COLUMNS = `
     payment_proof_url,
     approved_amount,
     project:projects(id, project_name, project_code),
-    items:purchasing_items(id, name, qty, unit, unit_price, total)
+    items:purchasing_items(id, name, qty, unit, unit_price, total),
+    invoices:purchasing_invoices(id, invoice_url, invoice_name, invoice_type, notes, created_at)
 `;
 
 /**
@@ -71,37 +72,100 @@ export async function GET(request: NextRequest) {
         const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
         const offset = parseInt(searchParams.get("offset") || "0");
 
-        // Build query
+        // Filters
+        const projectId = searchParams.get("project_id");
+        const approvalStatus = searchParams.get("approval_status");
+        const myRequests = searchParams.get("my_requests") === "true";
+        const q = searchParams.get("q");
+        const month = searchParams.get("month"); // 1-12
+        const year = searchParams.get("year");   // 2026, etc.
+
+        // Build base query for data
         let query = supabase
             .from("purchasing_requests")
-            .select(PURCHASING_COLUMNS)
-            .order("created_at", { ascending: false })
-            .range(offset, offset + limit - 1);
+            .select(PURCHASING_COLUMNS, { count: 'exact' });
 
-        // Optional filters
-        const projectId = searchParams.get("project_id");
-        if (projectId) {
-            query = query.eq("project_id", projectId);
-        }
+        // Build base query for stats (no limit/offset)
+        let statsQuery = supabase
+            .from("purchasing_requests")
+            .select("amount, approval_status, financial_status");
 
-        const approvalStatus = searchParams.get("approval_status");
-        if (approvalStatus) {
-            query = query.eq("approval_status", approvalStatus);
-        }
+        // Apply shared filters
+        const applyFilters = (qBuilder: any, includeStatus: boolean = true) => {
+            let b = qBuilder;
+            if (projectId && projectId !== "ALL") b = b.eq("project_id", projectId);
 
-        const myRequests = searchParams.get("my_requests");
-        if (myRequests === "true") {
-            query = query.eq("created_by", user.id);
-        }
+            if (includeStatus && approvalStatus && approvalStatus !== "ALL") {
+                if (approvalStatus === "PAID") {
+                    b = b.eq("financial_status", "PAID");
+                } else if (approvalStatus === "APPROVED") {
+                    b = b.eq("approval_status", "APPROVED").neq("financial_status", "PAID");
+                } else if (approvalStatus === "SUBMITTED") {
+                    b = b.or("approval_status.eq.SUBMITTED,approval_status.eq.NEED_REVISION");
+                } else {
+                    b = b.eq("approval_status", approvalStatus);
+                }
+            }
 
-        const { data, error } = await query;
+            if (myRequests) b = b.eq("created_by", user.id);
 
-        if (error) {
-            console.error("Error fetching purchasing requests:", error);
+            if (q) {
+                b = b.or(`description.ilike.%${q}%,vendor.ilike.%${q}%`);
+            }
+
+            // Date filtering (skip if month is "ALL")
+            if (month && year && month !== "ALL") {
+                const yearInt = parseInt(year);
+                const monthInt = parseInt(month);
+                const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+
+                // Use literal date parts to avoid timezone shifts from .toISOString()
+                const lastDay = new Date(yearInt, monthInt, 0).getDate();
+                const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+                b = b.gte("date", startDate).lte("date", endDate);
+            }
+
+            return b;
+        };
+
+        query = applyFilters(query, true);
+        statsQuery = applyFilters(statsQuery, false);
+
+        // Fetch Data + Stats
+        const [dataRes, statsRes] = await Promise.all([
+            query
+                .order("date", { ascending: false })
+                .order("created_at", { ascending: false })
+                .range(offset, offset + limit - 1),
+            statsQuery
+        ]);
+
+        if (dataRes.error) {
+            console.error("Error fetching purchasing requests:", dataRes.error);
             return serverErrorResponse("Failed to fetch purchasing requests");
         }
 
-        return successResponse(data || []);
+        // Calculate Stats
+        const allItems = statsRes.data || [];
+        const stats = {
+            totalCount: allItems.length,
+            totalAmount: allItems.reduce((acc, i) => acc + (i.amount || 0), 0),
+            pendingCount: allItems.filter(i => i.approval_status === "SUBMITTED" || i.approval_status === "NEED_REVISION").length,
+            pendingAmount: allItems.filter(i => i.approval_status === "SUBMITTED" || i.approval_status === "NEED_REVISION").reduce((acc, i) => acc + (i.amount || 0), 0),
+            approvedCount: allItems.filter(i => i.approval_status === "APPROVED" && i.financial_status !== "PAID").length,
+            approvedAmount: allItems.filter(i => i.approval_status === "APPROVED" && i.financial_status !== "PAID").reduce((acc, i) => acc + (i.amount || 0), 0),
+            paidCount: allItems.filter(i => i.financial_status === "PAID").length,
+            paidAmount: allItems.filter(i => i.financial_status === "PAID").reduce((acc, i) => acc + (i.amount || 0), 0),
+            rejectedCount: allItems.filter(i => i.approval_status === "REJECTED").length,
+            rejectedAmount: allItems.filter(i => i.approval_status === "REJECTED").reduce((acc, i) => acc + (i.amount || 0), 0),
+        };
+
+        return successResponse({
+            data: dataRes.data || [],
+            count: dataRes.count || 0,
+            stats: stats
+        });
     } catch (e) {
         console.error("Purchasing GET error:", e);
         return serverErrorResponse("Internal server error");
@@ -121,7 +185,7 @@ export async function POST(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { items, ...requestData } = body;
+        const { items, invoice_urls, existing_invoice_ids, ...requestData } = body;
 
         // Validate required fields
         if (!requestData.project_id || !requestData.description || !requestData.amount) {
@@ -162,7 +226,25 @@ export async function POST(request: NextRequest) {
 
             if (itemsError) {
                 console.error("Error creating purchasing items:", itemsError);
-                // Optionally rollback the request here
+            }
+        }
+
+        // 3. Create invoices if provided
+        if (invoice_urls && invoice_urls.length > 0) {
+            const invoicesData = invoice_urls.map((inv: any) => ({
+                request_id: purchasingRequest.id,
+                invoice_url: inv.invoice_url,
+                invoice_name: inv.invoice_name,
+                invoice_type: 'INVOICE',
+                uploaded_by: user.id
+            }));
+
+            const { error: invoicesError } = await supabase
+                .from("purchasing_invoices")
+                .insert(invoicesData);
+
+            if (invoicesError) {
+                console.error("Error creating purchasing invoices:", invoicesError);
             }
         }
 

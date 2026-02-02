@@ -25,239 +25,252 @@ export async function GET(request: NextRequest) {
 
     try {
         const supabase = await createServerSupabase();
+        const searchParams = request.nextUrl.searchParams;
+        const workspaceId = searchParams.get("workspace_id");
 
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+
+        // Use YYYY-MM-DD to avoid UTC shifts from .toISOString()
+        const startOfThisMonth = `${year}-${String(month).padStart(2, '0')}-01`;
+        const lastDayThisMonth = new Date(year, month, 0).getDate();
+        const endOfThisMonth = `${year}-${String(month).padStart(2, '0')}-${String(lastDayThisMonth).padStart(2, '0')}`;
+
+        const lastMonthDate = new Date(year, month - 2, 1);
+        const lastMonthYear = lastMonthDate.getFullYear();
+        const lastMonthNum = lastMonthDate.getMonth() + 1;
+        const startOfLastMonth = `${lastMonthYear}-${String(lastMonthNum).padStart(2, '0')}-01`;
+        const lastDayLastMonth = new Date(lastMonthYear, lastMonthNum, 0).getDate();
+        const endOfLastMonth = `${lastMonthYear}-${String(lastMonthNum).padStart(2, '0')}-${String(lastDayLastMonth).padStart(2, '0')}`;
+
+        // Get project IDs for this workspace to filter requests
+        let workspaceProjectIds: string[] = [];
+        if (workspaceId) {
+            const { data: projects } = await supabase.from('projects').select('id').eq('workspace_id', workspaceId);
+            workspaceProjectIds = projects?.map(p => p.id) || [];
+        }
+
+        // Base queries with optional project filtering
+        const purchasingBase = supabase.from('purchasing_requests');
+        const reimburseBase = supabase.from('reimbursement_requests');
+
+        const applyProjectFilter = (query: any) => {
+            if (workspaceId && workspaceProjectIds.length > 0) {
+                return query.in('project_id', workspaceProjectIds);
+            }
+            return query;
+        };
 
         // Run queries in parallel for performance
         const [
-            paidPurchases,
-            paidReimburse,
+            teamPaidPurchasesThisMonth,
+            teamPaidReimburseThisMonth,
+            teamPaidPurchasesLastMonth,
+            teamPaidReimburseLastMonth,
             outstandingBills,
             reimbursePending,
-            pettyCash,
-            myPurchases,
-            myReimburse,
+            fundingSourcesRes,
+            myPaidPurchases,
+            myPaidReimburse,
             myPendingPurchases,
             myPendingReimburse,
-            myPaidReimburse,
             goodsReceived,
             invoices,
             staffClaims,
             myPurchaseHistory,
-            myReimburseHistory,
-            recentPurchases,
-            recentReimburse
+            myReimburseHistory
         ] = await Promise.all([
-            // Total Paid (Purchasing) this month
-            supabase
-                .from('purchasing_requests')
-                .select('amount')
-                .eq('financial_status', 'PAID')
-                .gte('payment_date', startOfMonth)
-                .lte('payment_date', endOfMonth),
+            // Team Paid Purchasing (This Month)
+            applyProjectFilter(supabase.from('purchasing_requests').select('amount').eq('financial_status', 'PAID').gte('payment_date', startOfThisMonth).lte('payment_date', endOfThisMonth)),
+            // Team Paid Reimburse (This Month)
+            applyProjectFilter(supabase.from('reimbursement_requests').select('amount').eq('status', 'PAID').gte('payment_date', startOfThisMonth).lte('payment_date', endOfThisMonth)),
 
-            // Total Paid (Reimburse) this month
-            supabase
-                .from('reimbursement_requests')
-                .select('amount')
-                .eq('status', 'PAID')
-                .gte('payment_date', startOfMonth)
-                .lte('payment_date', endOfMonth),
+            // Team Paid Purchasing (Last Month)
+            applyProjectFilter(supabase.from('purchasing_requests').select('amount').eq('financial_status', 'PAID').gte('payment_date', startOfLastMonth).lte('payment_date', endOfLastMonth)),
+            // Team Paid Reimburse (Last Month)
+            applyProjectFilter(supabase.from('reimbursement_requests').select('amount').eq('status', 'PAID').gte('payment_date', startOfLastMonth).lte('payment_date', endOfLastMonth)),
 
-            // Outstanding Bills count and amount
-            supabase
-                .from('purchasing_requests')
-                .select('amount')
+            // Outstanding Bills: All non-PAID and VALID purchases
+            applyProjectFilter(supabase.from('purchasing_requests').select('amount')
                 .neq('financial_status', 'PAID')
-                .in('purchase_stage', ['INVOICED', 'RECEIVED']),
+                .not('approval_status', 'in', '("REJECTED","DRAFT","CANCELLED")')),
 
-            // Reimburse Pending count and amount
-            supabase
-                .from('reimbursement_requests')
-                .select('amount')
-                .eq('status', 'PENDING'),
+            // Reimburse Pending: ONLY APPROVED reimbursements awaiting payment (as requested: "harusnya 1043")
+            applyProjectFilter(supabase.from('reimbursement_requests').select('amount')
+                .eq('status', 'APPROVED')),
 
-            // Petty Cash Balance
-            supabase
-                .from('funding_sources')
-                .select('balance')
-                .eq('type', 'PETTY_CASH'),
+            // Funding Sources: All active accounts in workspace
+            workspaceId
+                ? supabase.from('funding_sources').select('balance, type').eq('workspace_id', workspaceId)
+                : supabase.from('funding_sources').select('balance, type'),
 
-            // My Purchases this month (count)
-            supabase
-                .from('purchasing_requests')
-                .select('id', { count: 'exact', head: true })
+            // Personal Paid Purchases (This Month)
+            supabase.from('purchasing_requests')
+                .select('amount', { count: 'exact' })
                 .eq('created_by', user.id)
-                .gte('created_at', startOfMonth),
+                .eq('financial_status', 'PAID')
+                .gte('date', startOfThisMonth)
+                .lte('date', endOfThisMonth),
 
-            // My Reimbursements this month (count)
-            supabase
-                .from('reimbursement_requests')
-                .select('id', { count: 'exact', head: true })
-                .eq('created_by', user.id)
-                .gte('created_at', startOfMonth),
-
-            // My Pending Purchases amount
-            supabase
-                .from('purchasing_requests')
-                .select('amount')
-                .eq('created_by', user.id)
-                .in('approval_status', ['DRAFT', 'SUBMITTED', 'NEED_REVISION']),
-
-            // My Pending Reimbursements amount
-            supabase
-                .from('reimbursement_requests')
-                .select('amount')
-                .eq('created_by', user.id)
-                .in('status', ['DRAFT', 'PENDING', 'NEED_REVISION']),
-
-            // Paid to me this month
-            supabase
-                .from('reimbursement_requests')
-                .select('amount')
+            // Personal Paid Reimburse (This Month)
+            supabase.from('reimbursement_requests')
+                .select('amount', { count: 'exact' })
                 .eq('created_by', user.id)
                 .eq('status', 'PAID')
-                .gte('payment_date', startOfMonth)
-                .lte('payment_date', endOfMonth),
+                .gte('date', startOfThisMonth)
+                .lte('date', endOfThisMonth),
 
-            // Goods Received (Unpaid) - limited list
-            supabase
-                .from('purchasing_requests')
-                .select('id, date, vendor, description, amount, quantity, unit, project:projects(project_name, project_code)')
+            // Personal Pending Purchases (This Month)
+            supabase.from('purchasing_requests')
+                .select('amount', { count: 'exact' })
+                .eq('created_by', user.id)
+                .not('approval_status', 'in', '("REJECTED","DRAFT","CANCELLED")')
+                .neq('financial_status', 'PAID')
+                .gte('date', startOfThisMonth)
+                .lte('date', endOfThisMonth),
+
+            // Personal Pending Reimburse (This Month)
+            supabase.from('reimbursement_requests')
+                .select('amount', { count: 'exact' })
+                .eq('created_by', user.id)
+                .not('status', 'in', '("PAID","REJECTED","DRAFT","CANCELLED")')
+                .gte('date', startOfThisMonth)
+                .lte('date', endOfThisMonth),
+
+            // TEAM - Goods Received (Unpaid) - 5 most recent by date
+            applyProjectFilter(supabase.from('purchasing_requests')
+                .select('id, date, vendor, description, amount, project:projects(project_name, project_code)')
                 .eq('purchase_stage', 'RECEIVED')
                 .neq('financial_status', 'PAID')
-                .order('date', { ascending: true })
-                .limit(5),
+                .order('date', { ascending: false })
+                .limit(5)),
 
-            // Invoices Pending - limited list
-            supabase
-                .from('purchasing_requests')
-                .select('id, date, vendor, description, amount, quantity, unit, project:projects(project_name, project_code)')
+            // TEAM - Invoices Pending - 5 most recent by date
+            applyProjectFilter(supabase.from('purchasing_requests')
+                .select('id, date, vendor, description, amount, project:projects(project_name, project_code)')
                 .eq('purchase_stage', 'INVOICED')
                 .neq('financial_status', 'PAID')
-                .order('date', { ascending: true })
-                .limit(5),
+                .order('date', { ascending: false })
+                .limit(5)),
 
-            // Staff Claims - limited list
-            supabase
-                .from('reimbursement_requests')
-                .select('id, date, description, amount, qty, created_by, project:projects(project_name, project_code)')
+            // TEAM - Staff Claims (Reimburse Pending) - 5 most recent by date
+            applyProjectFilter(supabase.from('reimbursement_requests')
+                .select('id, date, description, amount, created_by, project:projects(project_name, project_code)')
                 .eq('status', 'PENDING')
-                .order('date', { ascending: true })
-                .limit(10),
+                .order('date', { ascending: false })
+                .limit(5)),
 
-            // My Purchase History - limited
-            supabase
-                .from('purchasing_requests')
-                .select('id, date, vendor, description, amount, approval_status, financial_status, purchase_stage, type, created_at, updated_at, project_id, project:projects(project_name, project_code)')
+            // PERSONAL - My Purchase History (THIS MONTH) - 5 most recent by date
+            supabase.from('purchasing_requests')
+                .select('id, date, vendor, description, amount, approval_status, financial_status, purchase_stage, created_at, updated_at, project_id, project:projects(project_name, project_code)')
                 .eq('created_by', user.id)
-                .order('created_at', { ascending: false })
+                .gte('date', startOfThisMonth)
+                .lte('date', endOfThisMonth)
+                .order('date', { ascending: false })
                 .limit(5),
 
-            // My Reimburse History - limited
-            supabase
-                .from('reimbursement_requests')
+            // PERSONAL - My Reimburse History (THIS MONTH) - 5 most recent by date
+            supabase.from('reimbursement_requests')
                 .select('id, date, description, amount, status, category, created_at, updated_at, project_id, project:projects(project_name, project_code)')
                 .eq('created_by', user.id)
-                .order('created_at', { ascending: false })
-                .limit(5),
-
-            // Recent Purchases - limited
-            supabase
-                .from('purchasing_requests')
-                .select('id, date, vendor, description, amount, approval_status, updated_at, created_by, project:projects(project_name, project_code)')
-                .order('updated_at', { ascending: false })
-                .limit(10),
-
-            // Recent Reimbursements - limited
-            supabase
-                .from('reimbursement_requests')
-                .select('id, date, description, amount, status, updated_at, created_by, project:projects(project_name, project_code)')
-                .order('updated_at', { ascending: false })
-                .limit(10)
+                .gte('date', startOfThisMonth)
+                .lte('date', endOfThisMonth)
+                .order('date', { ascending: false })
+                .limit(5)
         ]);
 
-        // Calculate totals
-        const totalPaidPurchasing = paidPurchases.data?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-        const totalPaidReimburse = paidReimburse.data?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-        const pettyCashBalance = pettyCash.data?.reduce((sum, item) => sum + (item.balance || 0), 0) || 0;
-        const paidToMe = myPaidReimburse.data?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-        const outstandingAmount = outstandingBills.data?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-        const reimbursePendingAmount = reimbursePending.data?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-        const myPendingAmount =
-            (myPendingPurchases.data?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0) +
-            (myPendingReimburse.data?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0);
+        // Check for errors in any of the queries
+        const queries = [
+            { name: 'teamPaidPurchasesThisMonth', res: teamPaidPurchasesThisMonth },
+            { name: 'teamPaidReimburseThisMonth', res: teamPaidReimburseThisMonth },
+            { name: 'teamPaidPurchasesLastMonth', res: teamPaidPurchasesLastMonth },
+            { name: 'teamPaidReimburseLastMonth', res: teamPaidReimburseLastMonth },
+            { name: 'outstandingBills', res: outstandingBills },
+            { name: 'reimbursePending', res: reimbursePending },
+            { name: 'fundingSources', res: fundingSourcesRes },
+            { name: 'myPaidPurchases', res: myPaidPurchases },
+            { name: 'myPaidReimburse', res: myPaidReimburse },
+            { name: 'myPendingPurchases', res: myPendingPurchases },
+            { name: 'myPendingReimburse', res: myPendingReimburse },
+            { name: 'goodsReceived', res: goodsReceived },
+            { name: 'invoices', res: invoices },
+            { name: 'staffClaims', res: staffClaims },
+            { name: 'myPurchaseHistory', res: myPurchaseHistory },
+            { name: 'myReimburseHistory', res: myReimburseHistory }
+        ];
 
-        // Get user profiles for recent activity
-        const userIds = new Set<string>();
-        recentPurchases.data?.forEach(p => userIds.add(p.created_by));
-        recentReimburse.data?.forEach(r => userIds.add(r.created_by));
-        staffClaims.data?.forEach(c => userIds.add(c.created_by));
+        const failedQuery = queries.find(q => q.res.error);
+        if (failedQuery) {
+            console.error(`Dashboard query failed: ${failedQuery.name}`, failedQuery.res.error);
+            return serverErrorResponse(`Data fetch error: ${failedQuery.name}`);
+        }
 
-        const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url')
-            .in('id', Array.from(userIds));
+        // CALCULATIONS - TEAM
+        const paidThisMonth =
+            (teamPaidPurchasesThisMonth.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0) +
+            (teamPaidReimburseThisMonth.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0);
 
+        const paidLastMonth =
+            (teamPaidPurchasesLastMonth.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0) +
+            (teamPaidReimburseLastMonth.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0);
+
+        const trendPercent = paidLastMonth === 0 ? 0 : Math.round(((paidThisMonth - paidLastMonth) / paidLastMonth) * 100);
+
+        const totalBalance = fundingSourcesRes.data?.reduce((sum: number, item: any) => sum + (item.balance || 0), 0) || 0;
+        const totalAccounts = fundingSourcesRes.data?.length || 0;
+
+        const outstandingCount = outstandingBills.data?.length || 0;
+        const outstandingAmount = outstandingBills.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
+
+        const reimbursePendingCount = reimbursePending.data?.length || 0;
+        const reimbursePendingAmount = reimbursePending.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
+
+        // CALCULATIONS - PERSONAL
+        const myPaidPurchasesCount = myPaidPurchases.count || 0;
+        const myPaidPurchasesAmount = myPaidPurchases.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
+
+        const myPaidReimburseCount = myPaidReimburse.count || 0;
+        const myPaidReimburseAmount = myPaidReimburse.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
+
+        const myPendingPurchasesCount = myPendingPurchases.count || 0;
+        const myPendingPurchasesAmount = myPendingPurchases.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
+
+        const myPendingReimburseCount = myPendingReimburse.count || 0;
+        const myPendingReimburseAmount = myPendingReimburse.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
+
+        // ENRICH STAFF CLAIMS WITH PROFILES
+        const staffUserIds = staffClaims.data?.map((c: any) => c.created_by) || [];
+        const { data: profiles } = await supabase.from('profiles').select('id, full_name, avatar_url').in('id', staffUserIds);
         const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
-        // Attach profile info to staff claims
-        const enrichedStaffClaims = staffClaims.data?.map(c => ({
+        const enrichedStaffClaims = staffClaims.data?.map((c: any) => ({
             ...c,
-            staff_name: profileMap.get(c.created_by)?.full_name || 'Unknown'
+            staff_name: profileMap.get(c.created_by)?.full_name || 'Staff'
         })) || [];
 
-        // Build recent activity (combine purchases + reimburse)
-        const recentActivity = [
-            ...(recentPurchases.data?.map(p => ({
-                id: p.id,
-                type: 'PURCHASE',
-                description: p.description,
-                amount: p.amount,
-                approval_status: p.approval_status,
-                updated_at: p.updated_at,
-                created_by_name: profileMap.get(p.created_by)?.full_name || 'Unknown'
-            })) || []),
-            ...(recentReimburse.data?.map(r => ({
-                id: r.id,
-                type: 'REIMBURSE',
-                description: r.description,
-                amount: r.amount,
-                status: r.status,
-                updated_at: r.updated_at,
-                created_by_name: profileMap.get(r.created_by)?.full_name || 'Unknown'
-            })) || [])
-        ].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).slice(0, 10);
-
-        // Return in the structure the client expects
         return successResponse({
-            // Summary section (for both team and personal)
             summary: {
                 team: {
-                    totalPaidThisMonth: totalPaidPurchasing + totalPaidReimburse,
-                    totalPaidPurchasing,
-                    totalPaidReimburse,
-                    outstanding: outstandingAmount,
-                    reimbursePending: reimbursePendingAmount,
-                    pettyCashBalance
+                    totalPaid: paidThisMonth,
+                    trend: trendPercent,
+                    outstanding: { count: outstandingCount, amount: outstandingAmount },
+                    reimbursePending: { count: reimbursePendingCount, amount: reimbursePendingAmount },
+                    balance: { total: totalBalance, accounts: totalAccounts }
                 },
                 personal: {
-                    myPurchases: myPurchases.count || 0,
-                    myReimburse: myReimburse.count || 0,
-                    pendingApproval: myPendingAmount,
-                    paid: paidToMe
+                    purchases: { count: myPaidPurchasesCount, amount: myPaidPurchasesAmount },
+                    reimburse: { count: myPaidReimburseCount, amount: myPaidReimburseAmount },
+                    pendingPurchases: { count: myPendingPurchasesCount, amount: myPendingPurchasesAmount },
+                    pendingReimburse: { count: myPendingReimburseCount, amount: myPendingReimburseAmount }
                 }
             },
-            // Lists section
             lists: {
                 goodsReceived: goodsReceived.data || [],
                 invoices: invoices.data || [],
                 staffClaims: enrichedStaffClaims,
                 myPurchaseHistory: myPurchaseHistory.data || [],
-                myReimburseHistory: myReimburseHistory.data || [],
-                recentActivity
+                myReimburseHistory: myReimburseHistory.data || []
             }
         });
     } catch (e) {

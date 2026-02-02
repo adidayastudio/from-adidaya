@@ -56,6 +56,9 @@ export async function fetchPurchasingRequests(options?: {
     project_id?: string;
     approval_status?: string;
     my_requests?: boolean;
+    q?: string;
+    month?: number | "ALL";
+    year?: number;
 }) {
     const params = new URLSearchParams();
     if (options?.limit) params.set("limit", String(options.limit));
@@ -63,16 +66,23 @@ export async function fetchPurchasingRequests(options?: {
     if (options?.project_id) params.set("project_id", options.project_id);
     if (options?.approval_status) params.set("approval_status", options.approval_status);
     if (options?.my_requests) params.set("my_requests", "true");
+    if (options?.q) params.set("q", options.q);
+    if (options?.month) params.set("month", String(options.month));
+    if (options?.year) params.set("year", String(options.year));
 
     const url = `/api/finance/purchasing${params.toString() ? `?${params}` : ""}`;
-    const { data, error } = await apiGet<any[]>(url);
+    const { data, error } = await apiGet<{ data: any[], count: number, stats?: any }>(url);
 
     if (error) {
         console.error("Error fetching purchasing requests:", error);
-        return [];
+        return { data: [], total: 0, stats: null };
     }
 
-    return data || [];
+    return {
+        data: data?.data || [],
+        total: data?.count || 0,
+        stats: data?.stats || null
+    };
 }
 
 export async function createPurchasingRequest(payload: PurchasingRequestPayload) {
@@ -166,6 +176,9 @@ export async function fetchReimburseRequests(options?: {
     project_id?: string;
     status?: string;
     my_requests?: boolean;
+    q?: string;
+    month?: number | "ALL";
+    year?: number;
 }) {
     const params = new URLSearchParams();
     if (options?.limit) params.set("limit", String(options.limit));
@@ -173,16 +186,23 @@ export async function fetchReimburseRequests(options?: {
     if (options?.project_id) params.set("project_id", options.project_id);
     if (options?.status) params.set("status", options.status);
     if (options?.my_requests) params.set("my_requests", "true");
+    if (options?.q) params.set("q", options.q);
+    if (options?.month) params.set("month", String(options.month));
+    if (options?.year) params.set("year", String(options.year));
 
     const url = `/api/finance/reimbursement${params.toString() ? `?${params}` : ""}`;
-    const { data, error } = await apiGet<any[]>(url);
+    const { data, error } = await apiGet<{ data: any[], count: number, stats?: any }>(url);
 
     if (error) {
         console.error("Error fetching reimbursement requests:", error);
-        return [];
+        return { data: [], total: 0, stats: null };
     }
 
-    return data || [];
+    return {
+        data: data?.data || [],
+        total: data?.count || 0,
+        stats: data?.stats || null
+    };
 }
 
 export async function createReimburseRequest(payload: ReimburseRequestPayload) {
@@ -349,37 +369,36 @@ export async function saveBeneficiaryAccount(account: {
 // =============================================
 
 export interface FinanceDashboardData {
-    team: {
-        totalPaidThisMonth: number;
-        totalPaidPurchasing: number;
-        totalPaidReimburse: number;
-        outstandingBills: number;
-        reimbursePending: number;
-        pettyCashBalance: number;
+    summary: {
+        team: {
+            totalPaid: number;
+            trend: number;
+            outstanding: { count: number; amount: number };
+            reimbursePending: { count: number; amount: number };
+            balance: { total: number; accounts: number };
+        };
+        personal: {
+            purchases: { count: number; amount: number };
+            reimburse: { count: number; amount: number };
+            pendingPurchases: { count: number; amount: number };
+            pendingReimburse: { count: number; amount: number };
+        };
     };
-    personal: {
-        myPurchases: number;
-        myReimburse: number;
-        pendingApproval: number;
-        paidToMe: number;
-    };
-    attention: {
+    lists: {
         goodsReceived: any[];
         invoices: any[];
         staffClaims: any[];
-    };
-    myHistory: {
-        purchases: any[];
-        reimbursements: any[];
-    };
-    recentActivity: {
-        purchases: any[];
-        reimbursements: any[];
+        myPurchaseHistory: any[];
+        myReimburseHistory: any[];
     };
 }
 
-export async function fetchFinanceDashboardData(): Promise<FinanceDashboardData | null> {
-    const { data, error } = await apiGet<FinanceDashboardData>("/api/finance/dashboard");
+export async function fetchFinanceDashboardData(workspaceId?: string): Promise<FinanceDashboardData | null> {
+    const params = new URLSearchParams();
+    if (workspaceId) params.set("workspace_id", workspaceId);
+
+    const url = `/api/finance/dashboard${params.toString() ? `?${params}` : ""}`;
+    const { data, error } = await apiGet<FinanceDashboardData>(url);
 
     if (error) {
         console.error("Error fetching dashboard data:", error);

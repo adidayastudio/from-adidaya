@@ -16,31 +16,19 @@ import { useRouter } from "next/navigation";
 import { useFinance } from "./FinanceContext";
 import {
     formatShort,
-    cleanEntityName
+    formatAmount
 } from "./modules/utils";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { AttentionItemRow } from "./modules/AttentionItemRow";
-import { RecentActivityList } from "./modules/RecentActivityList";
 import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 import { RequestTypeSelector, RequestType } from "./modules/RequestTypeSelector";
 import { PersonalPurchaseRow, PersonalReimburseRow } from "./modules/PersonalTransactionRows";
 import { fetchFinanceDashboardData } from "@/lib/client/finance-api";
+import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
-// Sort by: 1) deadline closest (expired first), 2) highest amount
-function sortAttentionItems(items: any[]): any[] {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    return [...items].sort((a, b) => {
-        const aDate = new Date(a.date || a.created_at);
-        const bDate = new Date(b.date || b.created_at);
-        return aDate.getTime() - bDate.getTime(); // Oldest first for attention
-    });
-}
-
 export default function FinanceOverviewClient() {
-    const { viewMode, isLoading: isAuthLoading, userId } = useFinance();
+    const { viewMode, isLoading: isAuthLoading } = useFinance();
     const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<RequestType>("PURCHASE");
@@ -50,11 +38,19 @@ export default function FinanceOverviewClient() {
     const router = useRouter();
 
     useEffect(() => {
-        setIsLoadingData(true);
-        fetchFinanceDashboardData()
-            .then(res => setData(res))
-            .catch(err => console.error("Failed to load dashboard data", err))
-            .finally(() => setIsLoadingData(false));
+        const loadWithWorkspace = async () => {
+            setIsLoadingData(true);
+            try {
+                const wsId = await fetchDefaultWorkspaceId();
+                const res = await fetchFinanceDashboardData(wsId || undefined);
+                setData(res);
+            } catch (err) {
+                console.error("Failed to load dashboard data", err);
+            } finally {
+                setIsLoadingData(false);
+            }
+        };
+        loadWithWorkspace();
     }, []);
 
     // FAB Action Listener
@@ -105,61 +101,61 @@ export default function FinanceOverviewClient() {
                                 icon={<DollarSign className="w-5 h-5 text-green-600" />}
                                 iconBg="bg-green-50"
                                 label="Total Paid (Month)"
-                                value={formatShort(data.summary.team.totalPaidThisMonth)}
-                                subtext="vs prev. month"
-                                trend="up"
+                                value={formatShort(data.summary.team.totalPaid)}
+                                subtext={data.summary.team.trend === 0 ? "vs prev. month" : `${data.summary.team.trend > 0 ? '+' : ''}${data.summary.team.trend}% vs last month`}
+                                trend={data.summary.team.trend >= 0 ? 'up' : 'down'}
                             />
                             <SummaryCard
                                 icon={<Receipt className="w-5 h-5 text-orange-600" />}
                                 iconBg="bg-orange-50"
                                 label="Outstanding Bills"
-                                value={formatShort(data.summary.team.outstanding)}
-                                subtext="pending payment"
+                                value={data.summary.team.outstanding.count}
+                                subtext={formatAmount(data.summary.team.outstanding.amount)}
                             />
                             <SummaryCard
                                 icon={<Users className="w-5 h-5 text-red-600" />}
                                 iconBg="bg-red-50"
                                 label="Reimburse Pending"
-                                value={formatShort(data.summary.team.reimbursePending)}
-                                subtext="waiting approval"
+                                value={data.summary.team.reimbursePending.count}
+                                subtext={formatAmount(data.summary.team.reimbursePending.amount)}
                             />
                             <SummaryCard
                                 icon={<Wallet className="w-5 h-5 text-purple-600" />}
                                 iconBg="bg-purple-50"
-                                label="Petty Cash Balance"
-                                value={formatShort(data.summary.team.pettyCashBalance)}
-                                subtext="Total balance"
+                                label="Balance"
+                                value={formatShort(data.summary.team.balance.total)}
+                                subtext={`${data.summary.team.balance.accounts} Accounts`}
                             />
                         </>
                     ) : (
                         <>
                             <SummaryCard
-                                icon={<ShoppingCart className="w-5 h-5 text-red-600" />}
-                                iconBg="bg-red-50"
-                                label="My Purchases"
-                                value={data.summary.personal.myPurchases.toString()}
-                                subtext="This month"
+                                icon={<ShoppingCart className="w-5 h-5 text-green-600" />}
+                                iconBg="bg-green-50"
+                                label="My Purchases (Paid)"
+                                value={data.summary.personal.purchases.count}
+                                subtext={formatAmount(data.summary.personal.purchases.amount)}
                             />
                             <SummaryCard
-                                icon={<Receipt className="w-5 h-5 text-purple-600" />}
-                                iconBg="bg-purple-50"
-                                label="My Reimbursements"
-                                value={data.summary.personal.myReimburse.toString()}
-                                subtext="This month"
+                                icon={<Receipt className="w-5 h-5 text-green-600" />}
+                                iconBg="bg-green-50"
+                                label="My Reimbursements (Paid)"
+                                value={data.summary.personal.reimburse.count}
+                                subtext={formatAmount(data.summary.personal.reimburse.amount)}
                             />
                             <SummaryCard
                                 icon={<DollarSign className="w-5 h-5 text-orange-600" />}
                                 iconBg="bg-orange-50"
-                                label="Pending Approval"
-                                value={formatShort(data.summary.personal.pendingApproval)}
-                                subtext="Awaiting manager"
+                                label="Pending Purchases"
+                                value={data.summary.personal.pendingPurchases.count}
+                                subtext={formatAmount(data.summary.personal.pendingPurchases.amount)}
                             />
                             <SummaryCard
-                                icon={<Wallet className="w-5 h-5 text-green-600" />}
-                                iconBg="bg-green-50"
-                                label="Paid to Me"
-                                value={formatShort(data.summary.personal.paid)}
-                                subtext="Transferred"
+                                icon={<Wallet className="w-5 h-5 text-orange-600" />}
+                                iconBg="bg-orange-50"
+                                label="Pending Reimbursement"
+                                value={data.summary.personal.pendingReimburse.count}
+                                subtext={formatAmount(data.summary.personal.pendingReimburse.amount)}
                             />
                         </>
                     )}
@@ -211,14 +207,13 @@ export default function FinanceOverviewClient() {
                                                 </button>
                                             </div>
                                             <div className="space-y-1">
-                                                {data.lists.goodsReceived.slice(0, 5).map((item: any) => (
+                                                {data.lists.goodsReceived.map((item: any) => (
                                                     <AttentionItemRow
                                                         key={item.id}
                                                         item={{
                                                             id: item.id,
                                                             type: 'goods_received',
                                                             description: item.description,
-                                                            quantity: `${item.quantity} ${item.unit}`,
                                                             projectCode: item.project?.project_code || 'N/A',
                                                             projectName: item.project?.project_name || 'Project',
                                                             submittedDate: item.date,
@@ -248,14 +243,13 @@ export default function FinanceOverviewClient() {
                                                 </button>
                                             </div>
                                             <div className="space-y-1">
-                                                {data.lists.invoices.slice(0, 5).map((item: any) => (
+                                                {data.lists.invoices.map((item: any) => (
                                                     <AttentionItemRow
                                                         key={item.id}
                                                         item={{
                                                             id: item.id,
                                                             type: 'invoice',
                                                             description: item.description,
-                                                            quantity: `${item.quantity} ${item.unit}`,
                                                             projectCode: item.project?.project_code || 'N/A',
                                                             projectName: item.project?.project_name || 'Project',
                                                             submittedDate: item.date,
@@ -288,17 +282,16 @@ export default function FinanceOverviewClient() {
                                             </button>
                                         </div>
                                         <div className="space-y-1">
-                                            {data.lists.staffClaims.slice(0, 5).map((item: any) => (
+                                            {data.lists.staffClaims.map((item: any) => (
                                                 <AttentionItemRow
                                                     key={item.id}
                                                     item={{
                                                         id: item.id,
                                                         type: 'staff_claim',
                                                         description: item.description,
-                                                        quantity: item.qty || '1',
                                                         projectCode: item.project?.project_code || 'N/A',
                                                         projectName: item.project?.project_name || 'Project',
-                                                        submittedDate: item.created_at,
+                                                        submittedDate: item.date,
                                                         beneficiary: item.staff_name || 'Staff',
                                                         beneficiaryType: 'staff',
                                                         amount: item.amount
@@ -333,27 +326,13 @@ export default function FinanceOverviewClient() {
                                             </button>
                                         </div>
                                         <div className="space-y-1.5">
-                                            {data.lists.myPurchaseHistory.slice(0, 5).map((p: any) => (
+                                            {data.lists.myPurchaseHistory.map((p: any) => (
                                                 <PersonalPurchaseRow
                                                     key={p.id}
                                                     item={{
-                                                        id: p.id,
-                                                        description: p.description,
-                                                        quantity: 1,
-                                                        unit: 'lot',
-                                                        vendor: p.vendor || 'Unknown Vendor',
+                                                        ...p,
                                                         project_name: p.project?.project_name || 'General',
-                                                        project_code: p.project?.project_code || 'GEN',
-                                                        amount: p.amount,
-                                                        financial_status: p.financial_status,
-                                                        approval_status: p.approval_status,
-                                                        purchase_stage: p.purchase_stage,
-                                                        type: p.type || 'MATERIAL',
-                                                        date: p.date || p.created_at,
-                                                        project_id: p.project_id || 'general',
-                                                        created_by: "Me",
-                                                        created_at: p.created_at,
-                                                        updated_at: p.updated_at
+                                                        project_code: p.project?.project_code || 'GEN'
                                                     }}
                                                 />
                                             ))}
@@ -378,23 +357,13 @@ export default function FinanceOverviewClient() {
                                             </button>
                                         </div>
                                         <div className="space-y-1.5">
-                                            {data.lists.myReimburseHistory.slice(0, 5).map((r: any) => (
+                                            {data.lists.myReimburseHistory.map((r: any) => (
                                                 <PersonalReimburseRow
                                                     key={r.id}
                                                     item={{
-                                                        id: r.id,
-                                                        description: r.description,
-                                                        quantity: r.quantity || '1',
+                                                        ...r,
                                                         project_name: r.project?.project_name || 'General',
-                                                        amount: r.amount,
-                                                        status: r.status,
-                                                        created_at: r.created_at,
-                                                        staff_id: 'me',
-                                                        staff_name: 'You',
-                                                        project_id: r.project_id || 'general',
-                                                        project_code: r.project?.project_code || 'GEN',
-                                                        updated_at: r.updated_at,
-                                                        category: r.category || 'General'
+                                                        project_code: r.project?.project_code || 'GEN'
                                                     }}
                                                 />
                                             ))}

@@ -254,14 +254,14 @@ export interface PurchasingRequestPayload {
 }
 
 export async function createPurchasingRequest(payload: PurchasingRequestPayload) {
-    const { items, created_by, ...requestData } = payload;
+    const { items, created_by, invoice_urls, existing_invoice_ids, ...requestData } = payload as any;
 
     if (!created_by) {
         throw new Error("User ID is required to create a purchasing request");
     }
 
     console.log("[DEBUG] createPurchasingRequest - User:", created_by);
-    console.log("[DEBUG] createPurchasingRequest - Payload:", JSON.stringify(requestData, null, 2));
+    console.log("[DEBUG] createPurchasingRequest - Payload (without invoice_urls):", JSON.stringify(requestData, null, 2));
 
     // 1. Create Request
     const result = await (supabase
@@ -283,7 +283,7 @@ export async function createPurchasingRequest(payload: PurchasingRequestPayload)
 
     // 2. Create Items
     if (items.length > 0) {
-        const itemsData = items.map(item => ({
+        const itemsData = items.map((item: any) => ({
             request_id: request.id,
             name: item.name,
             qty: item.qty,
@@ -299,8 +299,29 @@ export async function createPurchasingRequest(payload: PurchasingRequestPayload)
 
         if (itemsError) {
             console.error("Error creating purchasing items:", itemsError);
-            // Optional: rollback request creation?
-            throw itemsError;
+            // ROLLBACK: Delete the request header
+            await supabase.from("purchasing_requests").delete().eq("id", request.id);
+            throw new Error(`Failed to create items: ${itemsError.message}. Request rolled back.`);
+        }
+    }
+
+    // 3. Create Invoices if provided
+    if (invoice_urls && invoice_urls.length > 0) {
+        const invoicesData = invoice_urls.map((inv: any) => ({
+            request_id: request.id,
+            invoice_url: inv.invoice_url,
+            invoice_name: inv.invoice_name,
+            invoice_type: 'INVOICE',
+            uploaded_by: created_by
+        }));
+
+        const { error: invoicesError } = await supabase
+            .from("purchasing_invoices")
+            .insert(invoicesData);
+
+        if (invoicesError) {
+            console.error("Error creating purchasing invoices:", invoicesError);
+            // Don't rollback for this, just log the error
         }
     }
 
@@ -308,7 +329,7 @@ export async function createPurchasingRequest(payload: PurchasingRequestPayload)
 }
 
 export async function updatePurchasingRequest(id: string, payload: Partial<PurchasingRequestPayload>) {
-    const { items, ...requestData } = payload;
+    const { items, invoice_urls, existing_invoice_ids, created_by, ...requestData } = payload as any;
 
     // 1. Update Request
     const result = await (supabase
@@ -341,7 +362,7 @@ export async function updatePurchasingRequest(id: string, payload: Partial<Purch
 
         // Insert new
         if (items.length > 0) {
-            const itemsData = items.map(item => ({
+            const itemsData = items.map((item: any) => ({
                 request_id: id,
                 name: item.name,
                 qty: item.qty,
@@ -359,6 +380,47 @@ export async function updatePurchasingRequest(id: string, payload: Partial<Purch
                 console.error("Insert items error:", insError);
                 console.error("Failed ID:", id);
                 throw insError; // This is where FK error happens 
+            }
+        }
+    }
+
+    // 3. Update Invoices - delete removed ones, add new ones
+    if (existing_invoice_ids !== undefined || invoice_urls !== undefined) {
+        // Delete invoices that the user removed (not in existing_invoice_ids)
+        // But first fetch current ones to compare
+        if (existing_invoice_ids && Array.isArray(existing_invoice_ids)) {
+            const validIds = existing_invoice_ids.filter((i: string) => i && i !== 'legacy');
+            if (validIds.length > 0) {
+                await supabase
+                    .from("purchasing_invoices")
+                    .delete()
+                    .eq("request_id", id)
+                    .not("id", "in", `(${validIds.join(',')})`);
+            } else {
+                // No valid existing IDs means delete all existing
+                await supabase
+                    .from("purchasing_invoices")
+                    .delete()
+                    .eq("request_id", id);
+            }
+        }
+
+        // Insert new invoices
+        if (invoice_urls && invoice_urls.length > 0) {
+            const invoicesData = invoice_urls.map((inv: any) => ({
+                request_id: id,
+                invoice_url: inv.invoice_url,
+                invoice_name: inv.invoice_name,
+                invoice_type: 'INVOICE',
+                uploaded_by: created_by || null
+            }));
+
+            const { error: invoicesError } = await supabase
+                .from("purchasing_invoices")
+                .insert(invoicesData);
+
+            if (invoicesError) {
+                console.error("Error creating purchasing invoices:", invoicesError);
             }
         }
     }
@@ -474,7 +536,9 @@ export async function createReimburseRequest(payload: ReimburseRequestPayload) {
 
         if (itemsError) {
             console.error("Error creating reimburse items:", itemsError);
-            throw itemsError;
+            // ROLLBACK: Delete the request header
+            await supabase.from("reimbursement_requests").delete().eq("id", request.id);
+            throw new Error(`Failed to create items: ${itemsError.message}. Request rolled back.`);
         }
     }
 

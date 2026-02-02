@@ -63,37 +63,89 @@ export async function GET(request: NextRequest) {
         const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
         const offset = parseInt(searchParams.get("offset") || "0");
 
-        // Build query
+        // Filters
+        const projectId = searchParams.get("project_id");
+        const status = searchParams.get("status");
+        const myRequests = searchParams.get("my_requests") === "true";
+        const q = searchParams.get("q");
+        const month = searchParams.get("month"); // 1-12
+        const year = searchParams.get("year");   // 2026, etc.
+
+        // Build base query for data
         let query = supabase
             .from("reimbursement_requests")
-            .select(REIMBURSEMENT_COLUMNS)
-            .order("created_at", { ascending: false })
-            .range(offset, offset + limit - 1);
+            .select(REIMBURSEMENT_COLUMNS, { count: 'exact' });
 
-        // Optional filters
-        const projectId = searchParams.get("project_id");
-        if (projectId) {
-            query = query.eq("project_id", projectId);
-        }
+        // Build base query for stats
+        let statsQuery = supabase
+            .from("reimbursement_requests")
+            .select("amount, status");
 
-        const status = searchParams.get("status");
-        if (status) {
-            query = query.eq("status", status);
-        }
+        // Apply shared filters
+        // Apply shared filters
+        const applyFilters = (qBuilder: any, includeStatus: boolean = true) => {
+            let b = qBuilder;
+            if (projectId && projectId !== "ALL") b = b.eq("project_id", projectId);
+            if (includeStatus && status && status !== "ALL") b = b.eq("status", status);
+            if (myRequests) b = b.eq("created_by", user.id);
 
-        const myRequests = searchParams.get("my_requests");
-        if (myRequests === "true") {
-            query = query.eq("created_by", user.id);
-        }
+            if (q) {
+                b = b.ilike("description", `%${q}%`);
+            }
 
-        const { data, error } = await query;
+            // Date filtering (skip if month is "ALL")
+            if (month && year && month !== "ALL") {
+                const yearInt = parseInt(year);
+                const monthInt = parseInt(month);
+                const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
 
-        if (error) {
-            console.error("Error fetching reimbursement requests:", error);
+                // Use literal date parts to avoid timezone shifts from .toISOString()
+                const lastDay = new Date(yearInt, monthInt, 0).getDate();
+                const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+                b = b.gte("date", startDate).lte("date", endDate);
+            }
+
+            return b;
+        };
+
+        query = applyFilters(query, true);
+        statsQuery = applyFilters(statsQuery, false);
+
+        // Fetch Data + Stats
+        const [dataRes, statsRes] = await Promise.all([
+            query
+                .order("date", { ascending: false })
+                .order("created_at", { ascending: false })
+                .range(offset, offset + limit - 1),
+            statsQuery
+        ]);
+
+        if (dataRes.error) {
+            console.error("Error fetching reimbursement requests:", dataRes.error);
             return serverErrorResponse("Failed to fetch reimbursement requests");
         }
 
-        return successResponse(data || []);
+        // Calculate Stats
+        const allItems = statsRes.data || [];
+        const stats = {
+            totalCount: allItems.length,
+            totalAmount: allItems.reduce((acc, i) => acc + (i.amount || 0), 0),
+            pendingCount: allItems.filter(i => i.status === "PENDING" || i.status === "NEED_REVISION").length,
+            pendingAmount: allItems.filter(i => i.status === "PENDING" || i.status === "NEED_REVISION").reduce((acc, i) => acc + (i.amount || 0), 0),
+            approvedCount: allItems.filter(i => i.status === "APPROVED").length,
+            approvedAmount: allItems.filter(i => i.status === "APPROVED").reduce((acc, i) => acc + (i.amount || 0), 0),
+            paidCount: allItems.filter(i => i.status === "PAID").length,
+            paidAmount: allItems.filter(i => i.status === "PAID").reduce((acc, i) => acc + (i.amount || 0), 0),
+            rejectedCount: allItems.filter(i => i.status === "REJECTED").length,
+            rejectedAmount: allItems.filter(i => i.status === "REJECTED").reduce((acc, i) => acc + (i.amount || 0), 0),
+        };
+
+        return successResponse({
+            data: dataRes.data || [],
+            count: dataRes.count || 0,
+            stats: stats
+        });
     } catch (e) {
         console.error("Reimbursement GET error:", e);
         return serverErrorResponse("Internal server error");

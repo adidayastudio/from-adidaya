@@ -8,7 +8,7 @@ import { Project } from "@/types/project";
 import { createPurchasingRequest, updatePurchasingRequest, fetchBeneficiaryAccounts, saveBeneficiaryAccount, BeneficiaryAccount } from "@/lib/api/finance";
 import { uploadFinanceFile } from "@/lib/api/storage";
 import { useFinance } from "../FinanceContext";
-import { CreditCard, Save } from "lucide-react";
+import { CreditCard, Save, Trash2 } from "lucide-react";
 
 interface LineItem {
     id: string;
@@ -22,10 +22,12 @@ interface LineItem {
 export function PurchaseRequestForm({
     onClose,
     onSuccess,
+    onDelete,
     initialData
 }: {
     onClose: () => void;
     onSuccess?: () => void;
+    onDelete?: () => Promise<void> | void; // Add onDelete prop
     initialData?: any;
 }) {
     // -- CONTEXT & STATE --
@@ -49,27 +51,45 @@ export function PurchaseRequestForm({
         console.log("[DEBUG] PurchaseRequestForm - savedAccounts length:", savedAccounts.length);
     }, [savedAccounts]);
 
-    // Parse items from initialData (which is single item flattened) or default
-    // If initialData is present, it's a single item edit usually, or we need to handle multi-item edit?
-    // The current table structure flattens items. If we edit "a request", we might be editing just that item line?
-    // User expectation: "Edit Request" typically implies editing the whole request.
-    // However, we only passed a single flattened item.
-    // For now, let's assume we are editing the single item as a request with 1 item.
-    const [items, setItems] = useState<LineItem[]>(initialData ? [{
-        id: initialData.id, // PurchasingItem ID (which is the item id)
-        name: initialData.description,
-        qty: initialData.quantity,
-        unit: initialData.unit,
-        unitPrice: (initialData.amount || 0) / (initialData.quantity || 1), // Approximate unit price
-        total: initialData.amount || 0
-    }] : [
-        { id: Math.random().toString(36).substr(2, 9), name: "", qty: 1, unit: "pcs", unitPrice: 0, total: 0 }
-    ]);
+    // Parse items from initialData - properly handle multi-item requests
+    // If initialData.items exists and has items, use those. Otherwise fallback to legacy single-item format.
+    const [items, setItems] = useState<LineItem[]>(() => {
+        if (!initialData) {
+            // New request - start with empty item
+            return [{ id: Math.random().toString(36).substr(2, 9), name: "", qty: 1, unit: "pcs", unitPrice: 0, total: 0 }];
+        }
+
+        // Check if we have the items array (multi-item support)
+        if (initialData.items && Array.isArray(initialData.items) && initialData.items.length > 0) {
+            return initialData.items.map((item: any) => ({
+                id: item.id || Math.random().toString(36).substr(2, 9),
+                name: item.name || "",
+                qty: item.qty || 1,
+                unit: item.unit || "pcs",
+                unitPrice: item.unit_price || item.unitPrice || 0,
+                total: item.total || (item.qty || 1) * (item.unit_price || item.unitPrice || 0)
+            }));
+        }
+
+        // Legacy fallback: single item from flattened data
+        return [{
+            id: initialData.id || Math.random().toString(36).substr(2, 9),
+            name: initialData.description || "",
+            qty: initialData.quantity || 1,
+            unit: initialData.unit || "pcs",
+            unitPrice: initialData.quantity > 0 ? (initialData.amount || 0) / initialData.quantity : 0,
+            total: initialData.amount || 0
+        }];
+    });
 
     const [priceType, setPriceType] = useState<"ESTIMATION" | "ACTUAL">("ESTIMATION");
-    const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+    const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
+    const [existingInvoices, setExistingInvoices] = useState<{ id: string; invoice_url: string; invoice_name?: string }[]>(
+        initialData?.invoices || (initialData?.invoice_url ? [{ id: 'legacy', invoice_url: initialData.invoice_url, invoice_name: 'Invoice' }] : [])
+    );
     const [notes, setNotes] = useState(initialData?.notes || "");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Allow editing even if APPROVED, so they can add missing invoice/beneficiary info
     const isReadOnly = initialData && ["PAID", "REJECTED", "CANCELLED"].includes(initialData.approval_status);
@@ -131,11 +151,11 @@ export function PurchaseRequestForm({
         if (stage === "INVOICED" || stage === "RECEIVED") {
             if (!vendor) return false;
             // Invoice is mandatory for Invoiced/Received stages when submitting
-            if (!invoiceFile && !initialData?.invoice_url) return false;
+            if (invoiceFiles.length === 0 && existingInvoices.length === 0) return false;
         }
 
         return true;
-    }, [projectCode, category, subcategory, items, stage, vendor, invoiceFile, initialData]);
+    }, [projectCode, category, subcategory, items, stage, vendor, invoiceFiles, existingInvoices]);
 
     const handleSave = async (asDraft: boolean = false) => {
         if (isReadOnly) return;
@@ -146,16 +166,21 @@ export function PurchaseRequestForm({
             const selectedProject = projects.find(p => p.projectCode === projectCode);
             if (!selectedProject) throw new Error("Invalid project selected");
 
-            let uploadedInvoiceUrl = null;
-            if (invoiceFile) {
-                uploadedInvoiceUrl = await uploadFinanceFile(invoiceFile, "invoices");
-                if (!uploadedInvoiceUrl) {
-                    const confirmContinue = window.confirm("Failed to upload invoice. Continue without it?");
-                    if (!confirmContinue) throw new Error("Upload failed");
+            // Upload all new invoice files
+            const uploadedInvoiceUrls: string[] = [];
+            for (const file of invoiceFiles) {
+                const url = await uploadFinanceFile(file, "invoices");
+                if (url) {
+                    uploadedInvoiceUrls.push(url);
                 }
-            } else if (initialData?.invoice_url) {
-                uploadedInvoiceUrl = initialData.invoice_url;
             }
+
+            // Combine with existing invoices - use first one as legacy invoice_url for backward compatibility
+            const allInvoiceUrls = [
+                ...existingInvoices.map(inv => inv.invoice_url),
+                ...uploadedInvoiceUrls
+            ];
+            const primaryInvoiceUrl = allInvoiceUrls[0] || null;
 
             if (!userId) throw new Error("User not authenticated");
 
@@ -166,14 +191,21 @@ export function PurchaseRequestForm({
                 beneficiary_bank: bankName,
                 beneficiary_number: accountNumber,
                 beneficiary_name: accountName,
-                description: items.length > 1 ? `${items[0].name} + ${items.length - 1} more` : items[0].name,
+                description: items.map(i => i.name).join(', '),
                 type: category as any,
                 subcategory,
                 amount: totalAmount,
                 purchase_stage: stage,
                 approval_status: asDraft ? "DRAFT" : "SUBMITTED",
                 financial_status: initialData ? initialData.financial_status : "UNPAID",
-                invoice_url: uploadedInvoiceUrl || undefined,
+                invoice_url: primaryInvoiceUrl || undefined,
+                // Send all invoice URLs for the new invoices table
+                invoice_urls: uploadedInvoiceUrls.map((url, idx) => ({
+                    invoice_url: url,
+                    invoice_name: invoiceFiles[idx]?.name || `Invoice ${idx + 1}`
+                })),
+                // Keep track of existing invoice IDs to preserve
+                existing_invoice_ids: existingInvoices.map(inv => inv.id),
                 created_by: userId,
                 notes: notes,
                 items: items.map(i => ({
@@ -538,7 +570,7 @@ export function PurchaseRequestForm({
 
                 <hr className="border-neutral-100" />
 
-                {/* SECTION 5: DOCUMENTS */}
+                {/* SECTION 5: DOCUMENTS - Multiple Invoices */}
                 <section className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider flex items-center gap-2">
@@ -548,37 +580,85 @@ export function PurchaseRequestForm({
                         {(stage === "INVOICED" || stage === "RECEIVED") && <span className="text-xs font-bold text-amber-600">* Required</span>}
                     </div>
 
+                    {/* Existing Invoices List */}
+                    {existingInvoices.length > 0 && (
+                        <div className="space-y-2">
+                            {existingInvoices.map((inv, idx) => (
+                                <div key={inv.id} className="flex items-center gap-3 p-3 bg-blue-50/50 border border-blue-200/50 rounded-xl">
+                                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                                        <FileText className="w-5 h-5 text-blue-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-blue-800 truncate">{inv.invoice_name || `Invoice ${idx + 1}`}</p>
+                                        <p className="text-xs text-blue-600">Already uploaded</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => window.open(inv.invoice_url, '_blank')}
+                                        className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-100 hover:bg-blue-200 rounded-lg transition-all"
+                                    >
+                                        View
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setExistingInvoices(prev => prev.filter(i => i.id !== inv.id))}
+                                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* New Invoice Files List */}
+                    {invoiceFiles.length > 0 && (
+                        <div className="space-y-2">
+                            {invoiceFiles.map((file, idx) => (
+                                <div key={idx} className="flex items-center gap-3 p-3 bg-emerald-50/50 border border-emerald-200/50 rounded-xl">
+                                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                                        <CheckCircle className="w-5 h-5 text-emerald-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-emerald-800 truncate">{file.name}</p>
+                                        <p className="text-xs text-emerald-600">Ready to upload</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setInvoiceFiles(prev => prev.filter((_, i) => i !== idx))}
+                                        className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Add More Invoices Dropzone */}
                     <div
-                        className={clsx(
-                            "border-2 border-dashed rounded-xl p-8 text-center transition-all group relative",
-                            invoiceFile ? "border-emerald-500/40 bg-emerald-50/50 cursor-pointer" : "border-neutral-200 hover:border-red-500/30 hover:bg-red-50/20 cursor-pointer"
-                        )}
+                        className="border-2 border-dashed rounded-xl p-6 text-center transition-all group relative cursor-pointer border-neutral-200 hover:border-red-500/30 hover:bg-red-50/20"
                     >
                         <input
                             type="file"
+                            multiple
+                            accept="image/*,.pdf"
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                             onChange={e => {
-                                if (e.target.files && e.target.files[0]) setInvoiceFile(e.target.files[0]);
+                                if (e.target.files && e.target.files.length > 0) {
+                                    setInvoiceFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                                }
                             }}
                         />
-                        {invoiceFile ? (
-                            <div>
-                                <CheckCircle className="w-8 h-8 mx-auto text-emerald-600 mb-2" strokeWidth={1.5} />
-                                <p className="text-sm font-bold text-emerald-700">{invoiceFile.name}</p>
-                                <p className="text-xs text-emerald-600 mt-1">Ready to upload</p>
-                            </div>
-                        ) : (
-                            <div>
-                                <Upload className="w-8 h-8 mx-auto mb-2 text-neutral-400 group-hover:text-red-500 transition-colors" strokeWidth={1.5} />
-                                <p className="text-sm font-medium text-neutral-600 group-hover:text-neutral-900">
-                                    Upload Invoice / Nota
-                                </p>
-                                <p className="text-xs text-neutral-400 mt-1">JPG, PNG, PDF {stage === "PLANNED" && "(Optional for now)"}</p>
-                            </div>
-                        )}
+                        <Upload className="w-6 h-6 mx-auto mb-2 text-neutral-400 group-hover:text-red-500 transition-colors" strokeWidth={1.5} />
+                        <p className="text-sm font-medium text-neutral-600 group-hover:text-neutral-900">
+                            {existingInvoices.length > 0 || invoiceFiles.length > 0 ? "Add More Invoices" : "Upload Invoice / Nota"}
+                        </p>
+                        <p className="text-xs text-neutral-400 mt-1">JPG, PNG, PDF {stage === "PLANNED" && "(Optional for now)"}</p>
                     </div>
 
-                    {(stage === "INVOICED" || stage === "RECEIVED") && !invoiceFile && (
+                    {/* Warning if required but no invoices */}
+                    {(stage === "INVOICED" || stage === "RECEIVED") && invoiceFiles.length === 0 && existingInvoices.length === 0 && (
                         <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg font-medium">
                             <AlertTriangle className="w-3.5 h-3.5" strokeWidth={1.5} />
                             Invoice wajib diunggah karena transaksi {stage === "RECEIVED" ? "sudah dibeli" : "sudah ditagihkan"}.
@@ -608,6 +688,18 @@ export function PurchaseRequestForm({
                         Cancel
                     </button>
 
+                    {initialData && onDelete && (
+                        <button
+                            type="button"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            disabled={isSubmitting}
+                            className="h-11 w-11 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                            title="Delete Request"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    )}
+
                     {/* Save as Draft */}
                     <button
                         disabled={isSubmitting || isReadOnly}
@@ -628,6 +720,46 @@ export function PurchaseRequestForm({
                     </button>
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+                    <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl">
+                        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                            <Trash2 className="w-7 h-7 text-red-500" />
+                        </div>
+                        <h3 className="text-lg font-bold text-neutral-900 mb-2 text-center">Delete Request?</h3>
+                        <p className="text-sm text-neutral-500 mb-6 text-center font-medium">
+                            Are you sure you want to delete this request? This action <span className="text-red-500 font-bold">cannot be undone</span>.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                disabled={isSubmitting}
+                                className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        setIsSubmitting(true);
+                                        await onDelete?.();
+                                    } catch (e) {
+                                        setIsSubmitting(false);
+                                        setShowDeleteConfirm(false);
+                                    }
+                                }}
+                                disabled={isSubmitting}
+                                className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isSubmitting ? "Deleting..." : "Delete"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

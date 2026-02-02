@@ -11,14 +11,14 @@ export type Category =
     | "SPECIAL";
 
 export const CATEGORY_OPTIONS = [
-    { value: "MATERIAL", label: "Material (Material)" },
-    { value: "TOOLS_EQUIPMENT", label: "Tools & Equipment (Alat & Peralatan)" },
-    { value: "SERVICES", label: "Services (Jasa)" },
-    { value: "PROJECT_OPERATIONS", label: "Project Operations (Operasional Proyek)" },
-    { value: "OFFICE_OPERATIONS", label: "Office / Studio Operations (Operasional Kantor / Studio)" },
-    { value: "ASSETS_INVENTORY", label: "Assets & Inventory (Aset & Inventaris)" },
-    { value: "FINANCIAL_LEGAL", label: "Financial & Legal (Keuangan & Legal)" },
-    { value: "SPECIAL", label: "Special / Non-Standard (Khusus / Non-Standar)" }
+    { value: "MATERIAL", label: "Material" },
+    { value: "TOOLS_EQUIPMENT", label: "Tools & Equipment" },
+    { value: "SERVICES", label: "Services" },
+    { value: "PROJECT_OPERATIONS", label: "Project Operations" },
+    { value: "OFFICE_OPERATIONS", label: "Office / Studio Operations" },
+    { value: "ASSETS_INVENTORY", label: "Assets & Inventory" },
+    { value: "FINANCIAL_LEGAL", label: "Financial & Legal" },
+    { value: "SPECIAL", label: "Special / Non-Standard" }
 ];
 
 export const SUBCATEGORY_OPTIONS: Record<Category, { value: string; label: string }[]> = {
@@ -134,17 +134,17 @@ export const TRANSPORT_ROUTES = [
 ];
 
 export const REIMBURSE_CATEGORY_OPTIONS = [
-    { value: "TRANSPORTATION", label: "Transportation (Transportasi)" },
-    { value: "CONSUMPTION", label: "Meals & Consumption (Konsumsi)" },
-    { value: "ACCOMMODATION", label: "Accommodation (Akomodasi)" },
-    { value: "PURCHASE_PROJECT", label: "Project Purchase (Belanja Proyek - Reimbursable)" },
-    { value: "OPERATIONS_PROJECT", label: "Project Operations (Operasional Proyek)" },
-    { value: "SUPPORT_OFFICE", label: "Office & Work Support (Pendukung Kerja)" },
-    { value: "COMMUNICATION", label: "Communication (Komunikasi)" },
-    { value: "HEALTH_SAFETY", label: "Health, Safety & Wellbeing (Kesehatan & Keselamatan)" },
-    { value: "TRAVEL_DUTY", label: "Travel & Duty Expense (Perjalanan Dinas)" },
-    { value: "EMERGENCY", label: "Emergency & Incidental (Darurat & Insidental)" },
-    { value: "OTHER", label: "Other / Non-Standard (Lainnya / Non-Standar)" }
+    { value: "TRANSPORTATION", label: "Transportation" },
+    { value: "CONSUMPTION", label: "Meals & Consumption" },
+    { value: "ACCOMMODATION", label: "Accommodation" },
+    { value: "PURCHASE_PROJECT", label: "Project Purchase" },
+    { value: "OPERATIONS_PROJECT", label: "Project Operations" },
+    { value: "SUPPORT_OFFICE", label: "Office & Work Support" },
+    { value: "COMMUNICATION", label: "Communication" },
+    { value: "HEALTH_SAFETY", label: "Health, Safety & Wellbeing" },
+    { value: "TRAVEL_DUTY", label: "Travel & Duty Expense" },
+    { value: "EMERGENCY", label: "Emergency & Incidental" },
+    { value: "OTHER", label: "Other / Non-Standard" }
 ];
 
 export const REIMBURSE_SUBCATEGORY_OPTIONS: Record<string, { value: string; label: string }[]> = {

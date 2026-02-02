@@ -20,6 +20,7 @@ import {
     Upload,
     Filter
 } from "lucide-react";
+import { CATEGORY_OPTIONS } from "./modules/constants";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfMonth, endOfMonth, isBefore } from "date-fns";
@@ -83,6 +84,143 @@ function ReviseModal({ item, onClose, onRevise }: { item: PurchasingItem, onClos
                 <div className="flex gap-3">
                     <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
                     <button onClick={() => { if (reason) onRevise(reason); }} disabled={!reason} className="flex-1 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all disabled:opacity-50">Request Revision</button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+// Pagination Component
+function Pagination({
+    currentPage,
+    totalItems,
+    itemsPerPage,
+    onPageChange
+}: {
+    currentPage: number,
+    totalItems: number,
+    itemsPerPage: number,
+    onPageChange: (page: number) => void
+}) {
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+
+    if (totalItems === 0) return null;
+
+    return (
+        <div className="flex items-center justify-between px-6 py-4 bg-white/50 backdrop-blur-sm border-t border-neutral-100">
+            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                Showing <span className="text-neutral-900">{startItem}-{endItem}</span> of <span className="text-neutral-900">{totalItems}</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="p-2 hover:bg-neutral-100 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                    <ChevronLeft className="w-4 h-4 text-neutral-600" />
+                </button>
+                <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                        // Show first, last, and current +/- 1
+                        if (page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1)) {
+                            return (
+                                <button
+                                    key={page}
+                                    onClick={() => onPageChange(page)}
+                                    className={clsx(
+                                        "w-8 h-8 rounded-full text-xs font-bold transition-all",
+                                        currentPage === page
+                                            ? "bg-neutral-900 text-white shadow-lg shadow-neutral-200"
+                                            : "text-neutral-500 hover:bg-neutral-100"
+                                    )}
+                                >
+                                    {page}
+                                </button>
+                            );
+                        } else if (page === currentPage - 2 || page === currentPage + 2) {
+                            return <span key={page} className="text-neutral-300 mx-1">...</span>;
+                        }
+                        return null;
+                    })}
+                </div>
+                <button
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="p-2 hover:bg-neutral-100 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                >
+                    <ChevronRight className="w-4 h-4 text-neutral-600" />
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// Delete Confirmation Modal - Premium Design
+function DeleteConfirmModal({
+    item,
+    onClose,
+    onConfirm,
+    isDeleting
+}: {
+    item: { description?: string },
+    onClose: () => void,
+    onConfirm: () => void,
+    isDeleting?: boolean
+}) {
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden"
+            >
+                {/* Icon */}
+                <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                    <Trash2 className="w-7 h-7 text-red-500" />
+                </div>
+
+                <h3 className="text-lg font-bold text-neutral-900 mb-2 text-center">
+                    Delete Request?
+                </h3>
+                <p className="text-sm text-neutral-500 mb-6 text-center font-medium">
+                    Are you sure you want to delete this request? This action <span className="text-red-500 font-bold">cannot be undone</span>.
+                </p>
+
+                {item.description && (
+                    <div className="bg-neutral-50 rounded-xl p-3 mb-6 border border-neutral-100">
+                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Request</div>
+                        <div className="text-sm font-medium text-neutral-700 truncate">{item.description}</div>
+                    </div>
+                )}
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={isDeleting}
+                        className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isDeleting}
+                        className="flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {isDeleting ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Deleting...
+                            </>
+                        ) : (
+                            <>
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                            </>
+                        )}
+                    </button>
                 </div>
             </motion.div>
         </div>
@@ -316,27 +454,49 @@ function ViewModal({
     onClose: () => void;
     onPreview: (tab: 'invoice' | 'proof') => void;
 }) {
-    const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+    const [invoiceUrls, setInvoiceUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
     const [proofUrl, setProofUrl] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'invoice' | 'proof'>('invoice');
 
     useEffect(() => {
         const fetchUrls = async () => {
-            if (item.invoice_url) {
+            // Handle multiple invoices
+            const urls: { url: string; name: string; originalPath: string }[] = [];
+
+            if (item.invoices && item.invoices.length > 0) {
+                // Use new invoices array
+                for (const inv of item.invoices) {
+                    const url = await getFinanceFileUrl(inv.invoice_url);
+                    if (url) {
+                        urls.push({
+                            url,
+                            name: inv.invoice_name || `Invoice ${urls.length + 1}`,
+                            originalPath: inv.invoice_url
+                        });
+                    }
+                }
+            } else if (item.invoice_url) {
+                // Fallback to legacy single invoice_url
                 const url = await getFinanceFileUrl(item.invoice_url);
-                setInvoiceUrl(url);
+                if (url) {
+                    urls.push({ url, name: 'Invoice', originalPath: item.invoice_url });
+                }
             }
+            console.log('[ViewModal] Fetched invoice URLs:', urls.length, item.invoices?.length);
+            setInvoiceUrls(urls);
+
             if (item.payment_proof_url) {
                 const url = await getFinanceFileUrl(item.payment_proof_url);
                 setProofUrl(url);
             }
         };
         fetchUrls();
-    }, [item.invoice_url, item.payment_proof_url]);
+    }, [item.invoice_url, item.invoices, item.payment_proof_url]);
 
     useEffect(() => {
-        if (!item.invoice_url && item.payment_proof_url) setActiveTab('proof');
-    }, [item.invoice_url, item.payment_proof_url]);
+        const hasInvoices = item.invoice_url || (item.invoices && item.invoices.length > 0);
+        if (!hasInvoices && item.payment_proof_url) setActiveTab('proof');
+    }, [item.invoice_url, item.invoices, item.payment_proof_url]);
 
     const displayAmount = item.amount || 0;
     const notes = item.rejection_reason || item.notes || "";
@@ -404,7 +564,11 @@ function ViewModal({
 
                         <div>
                             <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Description</div>
-                            <div className="text-sm font-medium text-neutral-900">{item.description}</div>
+                            <div className="text-sm font-medium text-neutral-900">
+                                {item.description || (item.items && item.items.length > 0
+                                    ? item.items.map((i: any) => i.name).join(', ')
+                                    : "No description")}
+                            </div>
                             {item.vendor && <div className="text-[10px] text-neutral-400 font-medium mt-1">Vendor: {item.vendor}</div>}
                         </div>
 
@@ -485,7 +649,7 @@ function ViewModal({
                     </div>
 
                     {/* Missing Info Warning */}
-                    {item.approval_status === "APPROVED" && (!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) && (
+                    {item.approval_status === "APPROVED" && ((!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number) && (
                         <div className="my-6 p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3 animate-in fade-in slide-in-from-top-1">
                             <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
                             <div>
@@ -527,23 +691,29 @@ function ViewModal({
                         </div>
 
                         {activeTab === 'invoice' && (
-                            <div className="space-y-2">
-                                {item.invoice_url ? (
-                                    <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
-                                        {item.invoice_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                            <button onClick={() => onPreview('invoice')} className="w-full text-left cursor-zoom-in relative block">
-                                                {invoiceUrl ? <img src={invoiceUrl} alt="Invoice" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
-                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                    <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
-                                                </div>
-                                            </button>
-                                        ) : (
-                                            <div className="p-4 flex items-center justify-between">
-                                                <span className="text-sm text-neutral-600">Attached file</span>
-                                                <a href={invoiceUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">Open File</a>
+                            <div className="space-y-3">
+                                {invoiceUrls.length > 0 ? (
+                                    invoiceUrls.map((inv, idx) => (
+                                        <div key={idx} className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
+                                            <div className="p-2 border-b border-neutral-100 flex items-center justify-between bg-white">
+                                                <span className="text-xs font-bold text-neutral-600">{inv.name}</span>
+                                                <span className="text-[10px] text-neutral-400">#{idx + 1}</span>
                                             </div>
-                                        )}
-                                    </div>
+                                            {inv.originalPath.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                                <button onClick={() => onPreview('invoice')} className="w-full text-left cursor-zoom-in relative block">
+                                                    <img src={inv.url} alt={inv.name} className="w-full max-h-40 object-contain" />
+                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                        <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
+                                                    </div>
+                                                </button>
+                                            ) : (
+                                                <div className="p-4 flex items-center justify-between">
+                                                    <span className="text-sm text-neutral-600">PDF / Document</span>
+                                                    <a href={inv.url} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">Open File</a>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
                                 ) : (
                                     <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200"><p className="text-xs text-neutral-400">No invoice attached</p></div>
                                 )}
@@ -769,7 +939,7 @@ function InvoicePreviewModal({
 }
 
 export default function PurchasingClient() {
-    const { viewMode, userId, isLoading: isAuthLoading } = useFinance();
+    const { viewMode, userId, isLoading: isAuthLoading, userRole } = useFinance();
     const searchParams = useSearchParams();
     const [searchTerm, setSearchTerm] = useState("");
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -784,18 +954,22 @@ export default function PurchasingClient() {
     const initialStatus = searchParams.get("status") as ApprovalStatus | "ALL" | null;
     const [statusFilter, setStatusFilter] = useState<ApprovalStatus | "ALL">("ALL"); // Simplified initial state handling
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const itemsPerPage = 50;
+
     // Filters
     const [selectedProject, setSelectedProject] = useState<string>("ALL");
     const [categoryFilter, setCategoryFilter] = useState<PurchaseType | "ALL">("ALL");
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [showAllMonths, setShowAllMonths] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [globalStats, setGlobalStats] = useState<any>(null);
 
-    // Extract available categories dynamically
-    const availableCategories = useMemo(() => {
-        const cats = new Set<string>();
-        items.forEach(item => { if (item.type) cats.add(item.type); });
-        return ['ALL', ...Array.from(cats)].sort();
-    }, [items]);
+    const isTeamView = viewMode === "team";
+
+
 
     // Confirmation Modal State
     const [confirmModal, setConfirmModal] = useState<{
@@ -810,16 +984,28 @@ export default function PurchasingClient() {
     const [previewingDocument, setPreviewingDocument] = useState<{ item: PurchasingItem; initialTab: 'invoice' | 'proof' } | null>(null);
 
     // Fetch Data
-    const loadData = async () => {
-        setIsLoadingData(true);
+    const loadData = async (isInitial = false) => {
+        if (isInitial) setIsLoadingData(true);
         try {
-            const [requests, profiles] = await Promise.all([
-                fetchPurchasingRequests(),
+            const offset = (currentPage - 1) * itemsPerPage;
+            const [{ data: rawItems, total, stats }, profiles] = await Promise.all([
+                fetchPurchasingRequests({
+                    limit: itemsPerPage,
+                    offset: offset,
+                    approval_status: statusFilter,
+                    project_id: selectedProject !== "ALL" ? selectedProject : undefined,
+                    q: searchTerm || undefined,
+                    month: showAllMonths ? "ALL" : currentMonth.getMonth() + 1,
+                    year: currentMonth.getFullYear(),
+                    my_requests: !isTeamView
+                }),
                 fetchTeamMembers()
             ]);
 
-            const profileMap = new Map(profiles.map(p => [p.id, p]));
-            const flattened: PurchasingItem[] = requests.map((req: any) => {
+            setTotalItems(total || 0);
+            setGlobalStats(stats);
+            const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+            const flattened: PurchasingItem[] = (rawItems || []).map((req: any) => {
                 const creatorName = profileMap.get(req.created_by)?.username || "Unknown";
                 const creatorRole = profileMap.get(req.created_by)?.role || "Unknown Role";
 
@@ -862,6 +1048,14 @@ export default function PurchasingClient() {
                         unit: it.unit,
                         unit_price: it.unitPrice || it.unit_price,
                         total: it.total
+                    })) || [],
+                    invoices: req.invoices?.map((inv: any) => ({
+                        id: inv.id,
+                        invoice_url: inv.invoice_url,
+                        invoice_name: inv.invoice_name,
+                        invoice_type: inv.invoice_type,
+                        notes: inv.notes,
+                        created_at: inv.created_at
                     })) || []
                 };
             });
@@ -888,11 +1082,18 @@ export default function PurchasingClient() {
         }
     };
 
-    // Initial load
     useEffect(() => {
-        loadData();
         fetchAllProjects().then(setProjects);
     }, []);
+
+    useEffect(() => {
+        loadData(items.length === 0); // Only show GlobalLoading if we have no items
+    }, [currentPage, statusFilter, selectedProject, searchTerm, currentMonth, showAllMonths, isTeamView]);
+
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [statusFilter, selectedProject, searchTerm, currentMonth, showAllMonths]);
 
     // Load funding sources when paying items or on mount (lazy load implies better perf but simpler to just load)
     useEffect(() => {
@@ -995,6 +1196,8 @@ export default function PurchasingClient() {
     const [rejectingItem, setRejectingItem] = useState<PurchasingItem | null>(null);
     const [revisingItem, setRevisingItem] = useState<PurchasingItem | null>(null);
     const [viewingItem, setViewingItem] = useState<PurchasingItem | null>(null);
+    const [deletingItem, setDeletingItem] = useState<PurchasingItem | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ key: keyof PurchasingItem; direction: 'asc' | 'desc' } | null>(
         { key: 'date', direction: 'desc' }
     );
@@ -1086,75 +1289,42 @@ export default function PurchasingClient() {
         }
     };
 
-    const isTeamView = viewMode === "team";
-
-    // 1. Base Items: Filtered by everything EXCEPT Status (for summary cards)
+    // 1. Base Items: Now just current page items (already filtered by backend)
     const baseItems = useMemo(() => {
-        let current = [...items];
+        return items;
+    }, [items]);
 
-        if (!isTeamView) {
-            current = current.filter(item => item.created_by === userId);
-        }
-
-        // Search
-        if (searchTerm) {
-            const lower = searchTerm.toLowerCase();
-            current = current.filter(item =>
-                item.description.toLowerCase().includes(lower) ||
-                item.vendor.toLowerCase().includes(lower) ||
-                item.project_name.toLowerCase().includes(lower) ||
-                item.project_code.toLowerCase().includes(lower)
-            );
-        }
-
-        // Month Filter
-        current = current.filter(item => {
-            const itemDate = new Date(item.date);
-            return itemDate.getMonth() === currentMonth.getMonth() &&
-                itemDate.getFullYear() === currentMonth.getFullYear();
-        });
-
-        // Project Filter
-        if (selectedProject !== "ALL") {
-            current = current.filter(item => item.project_id === selectedProject);
-        }
-
-        // Category Filter
-        if (categoryFilter !== "ALL") {
-            current = current.filter(item => item.type === categoryFilter);
-        }
-
-        return current;
-    }, [items, isTeamView, userId, searchTerm, currentMonth, selectedProject, categoryFilter]);
-
-    // 2. Summary Stats derived from Base Items
+    // 2. Summary Stats derived from API globalStats or Base Items
     const summaryStats = useMemo(() => {
-        return {
-            total: baseItems.length,
-            pending: baseItems.filter(i => i.approval_status === "SUBMITTED" || i.approval_status === "NEED_REVISION").length,
-            approved: baseItems.filter(i => i.approval_status === "APPROVED" && i.financial_status !== "PAID").length,
-            paid: baseItems.filter(i => i.financial_status === "PAID").length,
-            rejected: baseItems.filter(i => i.approval_status === "REJECTED").length
-        };
-    }, [baseItems]);
-
-    // 3. Final Filtered Items: Base Items + Status Filter
-    const filteredItems = useMemo(() => {
-        let current = [...baseItems];
-
-        if (statusFilter !== "ALL") {
-            if (statusFilter === "PAID") {
-                current = current.filter(i => i.financial_status === "PAID");
-            } else if (statusFilter === "APPROVED") {
-                // Approved filter only shows APPROVED items that are NOT yet PAID
-                current = current.filter(i => i.approval_status === "APPROVED" && i.financial_status !== "PAID");
-            } else if (statusFilter === "SUBMITTED") {
-                // Pending filter includes SUBMITTED and NEED_REVISION
-                current = current.filter(i => i.approval_status === "SUBMITTED" || i.approval_status === "NEED_REVISION");
-            } else {
-                current = current.filter(item => item.approval_status === statusFilter);
-            }
+        if (globalStats) {
+            return {
+                total: globalStats.totalCount,
+                totalAmount: globalStats.totalAmount,
+                pending: globalStats.pendingCount,
+                pendingAmount: globalStats.pendingAmount,
+                approved: globalStats.approvedCount,
+                approvedAmount: globalStats.approvedAmount,
+                paid: globalStats.paidCount,
+                paidAmount: globalStats.paidAmount,
+                rejected: globalStats.rejectedCount
+            };
         }
+        return {
+            total: 0,
+            totalAmount: 0,
+            pending: 0,
+            pendingAmount: 0,
+            approved: 0,
+            approvedAmount: 0,
+            paid: 0,
+            paidAmount: 0,
+            rejected: 0
+        };
+    }, [globalStats]);
+
+    // 3. Final Filtered Items: Now just Base Items (already filtered by backend)
+    const filteredItems = useMemo(() => {
+        let current = [...items];
 
         if (sortConfig) {
             current.sort((a, b) => {
@@ -1163,6 +1333,17 @@ export default function PurchasingClient() {
                     const aIndex = STATUS_ORDER.indexOf(a.approval_status);
                     const bIndex = STATUS_ORDER.indexOf(b.approval_status);
                     return sortConfig.direction === 'asc' ? aIndex - bIndex : bIndex - aIndex;
+                }
+
+                // Special handling for date sorting
+                if (sortConfig.key === 'date') {
+                    const aTime = new Date(a.date).getTime();
+                    const bTime = new Date(b.date).getTime();
+                    if (aTime !== bTime) {
+                        return sortConfig.direction === 'asc' ? aTime - bTime : bTime - aTime;
+                    }
+                    // Fallback to ID for stable sort
+                    return b.id.localeCompare(a.id);
                 }
 
                 const aValue = a[sortConfig.key];
@@ -1194,12 +1375,13 @@ export default function PurchasingClient() {
             <div className="flex flex-col gap-6">
                 {/* SUMMARY CARDS */}
                 {/* SUMMARY CARDS */}
-                <SummaryCardsRow>
+                <SummaryCardsRow className="lg:grid-cols-5">
                     <SummaryCard
                         icon={<Package className="w-5 h-5 text-red-600" />}
                         iconBg="bg-red-50"
                         label="Total Requests"
                         value={summaryStats.total.toString()}
+                        subtext={formatCurrency(summaryStats.totalAmount)}
                         onClick={() => setStatusFilter("ALL")}
                         isActive={statusFilter === "ALL"}
                         activeColor="ring-red-500"
@@ -1210,6 +1392,7 @@ export default function PurchasingClient() {
                         iconBg="bg-orange-50"
                         label="Pending"
                         value={summaryStats.pending.toString()}
+                        subtext={formatCurrency(summaryStats.pendingAmount)}
                         onClick={() => setStatusFilter("SUBMITTED")}
                         isActive={statusFilter === "SUBMITTED"}
                         activeColor="ring-orange-500"
@@ -1220,6 +1403,7 @@ export default function PurchasingClient() {
                         iconBg="bg-blue-50"
                         label="Approved"
                         value={summaryStats.approved.toString()}
+                        subtext={formatCurrency(summaryStats.approvedAmount)}
                         onClick={() => setStatusFilter("APPROVED")}
                         isActive={statusFilter === "APPROVED"}
                         activeColor="ring-blue-500"
@@ -1230,6 +1414,7 @@ export default function PurchasingClient() {
                         iconBg="bg-emerald-50"
                         label="Paid"
                         value={summaryStats.paid.toString()}
+                        subtext={formatCurrency(summaryStats.paidAmount)}
                         onClick={() => setStatusFilter("PAID")}
                         isActive={statusFilter === "PAID"}
                         activeColor="ring-emerald-500"
@@ -1269,13 +1454,25 @@ export default function PurchasingClient() {
 
                     {/* Month Selector - iOS Glassy */}
                     <div className="flex items-center gap-0.5 p-1 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 shadow-sm">
-                        <button onClick={() => handleMonthChange("prev")} className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors">
+                        <button
+                            onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
+                            className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
+                        >
                             <ChevronLeft className="w-3.5 h-3.5" />
                         </button>
-                        <span className="text-[11px] font-bold text-neutral-700 min-w-[42px] text-center">
-                            {format(currentMonth, "MMM-yy")}
-                        </span>
-                        <button onClick={() => handleMonthChange("next")} className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors">
+                        <button
+                            onClick={() => setShowAllMonths(!showAllMonths)}
+                            className={clsx(
+                                "text-[11px] font-bold min-w-[42px] text-center transition-colors",
+                                showAllMonths ? "text-red-600" : "text-neutral-700"
+                            )}
+                        >
+                            {showAllMonths ? "ALL" : format(currentMonth, "MMM-yy")}
+                        </button>
+                        <button
+                            onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
+                            className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
+                        >
                             <ChevronRight className="w-3.5 h-3.5" />
                         </button>
                     </div>
@@ -1298,28 +1495,32 @@ export default function PurchasingClient() {
                         </select>
                     </div>
 
-                    {/* Category Filter (Native) */}
+                    {/* Category Dropdown (Native) */}
                     <div className="relative">
-                        <div className={clsx(
-                            "p-2.5 rounded-full backdrop-blur-sm border shadow-sm transition-all flex items-center justify-center",
-                            categoryFilter !== "ALL"
-                                ? "bg-neutral-900 text-white border-neutral-800"
-                                : "bg-white/80 border-white/60 text-neutral-500"
-                        )}>
-                            <Filter className="w-4 h-4" />
+                        <div className="h-9 px-3 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-[11px] font-bold text-neutral-700 shadow-sm flex items-center gap-1">
+                            <span>
+                                {categoryFilter === "ALL"
+                                    ? "All Categories"
+                                    : CATEGORY_OPTIONS.find(c => c.value === categoryFilter)?.label || categoryFilter}
+                            </span>
+                            <ChevronDown className="w-3 h-3 text-neutral-400" />
                         </div>
                         <select
                             value={categoryFilter}
                             onChange={(e) => setCategoryFilter(e.target.value as any)}
                             className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
                         >
-                            {availableCategories.map(cat => (
-                                <option key={cat} value={cat}>
-                                    {cat === 'ALL' ? 'All Types' : cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase().replace(/_/g, ' ')}
+                            <option value="ALL">All Categories</option>
+                            {CATEGORY_OPTIONS.map(cat => (
+                                <option key={cat.value} value={cat.value}>
+                                    {cat.label}
                                 </option>
                             ))}
                         </select>
                     </div>
+
+                    {/* Removed Category Icon Filter as requested to be a dropdown */}
+
 
                     {/* Spacer */}
                     <div className="flex-1" />
@@ -1354,11 +1555,11 @@ export default function PurchasingClient() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
 
-                {/* ADVANCED TOOLBAR - DESKTOP */}
-                <div className="hidden md:flex flex-row gap-4 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40">
+                {/* ADVANCED TOOLBAR - DESKTOP  */}
+                <div className="hidden md:flex flex-row gap-2 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40">
                     {/* LEFT: Search, Month, Project */}
-                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                        <div className="h-10 flex items-center gap-2 px-3 bg-white rounded-xl border border-neutral-200 shadow-sm focus-within:ring-2 focus-within:ring-red-500/10 focus-within:border-red-500/50 transition-all w-full md:w-[220px]">
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                        <div className="h-10 flex items-center gap-2 px-3 bg-white rounded-xl border border-neutral-200 shadow-sm focus-within:ring-2 focus-within:ring-red-500/10 focus-within:border-red-500/50 transition-all w-full md:w-[200px]">
                             <Search className="w-4 h-4 text-neutral-400" />
                             <input
                                 type="text"
@@ -1371,16 +1572,22 @@ export default function PurchasingClient() {
 
                         <div className="h-10 flex items-center gap-1 p-1 bg-white rounded-xl border border-neutral-200 shadow-sm">
                             <button
-                                onClick={() => handleMonthChange("prev")}
+                                onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
                                 className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
-                            <div className="px-2 text-sm font-bold text-neutral-700 whitespace-nowrap min-w-[100px] text-center">
-                                {format(currentMonth, "MMM yyyy")}
-                            </div>
                             <button
-                                onClick={() => handleMonthChange("next")}
+                                onClick={() => setShowAllMonths(!showAllMonths)}
+                                className={clsx(
+                                    "px-2 text-sm font-bold whitespace-nowrap min-w-[100px] text-center transition-colors hover:text-red-500",
+                                    showAllMonths ? "text-red-600" : "text-neutral-700"
+                                )}
+                            >
+                                {showAllMonths ? "All Time" : format(currentMonth, "MMM yyyy")}
+                            </button>
+                            <button
+                                onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
                                 className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
                             >
                                 <ChevronRight className="w-4 h-4" />
@@ -1391,45 +1598,41 @@ export default function PurchasingClient() {
                             <select
                                 value={selectedProject}
                                 onChange={(e) => setSelectedProject(e.target.value)}
-                                className="h-10 pl-3 pr-8 bg-white rounded-xl border border-neutral-200 shadow-sm text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 hover:border-red-500/30 transition-all appearance-none cursor-pointer min-w-[150px] max-w-[200px]"
+                                className="appearance-none h-10 pl-3 pr-8 bg-white border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/50 transition-all cursor-pointer min-w-[100px] max-w-[140px] lg:max-w-[180px] truncate"
                             >
                                 <option value="ALL">All Projects</option>
                                 {projects.map(p => (
                                     <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
                                 ))}
                             </select>
-                            <ChevronDown className="w-4 h-4 text-neutral-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
+                        </div>
+
+                        <div className="relative group">
+                            <select
+                                value={categoryFilter}
+                                onChange={(e) => setCategoryFilter(e.target.value as any)}
+                                className="appearance-none h-10 pl-3 pr-8 bg-white border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/50 transition-all cursor-pointer min-w-[100px] max-w-[140px] lg:max-w-[180px] truncate"
+                            >
+                                <option value="ALL">All Categories</option>
+                                {CATEGORY_OPTIONS.map(cat => (
+                                    <option key={cat.value} value={cat.value}>
+                                        {cat.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
                         </div>
                     </div>
 
-                    {/* RIGHT: Category, Export, New */}
-                    <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-                        {/* Category Toggle */}
-                        <div className="h-10 flex items-center p-1 bg-white rounded-xl border border-neutral-200 shadow-sm">
-                            {(['ALL', 'MATERIAL', 'TOOL', 'SERVICE'] as const).map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setCategoryFilter(cat)}
-                                    className={clsx(
-                                        "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
-                                        categoryFilter === cat
-                                            ? "bg-neutral-900 text-white shadow-md"
-                                            : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
-                                    )}
-                                >
-                                    {cat === "ALL" ? "All" : cat}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="w-px h-8 bg-neutral-200 mx-1 hidden md:block" />
-
+                    {/* RIGHT: Export, New */}
+                    <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-shrink-0">
                         <button
                             onClick={handleExport}
                             className="h-10 px-4 bg-white border border-neutral-200 text-neutral-600 rounded-xl text-sm font-bold shadow-sm hover:bg-neutral-50 hover:text-neutral-900 transition-all flex items-center gap-2"
                         >
                             <Download className="w-4 h-4" />
-                            <span className="hidden sm:inline">Export</span>
+                            <span className="hidden lg:inline">Export</span>
                         </button>
 
                         <button
@@ -1488,7 +1691,9 @@ export default function PurchasingClient() {
                                 {/* Line 1: Item + Harga + Status */}
                                 <div className="flex items-center justify-between gap-2 mb-1.5">
                                     <div className="text-[12px] font-semibold text-neutral-900 leading-tight flex-1 min-w-0">
-                                        {item.description}
+                                        {item.items && item.items.length > 1
+                                            ? `${item.items[0].name} + ${item.items.length - 1} more`
+                                            : (item.items?.[0]?.name || item.description)}
                                     </div>
                                     <span className="text-[12px] font-bold text-neutral-900 tabular-nums whitespace-nowrap">{formatCurrency(item.amount)}</span>
                                     <StatusBadge status={getPrimaryStatus(item.approval_status, item.purchase_stage, item.financial_status)} />
@@ -1517,8 +1722,22 @@ export default function PurchasingClient() {
                                                 <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1 text-rose-600 bg-rose-50 rounded"><Ban className="w-3.5 h-3.5" /></button>
                                             </>
                                         )}
-                                        {(item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION" || (item.approval_status === "APPROVED" && item.financial_status !== "PAID")) && (
-                                            <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1 text-neutral-500 bg-neutral-100 rounded"><Pencil className="w-3.5 h-3.5" /></button>
+                                        {(["DRAFT", "SUBMITTED", "NEED_REVISION", "REJECTED"].includes(item.approval_status) || (["admin", "superadmin", "supervisor"].includes(userRole || "") ? true : false)) && (
+                                            <>
+                                                {/* Edit only for non-final or privileged */}
+                                                {(["DRAFT", "SUBMITTED", "NEED_REVISION"].includes(item.approval_status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
+                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1 text-neutral-500 bg-neutral-100 rounded"><Pencil className="w-3.5 h-3.5" /></button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setDeletingItem(item);
+                                                    }}
+                                                    className="p-1 text-red-500 bg-red-50 rounded"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </>
                                         )}
                                         {isTeamView && item.approval_status === "APPROVED" && item.financial_status !== "PAID" && item.invoice_url && item.beneficiary_bank && (
                                             <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1 text-emerald-600 bg-emerald-50 rounded"><CreditCard className="w-3.5 h-3.5" /></button>
@@ -1537,7 +1756,7 @@ export default function PurchasingClient() {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="border-b border-neutral-100 bg-white/20">
+                            <tr className="border-b border-neutral-100 bg-neutral-50/50 backdrop-blur-sm">
                                 <th
                                     className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors"
                                     onClick={() => handleSort('date')}
@@ -1676,9 +1895,17 @@ export default function PurchasingClient() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="text-[12px] font-semibold text-neutral-900 tracking-tight leading-tight mb-0.5">{item.description}</div>
+                                                <div className="text-[12px] font-semibold text-neutral-900 tracking-tight leading-tight mb-0.5">
+                                                    {item.items && item.items.length > 1
+                                                        ? `${item.items[0].name} + ${item.items.length - 1} more`
+                                                        : (item.items?.[0]?.name || item.description)}
+                                                </div>
                                                 <div className="text-[10px] font-normal text-neutral-400 flex items-center gap-1.5">
-                                                    <span className="text-neutral-500 font-medium">{item.quantity} {item.unit}</span>
+                                                    <span className="text-neutral-500 font-medium">
+                                                        {item.items && item.items.length > 0
+                                                            ? `${item.items.length} items`
+                                                            : (item.quantity ? `${item.quantity} ${item.unit}` : '')}
+                                                    </span>
                                                     <span className="text-neutral-300">•</span>
                                                     <div className="flex items-center gap-1.5 overflow-hidden">
                                                         <span className="hover:text-neutral-600 transition-colors tracking-tight text-[10px] truncate">{cleanEntityName(item.vendor)}</span>
@@ -1772,13 +1999,40 @@ export default function PurchasingClient() {
                                                                     </button>
                                                                 </>
                                                             )}
+                                                            {/* Admin Delete Button - Visible in Team View for all statuses */}
+                                                            {["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setDeletingItem(item);
+                                                                    }}
+                                                                    className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                                                                    title="Delete Request"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                                                                </button>
+                                                            )}
                                                         </>
                                                     ) : (
                                                         <>
-                                                            {(item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION" || item.approval_status === "APPROVED") && (
-                                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Edit Request">
-                                                                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
-                                                                </button>
+                                                            {(["DRAFT", "SUBMITTED", "NEED_REVISION", "REJECTED"].includes(item.approval_status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
+                                                                <>
+                                                                    {(["DRAFT", "SUBMITTED", "NEED_REVISION"].includes(item.approval_status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
+                                                                        <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Edit Request">
+                                                                            <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                                                                        </button>
+                                                                    )}
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setDeletingItem(item);
+                                                                        }}
+                                                                        className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                                                                        title="Delete Request"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                                                                    </button>
+                                                                </>
                                                             )}
                                                         </>
                                                     )}
@@ -1805,6 +2059,13 @@ export default function PurchasingClient() {
                     </table>
                 </div>
             </div>
+
+            <Pagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+            />
 
             {
                 payingItem && (
@@ -1854,47 +2115,74 @@ export default function PurchasingClient() {
             }
 
             {/* Reject Modal */}
-            {rejectingItem && (
-                <RejectModal
-                    item={rejectingItem}
-                    onClose={() => setRejectingItem(null)}
-                    onReject={async (reason) => {
-                        try {
-                            const requestId = rejectingItem.request_id || rejectingItem.id;
-                            const success = await updatePurchasingStatus(requestId, {
-                                approval_status: "REJECTED",
-                                rejection_reason: reason
-                            });
+            {
+                rejectingItem && (
+                    <RejectModal
+                        item={rejectingItem}
+                        onClose={() => setRejectingItem(null)}
+                        onReject={async (reason) => {
+                            try {
+                                const requestId = rejectingItem.request_id || rejectingItem.id;
+                                const success = await updatePurchasingStatus(requestId, {
+                                    approval_status: "REJECTED",
+                                    rejection_reason: reason
+                                });
 
-                            if (success) {
-                                loadData();
-                                setRejectingItem(null);
-                            } else {
-                                alert("Failed to reject request. Please try again.");
+                                if (success) {
+                                    loadData();
+                                    setRejectingItem(null);
+                                } else {
+                                    alert("Failed to reject request. Please try again.");
+                                }
+                            } catch (error) {
+                                console.error("Rejection error:", error);
+                                alert("An error occurred during rejection.");
                             }
-                        } catch (error) {
-                            console.error("Rejection error:", error);
-                            alert("An error occurred during rejection.");
-                        }
-                    }}
-                />
-            )}
+                        }}
+                    />
+                )
+            }
 
             {/* View Modal */}
-            {viewingItem && (
-                <ViewModal
-                    item={viewingItem}
-                    onClose={() => setViewingItem(null)}
-                    onPreview={(tab) => viewingItem && setPreviewingDocument({ item: viewingItem, initialTab: tab })}
-                />
-            )}
+            {
+                viewingItem && (
+                    <ViewModal
+                        item={viewingItem}
+                        onClose={() => setViewingItem(null)}
+                        onPreview={(tab) => viewingItem && setPreviewingDocument({ item: viewingItem, initialTab: tab })}
+                    />
+                )
+            }
 
             {/* Invoice Preview Modal */}
-            {previewingDocument && (
-                <InvoicePreviewModal
-                    item={previewingDocument.item}
-                    initialTab={previewingDocument.initialTab}
-                    onClose={() => setPreviewingDocument(null)}
+            {
+                previewingDocument && (
+                    <InvoicePreviewModal
+                        item={previewingDocument.item}
+                        initialTab={previewingDocument.initialTab}
+                        onClose={() => setPreviewingDocument(null)}
+                    />
+                )
+            }
+
+            {/* Delete Confirmation Modal */}
+            {deletingItem && (
+                <DeleteConfirmModal
+                    item={deletingItem}
+                    onClose={() => setDeletingItem(null)}
+                    onConfirm={async () => {
+                        setIsDeleting(true);
+                        try {
+                            await deletePurchasingRequest(deletingItem.id);
+                            loadData();
+                        } catch (error) {
+                            console.error("Failed to delete:", error);
+                        } finally {
+                            setIsDeleting(false);
+                            setDeletingItem(null);
+                        }
+                    }}
+                    isDeleting={isDeleting}
                 />
             )}
 
@@ -1912,53 +2200,68 @@ export default function PurchasingClient() {
                     setIsDrawerOpen(false);
                     setEditingItem(null);
                 }}
+                onDelete={editingItem ? async () => {
+                    try {
+                        await deletePurchasingRequest(editingItem.id);
+                        loadData();
+                        setIsDrawerOpen(false);
+                        setEditingItem(null);
+                    } catch (error) {
+                        console.error("Delete failed:", error);
+                        alert("Failed to delete request");
+                    }
+                } : undefined}
             />
 
             {/* Confirmation Modal */}
-            {revisingItem && (
-                <ReviseModal
-                    item={revisingItem}
-                    onClose={() => setRevisingItem(null)}
-                    onRevise={async (reason) => {
-                        try {
-                            await updatePurchasingStatus(revisingItem.id, {
-                                approval_status: 'NEED_REVISION',
-                                revision_reason: reason
-                            });
-                            setRevisingItem(null);
-                            loadData();
-                        } catch (error) {
-                            console.error("Error updating revision status:", error);
-                            alert("Failed to request revision.");
-                        }
-                    }}
-                />
-            )}
-
-            {approvingItem && (
-                <ApproveModal
-                    item={approvingItem}
-                    onClose={() => setApprovingItem(null)}
-                    onApprove={async (amount) => {
-                        try {
-                            const requestId = approvingItem.request_id || approvingItem.id;
-                            const success = await updatePurchasingStatus(requestId, {
-                                approval_status: "APPROVED",
-                                approved_amount: amount // Use approved_amount instead of amount
-                            });
-                            if (success) {
-                                setApprovingItem(null);
+            {
+                revisingItem && (
+                    <ReviseModal
+                        item={revisingItem}
+                        onClose={() => setRevisingItem(null)}
+                        onRevise={async (reason) => {
+                            try {
+                                await updatePurchasingStatus(revisingItem.id, {
+                                    approval_status: 'NEED_REVISION',
+                                    revision_reason: reason
+                                });
+                                setRevisingItem(null);
                                 loadData();
-                            } else {
-                                alert("Failed to approve request.");
+                            } catch (error) {
+                                console.error("Error updating revision status:", error);
+                                alert("Failed to request revision.");
                             }
-                        } catch (error) {
-                            console.error("Error approving request:", error);
-                            alert(`Error: ${error}`);
-                        }
-                    }}
-                />
-            )}
+                        }}
+                    />
+                )
+            }
+
+            {
+                approvingItem && (
+                    <ApproveModal
+                        item={approvingItem}
+                        onClose={() => setApprovingItem(null)}
+                        onApprove={async (amount) => {
+                            try {
+                                const requestId = approvingItem.request_id || approvingItem.id;
+                                const success = await updatePurchasingStatus(requestId, {
+                                    approval_status: "APPROVED",
+                                    approved_amount: amount // Use approved_amount instead of amount
+                                });
+                                if (success) {
+                                    setApprovingItem(null);
+                                    loadData();
+                                } else {
+                                    alert("Failed to approve request.");
+                                }
+                            } catch (error) {
+                                console.error("Error approving request:", error);
+                                alert(`Error: ${error}`);
+                            }
+                        }}
+                    />
+                )
+            }
 
             <AnimatePresence>
                 {confirmModal.open && (
@@ -2004,6 +2307,6 @@ export default function PurchasingClient() {
                 )}
             </AnimatePresence>
 
-        </FinancePageWrapper>
+        </FinancePageWrapper >
     );
 }

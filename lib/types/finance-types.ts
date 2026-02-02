@@ -83,6 +83,14 @@ export interface PurchasingItem {
         unit_price: number;
         total: number;
     }[];
+    invoices?: {
+        id: string;
+        invoice_url: string;
+        invoice_name?: string;
+        invoice_type: 'INVOICE' | 'RECEIPT' | 'QUOTATION' | 'OTHER';
+        notes?: string;
+        created_at: string;
+    }[];
 }
 
 export interface ReimburseRequest {
@@ -120,6 +128,14 @@ export interface ReimburseRequest {
         unit: string;
         unit_price: number;
         total: number;
+    }[];
+    invoices?: {
+        id: string;
+        invoice_url: string;
+        invoice_name?: string;
+        invoice_type: 'INVOICE' | 'RECEIPT' | 'QUOTATION' | 'OTHER';
+        notes?: string;
+        created_at: string;
     }[];
     notes?: string;
     revision_reason?: string;
