@@ -454,7 +454,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                             <div className="text-[10px] uppercase font-bold text-neutral-400 tracking-wide mb-1">ID Number (Auto)</div>
                             <div className="relative">
                                 <div className="font-mono text-lg font-bold text-neutral-900 tracking-wider">
-                                    {ids.idNumber}
+                                    {editingSection === "identification" ? ids.idNumber : (person.id_number || person.system_id || ids.idNumber)}
                                 </div>
                                 <Lock className="w-4 h-4 text-neutral-400 absolute right-0 top-1/2 -translate-y-1/2" />
                             </div>
@@ -463,7 +463,9 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                         {/* ID Code - Derived */}
                         <div className="pt-3 border-t border-neutral-200/50">
                             <div className="text-[10px] uppercase font-bold text-neutral-400 tracking-wide mb-1">ID Code</div>
-                            <div className="font-mono text-xs font-bold text-blue-600 truncate">{ids.idCode}</div>
+                            <div className="font-mono text-xs font-bold text-blue-600 truncate">
+                                {editingSection === "identification" ? ids.idCode : (person.id_code || person.display_id || ids.idCode)}
+                            </div>
                         </div>
                     </div>
                 </Section>
