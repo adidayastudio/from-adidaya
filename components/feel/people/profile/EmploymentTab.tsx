@@ -30,6 +30,7 @@ import {
     fetchWorkStatuses,
     fetchWorkSchedules
 } from "@/lib/api/employment";
+import useUserProfile from "@/hooks/useUserProfile";
 
 // Level code to Roman numeral conversion - will be replaced by fetched data
 const DEFAULT_ROMAN_MAP: Record<number, string> = {
@@ -64,6 +65,9 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
     const [deletingHistoryId, setDeletingHistoryId] = useState<string | null>(null);
     const [alertMessage, setAlertMessage] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+
+    const { profile: currentUser } = useUserProfile();
+    const isViewerAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
 
     // --- SETUP DATA ---
     const [departments, setDepartments] = useState<any[]>([]);
@@ -175,6 +179,8 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
     };
 
     const handleEditClick = (section: string) => {
+        if (!isViewerAdmin) return; // Locked for non-admins
+
         if (isMe) {
             setEditingSection(section);
         } else {
@@ -308,7 +314,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                 <Section
                     id="current-role"
                     title="Current Role"
-                    onEdit={handleEditClick}
+                    onEdit={isViewerAdmin ? handleEditClick : undefined}
                     isEditing={editingSection === "current-role"}
                     onSave={handleSave}
                     onCancel={handleCancel}
@@ -346,7 +352,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                 <Section
                     id="status"
                     title="Employment Status"
-                    onEdit={handleEditClick}
+                    onEdit={isViewerAdmin ? handleEditClick : undefined}
                     isEditing={editingSection === "status"}
                     onSave={handleSave}
                     onCancel={handleCancel}
@@ -409,7 +415,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                 <Section
                     id="identification"
                     title="Employee Identification"
-                    onEdit={handleEditClick}
+                    onEdit={isViewerAdmin ? handleEditClick : undefined}
                     isEditing={editingSection === "identification"}
                     onSave={handleSave}
                     onCancel={handleCancel}
@@ -473,7 +479,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                 <Section
                     id="schedule"
                     title="Work Schedule"
-                    onEdit={handleEditClick}
+                    onEdit={isViewerAdmin ? handleEditClick : undefined}
                     isEditing={editingSection === "schedule"}
                     onSave={handleSave}
                     onCancel={handleCancel}
@@ -620,7 +626,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                 <Section
                     id="contract"
                     title="Contract Details"
-                    onEdit={handleEditClick}
+                    onEdit={isViewerAdmin ? handleEditClick : undefined}
                     isEditing={editingSection === "contract"}
                     onSave={handleSave}
                     onCancel={handleCancel}
@@ -735,16 +741,18 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                     title="History"
                     className="relative"
                 >
-                    <div className="absolute top-5 right-5 z-10">
-                        <Button
-                            variant="text"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-neutral-400 hover:text-neutral-900"
-                            onClick={() => setIsAddingHistory(!isAddingHistory)}
-                        >
-                            <Plus className={clsx("w-4 h-4 transition-transform", isAddingHistory && "rotate-45")} />
-                        </Button>
-                    </div>
+                    {isViewerAdmin && (
+                        <div className="absolute top-5 right-5 z-10">
+                            <Button
+                                variant="text"
+                                size="sm"
+                                className="h-6 w-6 p-0 text-neutral-400 hover:text-neutral-900"
+                                onClick={() => setIsAddingHistory(!isAddingHistory)}
+                            >
+                                <Plus className={clsx("w-4 h-4 transition-transform", isAddingHistory && "rotate-45")} />
+                            </Button>
+                        </div>
+                    )}
 
                     {isAddingHistory && (
                         <div className="mb-4 p-3 bg-neutral-50 rounded-lg border border-neutral-100 space-y-3 animate-in fade-in slide-in-from-top-2">

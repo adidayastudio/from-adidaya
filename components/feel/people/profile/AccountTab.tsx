@@ -2,16 +2,20 @@
 
 import { useState, useEffect } from "react";
 import { Person } from "../types";
-import { User, Shield, Mail, Key, Pencil, Check, X, AlertTriangle, Fingerprint, Activity, AtSign, Target } from "lucide-react"; // Using Activity instead of Password icon
+import { User, Shield, Mail, Key, Pencil, Check, X, AlertTriangle, Fingerprint, Activity, AtSign, Target, Lock } from "lucide-react"; // Using Activity instead of Password icon
 import { Input } from "@/shared/ui/primitives/input/input";
 import { Button } from "@/shared/ui/primitives/button/button";
 import EditConfirmationModal from "../modals/EditConfirmationModal";
 import clsx from "clsx";
 import { updatePeopleProfile } from "@/lib/api/people";
+import useUserProfile from "@/hooks/useUserProfile";
 
 export default function AccountTab({ person, isMe, onUpdate }: { person: Person, isMe: boolean, onUpdate?: () => void }) {
     const [editingSection, setEditingSection] = useState<string | null>(null);
     const [confirmingSection, setConfirmingSection] = useState<string | null>(null);
+
+    const { profile: currentUser } = useUserProfile();
+    const isViewerAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
 
     // Mock form state
     const [accountType, setAccountType] = useState(person.account_type);
@@ -36,7 +40,14 @@ export default function AccountTab({ person, isMe, onUpdate }: { person: Person,
 
     const handleEditClick = (section: string) => {
         if (isMe) {
-            setEditingSection(section);
+            if (!isViewerAdmin) {
+                // For Account Info, we allow with simplified confirmation
+                // For Type/Config, we shouldn't even reach here if UI is correct, but safety check:
+                if (section === "type" || section === "config") return;
+                setConfirmingSection(section);
+            } else {
+                setEditingSection(section);
+            }
         } else {
             setConfirmingSection(section);
         }
@@ -103,7 +114,7 @@ export default function AccountTab({ person, isMe, onUpdate }: { person: Person,
                     subtitle="Determines how this identity functions in the system."
                     icon={Shield}
                     color="purple"
-                    onEdit={handleEditClick}
+                    onEdit={isViewerAdmin ? handleEditClick : undefined}
                     isEditing={editingSection === "type"}
                     onSave={handleSaveTypeAndConfig}
                     onCancel={handleCancel}
@@ -119,6 +130,7 @@ export default function AccountTab({ person, isMe, onUpdate }: { person: Person,
                                     {accountType === "human_account" ? "A real person with full profile capabilities." : "A bot/service account for automation."}
                                 </div>
                             </div>
+                            {!isViewerAdmin && <Lock className="w-4 h-4 text-neutral-300" />}
                         </div>
 
                         {editingSection === "type" && (
@@ -154,7 +166,7 @@ export default function AccountTab({ person, isMe, onUpdate }: { person: Person,
                     subtitle="Manage inclusion in company metrics."
                     icon={Activity}
                     color="green"
-                    onEdit={handleEditClick}
+                    onEdit={isViewerAdmin ? handleEditClick : undefined}
                     isEditing={editingSection === "config"}
                     onSave={handleSaveTypeAndConfig}
                     onCancel={handleCancel}
@@ -162,7 +174,9 @@ export default function AccountTab({ person, isMe, onUpdate }: { person: Person,
                     <div className={clsx("p-4 rounded-xl border transition-all", includePerformance ? "bg-emerald-50/50 border-emerald-100" : "bg-amber-50/50 border-amber-100")}>
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-neutral-900">Include in Performance</span>
-                            {editingSection === "config" ? (
+                            {!isViewerAdmin ? (
+                                <Lock className="w-4 h-4 text-neutral-300" />
+                            ) : editingSection === "config" ? (
                                 <div
                                     onClick={() => {
                                         if (accountType !== "system_account") {
@@ -260,6 +274,7 @@ export default function AccountTab({ person, isMe, onUpdate }: { person: Person,
                 isOpen={!!confirmingSection}
                 onClose={() => setConfirmingSection(null)}
                 onConfirm={handleConfirmEdit}
+                message={!isViewerAdmin ? "Do you really try editing this detail?" : undefined}
             />
         </div>
     );

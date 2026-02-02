@@ -20,12 +20,17 @@ import {
     getDocumentUrl
 } from "@/lib/api/people";
 import { UserDocument } from "../types";
+import useUserProfile from "@/hooks/useUserProfile";
 
 export default function ProfileTab({ person, isSystem, isMe, onUpdate }: { person: Person, isSystem: boolean, isMe: boolean, onUpdate?: () => void }) {
     const [editingSection, setEditingSection] = useState<string | null>(null);
     const [confirmingSection, setConfirmingSection] = useState<string | null>(null);
     const [isAddSocialModalOpen, setIsAddSocialModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    const { profile: currentUser } = useUserProfile();
+    // Check if viewer is admin/superadmin
+    const isViewerAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
 
     // --- STATES ---
 
@@ -157,9 +162,20 @@ export default function ProfileTab({ person, isSystem, isMe, onUpdate }: { perso
     };
 
     const handleEditClick = (section: string) => {
+        // If it's me AND I'm an admin, I can edit directly? 
+        // Original logic: if (isMe) setEditingSection(section);
+        // New logic: Even if isMe, we might want confirmation if NOT admin (based on request 1).
+        // "JIKA SESORANG MENGEDIT MY PROFILE, MAKA KONFIRMASI YG MUNCUL CUKUP DO YOU REALLY TRY EDITING THIS DETAIL?"
+
         if (isMe) {
-            setEditingSection(section);
+            // Check if restricted user (not admin/superadmin)
+            if (!isViewerAdmin) {
+                setConfirmingSection(section);
+            } else {
+                setEditingSection(section);
+            }
         } else {
+            // Editing someone else
             setConfirmingSection(section);
         }
     };
@@ -622,6 +638,7 @@ export default function ProfileTab({ person, isSystem, isMe, onUpdate }: { perso
                 isOpen={!!confirmingSection}
                 onClose={() => setConfirmingSection(null)}
                 onConfirm={handleConfirmEdit}
+                message={!isViewerAdmin ? "Do you really try editing this detail?" : undefined}
             />
             <DocumentPreviewModal
                 isOpen={isPreviewOpen}

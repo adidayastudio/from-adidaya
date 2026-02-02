@@ -12,6 +12,7 @@ import { fetchAttendanceRecords } from "@/lib/api/clock";
 import { calculateStats, calculateAdidayaScore } from "@/lib/clock-data-logic";
 import { SpiderChart, PerformanceLineChart } from "./PerformanceHistoryCharts";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import useUserProfile from "@/hooks/useUserProfile";
 import clsx from "clsx";
 
 export default function PerformanceTab({ person, isSystem, isMe }: { person: Person, isSystem: boolean, isMe: boolean }) {
@@ -26,6 +27,9 @@ export default function PerformanceTab({ person, isSystem, isMe }: { person: Per
     const [realtimeAttendance, setRealtimeAttendance] = useState<number | null>(null);
     const [timeFilter, setTimeFilter] = useState("3m");
     const [isLoading, setIsLoading] = useState(true);
+
+    const { profile: currentUser } = useUserProfile();
+    const isViewerAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
 
     useEffect(() => {
         const loadData = async () => {
@@ -290,7 +294,14 @@ export default function PerformanceTab({ person, isSystem, isMe }: { person: Per
                         Overrides are restricted to HR and Superadmins.
                     </p>
 
-                    {isEditingOverride ? (
+                    {!isViewerAdmin ? (
+                        <div
+                            className="p-3 bg-neutral-50 rounded-lg border border-neutral-200 flex items-center justify-between cursor-not-allowed text-neutral-400"
+                        >
+                            <span className="text-sm font-medium">Adjust Score</span>
+                            <Lock className="w-3 h-3" />
+                        </div>
+                    ) : isEditingOverride ? (
                         <div className="space-y-3">
                             <div>
                                 <label className="text-[10px] uppercase font-bold text-neutral-500 mb-1 block">New Score</label>

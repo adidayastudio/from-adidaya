@@ -131,20 +131,22 @@ export default function PersonalProfile({ person, isMe = false, onUpdate }: { pe
             </div>
 
             {/* TABS NAVIGATION */}
-            <div className="border-b border-neutral-200">
-                <Tabs
-                    value={activeTab}
-                    onChange={setActiveTab}
-                    activeColor="blue"
-                    items={[
-                        { key: "account", label: <div className="flex items-center gap-2"><Settings className="w-4 h-4" /> Account</div> },
-                        { key: "profile", label: <div className="flex items-center gap-2"><User className="w-4 h-4" /> Profile</div> },
-                        { key: "employment", label: <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Employment</div> },
-                        { key: "skills", label: <div className="flex items-center gap-2"><Star className="w-4 h-4" /> Skills</div> },
-                        ...(!isSystem ? [{ key: "performance", label: <div className="flex items-center gap-2"><ChartBar className="w-4 h-4" /> Performance</div> }] : []),
-                        { key: "access", label: <div className="flex items-center gap-2"><Lock className="w-4 h-4" /> Access</div> },
-                    ]}
-                />
+            <div className="border-b border-neutral-200 overflow-x-auto no-scrollbar">
+                <div className="min-w-max">
+                    <Tabs
+                        value={activeTab}
+                        onChange={setActiveTab}
+                        activeColor="blue"
+                        items={[
+                            { key: "account", label: <div className="flex items-center gap-2"><Settings className="w-4 h-4" /> Account</div> },
+                            { key: "profile", label: <div className="flex items-center gap-2"><User className="w-4 h-4" /> Profile</div> },
+                            { key: "employment", label: <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Employment</div> },
+                            { key: "skills", label: <div className="flex items-center gap-2"><Star className="w-4 h-4" /> Skills</div> },
+                            ...(!isSystem ? [{ key: "performance", label: <div className="flex items-center gap-2"><ChartBar className="w-4 h-4" /> Performance</div> }] : []),
+                            { key: "access", label: <div className="flex items-center gap-2"><Lock className="w-4 h-4" /> Access</div> },
+                        ]}
+                    />
+                </div>
             </div>
 
             {/* TAB CONTENT */}
