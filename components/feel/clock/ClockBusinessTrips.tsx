@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import clsx from "clsx";
 import { Briefcase, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, List, Grid3X3, Calendar as CalendarIcon, Download, Check, X, Ban, Edit, Trash, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -42,7 +43,7 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", viewMode, 
     // Mobile search toggle
     const [showSearchInput, setShowSearchInput] = useState(false);
 
-    const { businessTrips, loading, refresh } = useClockData(profile?.id, viewMode === "team", currentMonth);
+    const { businessTrips, loading, refresh, updateBusinessTripOptimistic, deleteBusinessTripOptimistic } = useClockData(profile?.id, viewMode === "team", currentMonth);
 
     // Map fetched data to UI format
     const rawData = useMemo(() => {
@@ -163,16 +164,15 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", viewMode, 
             variant: "success",
             requireReason: false,
             onConfirm: async () => {
-                setActionLoading(trip.id);
+                updateBusinessTripOptimistic(trip.id, "approved");
+                toast.success("✓ Business trip approved");
                 try {
                     await updateRequestStatus("business-trip", trip.id, "approved");
                     await createTripAttendanceRecords(trip.userId, trip.from, trip.to);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to approve");
-                } finally {
-                    setActionLoading(null);
+                    updateBusinessTripOptimistic(trip.id, "pending");
+                    toast.error("Failed to approve");
                 }
             }
         });
@@ -186,16 +186,15 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", viewMode, 
             variant: "danger",
             requireReason: true,
             onConfirm: async (reason) => {
-                setActionLoading(id);
+                updateBusinessTripOptimistic(id, "rejected", reason);
+                toast.success("Request rejected");
                 try {
                     await updateRequestStatus("business-trip", id, "rejected", reason);
                     await deleteTripAttendanceRecords(userId, startDate, endDate);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to reject");
-                } finally {
-                    setActionLoading(null);
+                    updateBusinessTripOptimistic(id, "pending");
+                    toast.error("Failed to reject");
                 }
             }
         });
@@ -203,6 +202,7 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", viewMode, 
 
     const handleCancel = (id: string, userId: string, startDate: string, endDate: string, status: string) => {
         const isApproved = status === "approved";
+        const previousStatus = status as "pending" | "approved";
         setConfirmConfig({
             isOpen: true,
             title: isApproved ? "Cancel Approved Trip" : "Cancel Trip Request",
@@ -212,16 +212,15 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", viewMode, 
             variant: "warning",
             requireReason: isApproved,
             onConfirm: async (reason) => {
-                setActionLoading(id);
+                updateBusinessTripOptimistic(id, "cancelled", reason);
+                toast.success("Request cancelled");
                 try {
                     await updateRequestStatus("business-trip", id, "cancelled", reason);
                     await deleteTripAttendanceRecords(userId, startDate, endDate);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to cancel");
-                } finally {
-                    setActionLoading(null);
+                    updateBusinessTripOptimistic(id, previousStatus);
+                    toast.error("Failed to cancel");
                 }
             }
         });
@@ -235,16 +234,15 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", viewMode, 
             variant: "danger",
             requireReason: false,
             onConfirm: async () => {
-                setActionLoading(id);
+                deleteBusinessTripOptimistic(id);
+                toast.success("Request deleted");
                 try {
                     await deleteBusinessTrip(id);
                     await deleteTripAttendanceRecords(userId, startDate, endDate);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to delete");
-                } finally {
-                    setActionLoading(null);
+                    refresh(); // Restore on error
+                    toast.error("Failed to delete");
                 }
             }
         });

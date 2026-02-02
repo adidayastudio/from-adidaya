@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import clsx from "clsx";
 import { CalendarRange, Plus, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Search, List, Grid3X3, ArrowUpDown, Calendar as CalendarIcon, Filter, X, Download, Check, Ban, Edit, Trash, Eye, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -36,7 +37,7 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", viewMode, 
     // Month Navigation - declare before useClockData
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
-    const { leaves, loading, refresh } = useClockData(profile?.id, viewMode === "team", currentMonth);
+    const { leaves, loading, refresh, updateLeaveOptimistic, deleteLeaveOptimistic } = useClockData(profile?.id, viewMode === "team", currentMonth);
 
     // Map fetched data to UI format
     const rawData = useMemo(() => {
@@ -158,16 +159,15 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", viewMode, 
             variant: "success",
             requireReason: false,
             onConfirm: async () => {
-                setActionLoading(id);
+                updateLeaveOptimistic(id, "approved");
+                toast.success("✓ Leave request approved");
                 try {
                     await updateRequestStatus("leave", id, "approved");
                     await createLeaveAttendanceRecords(userId, startDate, endDate);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to approve");
-                } finally {
-                    setActionLoading(null);
+                    updateLeaveOptimistic(id, "pending");
+                    toast.error("Failed to approve");
                 }
             }
         });
@@ -181,16 +181,15 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", viewMode, 
             variant: "danger",
             requireReason: true,
             onConfirm: async (reason) => {
-                setActionLoading(id);
+                updateLeaveOptimistic(id, "rejected", reason);
+                toast.success("Request rejected");
                 try {
                     await updateRequestStatus("leave", id, "rejected", reason);
                     await deleteLeaveAttendanceRecords(userId, startDate, endDate);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to reject");
-                } finally {
-                    setActionLoading(null);
+                    updateLeaveOptimistic(id, "pending");
+                    toast.error("Failed to reject");
                 }
             }
         });
@@ -198,6 +197,7 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", viewMode, 
 
     const handleCancel = (id: string, userId: string, startDate: string, endDate: string, status: string) => {
         const isApproved = status === "approved";
+        const previousStatus = status as "pending" | "approved";
         setConfirmConfig({
             isOpen: true,
             title: isApproved ? "Cancel Approved Request" : "Cancel Request",
@@ -207,16 +207,15 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", viewMode, 
             variant: "warning",
             requireReason: isApproved,
             onConfirm: async (reason) => {
-                setActionLoading(id);
+                updateLeaveOptimistic(id, "cancelled", reason);
+                toast.success("Request cancelled");
                 try {
                     await updateRequestStatus("leave", id, "cancelled", reason);
                     await deleteLeaveAttendanceRecords(userId, startDate, endDate);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to cancel");
-                } finally {
-                    setActionLoading(null);
+                    updateLeaveOptimistic(id, previousStatus);
+                    toast.error("Failed to cancel");
                 }
             }
         });
@@ -230,16 +229,15 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", viewMode, 
             variant: "danger",
             requireReason: false,
             onConfirm: async () => {
-                setActionLoading(id);
+                deleteLeaveOptimistic(id);
+                toast.success("Request deleted");
                 try {
                     await deleteLeaveAttendanceRecords(userId, startDate, endDate);
                     await deleteLeaveRequest(id);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to delete");
-                } finally {
-                    setActionLoading(null);
+                    refresh(); // Restore on error
+                    toast.error("Failed to delete");
                 }
             }
         });

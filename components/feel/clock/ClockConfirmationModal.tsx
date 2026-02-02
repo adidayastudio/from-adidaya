@@ -57,34 +57,26 @@ export function ClockConfirmationModal({
 
     const handleConfirm = async () => {
         if (requireReason && !reason.trim()) return;
-        setLoading(true);
+
+        // OPTIMIZATION: Close modal immediately for instant feedback
+        const reasonValue = reason;
+        setReason("");
+        onClose();
+
+        // Run the actual operation in the background (fire and forget)
+        // The parent component's optimistic update already handles the UI
         try {
-            // Pass correction data if enabled, otherwise just reason
             if (enableCorrection) {
-                // We pass a composite object or arguments depending on how the parent expects it.
-                // However, the parent callback `onConfirm` currently expects `(reason?: string)`.
-                // We should probably update the parent to handle this, OR pass it as part of the reason argument?
-                // Ideally onConfirm should accept dynamic args, but let's cast it in the parent.
-                // Actually, let's update the interface to allow passing correction data.
-                // But to keep it simple and type-safe for existing usages, let's pass it as a second arg if the handler supports it.
-                // CAUTION: onConfirm is defined as `(reason?: string) => Promise<void>`.
-                // We need to cast or update the type.
-
-                // Let's assume the parent will handle the arguments based on context.
-                // We'll pass an object with everything.
-                await (onConfirm as any)(reason, { approvedStartTime: startTime, approvedEndTime: endTime });
+                await (onConfirm as any)(reasonValue, { approvedStartTime: startTime, approvedEndTime: endTime });
             } else {
-                await onConfirm(reason);
+                await onConfirm(reasonValue);
             }
-
-            setReason("");
-            onClose();
         } catch (error) {
-            console.error(error);
-        } finally {
-            setLoading(false);
+            console.error("Background operation failed:", error);
+            // Error handling is done by the parent via optimistic update rollback
         }
     };
+
 
     const styles = {
         default: {

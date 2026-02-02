@@ -382,7 +382,12 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                         } else {
                             // FALLBACK: Check Sessions or Logs if no record exists
                             const daySession = (sessions || []).find(s => s.date === dayStr);
-                            const dayLog = (logs || []).find(l => l.timestamp.startsWith(dayStr) && l.type === 'IN');
+                            const dayLog = (logs || []).find(l => {
+                                if (l.type !== 'IN') return false;
+                                // Robust date comparison handling timezone
+                                const logDate = new Date(l.timestamp);
+                                return format(logDate, "yyyy-MM-dd") === dayStr;
+                            });
 
                             if (daySession || dayLog) {
                                 denseData.push({
@@ -646,7 +651,12 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             }, []);
 
             // 4. Find "Ghost" Members from LOGS (Fallback)
-            const dayLogs = logs?.filter(l => l.timestamp.startsWith(dateToShow) && l.type === "IN") || [];
+            const dayLogs = logs?.filter(l => {
+                if (l.type !== 'IN') return false;
+                // Robust date comparison handling timezone
+                const logDate = new Date(l.timestamp);
+                return format(logDate, "yyyy-MM-dd") === dateToShow;
+            }) || [];
             const ghostMembersFromLogs = dayLogs.reduce((acc: any[], log) => {
                 const hasRecord = dayRecords.some(r => r.userId === log.userId);
                 const isInData = validMembers.some(m => m.id === log.userId);
@@ -667,8 +677,11 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                 return acc;
             }, []);
 
-            // Combine valid members and ghosts
-            const allMembersToDisplay = [...validMembers, ...ghostMembersFromRecords, ...ghostMembersFromLogs];
+            // Combine valid members and ghosts, ensuring uniqueness by ID
+            const allMembersToDisplay = Array.from(new Map(
+                [...validMembers, ...ghostMembersFromRecords, ...ghostMembersFromLogs]
+                    .map(m => [m.id, m])
+            ).values());
 
             const fullList = allMembersToDisplay.map(member => {
                 // Try to match by userId first, then username fallback

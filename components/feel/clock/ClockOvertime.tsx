@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { toast } from "react-hot-toast";
 import clsx from "clsx";
 import { Hourglass, Plus, Search, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ArrowUpDown, Download, X, Check, Ban, Edit, Trash, Eye, Loader2 } from "lucide-react";
 import { format } from "date-fns";
@@ -40,7 +41,7 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showSearchInput, setShowSearchInput] = useState(false);
 
-    const { overtime, attendance, loading, refresh } = useClockData(profile?.id, viewMode === "team", currentMonth);
+    const { overtime, attendance, loading, refresh, updateOvertimeOptimistic, deleteOvertimeOptimistic } = useClockData(profile?.id, viewMode === "team", currentMonth);
 
     // Map fetched data to UI format
     const rawData = useMemo(() => {
@@ -60,25 +61,38 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
 
             // Use approved times if available for end time
             const effectiveEndTime = o.approvedEndTime || o.endTime;
+            const effectiveStartTime = o.approvedStartTime || calculatedStartTime;
 
-            // Calculate duration based on calculated start time and end time
-            const start = new Date(`${o.date}T${calculatedStartTime}`);
+            // Calculate duration based on effective times
+            const start = new Date(`${o.date}T${effectiveStartTime}`);
             const end = new Date(`${o.date}T${effectiveEndTime}`);
             const diff = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 60000));
+
+            // Check if there's a correction (approved times differ from original)
+            const hasCorrection = o.status === "approved" && (
+                (o.approvedStartTime && o.approvedStartTime !== calculatedStartTime) ||
+                (o.approvedEndTime && o.approvedEndTime !== o.endTime)
+            );
 
             return {
                 id: o.id,
                 userId: o.userId,
                 employee: o.userName || userName,
                 date: o.date,
-                clockIn: calculatedStartTime?.substring(0, 5), // Use calculated start time
-                clockOut: effectiveEndTime?.substring(0, 5),   // Ensure HH:mm format
-                totalMinutes: diff + workMinutes, // work hours + OT
+                // Original submitted times
+                originalClockIn: calculatedStartTime?.substring(0, 5),
+                originalClockOut: o.endTime?.substring(0, 5),
+                // Effective times (approved or original)
+                clockIn: effectiveStartTime?.substring(0, 5),
+                clockOut: effectiveEndTime?.substring(0, 5),
+                // Flag for UI
+                hasCorrection,
+                totalMinutes: diff + workMinutes,
                 overtimeMinutes: diff,
                 status: o.status,
                 reason: o.description,
                 rejectReason: o.rejectReason,
-                original: o // Keep for edit
+                original: o
             };
         });
     }, [overtime, attendance, userName]);
@@ -182,17 +196,17 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
             initialStartTime: row.clockIn?.substring(0, 5),
             initialEndTime: row.clockOut?.substring(0, 5),
             onConfirm: async (reason, correction) => {
-                setActionLoading(row.id);
+                // OPTIMISTIC UPDATE - instant UI feedback
+                updateOvertimeOptimistic(row.id, "approved");
+                toast.success("✓ Overtime request approved");
                 try {
-                    // Pass correction object if provided
                     await updateRequestStatus("overtime", row.id, "approved", reason, correction);
                     await syncOvertimeToAttendance(row.userId, row.date);
-                    refresh();
+                    // Success - no refresh needed, optimistic update is correct
                 } catch (e: any) {
                     console.error("Approval Error:", e);
-                    alert(`Failed to approve: ${e.message || "Unknown error"}`);
-                } finally {
-                    setActionLoading(null);
+                    updateOvertimeOptimistic(row.id, "pending");
+                    toast.error(`Failed to approve: ${e.message || "Unknown error"}`);
                 }
             }
         });
@@ -206,16 +220,15 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
             variant: "danger",
             requireReason: true,
             onConfirm: async (reason) => {
-                setActionLoading(id);
+                updateOvertimeOptimistic(id, "rejected", reason);
+                toast.success("Request rejected");
                 try {
                     await updateRequestStatus("overtime", id, "rejected", reason);
                     await syncOvertimeToAttendance(userId, date);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to reject");
-                } finally {
-                    setActionLoading(null);
+                    updateOvertimeOptimistic(id, "pending");
+                    toast.error("Failed to reject request");
                 }
             }
         });
@@ -223,6 +236,7 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
 
     const handleCancel = (id: string, userId: string, date: string, status: string) => {
         const isApproved = status === "approved";
+        const previousStatus = status as "pending" | "approved";
         setConfirmConfig({
             isOpen: true,
             title: isApproved ? "Cancel Approved Request" : "Cancel Request",
@@ -232,16 +246,15 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
             variant: "warning",
             requireReason: isApproved,
             onConfirm: async (reason) => {
-                setActionLoading(id);
+                updateOvertimeOptimistic(id, "cancelled", reason);
+                toast.success("Request cancelled");
                 try {
                     await updateRequestStatus("overtime", id, "cancelled", reason);
                     await syncOvertimeToAttendance(userId, date);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to cancel");
-                } finally {
-                    setActionLoading(null);
+                    updateOvertimeOptimistic(id, previousStatus);
+                    toast.error("Failed to cancel request");
                 }
             }
         });
@@ -255,16 +268,15 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
             variant: "danger",
             requireReason: false,
             onConfirm: async () => {
-                setActionLoading(id);
+                deleteOvertimeOptimistic(id);
+                toast.success("Request deleted");
                 try {
                     await deleteOvertimeLog(id);
                     await syncOvertimeToAttendance(userId, date);
-                    refresh();
                 } catch (e) {
                     console.error(e);
-                    alert("Failed to delete");
-                } finally {
-                    setActionLoading(null);
+                    refresh(); // Restore the deleted item on error
+                    toast.error("Failed to delete request");
                 }
             }
         });
@@ -528,8 +540,26 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
                                 <tr key={row.id} className="hover:bg-neutral-50/50 transition-colors">
                                     {isManager && viewMode === "team" && <td className="px-6 py-4 font-medium text-neutral-900">{row.employee}</td>}
                                     <td className="px-6 py-4 text-neutral-700 font-mono text-xs">{row.date}</td>
-                                    <td className="px-6 py-4 font-mono text-neutral-900">{row.clockIn}</td>
-                                    <td className="px-6 py-4 font-mono text-neutral-900">{row.clockOut}</td>
+                                    <td className="px-6 py-4 font-mono">
+                                        {row.hasCorrection && row.originalClockIn !== row.clockIn ? (
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-neutral-400 line-through text-xs">{row.originalClockIn}</span>
+                                                <span className="text-emerald-600 font-medium">{row.clockIn}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-neutral-900">{row.clockIn}</span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 font-mono">
+                                        {row.hasCorrection && row.originalClockOut !== row.clockOut ? (
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="text-neutral-400 line-through text-xs">{row.originalClockOut}</span>
+                                                <span className="text-emerald-600 font-medium">{row.clockOut}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-neutral-900">{row.clockOut}</span>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4 text-emerald-600 font-medium">+{formatDuration(row.overtimeMinutes)}</td>
                                     <td className="px-6 py-4">
                                         {getStatusBadge(row.status)}

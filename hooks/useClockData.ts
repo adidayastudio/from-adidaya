@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import * as clockApi from "@/lib/api/clock/index";
 import { fetchTeamMembers, TeamMemberProfile } from "@/lib/api/clock_team";
-import { AttendanceRecord, LeaveRequest, OvertimeLog, AttendanceSession, BusinessTrip, AttendanceLog } from "@/lib/api/clock/clock.types";
+import { AttendanceRecord, LeaveRequest, OvertimeLog, AttendanceSession, BusinessTrip, AttendanceLog, RequestStatus } from "@/lib/api/clock/clock.types";
 
 // Helper to get start/end of month
 const getMonthRange = (date: Date) => {
@@ -86,6 +86,51 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
         fetchData();
     }, [fetchData]);
 
+    // ==========================================
+    // OPTIMISTIC UPDATE FUNCTIONS
+    // These update local state INSTANTLY for better UX
+    // ==========================================
+
+    // Update leave request status optimistically
+    const updateLeaveOptimistic = useCallback((id: string, newStatus: RequestStatus, rejectReason?: string) => {
+        setLeaves(prev => prev.map(item =>
+            item.id === id
+                ? { ...item, status: newStatus, rejectReason: rejectReason || item.rejectReason }
+                : item
+        ));
+    }, []);
+
+    // Update overtime log status optimistically
+    const updateOvertimeOptimistic = useCallback((id: string, newStatus: RequestStatus, rejectReason?: string) => {
+        setOvertime(prev => prev.map(item =>
+            item.id === id
+                ? { ...item, status: newStatus, rejectReason: rejectReason || item.rejectReason }
+                : item
+        ));
+    }, []);
+
+    // Update business trip status optimistically
+    const updateBusinessTripOptimistic = useCallback((id: string, newStatus: RequestStatus, rejectReason?: string) => {
+        setBusinessTrips(prev => prev.map(item =>
+            item.id === id
+                ? { ...item, status: newStatus, rejectReason: rejectReason || item.rejectReason }
+                : item
+        ));
+    }, []);
+
+    // Delete item optimistically
+    const deleteLeaveOptimistic = useCallback((id: string) => {
+        setLeaves(prev => prev.filter(item => item.id !== id));
+    }, []);
+
+    const deleteOvertimeOptimistic = useCallback((id: string) => {
+        setOvertime(prev => prev.filter(item => item.id !== id));
+    }, []);
+
+    const deleteBusinessTripOptimistic = useCallback((id: string) => {
+        setBusinessTrips(prev => prev.filter(item => item.id !== id));
+    }, []);
+
     return {
         attendance,
         leaves,
@@ -95,6 +140,14 @@ export function useClockData(userId?: string, isTeam: boolean = false, targetDat
         logs,
         teamMembers,
         loading,
-        refresh
+        refresh,
+        // Optimistic update functions
+        updateLeaveOptimistic,
+        updateOvertimeOptimistic,
+        updateBusinessTripOptimistic,
+        deleteLeaveOptimistic,
+        deleteOvertimeOptimistic,
+        deleteBusinessTripOptimistic
     };
 }
+
