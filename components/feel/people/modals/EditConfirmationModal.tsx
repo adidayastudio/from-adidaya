@@ -9,12 +9,16 @@ type EditConfirmationModalProps = {
     isOpen: boolean;
     onClose: () => void;
     onConfirm: () => void;
+    title?: string;
+    message?: React.ReactNode;
 };
 
 export default function EditConfirmationModal({
     isOpen,
     onClose,
-    onConfirm
+    onConfirm,
+    title,
+    message
 }: EditConfirmationModalProps) {
     return (
         <ModalRoot open={isOpen} onOpenChange={onClose}>
