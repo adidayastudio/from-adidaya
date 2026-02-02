@@ -41,12 +41,18 @@ export async function fetchProjectBySlug(slug: string) {
     return data;
 }
 
-export async function fetchProjectsByWorkspace(workspaceId: string) {
-    const { data, error } = await supabase
+export async function fetchProjectsByWorkspace(workspaceId?: string) {
+    // If no workspaceId provided, fetch all projects (single-workspace app)
+    let query = supabase
         .from("projects")
         .select("*")
-        .eq("workspace_id", workspaceId)
         .order("project_number", { ascending: true });
+
+    if (workspaceId) {
+        query = query.eq("workspace_id", workspaceId);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return data ?? [];

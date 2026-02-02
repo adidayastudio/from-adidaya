@@ -166,7 +166,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             const [members, statsData, projectsData] = await Promise.all([
                 fetchCrewMembers(wsId || undefined),
                 fetchCrewStats(wsId || undefined),
-                wsId ? fetchProjectsByWorkspace(wsId) : Promise.resolve([])
+                fetchProjectsByWorkspace(wsId || undefined)
             ]);
 
             if (projectsData.length > 0) {

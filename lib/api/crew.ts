@@ -171,11 +171,9 @@ export async function fetchCrewMembers(
     workspaceId?: string,
     filters?: CrewFilters
 ): Promise<CrewMember[]> {
+    // NOTE: Removed workspaceId filter - this is a single-workspace app
+    // The filter was causing empty results when workspaceId fetch failed due to RLS
     let query = supabase.from("crew_members").select("*");
-
-    if (workspaceId) {
-        query = query.eq("workspace_id", workspaceId);
-    }
 
     if (filters?.status) {
         query = query.eq("status", filters.status);
@@ -250,11 +248,8 @@ export async function fetchCrewStats(workspaceId?: string): Promise<{
     skilled: number;
     unskilled: number;
 }> {
-    let query = supabase.from("crew_members").select("id, status, role");
-
-    if (workspaceId) {
-        query = query.eq("workspace_id", workspaceId);
-    }
+    // NOTE: Removed workspaceId filter - single-workspace app
+    const query = supabase.from("crew_members").select("id, status, role");
 
     const { data, error } = await query;
 
@@ -708,7 +703,7 @@ export async function updateDailyRating(crewId: string, workspaceId: string, dat
         .eq("crew_id", crewId)
         .eq("date", date)
         .single();
-    
+
     if (existing) {
         // Update
         const { error } = await supabase
