@@ -27,6 +27,8 @@ import useUserProfile from "@/hooks/useUserProfile";
 import ClockActionModal from "@/components/feel/clock/ClockActionModal";
 import styles from "./BottomTabBar.module.css";
 
+import FrostedGlassFilter from "./FrostedGlassFilter";
+
 // Define Tab Type
 export type Tab = 'home' | 'frame' | 'flow' | 'feel' | 'me';
 
@@ -170,16 +172,9 @@ export default function MobileBottomBar() {
     return (
         <>
             <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center gap-3 w-full px-4 max-w-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-                {/* SVG Filter Definition */}
-                <svg style={{ position: 'absolute', width: 0, height: 0 }}>
-                    <filter id="lensFilter" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox">
-                        <feComponentTransfer in="SourceAlpha" result="alpha">
-                            <feFuncA type="identity" />
-                        </feComponentTransfer>
-                        <feGaussianBlur in="alpha" stdDeviation="50" result="blur" />
-                        <feDisplacementMap in="SourceGraphic" in2="blur" scale="50" xChannelSelector="A" yChannelSelector="A" />
-                    </filter>
-                </svg>
+                {/* Lightweight Frosted Glass Filter */}
+                <FrostedGlassFilter />
+
                 {/* NEW BOTTOM TAB BAR */}
                 <div className={styles.tabBar} data-theme={theme}>
                     <div className={styles.glassFilter} />
@@ -202,11 +197,11 @@ export default function MobileBottomBar() {
                             data-active={activeTab === tab}
                         >
                             {/* Render icon based on tab */}
-                            {tab === 'home' && <House size={24} strokeWidth={activeTab === tab ? 2.5 : 2} color={getIconColor(activeTab === tab)} />}
-                            {tab === 'frame' && <SquareStack size={24} strokeWidth={activeTab === tab ? 2.5 : 2} color={getIconColor(activeTab === tab)} />}
-                            {tab === 'flow' && <Share2 size={24} strokeWidth={activeTab === tab ? 2.5 : 2} color={getIconColor(activeTab === tab)} />}
-                            {tab === 'feel' && <Heart size={24} strokeWidth={activeTab === tab ? 2.5 : 2} color={getIconColor(activeTab === tab)} fill={activeTab === tab ? getIconColor(true) : "none"} />}
-                            {tab === 'me' && <UserCircle size={24} strokeWidth={activeTab === tab ? 2.5 : 2} color={getIconColor(activeTab === tab)} />}
+                            {tab === 'home' && <House size={24} strokeWidth={activeTab === tab ? 2 : 1.5} color={getIconColor(activeTab === tab)} />}
+                            {tab === 'frame' && <SquareStack size={24} strokeWidth={activeTab === tab ? 2 : 1.5} color={getIconColor(activeTab === tab)} />}
+                            {tab === 'flow' && <Share2 size={24} strokeWidth={activeTab === tab ? 2 : 1.5} color={getIconColor(activeTab === tab)} />}
+                            {tab === 'feel' && <Heart size={24} strokeWidth={activeTab === tab ? 2 : 1.5} color={getIconColor(activeTab === tab)} fill={activeTab === tab ? getIconColor(true) : "none"} />}
+                            {tab === 'me' && <UserCircle size={24} strokeWidth={activeTab === tab ? 2 : 1.5} color={getIconColor(activeTab === tab)} />}
 
                             <span className={styles.label} style={{ color: getIconColor(activeTab === tab) }}>
                                 {tab.charAt(0).toUpperCase() + tab.slice(1)}

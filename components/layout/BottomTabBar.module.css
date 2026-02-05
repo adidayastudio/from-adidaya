@@ -31,7 +31,7 @@
     z-index: 0;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    filter: url(#lensFilter) saturate(120%) brightness(1.15);
+    filter: url(#frosted) saturate(140%) brightness(1.2);
 }
 
 .glassOverlay {
@@ -87,7 +87,8 @@
     transform-origin: center;
 
     /* Liquid Glass Aesthetic - Softer & Clearer - Reduced Opacity */
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01));
+    background: linear-gradient(135deg, rgba(190, 190, 190, 0.35), rgba(200, 200, 200, 0.12));
+    /* Medium Greyish tint */
     backdrop-filter: url(#frosted) blur(12px) saturate(180%);
     -webkit-backdrop-filter: url(#frosted) blur(12px) saturate(180%);
 
@@ -157,7 +158,7 @@
 
 .label {
     font-size: 10px;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: -0.1px;
 }
 
