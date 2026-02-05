@@ -69,7 +69,7 @@ export default function FlowOverview() {
                     <Link
                         key={item.label}
                         href={item.href}
-                        className="group relative flex items-center p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-slate-100 dark:border-zinc-800 shadow-sm active:scale-[0.98] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md"
+                        className="group relative flex items-center p-4 rounded-3xl bg-white border border-slate-100 shadow-sm active:scale-[0.98] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:shadow-md"
                     >
                         {/* Icon Box */}
                         <div className={cn("flex items-center justify-center w-12 h-12 rounded-2xl transition-colors shrink-0", item.bg)}>
@@ -78,10 +78,10 @@ export default function FlowOverview() {
 
                         {/* Text Content */}
                         <div className="ml-4 flex-1 min-w-0">
-                            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors truncate">
+                            <h4 className="text-sm font-bold text-slate-800 group-hover:text-red-600 transition-colors truncate">
                                 {item.label}
                             </h4>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium leading-tight truncate mt-0.5">
+                            <p className="text-[11px] text-slate-500 font-medium leading-tight truncate mt-0.5">
                                 {item.desc}
                             </p>
                         </div>

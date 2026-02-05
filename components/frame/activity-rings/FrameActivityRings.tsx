@@ -80,7 +80,7 @@ export default function FrameActivityRings() {
 
     return (
         <div className="w-full px-4 pt-2 pb-6">
-            <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/20 dark:border-zinc-800/50 flex items-center w-full relative overflow-hidden">
+            <div className="bg-white/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/20 flex items-center w-full relative overflow-hidden">
                 {/* Glass Reflection Effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
 
@@ -173,7 +173,7 @@ function StatRow({ icon: Icon, label, value, color, bg }: { icon: any, label: st
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-tight mb-0.5">
                     {label}
                 </span>
-                <span className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                <span className="text-sm font-bold text-slate-800 leading-tight">
                     {value}
                 </span>
             </div>
