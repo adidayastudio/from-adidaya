@@ -67,8 +67,8 @@ export default function CrewPageWrapper({
                     {children}
                 </div>
 
-                {/* Mobile FAB */}
-                {fabAction && (
+                {/* Mobile FAB Removed - Handled by MobileBottomBar */}
+                {/* {fabAction && (
                     <div className="fixed bottom-6 right-4 z-50">
                         <button
                             onClick={fabAction.onClick}
@@ -77,7 +77,7 @@ export default function CrewPageWrapper({
                             {fabAction.icon}
                         </button>
                     </div>
-                )}
+                )} */}
             </div>
 
             {/* DESKTOP LAYOUT */}

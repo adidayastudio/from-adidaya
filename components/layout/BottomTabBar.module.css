@@ -6,7 +6,7 @@
     box-sizing: border-box;
 
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     align-items: center;
 
     background: transparent;
@@ -74,7 +74,7 @@
     position: absolute;
     top: 6px;
     bottom: 6px;
-    width: calc(100% / 5 - 2.4px);
+    width: calc(100% / 4 - 2.4px);
     /* Slightly narrower to account for gaps/borders */
     border-radius: 32px;
     z-index: 3;

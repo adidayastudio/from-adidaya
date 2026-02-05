@@ -121,6 +121,21 @@ export default function CrewPage() {
     />
   );
 
+  // Listen for FAB actions from MobileBottomBar
+  useEffect(() => {
+    const handleFabAction = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const id = customEvent.detail?.id;
+
+      if (id === 'CREW_ADD') setTriggerAddCrew(t => t + 1);
+      if (id === 'CREW_ASSIGNMENT_NEW') setTriggerNewAssignment(t => t + 1);
+      if (id === 'CREW_REQUEST_NEW') setTriggerAddRequest(t => t + 1);
+    };
+
+    window.addEventListener('fab-action', handleFabAction);
+    return () => window.removeEventListener('fab-action', handleFabAction);
+  }, []);
+
   return (
     <>
       <CrewPageWrapper
