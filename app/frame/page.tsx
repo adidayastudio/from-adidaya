@@ -1,42 +1,37 @@
 "use client";
 
-import CategoryHub from "@/components/layout/CategoryHub";
-import { Globe, Share2, GraduationCap } from "lucide-react";
+import React from "react";
+import FrostedGlassFilter from "@/components/layout/FrostedGlassFilter";
+import FrameActivityRings from "@/components/frame/activity-rings/FrameActivityRings";
+import FrameOverview from "@/components/frame/overview/FrameOverview";
 
 export default function FrameRootPage() {
-    const apps = [
-        {
-            label: "Website",
-            href: "/frame/website",
-            icon: Globe,
-            color: "text-orange-500",
-            snippet: "Front-facing portfolio and content management.",
-            count: 0
-        },
-        {
-            label: "Social",
-            href: "/frame/social",
-            icon: Share2,
-            color: "text-orange-500",
-            snippet: "Coordinate and manage digital presence.",
-            count: 0
-        },
-        {
-            label: "Learn",
-            href: "/frame/learn",
-            icon: GraduationCap,
-            color: "text-orange-500",
-            snippet: "Internal training and knowledge base.",
-            count: 1
-        },
-    ];
-
     return (
-        <CategoryHub
-            category="FRAME"
-            title="Identity & Growth"
-            description="The external image and internal knowledge of Adidaya."
-            apps={apps}
-        />
+        <div className="h-screen overflow-y-auto overflow-x-hidden bg-slate-50 text-slate-900 pb-24 relative">
+            <FrostedGlassFilter />
+
+            {/* Header */}
+            <header className="px-6 pt-12 pb-2 sticky top-0 z-10">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight text-slate-900">
+                            Frame
+                        </h1>
+                        <p className="text-sm font-medium text-slate-500">
+                            Identity & Growth
+                        </p>
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="space-y-4 relative z-0">
+                {/* 1. Activity Rings Section */}
+                <FrameActivityRings />
+
+                {/* 2. Overview Grid Section */}
+                <FrameOverview />
+            </main>
+        </div>
     );
 }

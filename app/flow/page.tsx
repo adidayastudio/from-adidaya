@@ -1,50 +1,37 @@
 "use client";
 
-import CategoryHub from "@/components/layout/CategoryHub";
-import { FolderKanban, Banknote, Package, User } from "lucide-react";
+import React from "react";
+import FrostedGlassFilter from "@/components/layout/FrostedGlassFilter";
+import FlowActivityRings from "@/components/flow/activity-rings/FlowActivityRings";
+import FlowOverview from "@/components/flow/overview/FlowOverview";
 
 export default function FlowRootPage() {
-    const apps = [
-        {
-            label: "Projects",
-            href: "/flow/projects",
-            icon: FolderKanban,
-            color: "text-red-500",
-            snippet: "8 Active Projects · 2 Need attention",
-            count: 2
-        },
-        {
-            label: "Finance",
-            href: "/flow/finance",
-            icon: Banknote,
-            color: "text-red-500",
-            snippet: "Manage purchasing, reimbursements, and budgets.",
-            count: 0
-        },
-        {
-            label: "Resources",
-            href: "/flow/resources",
-            icon: Package,
-            color: "text-red-500",
-            snippet: "Materials, tools, and asset management.",
-            count: 0
-        },
-        {
-            label: "Client",
-            href: "/flow/client",
-            icon: User,
-            color: "text-red-500",
-            snippet: "Client database and project communications.",
-            count: 0
-        },
-    ];
-
     return (
-        <CategoryHub
-            category="FLOW"
-            title="Production & Operations"
-            description="Manage the core movement of your projects, from finance to physical resources."
-            apps={apps}
-        />
+        <div className="h-screen overflow-y-auto overflow-x-hidden bg-slate-50 text-slate-900 pb-24 relative">
+            <FrostedGlassFilter />
+
+            {/* Header */}
+            <header className="px-6 pt-12 pb-2 sticky top-0 z-10">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-black tracking-tight text-slate-900">
+                            Flow
+                        </h1>
+                        <p className="text-sm font-medium text-slate-500">
+                            Work Execution
+                        </p>
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content */}
+            <main className="space-y-4 relative z-0">
+                {/* 1. Activity Rings Section */}
+                <FlowActivityRings />
+
+                {/* 2. Overview Grid Section */}
+                <FlowOverview />
+            </main>
+        </div>
     );
 }

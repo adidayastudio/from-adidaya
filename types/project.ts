@@ -320,3 +320,29 @@ export interface ProjectDoc {
     createdAt: string;
     updatedAt: string;
 }
+
+// ============================================
+// REPORTS (Manual Tracking)
+// ============================================
+
+export type ReportStatus = "on-track" | "delayed" | "critical" | "completed";
+
+export interface ProjectReport {
+    id: string;
+    projectId: string;
+
+    title: string;
+    reportDate: string; // ISO Date "YYYY-MM-DD"
+
+    progress: number; // 0-100 manual estimate
+    status: ReportStatus;
+
+    manpowerCount?: number;
+    weatherCondition?: string; // e.g. "Sunny", "Rainy"
+
+    content?: string; // Markdown supported
+
+    createdBy?: string;
+    createdAt: string;
+    updatedAt: string;
+}
