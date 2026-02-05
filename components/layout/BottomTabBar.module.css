@@ -1,0 +1,182 @@
+.tabBar {
+    /* Position handled by parent container now */
+    /* position: fixed; */
+    /* bottom: 24px; */
+    /* left: 50%; */
+    /* transform: translateX(-50%); */
+
+    height: 64px;
+    width: 100%;
+    /* Take available width in flex container */
+    padding: 6px;
+    box-sizing: border-box;
+
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: center;
+
+    background: rgba(255, 255, 255, 0.05);
+    /* Transparent base */
+    backdrop-filter: url(#frosted) blur(24px) saturate(200%);
+    -webkit-backdrop-filter: url(#frosted) blur(24px) saturate(200%);
+
+    border-radius: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    /* Sharper edge */
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 20px 40px rgba(0, 0, 0, 0.2),
+        /* Deeper shadow */
+        inset 0 1px 2px rgba(255, 255, 255, 0.1);
+
+    z-index: 1000;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tabItem {
+    width: 100%;
+    /* Fill Grid Cell */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-radius: 32px;
+    position: relative;
+    z-index: 2;
+    /* Content above the indicator */
+    color: #98989E;
+    transition: color 0.3s ease;
+}
+
+.tabItem[data-active="true"] {
+    color: #000;
+}
+
+/* Liquid Sliding Indicator */
+.activeIndicator {
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    width: calc(100% / 5 - 2.4px);
+    /* Slightly narrower to account for gaps/borders */
+    border-radius: 32px;
+    z-index: 1;
+    pointer-events: none;
+    box-sizing: border-box;
+
+    /* Centered positioning relative to container width */
+    left: 6px;
+    transform-origin: center;
+
+    /* Liquid Glass Aesthetic - Softer & Clearer - Reduced Opacity */
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.01));
+    backdrop-filter: url(#frosted) blur(12px) saturate(180%);
+    -webkit-backdrop-filter: url(#frosted) blur(12px) saturate(180%);
+
+    /* High-Fidelity Sheen - Subtler */
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.05),
+        inset 0 1px 2px rgba(255, 255, 255, 0.3),
+        /* Reduced from 0.8 */
+        inset 0 -1px 1px rgba(0, 0, 0, 0.02);
+
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    /* Reduced from 0.6 */
+
+    /* Liquid physics transition - Bouncy Spring */
+    transition:
+        transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+        /* Overshoot bounce */
+        width 0.3s ease,
+        background 0.3s ease;
+}
+
+/* Expand slightly when moving (Liquid surface tension) */
+
+
+/* Dynamic Liquid Glare - Iridescent Soap Bubble Look */
+.activeIndicator::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 32px;
+
+    /* Crystal Clear Liquid Sheen (Subtle & Wide) */
+    background: linear-gradient(120deg,
+            rgba(255, 255, 255, 0) 20%,
+            rgba(255, 255, 255, 0.03) 40%,
+            /* Wider, softer approach */
+            rgba(255, 255, 255, 0.15) 50%,
+            /* Softened & Reduced Peak */
+            rgba(255, 255, 255, 0.03) 60%,
+            /* Wider exit */
+            rgba(255, 255, 255, 0) 80%);
+
+    z-index: 2;
+    opacity: 0;
+    transform: scale(0.9);
+    filter: blur(1px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.activeIndicator[data-moving="true"]::before {
+    opacity: 0.9;
+    transform: scale(1.1);
+    /* Flare up */
+    animation: liquidShimmer 1s infinite linear;
+}
+
+@keyframes liquidShimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 100% 50%;
+    }
+}
+
+/* Specific styling for the Active Background */
+/* We might want to handle color dynamically in React, but here's a default base */
+
+.icon {
+    transition: transform 0.2s ease;
+}
+
+.label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: -0.1px;
+}
+
+.tabItem:active .icon {
+    transform: scale(0.9);
+}
+
+/* Theme overrides */
+.tabBar[data-theme="dark"] {
+    background: rgba(20, 20, 20, 0.6);
+    backdrop-filter: url(#frosted) blur(30px) saturate(180%);
+    -webkit-backdrop-filter: url(#frosted) blur(30px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.tabBar[data-theme="colorful"] {
+    /* Extra Transparent to show off the vibrant background */
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: url(#frosted) blur(15px) saturate(140%);
+    /* Less blur to see colors */
+    -webkit-backdrop-filter: url(#frosted) blur(15px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
