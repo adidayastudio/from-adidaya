@@ -1,13 +1,7 @@
 .tabBar {
-    /* Position handled by parent container now */
-    /* position: fixed; */
-    /* bottom: 24px; */
-    /* left: 50%; */
-    /* transform: translateX(-50%); */
-
+    /* Position handled by parent container inline */
     height: 64px;
     width: 100%;
-    /* Take available width in flex container */
     padding: 6px;
     box-sizing: border-box;
 
@@ -15,22 +9,40 @@
     grid-template-columns: repeat(5, 1fr);
     align-items: center;
 
-    background: rgba(255, 255, 255, 0.05);
-    /* Transparent base */
-    backdrop-filter: url(#frosted) blur(24px) saturate(200%);
-    -webkit-backdrop-filter: url(#frosted) blur(24px) saturate(200%);
-
+    background: transparent;
     border-radius: 40px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    /* Sharper edge */
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.1),
-        0 20px 40px rgba(0, 0, 0, 0.2),
-        /* Deeper shadow */
-        inset 0 1px 2px rgba(255, 255, 255, 0.1);
-
     z-index: 1000;
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+    /* Contain the effects */
+}
+
+.glassFilter,
+.glassOverlay,
+.glassSpecular {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.glassFilter {
+    z-index: 0;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    filter: url(#lensFilter) saturate(120%) brightness(1.15);
+}
+
+.glassOverlay {
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.glassSpecular {
+    z-index: 2;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.5), inset 0 0 5px rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .tabItem {
@@ -47,8 +59,8 @@
     background: none;
     border-radius: 32px;
     position: relative;
-    z-index: 2;
-    /* Content above the indicator */
+    z-index: 4;
+    /* Content above glass layers */
     color: #98989E;
     transition: color 0.3s ease;
 }
@@ -65,7 +77,8 @@
     width: calc(100% / 5 - 2.4px);
     /* Slightly narrower to account for gaps/borders */
     border-radius: 32px;
-    z-index: 1;
+    z-index: 3;
+    /* Above glass layers */
     pointer-events: none;
     box-sizing: border-box;
 
@@ -95,9 +108,6 @@
         width 0.3s ease,
         background 0.3s ease;
 }
-
-/* Expand slightly when moving (Liquid surface tension) */
-
 
 /* Dynamic Liquid Glare - Iridescent Soap Bubble Look */
 .activeIndicator::before {
@@ -140,9 +150,6 @@
         background-position: 100% 50%;
     }
 }
-
-/* Specific styling for the Active Background */
-/* We might want to handle color dynamically in React, but here's a default base */
 
 .icon {
     transition: transform 0.2s ease;

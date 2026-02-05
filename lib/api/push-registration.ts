@@ -47,8 +47,13 @@ export const subscribeToPush = async () => {
 
         console.log("✅ [Push] Subscription synced with Supabase for user:", user.id);
         return true;
-    } catch (error) {
+    } catch (error: any) {
+        if (error.name === 'AbortError') {
+            console.warn("⚠️ [Push] Subscription sync aborted (likely due to navigation or timeout).");
+            return false;
+        }
         console.error("❌ [Push] Subscription sync failed:", error);
+        if (error?.message) console.error("   Message:", error.message);
         return false;
     }
 }
