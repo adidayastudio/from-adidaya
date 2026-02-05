@@ -81,14 +81,14 @@ export default function FlowActivityRings() {
 
     return (
         <div className="w-full px-4 pt-2 pb-6">
-            <div className="bg-white/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/20 flex items-center w-full relative overflow-hidden">
+            <div className="bg-white/60 backdrop-blur-xl rounded-3xl p-6 shadow-sm border border-white/20 flex flex-col items-center w-full relative overflow-hidden">
                 {/* Glass Reflection Effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none" />
 
-                {/* Rings Container - Left Side (2/3) */}
-                <div className="w-2/3 flex items-center justify-center border-r border-slate-50 dark:border-zinc-800 pr-4 relative">
+                {/* Rings Container - Top (Full Width) */}
+                <div className="w-full flex items-center justify-center pb-6 border-b border-slate-100 relative">
                     <div
-                        className="relative flex items-center justify-center w-[160px] h-[160px] flex-shrink-0 cursor-pointer group"
+                        className="relative flex items-center justify-center w-[200px] h-[200px] flex-shrink-0 cursor-pointer group"
                         onClick={handleRingClick}
                     >
                         {/* Outer Ring: Progress (Largest) */}
@@ -98,8 +98,8 @@ export default function FlowActivityRings() {
                             <ActivityRing
                                 id="progress-ring"
                                 percentage={progress.percentage}
-                                size={160}
-                                strokeWidth={16}
+                                size={200}
+                                strokeWidth={20}
                                 trackColor={progressColor.track}
                                 gradient={[progressColor.from, progressColor.to]}
                             />
@@ -112,8 +112,8 @@ export default function FlowActivityRings() {
                             <ActivityRing
                                 id="stability-ring"
                                 percentage={stability.percentage}
-                                size={120} // 160 - 16*2 - gap(8) = 120
-                                strokeWidth={16}
+                                size={150} // 200 - 20*2 - gap(10) = 150
+                                strokeWidth={20}
                                 trackColor={stabilityColor.track}
                                 gradient={[stabilityColor.from, stabilityColor.to]}
                             />
@@ -126,8 +126,8 @@ export default function FlowActivityRings() {
                             <ActivityRing
                                 id="load-balance-ring"
                                 percentage={loadBalance.percentage}
-                                size={80} // 120 - 16*2 - gap(8) = 80
-                                strokeWidth={16}
+                                size={100} // 150 - 20*2 - gap(10) = 100
+                                strokeWidth={20}
                                 trackColor={loadBalanceColor.track}
                                 gradient={[loadBalanceColor.from, loadBalanceColor.to]}
                             />
@@ -135,8 +135,8 @@ export default function FlowActivityRings() {
                     </div>
                 </div>
 
-                {/* Stats / Legend - Right Side (1/3) */}
-                <div className="w-1/3 flex flex-col gap-4 justify-center pl-6">
+                {/* Stats / Legend - Bottom (3 Columns) */}
+                <div className="w-full grid grid-cols-3 gap-2 pt-4">
                     <StatRow
                         icon={CheckCircle2}
                         label="Progress"
@@ -166,15 +166,15 @@ export default function FlowActivityRings() {
 
 function StatRow({ icon: Icon, label, value, color, bg }: { icon: any, label: string, value: string, color: string, bg: string }) {
     return (
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col items-center justify-center gap-2 p-1">
             <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: bg }}>
                 <Icon size={14} style={{ color }} strokeWidth={2.5} />
             </div>
-            <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-tight mb-0.5">
+            <div className="flex flex-col items-center">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-tight mb-0.5">
                     {label}
                 </span>
-                <span className="text-sm font-bold text-slate-800 leading-tight">
+                <span className="text-xs font-bold text-slate-800 leading-tight">
                     {value}
                 </span>
             </div>

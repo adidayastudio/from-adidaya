@@ -7,7 +7,7 @@ import FlowOverview from "@/components/flow/overview/FlowOverview";
 
 export default function FlowRootPage() {
     return (
-        <div className="h-screen overflow-y-auto overflow-x-hidden bg-slate-50 text-slate-900 pb-24 relative">
+        <div className="h-screen overflow-y-auto overflow-x-hidden bg-red-50/50 text-slate-900 pb-24 relative">
             <FrostedGlassFilter />
 
             {/* Header */}

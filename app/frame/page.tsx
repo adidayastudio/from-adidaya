@@ -7,7 +7,7 @@ import FrameOverview from "@/components/frame/overview/FrameOverview";
 
 export default function FrameRootPage() {
     return (
-        <div className="h-screen overflow-y-auto overflow-x-hidden bg-slate-50 text-slate-900 pb-24 relative">
+        <div className="h-screen overflow-y-auto overflow-x-hidden bg-orange-50/50 text-slate-900 pb-24 relative">
             <FrostedGlassFilter />
 
             {/* Header */}
