@@ -339,44 +339,82 @@ export default function ProjectsListPage() {
                     </div>
                 )}
 
-                {/* Table */}
+                {/* Table (Desktop) */}
                 {!isLoading && projects.length > 0 && (
-                    <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
-                        <table className="w-full">
-                            <thead className="bg-neutral-50/80 border-b border-neutral-100">
-                                <tr>
-                                    <SortHeader label="Project" sortKeyName="number" />
-                                    <SortHeader label="Client" sortKeyName="client" />
-                                    <SortHeader label="Scope" sortKeyName="scope" />
-                                    <SortHeader label="Progress" sortKeyName="progress" align="center" />
-                                    <SortHeader label="Value" sortKeyName="value" align="right" />
-                                    <SortHeader label="Status" sortKeyName="status" />
-                                    <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y">{sorted.map((p) => (
-                                <tr key={p.id} className="hover:bg-neutral-50/50">
-                                    <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600"><LayoutGrid className="w-5 h-5" /></div><div><div className="font-medium text-neutral-900">{p.name || "-"}</div><div className="text-xs text-neutral-500">{p.code || "-"} · {p.number || "-"}</div></div></div></td>
-                                    <td className="px-6 py-4 text-sm text-neutral-600">{p.client || "-"}</td>
-                                    <td className="px-6 py-4 text-sm text-neutral-500">{p.scope || "-"}</td>
-                                    <td className="px-6 py-4"><div className="flex items-center gap-2 justify-center"><div className="w-20 h-2 bg-neutral-100 rounded-full overflow-hidden"><div className="h-full bg-red-500 rounded-full" style={{ width: `${p.progress}%` }} /></div><span className="text-sm font-medium">{p.progress}%</span></div></td>
-                                    <td className="px-6 py-4 text-sm font-medium text-right">{p.value ? formatShort(p.value) : "-"}</td>
-                                    <td className="px-6 py-4"><StatusBadge status={p.status} /></td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Link href={`/flow/projects/${p.number}-${p.code}`} className="p-2 hover:bg-neutral-100 rounded"><Eye className="w-4 h-4 text-neutral-500" /></Link>
-                                            {CAN_EDIT && (
-                                                <>
-                                                    <button onClick={() => openEditDrawer(p)} className="p-2 hover:bg-neutral-100 rounded"><Edit2 className="w-4 h-4 text-neutral-500" /></button>
-                                                    <button onClick={() => setDeleteTarget(p)} className="p-2 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4 text-neutral-400 hover:text-red-500" /></button>
-                                                </>
-                                            )}
+                    <>
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-4">
+                            {sorted.map((p) => (
+                                <div key={p.id} className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm flex flex-col gap-3">
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <div className="flex items-center gap-2 text-xs font-mono text-neutral-500 mb-1">
+                                                <span className="bg-neutral-100 px-1.5 py-0.5 rounded">{p.number}</span>
+                                                <span>{p.code}</span>
+                                            </div>
+                                            <h3 className="font-bold text-neutral-900 line-clamp-2">{p.name}</h3>
                                         </div>
-                                    </td>
-                                </tr>
-                            ))}</tbody>
-                        </table>
-                    </div>
+                                        <StatusBadge status={p.status} />
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-4 pt-2 border-t border-neutral-100">
+                                        <div className="flex-1">
+                                            <div className="flex justify-between text-xs text-neutral-500 mb-1.5">
+                                                <span>Progress</span>
+                                                <span>{p.progress}%</span>
+                                            </div>
+                                            <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                                                <div className="h-full bg-red-500 rounded-full" style={{ width: `${p.progress}%` }} />
+                                            </div>
+                                        </div>
+                                        <Link href={`/flow/projects/${p.number}-${p.code}`} className="flex items-center justify-center p-2 bg-neutral-50 border border-neutral-200 rounded-lg hover:bg-white active:scale-95 transition-all text-neutral-600">
+                                            <Eye className="w-4 h-4" />
+                                        </Link>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Desktop Table */}
+                        <div className="hidden md:block bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+                            <table className="w-full">
+                                <thead className="bg-neutral-50/80 border-b border-neutral-100">
+                                    <tr>
+                                        <SortHeader label="Project" sortKeyName="number" />
+                                        <SortHeader label="Scope" sortKeyName="scope" />
+                                        <SortHeader label="Progress" sortKeyName="progress" align="center" />
+                                        <SortHeader label="Value" sortKeyName="value" align="right" />
+                                        <SortHeader label="Status" sortKeyName="status" />
+                                        <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">{sorted.map((p) => (
+                                    <tr
+                                        key={p.id}
+                                        className="hover:bg-neutral-50/50 cursor-pointer transition-colors"
+                                        onClick={() => window.location.href = `/flow/projects/${p.number}-${p.code}`}
+                                    >
+                                        <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600"><LayoutGrid className="w-5 h-5" /></div><div><div className="font-medium text-neutral-900">{p.name || "-"}</div><div className="text-xs text-neutral-500">{p.code || "-"} · {p.number || "-"}</div></div></div></td>
+                                        <td className="px-6 py-4 text-sm text-neutral-500">{p.scope || "-"}</td>
+                                        <td className="px-6 py-4"><div className="flex items-center gap-2 justify-center"><div className="w-20 h-2 bg-neutral-100 rounded-full overflow-hidden"><div className="h-full bg-red-500 rounded-full" style={{ width: `${p.progress}%` }} /></div><span className="text-sm font-medium">{p.progress}%</span></div></td>
+                                        <td className="px-6 py-4 text-sm font-medium text-right">{p.value ? formatShort(p.value) : "-"}</td>
+                                        <td className="px-6 py-4"><StatusBadge status={p.status} /></td>
+                                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Link href={`/flow/projects/${p.number}-${p.code}`} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><Eye className="w-4 h-4 text-neutral-500" /></Link>
+                                                {CAN_EDIT && (
+                                                    <>
+                                                        <button onClick={() => openEditDrawer(p)} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><Edit2 className="w-4 h-4 text-neutral-500" /></button>
+                                                        <button onClick={() => setDeleteTarget(p)} className="p-2 hover:bg-red-50 rounded-full transition-colors"><Trash2 className="w-4 h-4 text-neutral-400 hover:text-red-500" /></button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}</tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
 
                 {/* No results */}

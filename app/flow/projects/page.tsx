@@ -12,9 +12,11 @@ import {
   FileText,
   TrendingUp,
   Briefcase,
-  MoreHorizontal
+  MoreHorizontal,
+  Plus
 } from "lucide-react";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
+import Drawer from "@/components/shared/Drawer";
 import clsx from "clsx";
 
 export default function ProjectsOverviewPage() {
@@ -26,6 +28,7 @@ export default function ProjectsOverviewPage() {
     totalValue: 0
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
     async function loadStats() {
@@ -50,6 +53,17 @@ export default function ProjectsOverviewPage() {
     loadStats();
   }, []);
 
+  useEffect(() => {
+    const handleFabAction = (e: any) => {
+      if (e.detail?.id === 'PROJECT_QUICK_ACTIONS') {
+        setIsDrawerOpen(true);
+      }
+    };
+
+    window.addEventListener('fab-action', handleFabAction);
+    return () => window.removeEventListener('fab-action', handleFabAction);
+  }, []);
+
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(val);
   };
@@ -64,7 +78,13 @@ export default function ProjectsOverviewPage() {
             <p className="text-sm text-neutral-500 mt-1">Portfolio performance and activity summary.</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">{new Date().toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            <button
+              onClick={() => setIsDrawerOpen(true)}
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl hover:bg-red-700 transition-colors shadow-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Quick Actions
+            </button>
           </div>
         </div>
       }
@@ -72,7 +92,6 @@ export default function ProjectsOverviewPage() {
       <div className="space-y-8 w-full animate-in fade-in duration-500">
         <div className="border-b border-neutral-200 lg:hidden" />
 
-        {/* Stats Grid */}
         {/* Stats Grid */}
         <SummaryCardsRow>
           <SummaryCard
@@ -116,10 +135,10 @@ export default function ProjectsOverviewPage() {
               <h3 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
                 <Activity className="w-5 h-5 text-red-600" /> Recent Activity
               </h3>
-              <button className="text-sm text-neutral-500 hover:text-red-600 font-medium">View All</button>
+              <button className="text-sm px-3 py-1 bg-neutral-50 hover:bg-red-50 text-neutral-500 hover:text-red-600 font-medium rounded-full transition-colors">View All</button>
             </div>
 
-            <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-8 flex flex-col items-center justify-center text-center">
+            <div className="bg-white rounded-2xl border border-neutral-100 shadow-sm p-8 flex flex-col items-center justify-center text-center h-64">
               <div className="w-12 h-12 bg-neutral-50 rounded-full flex items-center justify-center mb-3">
                 <Activity className="w-6 h-6 text-neutral-300" />
               </div>
@@ -128,34 +147,12 @@ export default function ProjectsOverviewPage() {
             </div>
           </div>
 
-          {/* Quick Actions / Summary */}
+          {/* Weekly Insight */}
           <div className="space-y-6">
-            <h3 className="text-lg font-bold text-neutral-900">Quick Actions</h3>
-            <div className="grid grid-cols-1 gap-3">
-              <button className="w-full text-left p-4 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-xl transition-all shadow-sm hover:shadow-md group">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-neutral-100 rounded-lg group-hover:bg-white group-hover:text-red-600 transition-colors"><FileText className="w-5 h-5 text-neutral-600 group-hover:text-red-600" /></div>
-                  <div>
-                    <div className="font-medium text-neutral-900">Generate Report</div>
-                    <div className="text-xs text-neutral-500">Create weekly progress summary</div>
-                  </div>
-                </div>
-              </button>
-              <button className="w-full text-left p-4 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-xl transition-all shadow-sm hover:shadow-md group">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-neutral-100 rounded-lg group-hover:bg-white group-hover:text-blue-600 transition-colors"><Clock className="w-5 h-5 text-neutral-600 group-hover:text-blue-600" /></div>
-                  <div>
-                    <div className="font-medium text-neutral-900">Schedule Meeting</div>
-                    <div className="text-xs text-neutral-500">Coordinate with site managers</div>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-            <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 rounded-2xl p-6 text-white shadow-lg mt-6">
-              <h4 className="font-bold text-lg mb-2">Weekly Insight</h4>
-              <p className="text-sm text-neutral-300 mb-4">Project completions satisfy client deadlines by 15% better than last month.</p>
-              <div className="h-1 bg-neutral-700 rounded-full w-full overflow-hidden">
+            <div className="bg-white border border-neutral-200 rounded-2xl p-6 shadow-sm">
+              <h4 className="font-bold text-lg text-neutral-900 mb-2">Weekly Insight</h4>
+              <p className="text-sm text-neutral-500 mb-4">Project completions satisfy client deadlines by 15% better than last month.</p>
+              <div className="h-1 bg-neutral-100 rounded-full w-full overflow-hidden">
                 <div className="h-full bg-green-500 w-[75%]" />
               </div>
               <div className="flex justify-between text-xs text-neutral-400 mt-2">
@@ -167,6 +164,51 @@ export default function ProjectsOverviewPage() {
 
         </div>
       </div>
+
+      <Drawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        title="Quick Actions"
+      >
+        <div className="space-y-3">
+          <button className="w-full text-left p-4 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-2xl transition-all shadow-sm hover:border-red-200 group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-neutral-100 rounded-xl group-hover:bg-red-50 group-hover:text-red-600 transition-colors">
+                <Plus className="w-5 h-5 text-neutral-600 group-hover:text-red-600" />
+              </div>
+              <div>
+                <div className="font-medium text-neutral-900 group-hover:text-red-700">New Project</div>
+                <div className="text-xs text-neutral-500">Initialize a new project</div>
+              </div>
+            </div>
+          </button>
+
+          <button className="w-full text-left p-4 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-2xl transition-all shadow-sm hover:border-blue-200 group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-neutral-100 rounded-xl group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
+                <Activity className="w-5 h-5 text-neutral-600 group-hover:text-blue-600" />
+              </div>
+              <div>
+                <div className="font-medium text-neutral-900 group-hover:text-blue-700">Add Activity</div>
+                <div className="text-xs text-neutral-500">Log progress or events</div>
+              </div>
+            </div>
+          </button>
+
+          <button className="w-full text-left p-4 bg-white hover:bg-neutral-50 border border-neutral-200 rounded-2xl transition-all shadow-sm hover:border-amber-200 group">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-neutral-100 rounded-xl group-hover:bg-amber-50 group-hover:text-amber-600 transition-colors">
+                <FileText className="w-5 h-5 text-neutral-600 group-hover:text-amber-600" />
+              </div>
+              <div>
+                <div className="font-medium text-neutral-900 group-hover:text-amber-700">Generate Report</div>
+                <div className="text-xs text-neutral-500">Create weekly progress summary</div>
+              </div>
+            </div>
+          </button>
+        </div>
+      </Drawer>
+
     </ProjectsPageWrapper>
   );
 }
