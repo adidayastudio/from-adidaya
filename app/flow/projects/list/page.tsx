@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import ProjectsPageWrapper from "@/components/flow/projects/ProjectsPageWrapper";
 import { User, Users, Search, Plus, Eye, LayoutGrid, Edit2, Trash2, Loader2, FolderOpen, X, ChevronUp, ChevronDown } from "lucide-react";
 import clsx from "clsx";
@@ -45,6 +45,21 @@ export default function ProjectsListPage() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [editingProject, setEditingProject] = useState<ProjectListItem | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Toggle Refs
+    const personalRef = useRef<HTMLButtonElement>(null);
+    const teamRef = useRef<HTMLButtonElement>(null);
+    const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, left: 0 });
+
+    useEffect(() => {
+        const activeRef = viewMode === "personal" ? personalRef : teamRef;
+        if (activeRef.current) {
+            setIndicatorStyle({
+                width: activeRef.current.offsetWidth,
+                left: activeRef.current.offsetLeft,
+            });
+        }
+    }, [viewMode]);
 
     // Sort state
     type SortKey = "number" | "name" | "client" | "scope" | "progress" | "value" | "status";
@@ -309,15 +324,46 @@ export default function ProjectsListPage() {
                             <h1 className="text-2xl font-bold text-neutral-900">Projects</h1>
                             <p className="text-sm text-neutral-500 mt-1">Manage and track all your projects in one place.</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center bg-neutral-100 rounded-full p-1">
-                                <button onClick={() => setViewMode("personal")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "personal" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><User className="w-4 h-4" /> Personal</button>
-                                <button onClick={() => setViewMode("team")} className={clsx("flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium", viewMode === "team" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><Users className="w-4 h-4" /> Team</button>
-                            </div>
-                            {CAN_EDIT && (<button onClick={openAddDrawer} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 transition-colors"><Plus className="w-4 h-4" /> New Project</button>)}
-                        </div>
+                        {CAN_EDIT && (<button onClick={openAddDrawer} className="hidden md:flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-medium hover:bg-red-700 transition-colors"><Plus className="w-4 h-4" /> New Project</button>)}
                     </div>
-                    <div className="border-b border-neutral-200" />
+                </div>
+                <div className="border-b border-neutral-200" />
+
+                {/* Mobile Floating Toggle (Me/Team) */}
+                <div className="lg:hidden fixed top-[72px] right-3 z-30">
+                    <button
+                        onClick={() => setViewMode(viewMode === "personal" ? "team" : "personal")}
+                        className="flex items-center gap-1 h-7 px-2 pr-1.5 rounded-full backdrop-blur-xl border border-neutral-200/80 shadow-sm transition-all active:scale-95"
+                        style={{ background: 'rgba(255,255,255,0.9)' }}
+                    >
+                        {viewMode === "personal" ? <User className="w-3.5 h-3.5 text-blue-600" strokeWidth={2} /> : <Users className="w-3.5 h-3.5 text-rose-600" strokeWidth={2} />}
+                        <span className="text-[11px] font-semibold text-neutral-600 max-w-[60px] truncate">{viewMode === "personal" ? "Me" : "Team"}</span>
+                        <svg className="w-3 h-3 text-neutral-300 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
+                    </button>
+                </div>
+
+                {/* Desktop Toggle (Hidden on Mobile) */}
+                <div className="hidden lg:flex items-center gap-3 justify-end -mt-12 mb-4">
+                    <div className="relative inline-flex p-1 rounded-full h-10 bg-black/5" style={{ background: 'rgba(0, 0, 0, 0.06)' }}>
+                        <div
+                            className="absolute top-1 bottom-1 rounded-full bg-white shadow-sm transition-all duration-300 ease-out"
+                            style={{ width: `${indicatorStyle.width}px`, left: `${indicatorStyle.left}px` }}
+                        />
+                        <button
+                            ref={personalRef}
+                            onClick={() => setViewMode("personal")}
+                            className={clsx("relative z-10 flex items-center gap-2 px-3 h-full rounded-full text-sm font-medium transition-colors duration-200", viewMode === "personal" ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
+                        >
+                            <User className="w-4 h-4" /> Personal
+                        </button>
+                        <button
+                            ref={teamRef}
+                            onClick={() => setViewMode("team")}
+                            className={clsx("relative z-10 flex items-center gap-2 px-3 h-full rounded-full text-sm font-medium transition-colors duration-200", viewMode === "team" ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
+                        >
+                            <Users className="w-4 h-4" /> Team
+                        </button>
+                    </div>
                 </div>
 
                 {/* Filters */}
@@ -468,19 +514,21 @@ export default function ProjectsListPage() {
             </Drawer>
 
             {/* Delete Modal */}
-            {deleteTarget && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
-                    <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 animate-in zoom-in-95">
-                        <h3 className="text-lg font-bold text-neutral-900 mb-2">Delete Project?</h3>
-                        <p className="text-sm text-neutral-600 mb-6">Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.</p>
-                        <div className="flex gap-3">
-                            <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 px-4 border border-neutral-200 rounded-xl font-medium text-neutral-700 hover:bg-neutral-50">Cancel</button>
-                            <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50">{isDeleting ? "Deleting..." : "Delete"}</button>
+            {
+                deleteTarget && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
+                        <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 animate-in zoom-in-95">
+                            <h3 className="text-lg font-bold text-neutral-900 mb-2">Delete Project?</h3>
+                            <p className="text-sm text-neutral-600 mb-6">Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.</p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 px-4 border border-neutral-200 rounded-xl font-medium text-neutral-700 hover:bg-neutral-50">Cancel</button>
+                                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50">{isDeleting ? "Deleting..." : "Delete"}</button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </ProjectsPageWrapper>
+                )
+            }
+        </ProjectsPageWrapper >
     );
 }
