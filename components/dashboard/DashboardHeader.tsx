@@ -40,7 +40,7 @@ export default function DashboardHeader() {
   return (
     <div className="mb-8">
       <div className="flex items-center gap-4 mb-6">
-        <div className={clsx("w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors duration-500", phase.bg)}>
+        <div className={clsx("w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-500", phase.bg)}>
           <PhaseIcon className={clsx("w-6 h-6 transition-colors duration-500", phase.color)} />
         </div>
         <div>

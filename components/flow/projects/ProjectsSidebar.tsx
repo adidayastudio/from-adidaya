@@ -25,8 +25,8 @@ import { useState, useRef, useEffect } from "react";
    NAV ITEMS CONFIG
 ====================== */
 const NAV_ITEMS = [
-  { label: "Overview", path: "/flow/projects", icon: LayoutDashboard },
-  { label: "Projects List", path: "/flow/projects/list", icon: LayoutGrid },
+  { label: "Projects", path: "/flow/projects", icon: LayoutGrid },
+
   { label: "Activity", path: "/flow/projects/activity", icon: Activity },
   { label: "Schedule", path: "/flow/projects/schedule", icon: Calendar },
   { label: "Documents", path: "/flow/projects/docs", icon: FileText },

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Users, Clock, Briefcase, HardHat, Sparkles, Calendar } from "lucide-react";
+import { Users, Clock, HardHat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Mock AI Insights Hook
@@ -11,10 +11,7 @@ const useSmartInsights = () => {
     return {
         people: "12 Active now",
         clock: "On track 40h",
-        crew: "Alpha Deployed",
-        calendar: "Meeting 14:00",
-        career: "3 Goals set",
-        culture: "High morale"
+        crew: "Alpha Deployed"
     };
 };
 
@@ -42,30 +39,6 @@ const menuItems = [
         color: "text-indigo-500",
         bg: "bg-indigo-500/10",
         desc: "Field Ops"
-    },
-    {
-        label: "Calendar",
-        href: "/feel/calendar",
-        icon: Calendar,
-        color: "text-violet-500",
-        bg: "bg-violet-500/10",
-        desc: "Schedules"
-    },
-    {
-        label: "Career",
-        href: "/feel/career",
-        icon: Briefcase,
-        color: "text-pink-500",
-        bg: "bg-pink-500/10",
-        desc: "Pathways"
-    },
-    {
-        label: "Culture",
-        href: "/feel/culture",
-        icon: Sparkles,
-        color: "text-amber-500",
-        bg: "bg-amber-500/10",
-        desc: "Values"
     }
 ];
 

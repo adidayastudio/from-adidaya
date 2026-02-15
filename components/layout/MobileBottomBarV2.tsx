@@ -14,7 +14,6 @@ import styles from "./BottomTabBar.module.css";
 import FrostedGlassFilter from "./FrostedGlassFilter";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Define Tab Type
 export type TabKey = string;
 
 interface TabConfig {
@@ -28,34 +27,28 @@ export default function MobileBottomBar() {
     const pathname = usePathname();
     const router = useRouter();
 
-    // Search Mode State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
-
-    // State for liquid animation
     const [isMoving, setIsMoving] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-    // --- 1. GLOBAL TABS CONFIGURATION ---
     const globalTabs: TabConfig[] = [
         { key: "home", label: "Home", icon: House, path: "/dashboard" },
-        { key: "task", label: "Task", icon: LayoutGrid, path: "/flow" }, // Mapping Task to Flow/General
-        { key: "action", label: "Action", icon: Zap, path: "/frame" },  // Mapping Action to Frame/QuickActions
-        { key: "project", label: "Project", icon: Briefcase, path: "/flow/projects" },
+        { key: "task", label: "Task", icon: LayoutGrid, path: "/task" },
+        { key: "action", label: "Action", icon: Zap, path: "/action" },
+        { key: "project", label: "Project", icon: Briefcase, path: "/project" },
     ];
 
-    // --- 2. Determine Active Tab ---
     const activeTabKey = useMemo(() => {
-        if (pathname.startsWith("/flow/projects")) return "project";
-        if (pathname.startsWith("/flow")) return "task";
-        if (pathname.startsWith("/frame")) return "action";
+        if (pathname.startsWith("/project")) return "project";
+        if (pathname.startsWith("/task")) return "task";
+        if (pathname.startsWith("/action")) return "action";
         return "home";
     }, [pathname]);
 
     const activeIndex = globalTabs.findIndex(t => t.key === activeTabKey);
     const activeTab = globalTabs[activeIndex] || globalTabs[0];
 
-    // --- 3. Handlers ---
     const handleTabClick = (tab: TabConfig) => {
         if (isSearchOpen) return;
         router.push(tab.path);
@@ -73,71 +66,76 @@ export default function MobileBottomBar() {
     const executeSearch = (e: React.FormEvent) => {
         e.preventDefault();
         if (!searchQuery.trim()) return;
-
         const params = new URLSearchParams();
         params.set("q", searchQuery);
         params.set("context", activeTabKey);
         router.push(`/search?${params.toString()}`);
-
         setIsSearchOpen(false);
     };
 
-    // Animation Effect
     useEffect(() => {
         setIsMoving(true);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
-            setIsMoving(false);
-        }, 500);
-        return () => {
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        };
+        timeoutRef.current = setTimeout(() => setIsMoving(false), 500);
+        return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
     }, [activeTabKey]);
 
     const theme = 'light';
 
-    // ANIMATION CONFIG
     const layoutTransition = {
-        type: "spring",
-        damping: 25,
-        stiffness: 300,
-        mass: 0.8
+        type: "tween",
+        duration: 0.4,
+        ease: [0.4, 0.0, 0.2, 1] // Material Design ease-in-out
+    } as const;
+
+    const layoutTransitionDelayed = {
+        ...layoutTransition,
+        delay: 0.03
     } as const;
 
     return (
         <>
-            <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center w-full px-4 max-w-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-                {/* Lightweight Frosted Glass Filter */}
+            <div
+                className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center w-full px-4 max-w-lg"
+                style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            >
                 <FrostedGlassFilter />
 
-                {/* THE MAGIC MOTION CONTAINER */}
+                {/* SPLIT LAYOUT: [Tabs Pill] + [Search Circle] */}
                 <div className="flex items-center gap-2 w-full">
 
-                    {/* --- LEFT COMPONENT: TABS -> ACTIVE ICON --- */}
+                    {/* === LEFT: TABS PILL → ACTIVE ICON CIRCLE === */}
                     <motion.div
                         layout
                         className={!isSearchOpen ? styles.tabBar : styles.activeIconCircle}
-                        transition={layoutTransition}
+                        transition={!isSearchOpen ? layoutTransition : layoutTransitionDelayed}
                         data-theme={theme}
-                        onClick={() => isSearchOpen && setIsSearchOpen(false)} // CLICK TO CLOSE SEARCH
+                        onClick={() => isSearchOpen && setIsSearchOpen(false)}
                         style={{ cursor: isSearchOpen ? 'pointer' : 'default', overflow: 'hidden' }}
                     >
+                        {/* Glass layers — ONLY on this parent */}
+                        <div className={styles.glassFilter} />
+                        <div className={styles.glassOverlay} />
+                        <div className={styles.glassSpecular} />
+
                         <AnimatePresence mode="popLayout" initial={false}>
                             {!isSearchOpen ? (
-                                /* --- 1. NORMAL: TABS GRID --- */
+                                /* NORMAL: 4 Tabs */
                                 <motion.div
                                     key="tabs-grid"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0, transition: { duration: 0.01 } }} // EXIT INSTANTLY
-                                    transition={{ duration: 0.2 }}
-                                    className="w-full h-full grid grid-cols-4 items-center relative"
+                                    exit={{ opacity: 0, transition: { duration: 0.05 } }}
+                                    transition={{ duration: 0.15 }}
+                                    style={{
+                                        position: 'absolute',
+                                        inset: '6px',
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(4, 1fr)',
+                                        alignItems: 'center',
+                                        zIndex: 10,
+                                    }}
                                 >
-                                    {/* Shared Background Layers */}
-                                    <div className={styles.glassFilter} />
-                                    <div className={styles.glassOverlay} />
-                                    <div className={styles.glassSpecular} />
-
                                     {/* Sliding Indicator */}
                                     {activeIndex !== -1 && (
                                         <div
@@ -180,70 +178,60 @@ export default function MobileBottomBar() {
                                     })}
                                 </motion.div>
                             ) : (
-                                /* --- 2. SEARCH MODE: ACTIVE ICON ONLY --- */
+                                /* SEARCH MODE: Active Icon Only */
                                 <motion.div
                                     key="active-icon"
-                                    initial={{ opacity: 0, scale: 0.5 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.1 } }}
-                                    transition={{ duration: 0.3, delay: 0.1 }}
-                                    className="flex items-center justify-center w-full h-full relative"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0, transition: { duration: 0.05 } }}
+                                    transition={{ duration: 0.15 }}
+                                    className="flex items-center justify-center w-full h-full relative z-10"
                                 >
-                                    {/* Shared Background Layers */}
-                                    <div className={styles.glassFilter} />
-                                    <div className={styles.glassOverlay} />
-                                    <div className={styles.glassSpecular} />
-
-                                    <activeTab.icon size={24} color="#000" className="relative z-10" />
+                                    <activeTab.icon size={24} color="#000" />
                                 </motion.div>
                             )}
                         </AnimatePresence>
                     </motion.div>
 
-                    {/* --- RIGHT COMPONENT: SEARCH BUTTON -> SEARCH BAR --- */}
+                    {/* === RIGHT: SEARCH CIRCLE → SEARCH BAR === */}
                     <motion.div
                         layout
                         className={!isSearchOpen ? styles.searchCircle : styles.searchBarExpanded}
                         transition={layoutTransition}
                         data-theme={theme}
                     >
+                        {/* Glass layers — ONLY on this parent */}
+                        <div className={styles.glassFilter} />
+                        <div className={styles.glassOverlay} />
+                        <div className={styles.glassSpecular} />
+
                         <AnimatePresence mode="wait" initial={false}>
                             {!isSearchOpen ? (
-                                /* --- 1. NORMAL: SEARCH ICON --- */
+                                /* NORMAL: Search Icon */
                                 <motion.button
                                     key="search-btn"
-                                    initial={{ opacity: 0, scale: 0.5 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.01 } }} // EXIT INSTANTLY
-                                    transition={{ duration: 0.2 }}
-                                    className="w-full h-full flex items-center justify-center relative cursor-pointer"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0, transition: { duration: 0.03 } }}
+                                    transition={{ duration: 0.15 }}
+                                    className="w-full h-full flex items-center justify-center relative z-10 cursor-pointer"
                                     onClick={toggleSearch}
                                 >
-                                    {/* Shared Background Layers */}
-                                    <div className={styles.glassFilter} />
-                                    <div className={styles.glassOverlay} />
-                                    <div className={styles.glassSpecular} />
-
-                                    <Search size={24} color="rgba(0,0,0,0.65)" className="relative z-10" />
+                                    <Search size={24} color="rgba(0,0,0,0.65)" />
                                 </motion.button>
                             ) : (
-                                /* --- 2. SEARCH MODE: INPUT --- */
+                                /* SEARCH MODE: Input */
                                 <motion.div
                                     key="search-input"
-                                    initial={{ opacity: 0, width: 0 }}
-                                    animate={{ opacity: 1, width: "100%" }}
-                                    exit={{ opacity: 0, width: 0 }}
-                                    transition={{ duration: 0.3, delay: 0.1 }}
-                                    className="flex-1 w-full h-full flex items-center gap-2 relative overflow-hidden"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="w-full h-full flex items-center gap-2 relative z-10 overflow-hidden"
                                 >
-                                    {/* Shared Background Layers */}
-                                    <div className={styles.glassFilter} />
-                                    <div className={styles.glassOverlay} />
-                                    <div className={styles.glassSpecular} />
-
                                     <form
                                         onSubmit={executeSearch}
-                                        className="flex-1 h-full flex items-center relative z-10 w-full pl-4"
+                                        className="flex-1 h-full flex items-center w-full pl-4"
                                     >
                                         <Search size={18} className="text-gray-500 mr-2 opacity-70 shrink-0" />
                                         <input
@@ -254,6 +242,19 @@ export default function MobileBottomBar() {
                                             autoFocus
                                         />
                                     </form>
+                                    <button
+                                        onClick={() => setIsSearchOpen(false)}
+                                        className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-2"
+                                        style={{
+                                            background: 'rgba(255,255,255,0.45)',
+                                            backdropFilter: 'blur(12px)',
+                                            WebkitBackdropFilter: 'blur(12px)',
+                                            border: '1px solid rgba(255,255,255,0.5)',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.4)',
+                                        }}
+                                    >
+                                        <X size={16} color="rgba(0,0,0,0.6)" />
+                                    </button>
                                 </motion.div>
                             )}
                         </AnimatePresence>

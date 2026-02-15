@@ -21,6 +21,10 @@ import { PageHeader } from "@/shared/ui/headers/PageHeader";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { Button } from "@/shared/ui/primitives/button/button";
 
+import PersonalGrowth from "@/components/feel/people/PersonalGrowth";
+import PersonalValues from "@/components/feel/people/PersonalValues";
+import TeamCulture from "@/components/feel/people/TeamCulture";
+
 export default function FeelPeoplePage() {
    const { profile, loading: profileLoading } = useUserProfile();
    const [people, setPeople] = useState<Person[]>([]);
@@ -102,10 +106,13 @@ export default function FeelPeoplePage() {
          case "overview": return "Overview";
          case "directory": return "Directory";
          case "performance": return "Performance Index";
+         case "team-culture": return "Team Culture";
          case "analytics": return "Team Analytics";
          case "setup": return "Setup";
          case "personal-profile": return targetPersonData ? (targetPersonData.id === profile?.id ? "My Profile" : targetPersonData.name) : "Profile";
          case "personal-performance": return targetPersonData ? (targetPersonData.id === profile?.id ? "My Performance" : `${targetPersonData.name}'s Performance`) : "Performance";
+         case "personal-growth": return "My Growth";
+         case "personal-values": return "My Values";
          default: return "Directory";
       }
    };
@@ -127,7 +134,7 @@ export default function FeelPeoplePage() {
             />
          );
       }
-   } else if (currentSection === "personal-profile" || currentSection === "personal-performance") {
+   } else if (currentSection === "personal-profile" || currentSection === "personal-performance" || currentSection === "personal-growth" || currentSection === "personal-values" || currentSection === "team-culture") {
       header = null; // Let the profile component handle its own header or rely on breadcrumbs
    } else {
       header = (
@@ -164,14 +171,13 @@ export default function FeelPeoplePage() {
    const mobileTabs = (currentSection === "personal-profile") ? PROFILE_TABS : isGlobalView ? [
       { id: "personal-profile", label: "My Profile", href: "/feel/people?section=personal-profile" },
       { id: "personal-performance", label: "My Performance", href: "/feel/people?section=personal-performance" },
-      { id: "overview", label: "Overview", href: "/feel/people?section=overview" },
+      { id: "personal-growth", label: "My Growth", href: "/feel/people?section=personal-growth" },
       { id: "directory", label: "Directory", href: "/feel/people?section=directory" },
-      { id: "performance", label: "Performance", href: "/feel/people?section=performance" },
-      { id: "analytics", label: "Analytics", href: "/feel/people?section=analytics" },
-      { id: "setup", label: "Setup", href: "/feel/people?section=setup" },
    ] : [
       { id: "personal-profile", label: "My Profile", href: "/feel/people?section=personal-profile" },
       { id: "personal-performance", label: "My Performance", href: "/feel/people?section=personal-performance" },
+      { id: "personal-growth", label: "My Growth", href: "/feel/people?section=personal-growth" },
+      { id: "personal-values", label: "My Values", href: "/feel/people?section=personal-values" },
    ];
 
    const fabAction = (currentSection === "directory" && isGlobalView) ? {
@@ -217,6 +223,11 @@ export default function FeelPeoplePage() {
                      />
                )}
 
+               {/* 3. NEW SECTIONS */}
+               {currentSection === "personal-growth" && <PersonalGrowth />}
+               {currentSection === "personal-values" && <PersonalValues />}
+               {currentSection === "team-culture" && <TeamCulture />}
+
                {currentSection === "performance" && (
                   isLoading ? <div className="p-8 flex justify-center"><GlobalLoading /></div> :
                      <PerformanceView people={people} />
@@ -258,6 +269,10 @@ export default function FeelPeoplePage() {
             // STAFF VIEW DEFAULT
             currentSection === 'personal-performance' ? (
                <PersonalPerformance person={myPersonData} />
+            ) : currentSection === 'personal-growth' ? (
+               <PersonalGrowth />
+            ) : currentSection === 'personal-values' ? (
+               <PersonalValues />
             ) : (
                <PersonalProfile person={myPersonData} onUpdate={loadDirectory} />
             )

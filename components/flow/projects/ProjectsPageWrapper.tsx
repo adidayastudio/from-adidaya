@@ -7,8 +7,8 @@ import { FolderKanban, LayoutDashboard, Activity, Settings, List, Calendar, File
 
 // Define Projects Tabs (matching sidebar)
 const PROJECT_TABS = [
-    { id: "overview", label: "Overview", href: "/flow/projects", icon: LayoutDashboard },
-    { id: "projects", label: "Projects", href: "/flow/projects/list", icon: List },
+    { id: "overview", label: "Projects", href: "/flow/projects", icon: LayoutDashboard },
+
     { id: "activity", label: "Activity", href: "/flow/projects/activity", icon: Activity },
     { id: "schedule", label: "Schedule", href: "/flow/projects/schedule", icon: Calendar },
     { id: "docs", label: "Docs", href: "/flow/projects/docs", icon: FileText },
@@ -22,10 +22,12 @@ export default function ProjectsPageWrapper({
     breadcrumbItems,
     header,
     children,
+    mobileToggle,
 }: {
     breadcrumbItems: { label: string; href?: string }[];
     header?: React.ReactNode;
     children: React.ReactNode;
+    mobileToggle?: React.ReactNode;
 }) {
     return (
         <>
@@ -41,6 +43,9 @@ export default function ProjectsPageWrapper({
                     tabs={PROJECT_TABS}
                     accentColor="text-red-500"
                 />
+
+                {/* Mobile Toggle (Fixed Position) */}
+                {mobileToggle}
 
                 {/* Content with top padding */}
                 <div className="pb-32 px-4 pt-20 space-y-4">

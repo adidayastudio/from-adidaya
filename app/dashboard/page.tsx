@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import PageWrapper from "@/components/layout/PageWrapper";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
@@ -29,27 +29,32 @@ import {
   Sun,
   Moon,
   CloudSun,
-  Play,
-  Square,
   ChevronDown,
   ChevronUp,
   CheckSquare,
   ClipboardCheck,
   Bell,
   LayoutDashboard,
-  Inbox
+  LayoutGrid,
+  Inbox,
+  Settings,
+  LogOut
 } from "lucide-react";
-import { useClock } from "@/hooks/useClock";
-import { formatTargetTime } from "@/lib/work-hours-utils";
-import ClockActionModal from "@/components/feel/clock/ClockActionModal";
+
 import { useNotifications } from "@/hooks/useNotifications";
 
 // Dashboard Tab Components
 import MyTasksContent from "@/components/my-tasks/MyTasksContent";
 import MyProjectsContent from "@/components/dashboard/my-projects/MyProjectsContent";
 import NotificationsContent from "@/components/dashboard/notifications/NotificationsContent";
+import NotificationDrawer from "@/components/dashboard/notifications/NotificationDrawer";
 import { X, Check, MoreHorizontal } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import WorkPersonaCard from "@/components/dashboard/WorkPersonaCard";
+import { resolveWorkPersona, WorkMetrics } from "@/lib/workPersonaLogic";
+import DashboardHeader from "@/components/dashboard/revamp/DashboardHeader";
+import DashboardCarousel from "@/components/dashboard/revamp/DashboardCarousel";
+import AppLauncher from "@/components/dashboard/revamp/AppLauncher";
 
 const DEFAULT_FAVORITES = ["Projects", "Finance", "Resources", "Clock", "People", "Career", "Crew"];
 
@@ -57,17 +62,36 @@ export default function DashboardPage() {
   const router = useRouter();
   const supabase = createClient();
   const { profile } = useUserProfile();
-  const { isCheckedIn, elapsed, toggleClock, formatTime, status: clockStatus, startTime, loading: clockLoading } = useClock();
+
   const { unreadCount } = useNotifications();
 
+  // Mock metrics for demo
+  const mockMetrics: WorkMetrics = {
+    tasksCompleted: 3,
+    tasksOpened: 5,
+    tasksOverdue: 0,
+    tasksRescheduled: 0,
+    activeTasks: 4,
+    criticalTasksOpen: 0,
+    timeLoggedHours: 7.5,
+    projectSwitchCount: 2,
+    daysEvaluated: 1,
+    previousPeriodTasksCompleted: 2,
+  };
+
+  const persona = useMemo(() => resolveWorkPersona(mockMetrics), []);
+
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isClockModalOpen, setIsClockModalOpen] = useState(false);
+
   const [showAllApps, setShowAllApps] = useState(false);
   const [activeTab, setActiveTab] = useState("tasks");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [isServicesDrawerOpen, setIsServicesDrawerOpen] = useState(false);
+  const [isNotifSheetOpen, setIsNotifSheetOpen] = useState(false);
+  const [isMeMenuOpen, setIsMeMenuOpen] = useState(false);
+  const meMenuRef = useRef<HTMLDivElement>(null);
 
   // SET MOUNTED
   useEffect(() => {
@@ -90,6 +114,19 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, []);
 
+  // Close Me menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (meMenuRef.current && !meMenuRef.current.contains(event.target as Node)) {
+        setIsMeMenuOpen(false);
+      }
+    };
+    if (isMeMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isMeMenuOpen]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push("/login");
@@ -97,9 +134,8 @@ export default function DashboardPage() {
   };
 
   // Time Phase Logic
-  const getPhase = (date: Date, checkedIn: boolean) => {
+  const getPhase = (date: Date) => {
     const hours = date.getHours();
-    if (checkedIn && hours >= 18) return "overtime";
     if (hours >= 5 && hours < 11) return "morning";
     if (hours >= 11 && hours < 15) return "afternoon";
     if (hours >= 15 && hours < 18) return "sore";
@@ -154,7 +190,7 @@ export default function DashboardPage() {
     },
   };
 
-  const currentPhaseKey = getPhase(currentTime, isCheckedIn);
+  const currentPhaseKey = getPhase(currentTime);
   const phase = phases[currentPhaseKey] || phases.morning;
   const PhaseIcon = phase.icon;
 
@@ -191,157 +227,11 @@ export default function DashboardPage() {
         <div className="h-full overflow-y-auto scrollbar-hide md:mx-0 -mx-4">
           <div className="w-full pb-32 md:px-0 px-4">
 
-            {/* GOJEK-STYLE BANNER HEADER (MOBILE ONLY) */}
-            <div className="md:hidden -mx-4 -mt-12 mb-6 relative overflow-hidden h-48 flex items-center">
-              <div className={clsx("absolute inset-0 bg-gradient-to-br transition-all duration-1000", phase.banner)} />
-
-              <div className="absolute inset-x-6 flex items-center justify-between z-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full border border-neutral-100 overflow-hidden bg-white flex items-center justify-center shadow-sm">
-                    <PhaseIcon className={clsx("w-6 h-6", phase.color)} />
-                  </div>
-                  <div>
-                    <h2 className={clsx("text-lg font-black tracking-tight leading-tight", phase.color)}>
-                      {phase.greeting}, {profile?.name?.split(' ')[0] || "Team"}
-                    </h2>
-                    <p className="text-neutral-500 text-[11px] font-medium max-w-[200px] mt-1 leading-tight">{phase.message}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link href="/dashboard/notifications" className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-neutral-100 flex items-center justify-center shadow-sm active:scale-95 transition-all relative">
-                    <Bell className="w-5 h-5 text-neutral-500" strokeWidth={1.5} />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
-                        {unreadCount > 9 ? "9+" : unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                  <Link href="/settings" className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm border border-neutral-100 flex items-center justify-center shadow-sm active:scale-95 transition-all">
-                    <User className="w-5 h-5 text-neutral-500" strokeWidth={1.5} />
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* iOS 26 GLASS CLOCK WIDGET (MOBILE ONLY) */}
-            <div className="md:hidden relative z-10 -mt-10 mx-2 mb-8">
-              <div className="backdrop-blur-xl bg-white/70 rounded-[24px] shadow-lg shadow-black/[0.03] border border-white/60 p-2.5 flex items-center"
-                style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.65) 100%)' }}>
-
-                {clockLoading ? (
-                  /* SKELETON STATE */
-                  <div className="flex-1 flex items-center gap-3 animate-pulse">
-                    <div className="w-[44px] h-[44px] rounded-[14px] bg-neutral-200/50" />
-                    <div className="space-y-1.5">
-                      <div className="w-12 h-2.5 bg-neutral-200/50 rounded-full" />
-                      <div className="w-20 h-4 bg-neutral-200/50 rounded-full" />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex-1 flex items-center gap-3">
-                    <div className={clsx(
-                      "w-[44px] h-[44px] rounded-[14px] flex items-center justify-center transition-all backdrop-blur-sm",
-                      isCheckedIn
-                        ? "bg-gradient-to-br from-blue-100/80 to-blue-50/40 border border-blue-200/30 text-blue-600"
-                        : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 border border-neutral-200/30 text-neutral-400"
-                    )}>
-                      <Clock className="w-5 h-5" strokeWidth={1.5} />
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest leading-none mb-1">
-                        {isCheckedIn ? "On Duty" : "Offline"}
-                      </div>
-                      <div className={clsx(
-                        "text-xl font-bold tracking-tighter tabular-nums leading-none",
-                        isCheckedIn ? "text-neutral-800" : "text-neutral-300"
-                      )}>
-                        {isCheckedIn ? formatTime(elapsed) : "00:00:00"}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-
-                <button
-                  onClick={() => setIsClockModalOpen(true)}
-                  disabled={clockLoading}
-                  className={clsx(
-                    "flex items-center gap-2 px-5 py-3.5 rounded-[18px] text-xs font-bold transition-all active:scale-95 ml-2",
-                    clockLoading ? "opacity-50 cursor-not-allowed bg-neutral-100 text-neutral-400" :
-                      isCheckedIn
-                        ? "bg-gradient-to-b from-red-50 to-red-100/70 text-red-600 border border-red-200/40 shadow-sm"
-                        : "bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-300/40"
-                  )}
-                >
-                  {clockLoading ? (
-                    <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                  ) : (
-                    isCheckedIn ? <Square className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current" />
-                  )}
-                  {isCheckedIn ? "Clock Out" : "Clock In"}
-                </button>
-              </div>
-            </div>
-
-            {/* DESKTOP WELCOME (UNCHANGED BUT HIDDEN ON MOBILE) */}
-            <div className={clsx(
-              "hidden md:flex rounded-2xl p-8 items-center justify-between gap-6 mb-10 backdrop-blur-xl shadow-sm border",
-              phase.bg, phase.border
-            )}>
-              <div className="flex items-center gap-5">
-                <div className={clsx("w-16 h-16 rounded-xl flex items-center justify-center bg-white shadow-sm border border-neutral-100/50", phase.color)}>
-                  <PhaseIcon className="w-8 h-8 opacity-90" strokeWidth={1.5} />
-                </div>
-                <div>
-                  <h2 className={clsx("text-xl font-bold tracking-tight", phase.color)}>
-                    {phase.greeting}, {profile?.name || "Team"}
-                  </h2>
-                  <p className="text-neutral-500 font-medium text-sm">Have a productive day ahead</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className={clsx("text-3xl font-bold tabular-nums tracking-tight", phase.color)}>
-                  {isMounted ? currentTime.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "--:-- --"}
-                </div>
-                <div className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mt-1">
-                  {isMounted ? currentTime.toLocaleDateString("en-US", { weekday: 'long', day: 'numeric', month: 'long' }) : "Loading..."}
-                </div>
-              </div>
-            </div>
-
-            {/* iOS 26 GLASS APP GRID (MOBILE ONLY) */}
-            <div className="md:hidden pb-8 px-2">
-              {isMounted && (
-                <div className="grid grid-cols-4 gap-y-6 gap-x-2">
-                  {displayFavorites.slice(0, 7).map((label) => {
-                    const app = APPS.find(a => a.label === label);
-                    if (!app) return null;
-                    return (
-                      <Link href={app.href} key={app.label} className="flex flex-col items-center gap-2 transition-all active:scale-95">
-                        <div className={clsx(
-                          "flex items-center justify-center w-[56px] h-[56px] rounded-[18px] shadow-sm border transition-all",
-                          app.bg
-                        )}>
-                          <app.icon className={clsx("w-6 h-6", app.color)} strokeWidth={1.5} />
-                        </div>
-                        <span className="text-[10px] font-medium text-neutral-500 text-center leading-tight px-1">
-                          {app.label}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                  <button
-                    onClick={() => setIsServicesDrawerOpen(true)}
-                    className="flex flex-col items-center gap-2 transition-all active:scale-95"
-                  >
-                    <div className="flex items-center justify-center w-[56px] h-[56px] backdrop-blur-xl rounded-[18px] border border-dashed border-neutral-300/60 text-neutral-400"
-                      style={{ background: 'linear-gradient(180deg, rgba(250,250,250,0.8) 0%, rgba(245,245,245,0.5) 100%)' }}>
-                      <LayoutDashboard className="w-6 h-6" strokeWidth={1.5} />
-                    </div>
-                    <span className="text-[10px] font-medium text-neutral-400 text-center leading-tight">More</span>
-                  </button>
-                </div>
-              )}
+            {/* NEW REVAMPED DASHBOARD (MOBILE) */}
+            <div className="md:hidden space-y-2 mb-80">
+              <DashboardHeader onOpenNotifications={() => setIsNotifSheetOpen(true)} />
+              <DashboardCarousel persona={persona} />
+              <AppLauncher />
             </div>
 
             {/* DESKTOP APP GRID (WITH THEMED BACKGROUNDS) */}
@@ -362,127 +252,7 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            {/* iOS 26 GLASS TAB BAR (MOBILE ONLY) */}
-            <div className="md:hidden space-y-3">
-              <div className="flex backdrop-blur-xl p-0.5 rounded-full border border-white/50"
-                style={{ background: 'linear-gradient(180deg, rgba(245,245,245,0.9) 0%, rgba(240,240,240,0.7) 100%)' }}>
-                {[
-                  { id: "tasks", label: "Tasks", icon: ClipboardCheck },
-                  { id: "projects", label: "Projects", icon: FolderKanban },
-                ].map((tab) => {
-                  const active = activeTab === tab.id;
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={clsx(
-                        "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-full text-[11px] font-semibold transition-all",
-                        active
-                          ? "bg-white/90 text-neutral-800 shadow-sm border border-white/60"
-                          : "text-neutral-400"
-                      )}
-                      style={active ? { background: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)' } : {}}
-                    >
-                      <Icon className={clsx("w-3.5 h-3.5", active ? "text-blue-500" : "text-neutral-400")} />
-                      {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
 
-              {/* iOS 26 GLASS CONTENT */}
-              <div className="space-y-2.5">
-                {activeTab === "tasks" && (
-                  <>
-                    {/* Tasks Empty State */}
-                    {false ? (
-                      [].map((task: any) => (
-                        <Link
-                          key={task.id}
-                          href="/dashboard/tasks"
-                          className="flex items-center justify-between p-3.5 backdrop-blur-xl rounded-2xl border border-white/50 active:scale-[0.98] transition-all shadow-sm"
-                          style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)' }}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={clsx(
-                              "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-sm border",
-                              task.status === "in-progress"
-                                ? "bg-gradient-to-br from-blue-100/80 to-blue-50/40 border-blue-200/40"
-                                : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 border-neutral-200/40"
-                            )}>
-                              <ClipboardCheck className={clsx("w-4 h-4", task.status === "in-progress" ? "text-blue-500" : "text-neutral-400")} strokeWidth={1.5} />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-neutral-700">{task.name}</p>
-                              <p className="text-[10px] text-neutral-400">{task.project}</p>
-                            </div>
-                          </div>
-                          <span className={clsx(
-                            "text-[10px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm border",
-                            task.due === "Today"
-                              ? "bg-gradient-to-br from-blue-100/80 to-blue-50/40 text-blue-600 border-blue-200/40"
-                              : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 text-neutral-500 border-neutral-200/40"
-                          )}>
-                            {task.due}
-                          </span>
-                        </Link>
-                      ))
-                    ) : (
-                      <EmptyPlaceholder text="No tasks due today 🎉" />
-                    )}
-                    {/* View All Button - Always Show */}
-                    <Link href="/dashboard/tasks" className="block text-center text-[11px] font-semibold text-blue-500 py-2">
-                      View All Tasks →
-                    </Link>
-                  </>
-                )}
-                {activeTab === "projects" && (
-                  <>
-                    {/* Projects Empty State */}
-                    {false ? (
-                      [].map((project: any) => (
-                        <Link
-                          key={project.id}
-                          href={`/flow/projects/${project.id}`}
-                          className="flex items-center justify-between p-3.5 backdrop-blur-xl rounded-2xl border border-white/50 active:scale-[0.98] transition-all shadow-sm"
-                          style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)' }}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={clsx(
-                              "w-9 h-9 rounded-xl flex items-center justify-center backdrop-blur-sm border",
-                              project.status === "attention"
-                                ? "bg-gradient-to-br from-orange-100/80 to-orange-50/40 border-orange-200/40"
-                                : "bg-gradient-to-br from-neutral-100/80 to-neutral-50/40 border-neutral-200/40"
-                            )}>
-                              <FolderKanban className={clsx("w-4 h-4", project.status === "attention" ? "text-orange-500" : "text-neutral-400")} strokeWidth={1.5} />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-neutral-700">{project.name}</p>
-                              <p className="text-[10px] text-neutral-400">{project.id}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-16 h-1.5 bg-neutral-200/50 rounded-full overflow-hidden backdrop-blur-sm">
-                              <div
-                                className={clsx("h-full rounded-full", project.status === "attention" ? "bg-orange-400" : "bg-blue-500")}
-                                style={{ width: `${project.progress}%` }}
-                              />
-                            </div>
-                            <span className="text-[10px] font-semibold text-neutral-500">{project.progress}%</span>
-                          </div>
-                        </Link>
-                      ))
-                    ) : (
-                      <EmptyPlaceholder text="No active projects" />
-                    )}
-                    <Link href="/dashboard/projects" className="block text-center text-[11px] font-semibold text-blue-500 py-2">
-                      View All Projects →
-                    </Link>
-                  </>
-                )}
-              </div>
-            </div>
 
             <div className="hidden md:block">
               <DashboardOverview />
@@ -491,13 +261,7 @@ export default function DashboardPage() {
         </div>
       </PageWrapper>
 
-      <ClockActionModal
-        isOpen={isClockModalOpen}
-        onClose={() => setIsClockModalOpen(false)}
-        type={isCheckedIn ? "OUT" : "IN"}
-        userRole={profile?.role || "staff"}
-        onConfirm={toggleClock}
-      />
+
 
       {/* SERVICES BOTTOM SHEET (GOJEK-STYLE) */}
       <AnimatePresence>
@@ -687,6 +451,12 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Notification Bottom Sheet */}
+      <NotificationDrawer
+        isOpen={isNotifSheetOpen}
+        onClose={() => setIsNotifSheetOpen(false)}
+      />
     </div>
   );
 }

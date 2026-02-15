@@ -63,11 +63,11 @@ export function FormField({ label, required, children }: { label: string; requir
 }
 
 export function FormInput({ placeholder, type = "text", ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
-    return <input type={type} placeholder={placeholder} className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-colors" {...props} />;
+    return <input type={type} placeholder={placeholder} className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-colors" {...props} />;
 }
 
 export function FormTextarea({ placeholder, rows = 3, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-    return <textarea placeholder={placeholder} rows={rows} className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-colors resize-none" {...props} />;
+    return <textarea placeholder={placeholder} rows={rows} className="w-full px-4 py-2.5 border border-neutral-200 rounded-lg text-base md:text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-colors resize-none" {...props} />;
 }
 
 export function FormSelect({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement>) {

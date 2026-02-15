@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { FolderKanban, Banknote, Package, User } from "lucide-react";
+import { FolderKanban, Banknote, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Mock Smart Insights for Flow
@@ -10,8 +10,7 @@ const useSmartInsights = () => {
     return {
         projects: "8 Active · 2 Risk",
         finance: "Budget OK · +12%",
-        resources: "Low Stock: Cement",
-        client: "3 New Inquiries"
+        tracking: "Low Stock: Cement",
     };
 };
 
@@ -33,20 +32,12 @@ const menuItems = [
         desc: "Cashflow"
     },
     {
-        label: "Resources",
+        label: "Tracking",
         href: "/flow/resources",
-        icon: Package,
+        icon: Target,
         color: "text-orange-500",
         bg: "bg-orange-500/10",
         desc: "Inventory"
-    },
-    {
-        label: "Client",
-        href: "/flow/client",
-        icon: User,
-        color: "text-blue-500",
-        bg: "bg-blue-500/10",
-        desc: "CRM"
     }
 ];
 

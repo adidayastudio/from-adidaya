@@ -21,6 +21,7 @@ import {
   Package,
   Box,
   Map,
+  Target,
   User,
   Users,
   Clock,
@@ -62,10 +63,8 @@ const menuItems: MenuSection[] = [
     section: "FLOW",
     items: [
       { label: "Projects", href: "/flow/projects", icon: FolderKanban },
-
       { label: "Finance", href: "/flow/finance", icon: Banknote },
-      { label: "Resources", href: "/flow/resources", icon: Package },
-      { label: "Client", href: "/flow/client", icon: User },
+      { label: "Tracking", href: "/flow/resources", icon: Target },
     ],
   },
   {
@@ -73,10 +72,7 @@ const menuItems: MenuSection[] = [
     items: [
       { label: "People", href: "/feel/people", icon: Users },
       { label: "Clock", href: "/feel/clock", icon: Clock },
-      { label: "Career", href: "/feel/career", icon: Briefcase },
       { label: "Crew", href: "/feel/crew", icon: HardHat },
-      { label: "Culture", href: "/feel/culture", icon: Sparkles },
-      { label: "Calendar", href: "/feel/calendar", icon: Calendar },
     ],
   },
 ];

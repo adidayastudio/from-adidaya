@@ -45,15 +45,15 @@ export function SummaryCard({
         <div
             onClick={onClick}
             className={clsx(
-                "relative overflow-hidden rounded-2xl lg:rounded-3xl p-3 lg:p-5 shadow-sm border backdrop-blur-xl transition-all duration-300 ease-out lg:hover:-translate-y-1 lg:hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] group min-w-[140px] lg:min-w-0 cursor-pointer",
+                "relative overflow-hidden rounded-2xl lg:rounded-3xl p-3 lg:p-5 shadow-sm border transition-all duration-300 ease-out lg:hover:-translate-y-1 lg:hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] group w-[160px] lg:w-full h-[140px] lg:h-auto flex flex-col justify-between cursor-pointer",
                 isActive
-                    ? clsx("bg-white border-transparent ring-2 ring-offset-2", activeColor || "ring-neutral-900")
-                    : "bg-white/90 lg:bg-white border-neutral-100/50 hover:border-neutral-200/60"
+                    ? clsx("bg-white/90 backdrop-blur-xl border-white/60 shadow-md ring-1 ring-black/5") // Active: Solid Glassy (90% white)
+                    : "bg-white/40 backdrop-blur-sm border-white/20 hover:bg-white/60" // Inactive: Transparent Glass (40% white)
             )}
         >
-            <div className="relative z-10 flex flex-col h-full justify-between">
+            <div className="relative z-10 flex flex-col h-full justify-between gap-4">
                 {/* Desktop: Top Row (Icon Left, Value Right) */}
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between">
                     <div className={clsx("p-1.5 lg:p-2 rounded-lg lg:rounded-xl transition-colors duration-300 shrink-0 [&_svg]:w-4 [&_svg]:h-4 lg:[&_svg]:w-5 lg:[&_svg]:h-5", iconBg)}>
                         {icon}
                     </div>
@@ -65,10 +65,10 @@ export function SummaryCard({
                 </div>
 
                 {/* Bottom Row: Label + Nominal */}
-                <div className="flex flex-col gap-0.5">
-                    <span className="text-[11px] lg:text-sm font-medium text-neutral-500">{label}</span>
+                <div className="flex flex-col gap-1">
+                    <span className="text-[11px] lg:text-sm font-medium text-neutral-500 leading-tight">{label}</span>
                     {subtext && (
-                        <span className="block text-sm lg:text-base font-bold text-neutral-900 font-numeric mt-0.5 tracking-tight truncate">
+                        <span className="block text-xs lg:text-base font-bold text-neutral-900 font-numeric tracking-tight break-words whitespace-normal leading-tight">
                             {subtext}
                         </span>
                     )}

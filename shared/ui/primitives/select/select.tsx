@@ -2,7 +2,7 @@
 
 import React from "react";
 import clsx from "clsx";
-import { ChevronDown, Search as SearchIcon } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 type SelectVariant = "default" | "filled";
 type SelectSize = "sm" | "md" | "lg";
@@ -12,21 +12,18 @@ interface Option {
   value: string;
 }
 
-interface SelectProps {
+interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'size' | 'value'> {
   label?: string;
   helperText?: string;
   error?: string;
-  name?: string;
   variant?: SelectVariant;
   selectSize?: SelectSize;
   options: Option[];
-  value?: string; // controlled
-  defaultValue?: string; // uncontrolled
-  disabled?: boolean;
+  value?: string;
   onChange?: (value: string) => void;
-  className?: string;
   accentColor?: "red" | "blue";
   placeholder?: string;
+  // searchable prop is ignored in native select implementation but kept for compatibility
   searchable?: boolean;
 }
 
@@ -34,123 +31,22 @@ export function Select({
   label,
   helperText,
   error,
-  name,
   variant = "default",
   selectSize = "md",
   options,
   value,
-  defaultValue,
   disabled,
   onChange,
   className,
   placeholder = "Select...",
   accentColor = "red",
-  searchable = false,
+  searchable, // ignored
+  ...props
 }: SelectProps) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [internalValue, setInternalValue] = React.useState(
-    defaultValue ?? options[0]?.value ?? ""
-  );
-  const [searchQuery, setSearchQuery] = React.useState("");
 
-  // Keyboard navigation state
-  const [highlightedIndex, setHighlightedIndex] = React.useState(-1);
-
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const triggerRef = React.useRef<HTMLButtonElement>(null);
-
-  const currentValue = value ?? internalValue;
-  const selected = options.find((o) => o.value === currentValue);
-
-  const filteredOptions = React.useMemo(() => {
-    if (!searchable || !searchQuery) return options;
-    return options.filter(o => o.label.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [options, searchable, searchQuery]);
-
-  const handleSelect = (val: string) => {
-    if (value === undefined) {
-      setInternalValue(val);
-    }
-    onChange?.(val);
-    setIsOpen(false);
-    triggerRef.current?.focus(); // Return focus to trigger
-  };
-
-  // Reset highlighted index and search when opening/closing
-  React.useEffect(() => {
-    if (isOpen) {
-      const idx = filteredOptions.findIndex((o) => o.value === currentValue);
-      setHighlightedIndex(idx >= 0 ? idx : 0);
-    } else {
-      setHighlightedIndex(-1);
-      setSearchQuery(""); // Reset search on close
-    }
-  }, [isOpen, currentValue, filteredOptions]);
-
-  // Handle keyboard interaction
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (disabled) return;
-
-    switch (e.key) {
-      case "Enter":
-      case " ":
-        e.preventDefault();
-        if (isOpen) {
-          if (highlightedIndex >= 0 && highlightedIndex < options.length) {
-            handleSelect(options[highlightedIndex].value);
-          }
-        } else {
-          setIsOpen(true);
-        }
-        break;
-      case "ArrowDown":
-        e.preventDefault();
-        if (!isOpen) {
-          setIsOpen(true);
-        } else {
-          setHighlightedIndex((prev) =>
-            prev < options.length - 1 ? prev + 1 : 0
-          );
-        }
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        if (!isOpen) {
-          setIsOpen(true);
-        } else {
-          setHighlightedIndex((prev) =>
-            prev > 0 ? prev - 1 : options.length - 1
-          );
-        }
-        break;
-      case "Escape":
-        e.preventDefault();
-        setIsOpen(false);
-        break;
-      case "Tab":
-        setIsOpen(false);
-        break;
-    }
-  };
-
-  // Click outside to close
-  React.useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // ── STYLES ──────────────────────────────────────────────
-
+  // Styles
   const base =
-    "w-full rounded-lg border bg-white text-neutral-900 transition-all duration-150 outline-none";
+    "w-full appearance-none rounded-lg border bg-white text-neutral-900 transition-all duration-150 outline-none";
 
   const focusStyles = accentColor === "blue"
     ? "!focus:border-blue-500/20 !focus:ring-4 !focus:ring-blue-500/[0.08]"
@@ -163,14 +59,14 @@ export function Select({
 
   const sizes: Record<SelectSize, string> = {
     sm: "pl-3 pr-8 h-8 text-xs",
-    md: "pl-3 pr-8 h-9 text-sm",
-    lg: "pl-4 pr-10 h-10 text-sm",
+    md: "pl-3 pr-8 h-9 text-base md:text-sm", // Native size logic
+    lg: "pl-4 pr-10 h-10 text-base md:text-sm",
   };
 
   const errorStyles = error ? (accentColor === "blue" ? "border-red-500 text-red-600 focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20" : "border-red-500 text-red-600 focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20") : "";
 
   return (
-    <div className="flex flex-col gap-1.5" ref={containerRef}>
+    <div className="flex flex-col gap-1.5" >
       {label && (
         <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
           {label}
@@ -178,135 +74,45 @@ export function Select({
       )}
 
       <div className="relative">
-        {/* Trigger pill */}
-        <button
-          ref={triggerRef}
-          type="button"
+        <select
+          value={value}
+          onChange={(e) => onChange?.(e.target.value)}
           disabled={disabled}
           className={clsx(
             base,
             variants[variant],
             sizes[selectSize],
-            "flex items-center justify-between cursor-pointer",
+            "cursor-pointer",
             disabled && "opacity-60 cursor-not-allowed",
+            value === "" && "text-neutral-400", // Placeholder style
             errorStyles,
             className
           )}
-          onClick={() => !disabled && setIsOpen((open) => !open)}
-          onKeyDown={handleKeyDown}
-          aria-haspopup="listbox"
-          aria-expanded={isOpen}
+          {...props}
         >
-          <span className={clsx("truncate", !selected && "text-neutral-400")}>
-            {selected?.label ?? placeholder}
-          </span>
-
-          {/* Chevron */}
-          <span
-            className={clsx(
-              "absolute right-3 pointer-events-none text-text-secondary transition-transform duration-200",
-              isOpen && "rotate-180"
-            )}
-          >
-            <ChevronDown size={16} strokeWidth={2} />
-          </span>
-        </button>
-
-        {/* Dropdown menu */}
-        {isOpen && !disabled && (
-          <div className="absolute z-20 mt-1 w-full rounded-xl border border-border-light bg-white shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-            {searchable && (
-              <div className="p-2 border-b border-neutral-100 sticky top-0 bg-white z-10">
-                <div className="relative">
-                  <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400">
-                    <SearchIcon className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="text"
-                    className={clsx(
-                      "w-full pl-9 pr-3 py-1.5 text-sm bg-neutral-50 border border-neutral-200 rounded-full focus:outline-none transition-all",
-                      accentColor === "blue"
-                        ? "focus:border-blue-500/20 focus:ring-4 focus:ring-blue-500/[0.08]"
-                        : "focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20"
-                    )}
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    autoFocus
-                  />
-                </div>
-              </div>
-            )}
-            <ul
-              className="max-h-60 overflow-y-auto py-1"
-              role="listbox"
-              tabIndex={-1}
-            >
-              {filteredOptions.length === 0 ? (
-                <li className="px-4 py-3 text-sm text-neutral-400 text-center">No results found</li>
-              ) : (
-                filteredOptions.map((opt, index) => {
-                  const isSelected = opt.value === currentValue;
-                  const isHighlighted = index === highlightedIndex;
-
-                  const highlightClass = accentColor === "blue"
-                    ? "bg-blue-50 text-neutral-900"
-                    : "bg-red-50 text-neutral-900";
-
-                  const selectedClass = accentColor === "blue"
-                    ? "bg-blue-100 text-blue-700 font-medium"
-                    : "bg-red-100 text-red-700 font-medium";
-
-                  const normalClass = accentColor === "blue"
-                    ? "text-neutral-600 hover:bg-blue-50 hover:text-neutral-900"
-                    : "text-neutral-600 hover:bg-red-50 hover:text-neutral-900";
-
-                  return (
-                    <li
-                      key={opt.value}
-                      role="option"
-                      aria-selected={isSelected}
-                      className={clsx(
-                        "w-full text-left px-4 py-2 text-body transition-colors cursor-pointer text-sm",
-                        isHighlighted && highlightClass,
-                        isSelected && selectedClass,
-                        !isHighlighted && !isSelected && normalClass
-                      )}
-                      onClick={() => handleSelect(opt.value)}
-                      onMouseEnter={() => setHighlightedIndex(index)}
-                    >
-                      {opt.label}
-                    </li>
-                  );
-                })
-              )}
-            </ul>
-          </div>
-        )}
-
-        {/* Hidden native select (for form submission) */}
-        <select
-          name={name}
-          value={currentValue}
-          tabIndex={-1}
-          aria-hidden="true"
-          className="sr-only"
-          onChange={() => { }}
-        >
+          <option value="" disabled className="text-neutral-400">
+            {placeholder}
+          </option>
           {options.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
         </select>
+
+        {/* Chevron Icon - Pointer events none ensures clicks go through to select */}
+        <span
+          className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400"
+        >
+          <ChevronDown size={16} strokeWidth={2} />
+        </span>
       </div>
 
       {/* Helper / error */}
       {error ? (
-        <p className="text-small text-action-danger">{error}</p>
+        <p className="text-xs text-red-600">{error}</p>
       ) : helperText ? (
-        <p className="text-small text-text-muted">{helperText}</p>
+        <p className="text-xs text-neutral-500">{helperText}</p>
       ) : null}
     </div>
   );

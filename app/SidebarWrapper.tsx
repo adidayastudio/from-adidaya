@@ -3,7 +3,8 @@
 import { useState, Suspense, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Sidebar from "../components/sidebar/Sidebar";
-import MobileBottomBar from "../components/layout/MobileBottomBar";
+import MobileBottomBar from "../components/layout/MobileBottomBarV2";
+import ClockAccessoryBar from "../components/layout/ClockAccessoryBar";
 import { Toaster } from "react-hot-toast";
 import { UserProvider } from "@/components/providers/UserProvider";
 
@@ -82,6 +83,7 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
           </main>
           <Suspense fallback={null}>
             <MobileBottomBar />
+            <ClockAccessoryBar />
           </Suspense>
           <Toaster
             position="bottom-right"

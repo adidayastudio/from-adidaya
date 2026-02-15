@@ -17,7 +17,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 
 export type NotificationSection = "all" | "unread" | "finance" | "projects" | "system";
 
-export default function NotificationsContent({ section }: { section: NotificationSection }) {
+export default function NotificationsContent({ section, isEmbedded = false }: { section: NotificationSection; isEmbedded?: boolean }) {
     const router = useRouter();
     const { notifications, loading, error, refresh, markAsRead, currentUserId } = useNotifications();
     const [searchQuery, setSearchQuery] = useState("");
@@ -198,159 +198,173 @@ export default function NotificationsContent({ section }: { section: Notificatio
     return (
         <div className="animate-in fade-in duration-500">
             {/* HEADER & DEBUG */}
-            <div className="space-y-4">
-                <div className="hidden md:flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-neutral-900">Notifications</h1>
-                </div>
-
-
-
-                {/* Debug Dashboard - Desktop Only */}
-                <div className="hidden md:flex flex-wrap gap-2 px-4 py-2 bg-neutral-50 rounded-xl border border-neutral-200/60 shadow-inner">
-                    <div className="flex items-center gap-1.5 min-w-fit">
-                        <div className={clsx("w-1.5 h-1.5 rounded-full", currentUserId ? "bg-green-500" : "bg-red-500")} />
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase">
-                            {currentUserId ? "Session Active" : "No Session"}
-                        </span>
-                    </div>
-                    <span className="text-neutral-300">•</span>
-                    <div className="flex items-center gap-1.5 min-w-fit">
-                        <div className={clsx("w-1.5 h-1.5 rounded-full", debugState.realtime.includes("Subscribed") ? "bg-green-500" : "bg-orange-500")} />
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase">Live: {debugState.realtime}</span>
-                    </div>
-                    <span className="text-neutral-300">•</span>
-                    <div className="flex items-center gap-1.5 min-w-fit">
-                        <div className={clsx("w-1.5 h-1.5 rounded-full", debugState.push.includes("Synced") ? "bg-green-500" : "bg-orange-500")} />
-                        <span className="text-[10px] font-bold text-neutral-500 uppercase">Push: {debugState.push}</span>
+            {!isEmbedded && (
+                <div className="space-y-4">
+                    <div className="hidden md:flex items-center justify-between">
+                        <h1 className="text-2xl font-bold text-neutral-900">Notifications</h1>
                     </div>
                 </div>
+            )}
+
+
+
+            {/* Debug Dashboard - Desktop Only */}
+            <div className="hidden md:flex flex-wrap gap-2 px-4 py-2 bg-neutral-50 rounded-xl border border-neutral-200/60 shadow-inner">
+                <div className="flex items-center gap-1.5 min-w-fit">
+                    <div className={clsx("w-1.5 h-1.5 rounded-full", currentUserId ? "bg-green-500" : "bg-red-500")} />
+                    <span className="text-[10px] font-bold text-neutral-500 uppercase">
+                        {currentUserId ? "Session Active" : "No Session"}
+                    </span>
+                </div>
+                <span className="text-neutral-300">•</span>
+                <div className="flex items-center gap-1.5 min-w-fit">
+                    <div className={clsx("w-1.5 h-1.5 rounded-full", debugState.realtime.includes("Subscribed") ? "bg-green-500" : "bg-orange-500")} />
+                    <span className="text-[10px] font-bold text-neutral-500 uppercase">Live: {debugState.realtime}</span>
+                </div>
+                <span className="text-neutral-300">•</span>
+                <div className="flex items-center gap-1.5 min-w-fit">
+                    <div className={clsx("w-1.5 h-1.5 rounded-full", debugState.push.includes("Synced") ? "bg-green-500" : "bg-orange-500")} />
+                    <span className="text-[10px] font-bold text-neutral-500 uppercase">Push: {debugState.push}</span>
+                </div>
+            </div>
 
 
 
 
 
-                {/* Desktop Cards */}
+            {/* Desktop Cards */}
+            {!isEmbedded && (
                 <SummaryFilterCards
                     items={filterItems}
                     selectedId={section}
                     onSelect={(id) => router.push(`/dashboard/notifications?section=${id}`)}
                     className="hidden md:grid"
                 />
-            </div>
+            )}
+            {/* Mobile Unified Navbar Pill - only show on standalone page */}
+            {!isEmbedded && (
+                <div className="md:hidden fixed top-0 left-0 right-0 z-50 px-3 pt-3 pb-2 pointer-events-none">
+                    <div
+                        className="flex items-center gap-2 p-1.5 rounded-full backdrop-blur-2xl backdrop-saturate-150 border border-white/50 transition-all duration-300 pointer-events-auto shadow-sm"
+                        style={{
+                            background: 'rgba(255,255,255,0.6)',
+                            boxShadow: '0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6)'
+                        }}
+                    >
+                        {/* Left: Title (Styled like App Switcher Pill) */}
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/60 border border-white/70 shrink-0">
+                            <Bell className="w-3.5 h-3.5 text-neutral-900 fill-neutral-900" />
+                            <span className="font-semibold text-neutral-900 text-xs">Notifications</span>
+                        </div>
 
-            {/* Mobile Unified Navbar Pill - Exact "MobileNavBar" Replica (Fixed Position) */}
-            <div className="md:hidden fixed top-0 left-0 right-0 z-50 px-3 pt-3 pb-2 pointer-events-none">
-                <div
-                    className="flex items-center gap-2 p-1.5 rounded-full backdrop-blur-2xl backdrop-saturate-150 border border-white/50 transition-all duration-300 pointer-events-auto shadow-sm"
-                    style={{
-                        background: 'rgba(255,255,255,0.6)',
-                        boxShadow: '0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6)'
-                    }}
-                >
-                    {/* Left: Title (Styled like App Switcher Pill) */}
-                    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/60 border border-white/70 shrink-0">
-                        <Bell className="w-3.5 h-3.5 text-neutral-900 fill-neutral-900" />
-                        <span className="font-semibold text-neutral-900 text-xs">Notifications</span>
-                    </div>
+                        {/* Divider */}
+                        <div className="w-px h-5 bg-neutral-300/40 shrink-0" />
 
-                    {/* Divider */}
-                    <div className="w-px h-5 bg-neutral-300/40 shrink-0" />
-
-                    {/* Right: Scrollable Tabs */}
-                    <div className="flex-1 overflow-hidden min-w-0">
-                        <MobileNotificationTabs
-                            items={filterItems}
-                            selectedId={section}
-                            onSelect={(id) => router.push(`/dashboard/notifications?section=${id}`)}
-                        />
+                        {/* Right: Scrollable Tabs */}
+                        <div className="flex-1 overflow-hidden min-w-0">
+                            <MobileNotificationTabs
+                                items={filterItems}
+                                selectedId={section}
+                                onSelect={(id) => router.push(`/dashboard/notifications?section=${id}`)}
+                            />
+                        </div>
                     </div>
                 </div>
-            </div>
+            )
+            }
 
             {/* Mobile Spacer to compensate for Fixed Header */}
-            <div className="md:hidden h-20" />
+            {!isEmbedded && <div className="md:hidden h-20" />}
 
             {/* Mobile Mobile Debug Buttons (Temporary) */}
-            <div className="md:hidden flex items-center justify-end gap-2 px-4 mb-4">
-                <button
-                    onClick={() => triggerLocalNotification("Health Check", "Testing Banner...", true)}
-                    className="text-[10px] font-bold text-neutral-400 border border-neutral-200 px-2 py-1 rounded-full hover:bg-neutral-50"
-                >
-                    Test
-                </button>
-                <button
-                    onClick={async () => {
-                        if (confirm("Reset connection?")) {
-                            const { unsubscribeFromPush, subscribeToPush } = await import("@/lib/api/push-registration");
-                            await unsubscribeFromPush();
-                            await subscribeToPush();
-                            window.location.reload();
-                        }
-                    }}
-                    className="text-[10px] font-bold text-neutral-400 border border-neutral-200 px-2 py-1 rounded-full hover:bg-red-50 hover:text-red-500"
-                >
-                    Reset
-                </button>
-            </div>
+            {
+                !isEmbedded && (
+                    <div className="md:hidden flex items-center justify-end gap-2 px-4 mb-4">
+                        <button
+                            onClick={() => triggerLocalNotification("Health Check", "Testing Banner...", true)}
+                            className="text-[10px] font-bold text-neutral-400 border border-neutral-200 px-2 py-1 rounded-full hover:bg-neutral-50"
+                        >
+                            Test
+                        </button>
+                        <button
+                            onClick={async () => {
+                                if (confirm("Reset connection?")) {
+                                    const { unsubscribeFromPush, subscribeToPush } = await import("@/lib/api/push-registration");
+                                    await unsubscribeFromPush();
+                                    await subscribeToPush();
+                                    window.location.reload();
+                                }
+                            }}
+                            className="text-[10px] font-bold text-neutral-400 border border-neutral-200 px-2 py-1 rounded-full hover:bg-red-50 hover:text-red-500"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                )
+            }
 
-            <div className="h-px bg-neutral-100 hidden md:block my-6" />
+            {!isEmbedded && <div className="h-px bg-neutral-100 hidden md:block my-6" />}
 
             {/* TOOLBAR - Desktop Only */}
-            <div className="hidden md:flex items-center justify-between gap-4 mb-6">
-                <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                    <input
-                        type="text"
-                        placeholder="Search notifications..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-neutral-400 w-full"
-                    />
-                </div>
+            {
+                !isEmbedded && (
+                    <div className="hidden md:flex items-center justify-between gap-4 mb-6">
+                        <div className="relative flex-1 max-w-md">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                            <input
+                                type="text"
+                                placeholder="Search notifications..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-neutral-400 w-full"
+                            />
+                        </div>
 
-                <div className="flex items-center gap-2">
-                    {permission === "default" && (
-                        <button
-                            onClick={requestPermission}
-                            className="bg-neutral-900 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-800 transition-all flex items-center gap-2 shadow-lg active:scale-95"
-                        >
-                            <Bell className="w-3.5 h-3.5" />
-                            Enable App Alerts
-                        </button>
-                    )}
+                        <div className="flex items-center gap-2">
+                            {permission === "default" && (
+                                <button
+                                    onClick={requestPermission}
+                                    className="bg-neutral-900 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-800 transition-all flex items-center gap-2 shadow-lg active:scale-95"
+                                >
+                                    <Bell className="w-3.5 h-3.5" />
+                                    Enable App Alerts
+                                </button>
+                            )}
 
-                    <button
-                        onClick={() => triggerLocalNotification("Health Check", "Testing Banner and Realtime Engine...", true)}
-                        className="bg-neutral-100 text-neutral-600 text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-200 transition-all border border-neutral-200 active:scale-95"
-                    >
-                        Test Alert
-                    </button>
+                            <button
+                                onClick={() => triggerLocalNotification("Health Check", "Testing Banner and Realtime Engine...", true)}
+                                className="bg-neutral-100 text-neutral-600 text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-200 transition-all border border-neutral-200 active:scale-95"
+                            >
+                                Test Alert
+                            </button>
 
-                    <button
-                        onClick={async () => {
-                            if (confirm("Reset notifications connection? This is useful if you updated the keys.")) {
-                                const { unsubscribeFromPush, subscribeToPush } = await import("@/lib/api/push-registration");
-                                await unsubscribeFromPush();
-                                await subscribeToPush();
-                                alert("Connection reset! If valid permissions exist, you are now re-registered.");
-                                window.location.reload();
-                            }
-                        }}
-                        className="bg-white text-neutral-400 text-xs font-bold px-3 py-2 rounded-full hover:bg-red-50 hover:text-red-500 transition-all border border-neutral-200"
-                        title="Reset Connection"
-                    >
-                        Reset
-                    </button>
+                            <button
+                                onClick={async () => {
+                                    if (confirm("Reset notifications connection? This is useful if you updated the keys.")) {
+                                        const { unsubscribeFromPush, subscribeToPush } = await import("@/lib/api/push-registration");
+                                        await unsubscribeFromPush();
+                                        await subscribeToPush();
+                                        alert("Connection reset! If valid permissions exist, you are now re-registered.");
+                                        window.location.reload();
+                                    }
+                                }}
+                                className="bg-white text-neutral-400 text-xs font-bold px-3 py-2 rounded-full hover:bg-red-50 hover:text-red-500 transition-all border border-neutral-200"
+                                title="Reset Connection"
+                            >
+                                Reset
+                            </button>
 
-                    <button
-                        onClick={refresh}
-                        className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all active:scale-90"
-                        title="Sync"
-                    >
-                        <Filter className={clsx("w-5 h-5", loading && "animate-spin")} />
-                    </button>
-                </div>
-            </div>
+                            <button
+                                onClick={refresh}
+                                className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all active:scale-90"
+                                title="Sync"
+                            >
+                                <Filter className={clsx("w-5 h-5", loading && "animate-spin")} />
+                            </button>
+                        </div>
+                    </div>
+                )
+            }
 
             <div className="space-y-6 pb-24 lg:pb-0">
                 {loading ? (
@@ -423,11 +437,13 @@ export default function NotificationsContent({ section }: { section: Notificatio
                             </div>
                         )}
 
-                        <div className="pt-8 text-center">
-                            <button className="text-xs font-bold text-neutral-400 hover:text-neutral-600 transition-colors px-4 py-2 rounded-full hover:bg-neutral-100">
-                                View All History
-                            </button>
-                        </div>
+                        {!isEmbedded && (
+                            <div className="pt-8 text-center">
+                                <button className="text-xs font-bold text-neutral-400 hover:text-neutral-600 transition-colors px-4 py-2 rounded-full hover:bg-neutral-100">
+                                    View All History
+                                </button>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
