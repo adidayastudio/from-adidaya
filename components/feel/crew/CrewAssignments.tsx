@@ -186,25 +186,34 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
         if (!formRole || !formCrew || !formProject) return;
 
         try {
-            // formCrew is the crewID here because we updated Select options below
             const crewId = formCrew;
             const projectCode = formProject;
 
-            // Call API
-            const success = await assignCrewToProject(crewId, projectCode);
+            // Extract the matching project name if possible
+            const matchedProject = projects.find(p => p.code === projectCode);
 
-            if (success) {
+            // Call API
+            const result = await assignCrewToProject(
+                crewId,
+                projectCode,
+                matchedProject?.name,
+                formStartDate || undefined,
+                formEndDate || undefined,
+                editingAssignment?.id
+            );
+
+            if (result.success) {
                 // Refresh list
                 await loadAssignments();
                 setShowDrawer(false);
                 resetForm();
                 toast.success("Assignment saved successfully");
             } else {
-                toast.error("Failed to assign crew. Please try again.");
+                toast.error(result.error || "Failed to assign crew. Please try again.");
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            toast.error("An error occurred while saving.");
+            toast.error(e.message || "An error occurred while saving.");
         }
     };
 

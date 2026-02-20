@@ -425,47 +425,81 @@ export async function deleteCrewMember(id: string): Promise<boolean> {
 // PROJECT ASSIGNMENT OPERATIONS
 // ============================================
 
-/**
- * Assign crew to a project (creates history entry)
- */
 export async function assignCrewToProject(
     crewMemberId: string,
     projectCode: string,
-    projectName?: string
-): Promise<boolean> {
-    // End any ongoing assignments first
-    await supabase
-        .from("crew_project_history")
-        .update({ status: "completed", end_date: new Date().toISOString().split("T")[0] })
-        .eq("crew_member_id", crewMemberId)
-        .eq("status", "ongoing");
+    projectName?: string,
+    startDate?: string,
+    endDate?: string,
+    assignmentId?: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        if (assignmentId) {
+            // Edit existing assignment
+            const { error: updateHistoryError } = await supabase
+                .from("crew_project_history")
+                .update({
+                    crew_member_id: crewMemberId,
+                    project_code: projectCode,
+                    project_name: projectName || null,
+                    start_date: startDate || new Date().toISOString().split("T")[0],
+                    end_date: endDate || null,
+                    status: endDate ? "completed" : "ongoing",
+                })
+                .eq("id", assignmentId);
 
-    // Create new assignment
-    const { error: historyError } = await supabase.from("crew_project_history").insert({
-        crew_member_id: crewMemberId,
-        project_code: projectCode,
-        project_name: projectName,
-        start_date: new Date().toISOString().split("T")[0],
-        status: "ongoing",
-    });
+            if (updateHistoryError) return { success: false, error: "Update History Failed: " + updateHistoryError.message };
 
-    if (historyError) {
-        console.error("❌ Error creating project history:", historyError);
-        return false;
+            // Synchronize the current_project_code on crew_members if this is the active assignment
+            if (!endDate) {
+                const { error: memberError } = await supabase
+                    .from("crew_members")
+                    .update({ current_project_code: projectCode })
+                    .eq("id", crewMemberId);
+                if (memberError) return { success: false, error: "Member Data Sync Failed: " + memberError.message };
+            }
+
+            return { success: true };
+        } else {
+            // Create New Assignment
+            // End any ongoing assignments first
+            await supabase
+                .from("crew_project_history")
+                .update({ status: "completed", end_date: startDate || new Date().toISOString().split("T")[0] })
+                .eq("crew_member_id", crewMemberId)
+                .eq("status", "ongoing");
+
+            // Create new assignment
+            const { error: historyError } = await supabase.from("crew_project_history").insert({
+                crew_member_id: crewMemberId,
+                project_code: projectCode,
+                project_name: projectName || null,
+                start_date: startDate || new Date().toISOString().split("T")[0],
+                end_date: endDate || null,
+                status: endDate ? "completed" : "ongoing",
+            });
+
+            if (historyError) {
+                return { success: false, error: "Insert History Failed: " + historyError.message };
+            }
+
+            // Update current project on crew member if it is an ongoing active assignment
+            if (!endDate) {
+                const { error: updateError } = await supabase
+                    .from("crew_members")
+                    .update({ current_project_code: projectCode })
+                    .eq("id", crewMemberId);
+
+                if (updateError) {
+                    return { success: false, error: "Update Member Failed: " + updateError.message };
+                }
+            }
+
+            return { success: true };
+        }
+    } catch (err: any) {
+        return { success: false, error: err.message };
     }
-
-    // Update current project on crew member
-    const { error: updateError } = await supabase
-        .from("crew_members")
-        .update({ current_project_code: projectCode })
-        .eq("id", crewMemberId);
-
-    if (updateError) {
-        console.error("❌ Error updating current project:", updateError);
-        return false;
-    }
-
-    return true;
 }
 
 /**

@@ -17,44 +17,47 @@ import {
     Sparkles,
     Calendar,
     Activity,
+    ChevronDown,
+    Settings2,
 } from "lucide-react";
 
 const APPS = [
-    { label: "Projects", href: "/flow/projects", icon: FolderKanban },
-    { label: "Finance", href: "/flow/finance", icon: Banknote },
-    { label: "Tracking", href: "/flow/tracking", icon: Activity },
-    { label: "People", href: "/feel/people", icon: Users },
-    { label: "Clock", href: "/feel/clock", icon: Clock },
-    { label: "Crew", href: "/feel/crew", icon: HardHat },
-    { label: "Website", href: "/frame/website", icon: Globe },
-    { label: "Social", href: "/frame/social", icon: Share2 },
-    { label: "Learn", href: "/frame/learn", icon: GraduationCap },
+    { label: "Projects", href: "/flow/projects", icon: FolderKanban, color: "text-blue-500 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10" },
+    { label: "Finance", href: "/flow/finance", icon: Banknote, color: "text-amber-500 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10" },
+    { label: "Tracking", href: "/flow/tracking", icon: Activity, color: "text-emerald-500 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
+    { label: "People", href: "/feel/people", icon: Users, color: "text-purple-500 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10" },
+    { label: "Clock", href: "/feel/clock", icon: Clock, color: "text-rose-500 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10" },
+    { label: "Crew", href: "/feel/crew", icon: HardHat, color: "text-indigo-500 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
+    { label: "Website", href: "/frame/website", icon: Globe, color: "text-cyan-500 dark:text-cyan-400", bg: "bg-cyan-50 dark:bg-cyan-500/10" },
+    { label: "Social", href: "/feel/social", icon: Share2, color: "text-pink-500 dark:text-pink-400", bg: "bg-pink-50 dark:bg-pink-500/10" },
+    { label: "Learn", href: "/frame/learn", icon: GraduationCap, color: "text-orange-500 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-500/10" },
 ];
 
 export default function AppLauncher() {
     return (
-        <div className="mt-2 mb-8 relative z-10">
-            <div className="flex items-center justify-between px-1 mb-4">
-                <h2 className="text-lg font-bold text-neutral-900 tracking-tight">Your Workspace</h2>
-            </div>
+        <div className="mt-6 mb-8 mx-4 relative z-10">
+            <h2 className="px-2 text-lg font-bold text-neutral-900 dark:text-white tracking-tight transition-colors mb-4">Your Workspace</h2>
 
-            <div className="w-full overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-                <div className="flex gap-4 w-max p-1">
-                    {APPS.map((app) => (
-                        <Link
-                            key={app.label}
-                            href={app.href}
-                            className="flex flex-col items-center gap-3 w-[72px] group"
-                        >
-                            <div className="w-[72px] h-[72px] rounded-[24px] flex items-center justify-center border border-white/60 bg-white/40 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.1)] backdrop-blur-xl transition-all duration-300 ease-out group-hover:scale-110 group-active:scale-90 group-hover:shadow-lg group-hover:bg-white/60">
-                                <app.icon className="w-8 h-8 text-neutral-500 drop-shadow-sm transition-colors group-hover:text-neutral-800" strokeWidth={1.5} />
-                            </div>
-                            <span className="text-[11px] font-medium text-neutral-500 text-center leading-tight group-hover:text-neutral-900 transition-colors">
-                                {app.label}
-                            </span>
-                        </Link>
-                    ))}
-                </div>
+            <div className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar gap-x-4">
+                <div className="w-2 shrink-0" /> {/* Left Spacer */}
+                {APPS.map((app) => (
+                    <Link
+                        key={app.label}
+                        href={app.href}
+                        className="flex flex-col items-center gap-2 group snap-start w-[60px] shrink-0"
+                    >
+                        <div className={clsx(
+                            "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ease-out group-hover:scale-105 group-active:scale-95",
+                            app.bg
+                        )}>
+                            <app.icon className={clsx("w-6 h-6", app.color)} strokeWidth={2} />
+                        </div>
+                        <span className="text-[10px] font-semibold text-neutral-600 dark:text-neutral-400 text-center leading-tight group-hover:text-neutral-900 dark:group-hover:text-white transition-colors line-clamp-1">
+                            {app.label}
+                        </span>
+                    </Link>
+                ))}
+                <div className="w-2 shrink-0" /> {/* Right Spacer */}
             </div>
         </div>
     );

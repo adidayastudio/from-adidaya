@@ -36,108 +36,96 @@ export default function DashboardCarousel({ persona }: DashboardCarouselProps) {
 
     // Clones for infinite scroll: [Last, ...Originals, First]
     const slidesWithClones = [
-        <div key="clone-last" className="w-full flex-shrink-0">{originalSlides[originalSlides.length - 1]}</div>,
-        ...originalSlides.map((slide, i) => <div key={`slide-${i}`} className="w-full flex-shrink-0">{slide}</div>),
-        <div key="clone-first" className="w-full flex-shrink-0">{originalSlides[0]}</div>
+        <div key="clone-last" className="w-[85vw] max-w-[340px] flex-shrink-0 snap-center">{originalSlides[originalSlides.length - 1]}</div>,
+        ...originalSlides.map((slide, i) => <div key={`slide-${i}`} className="w-[85vw] max-w-[340px] flex-shrink-0 snap-center">{slide}</div>),
+        <div key="clone-first" className="w-[85vw] max-w-[340px] flex-shrink-0 snap-center">{originalSlides[0]}</div>
     ];
 
     const handleScroll = () => {
-        if (scrollRef.current && !isLooping.current) {
-            const scrollLeft = scrollRef.current.scrollLeft;
-            const width = scrollRef.current.offsetWidth;
-            const rawIndex = Math.round(scrollLeft / width);
+        if (!scrollRef.current) return;
 
-            // Map raw index to active index
-            let newIndex = rawIndex - 1;
-            if (newIndex < 0) newIndex = originalSlides.length - 1;
-            if (newIndex >= originalSlides.length) newIndex = 0;
+        const scrollLeft = scrollRef.current.scrollLeft;
+        // The child width must perfectly match the distance between snap points
+        // Our slide is max-w-[340px] or 85vw + 16px gap
+        const slideEl = scrollRef.current.firstElementChild as HTMLElement;
+        if (!slideEl) return;
 
-            setActiveIndex(newIndex);
+        const childWidth = slideEl.offsetWidth + 16; // Add the 1rem (16px) gap we use in flex container
 
-            // Teleport logic
-            if (rawIndex === 0) { // At Clone Last
-                isLooping.current = true;
-                requestAnimationFrame(() => {
-                    if (scrollRef.current) {
-                        scrollRef.current.style.scrollBehavior = 'auto';
-                        scrollRef.current.scrollLeft = width * originalSlides.length;
-                        requestAnimationFrame(() => {
-                            if (scrollRef.current) {
-                                scrollRef.current.style.scrollBehavior = '';
-                                isLooping.current = false;
-                            }
-                        });
-                    }
-                });
-            } else if (rawIndex === slidesWithClones.length - 1) { // At Clone First
-                isLooping.current = true;
-                requestAnimationFrame(() => {
-                    if (scrollRef.current) {
-                        scrollRef.current.style.scrollBehavior = 'auto';
-                        scrollRef.current.scrollLeft = width;
-                        requestAnimationFrame(() => {
-                            if (scrollRef.current) {
-                                scrollRef.current.style.scrollBehavior = '';
-                                isLooping.current = false;
-                            }
-                        });
-                    }
-                });
+        // Determine current index based on scroll position
+        const rawIndex = Math.round(scrollLeft / childWidth);
+        const totalSlides = originalSlides.length;
+
+        // Map raw index to active index (clones are at 0 and totalSlides + 1)
+        let active = rawIndex - 1;
+        if (active < 0) active = totalSlides - 1;
+        if (active >= totalSlides) active = 0;
+        setActiveIndex(active);
+
+        // Clear existing timeout
+        if (isLooping.current) clearTimeout(isLooping.current as any);
+
+        // Wait for scrolling to stop before teleporting to prevent glitching mid-swipe
+        isLooping.current = setTimeout(() => {
+            if (!scrollRef.current) return;
+
+            // If we've settled on the FIRST clone (leftmost)
+            if (rawIndex === 0) {
+                scrollRef.current.style.scrollBehavior = 'auto'; // Disable smooth scroll
+                scrollRef.current.scrollLeft = childWidth * totalSlides; // Jump to last real slide
+                // Force reflow before re-enabling smooth scroll
+                void scrollRef.current.offsetWidth;
+                scrollRef.current.style.scrollBehavior = 'smooth';
             }
-        }
+            // If we've settled on the LAST clone (rightmost)
+            else if (rawIndex === totalSlides + 1) {
+                scrollRef.current.style.scrollBehavior = 'auto'; // Disable smooth scroll
+                scrollRef.current.scrollLeft = childWidth; // Jump to first real slide
+                // Force reflow before re-enabling smooth scroll
+                void scrollRef.current.offsetWidth;
+                scrollRef.current.style.scrollBehavior = 'smooth';
+            }
+        }, 150) as any;
     };
 
     // Initial Scroll to First Real Slide
     useEffect(() => {
         if (scrollRef.current) {
-            const width = scrollRef.current.offsetWidth;
-            scrollRef.current.scrollLeft = width; // Index 1
+            const slideEl = scrollRef.current.firstElementChild as HTMLElement;
+            if (slideEl) {
+                const childWidth = slideEl.offsetWidth + 16;
+                scrollRef.current.style.scrollBehavior = 'auto';
+                scrollRef.current.scrollLeft = childWidth; // Jump to real first slide
+                // Re-enable smooth scroll after initial jump
+                setTimeout(() => {
+                    if (scrollRef.current) scrollRef.current.style.scrollBehavior = 'smooth';
+                }, 50);
+            }
         }
     }, []);
 
     return (
-        <>
-            {/* GLOBAL BACKGROUND - Hero Section Only */}
-            <div className="absolute top-0 left-0 right-0 h-[60vh] z-0 overflow-hidden pointer-events-none">
-                {/* Current Gradient */}
-                {GRADIENTS.map((gradient, index) => (
+        <div className="relative z-10 w-full mb-4 pb-4">
+            <div
+                ref={scrollRef}
+                onScroll={handleScroll}
+                className="w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide flex gap-4 px-[7.5vw] md:px-[calc(50vw-170px)]"
+            >
+                {slidesWithClones}
+            </div>
+
+            {/* Pagination Dots */}
+            <div className="flex justify-center gap-2 mt-4">
+                {originalSlides.map((_, i) => (
                     <div
-                        key={index}
+                        key={i}
                         className={clsx(
-                            "absolute inset-0 bg-gradient-to-b transition-opacity duration-1000 ease-in-out",
-                            gradient,
-                            activeIndex === index ? "opacity-100" : "opacity-0"
+                            "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                            i === activeIndex ? "bg-blue-600 w-4" : "bg-neutral-300"
                         )}
                     />
                 ))}
-
-                {/* Bottom Fade to Page Background (neutral-50) */}
-                <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-b from-transparent to-neutral-50" />
             </div>
-
-            {/* Carousel Container */}
-            <div className="relative z-10 w-full mt-28 pb-4">
-                <div
-                    ref={scrollRef}
-                    onScroll={handleScroll}
-                    className="w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide flex"
-                >
-                    {slidesWithClones}
-                </div>
-
-                {/* Pagination Dots */}
-                <div className="flex justify-center gap-2 mt-4">
-                    {originalSlides.map((_, i) => (
-                        <div
-                            key={i}
-                            className={clsx(
-                                "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                                i === activeIndex ? "bg-white w-4" : "bg-white/30"
-                            )}
-                        />
-                    ))}
-                </div>
-            </div>
-        </>
+        </div>
     );
 }

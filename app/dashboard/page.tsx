@@ -220,7 +220,7 @@ export default function DashboardPage() {
     : ["Projects", "Finance", "Crew"];
 
   return (
-    <div className="min-h-screen bg-neutral-50 md:p-6 relative">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 md:p-6 relative transition-colors">
       <Breadcrumb items={[{ label: "Dashboard" }]} className="hidden md:flex" />
 
       <PageWrapper sidebar={<DashboardSidebar />}>
@@ -228,7 +228,7 @@ export default function DashboardPage() {
           <div className="w-full pb-32 md:px-0 px-4">
 
             {/* NEW REVAMPED DASHBOARD (MOBILE) */}
-            <div className="md:hidden space-y-2 mb-80">
+            <div className="md:hidden space-y-2 mb-24">
               <DashboardHeader onOpenNotifications={() => setIsNotifSheetOpen(true)} />
               <DashboardCarousel persona={persona} />
               <AppLauncher />
@@ -245,7 +245,7 @@ export default function DashboardPage() {
                   )}>
                     <app.icon className={clsx("w-6 h-6", app.color)} strokeWidth={1.5} />
                   </div>
-                  <span className="text-[10px] font-medium text-neutral-500 group-hover:text-neutral-900 transition-colors text-center w-full truncate px-1">
+                  <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors text-center w-full truncate px-1">
                     {app.label}
                   </span>
                 </Link>
@@ -279,8 +279,7 @@ export default function DashboardPage() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="w-full max-w-lg backdrop-blur-2xl rounded-t-[40px] shadow-2xl overflow-hidden relative border-t border-white/50"
-              style={{ background: 'linear-gradient(180deg, rgba(250,250,252,0.97) 0%, rgba(245,245,247,0.95) 100%)' }}
+              className="w-full max-w-lg bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl rounded-t-[40px] shadow-2xl overflow-hidden relative border-t border-white/50 dark:border-neutral-800"
             >
               {/* Handle Bar */}
               <div className="w-full flex justify-center py-3">
@@ -288,7 +287,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="px-6 py-4 flex items-center justify-between">
-                <h3 className="text-xl font-bold text-neutral-800 tracking-tight">My Favorite Apps</h3>
+                <h3 className="text-xl font-bold text-neutral-800 dark:text-white tracking-tight">My Favorite Apps</h3>
                 <button
                   onClick={() => setIsEditMode(true)}
                   className="p-2.5 rounded-full backdrop-blur-sm active:scale-95 transition-all border border-blue-200/40"
@@ -317,15 +316,14 @@ export default function DashboardPage() {
                           )}>
                             <app.icon className={clsx("w-7 h-7", app.color)} strokeWidth={1.5} />
                           </div>
-                          <span className="text-[11px] font-medium text-neutral-500 text-center leading-tight">
+                          <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 text-center leading-tight">
                             {app.label}
                           </span>
                         </Link>
                       );
                     })
                   ) : (
-                    <div className="col-span-4 py-8 px-4 text-center rounded-3xl backdrop-blur-sm border border-white/50"
-                      style={{ background: 'linear-gradient(180deg, rgba(250,250,250,0.8) 0%, rgba(245,245,245,0.5) 100%)' }}>
+                    <div className="col-span-4 py-8 px-4 text-center rounded-3xl backdrop-blur-sm border border-white/50 dark:border-neutral-800 bg-white/80 dark:bg-neutral-900/80">
                       <p className="text-[12px] font-medium text-neutral-400 leading-relaxed">
                         No favorite app selected.<br />Choose your most used apps for quick access.
                       </p>
@@ -355,7 +353,7 @@ export default function DashboardPage() {
                           )}>
                             <app.icon className={clsx("w-7 h-7", app.color)} strokeWidth={1.5} />
                           </div>
-                          <span className="text-[11px] font-medium text-neutral-500 text-center leading-tight">
+                          <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 text-center leading-tight">
                             {app.label}
                           </span>
                         </Link>

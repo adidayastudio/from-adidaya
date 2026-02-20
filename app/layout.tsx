@@ -4,6 +4,7 @@ import "../shared/styles/typography.css";
 import type { ReactNode } from "react";
 import SidebarWrapper from "./SidebarWrapper";
 import ServiceWorkerRegister from "@/components/dashboard/shared/ServiceWorkerRegister";
+import { ThemeProvider } from "@/providers/ThemeProvider";
 
 export const metadata = {
   title: "Adidaya Studio",
@@ -48,15 +49,17 @@ export const viewport = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className="overflow-x-hidden" suppressHydrationWarning>
-      <body className="bg-bg-100 text-text-primary font-sans overflow-x-hidden" suppressHydrationWarning>
-        <ServiceWorkerRegister />
-        {/* Tooltip Layer */}
-        <div
-          id="tooltip-layer"
-          className="fixed inset-0 pointer-events-none z-[9999]"
-        />
+      <body className="bg-bg-100 dark:bg-neutral-900 text-text-primary dark:text-neutral-50 font-sans overflow-x-hidden transition-colors duration-300" suppressHydrationWarning>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ServiceWorkerRegister />
+          {/* Tooltip Layer */}
+          <div
+            id="tooltip-layer"
+            className="fixed inset-0 pointer-events-none z-[9999]"
+          />
 
-        <SidebarWrapper>{children}</SidebarWrapper>
+          <SidebarWrapper>{children}</SidebarWrapper>
+        </ThemeProvider>
       </body>
     </html>
   );

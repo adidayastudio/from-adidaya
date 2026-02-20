@@ -13,15 +13,16 @@
     align-items: center;
 
     /* iOS 26 Liquid Glass — matching ClockAccessoryBar */
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 100%);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
+    backdrop-filter: blur(48px) saturate(220%);
+    -webkit-backdrop-filter: blur(48px) saturate(220%);
 
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.08),
-        0 1px 4px rgba(0, 0, 0, 0.04),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        0 4px 16px rgba(0, 0, 0, 0.04),
+        inset 0 1px 1px rgba(255, 255, 255, 0.6),
+        inset 0 0 20px rgba(255, 255, 255, 0.1);
 
     border-radius: 40px;
     z-index: 1000;
@@ -41,15 +42,16 @@
     justify-content: center;
 
     /* iOS 26 Liquid Glass — matching ClockAccessoryBar */
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.1) 100%);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
+    backdrop-filter: blur(48px) saturate(220%);
+    -webkit-backdrop-filter: blur(48px) saturate(220%);
 
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.08),
-        0 1px 4px rgba(0, 0, 0, 0.04),
-        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        0 4px 16px rgba(0, 0, 0, 0.04),
+        inset 0 1px 1px rgba(255, 255, 255, 0.6),
+        inset 0 0 20px rgba(255, 255, 255, 0.1);
     cursor: pointer;
     /* NO transition here — Framer Motion handles layout animation */
     position: relative;
@@ -122,13 +124,13 @@
 
 .glassOverlay {
     z-index: 1;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .glassSpecular {
     z-index: 2;
-    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.5), inset 0 0 5px rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 2px rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* --- MAGIC MOTION STATES --- */
@@ -231,17 +233,17 @@
     border-radius: 32px;
     box-sizing: border-box;
 
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.7) 0%, rgba(240, 240, 240, 0.4) 100%);
-    backdrop-filter: blur(20px) saturate(200%);
-    -webkit-backdrop-filter: blur(20px) saturate(200%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(240, 240, 240, 0.2) 100%);
+    backdrop-filter: blur(24px) saturate(220%);
+    -webkit-backdrop-filter: blur(24px) saturate(220%);
 
     box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.08),
-        0 1px 3px rgba(0, 0, 0, 0.05),
-        inset 0 1px 1px rgba(255, 255, 255, 0.8),
-        inset 0 -1px 1px rgba(0, 0, 0, 0.04);
+        0 8px 20px rgba(0, 0, 0, 0.06),
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        inset 0 1px 2px rgba(255, 255, 255, 0.9),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.02);
 
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.4);
 
     position: relative;
     transition: width 0.3s ease, background 0.3s ease;
@@ -313,7 +315,48 @@
 
 /* Theme Overrides */
 .tabBar[data-theme="dark"],
-.searchCircle[data-theme="dark"] {
-    background: rgba(20, 20, 20, 0.6);
-    /* ... rest of dark mode ... */
+.searchCircle[data-theme="dark"],
+.searchModeContainer[data-theme="dark"],
+.activeIconCircle[data-theme="dark"],
+.searchBarExpanded[data-theme="dark"] {
+    background: linear-gradient(180deg, rgba(30, 30, 30, 0.4) 0%, rgba(10, 10, 10, 0.2) 100%);
+    border-color: rgba(255, 255, 255, 0.05);
+    /* Softer dark mode border */
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.05),
+        /* Dimmer inner highlight */
+        inset 0 0 20px rgba(255, 255, 255, 0.01);
+}
+
+.tabBar[data-theme="dark"] .glassOverlay,
+.searchCircle[data-theme="dark"] .glassOverlay,
+.searchModeContainer[data-theme="dark"] .glassOverlay,
+.activeIconCircle[data-theme="dark"] .glassOverlay,
+.searchBarExpanded[data-theme="dark"] .glassOverlay {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.tabBar[data-theme="dark"] .glassSpecular,
+.searchCircle[data-theme="dark"] .glassSpecular,
+.searchModeContainer[data-theme="dark"] .glassSpecular,
+.activeIconCircle[data-theme="dark"] .glassSpecular,
+.searchBarExpanded[data-theme="dark"] .glassSpecular {
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.05), inset 0 0 5px rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tabBar[data-theme="dark"] .activeBubble {
+    background: linear-gradient(180deg, rgba(60, 60, 60, 0.8) 0%, rgba(30, 30, 30, 0.4) 100%);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.08),
+        inset 0 -1px 1px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.08);
+    /* Reduced from 0.15 */
+}
+
+.tabBar[data-theme="dark"] .activeBubble::after {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+    /* Reduced highlight */
 }

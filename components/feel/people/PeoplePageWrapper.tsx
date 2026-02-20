@@ -48,24 +48,14 @@ export default function PeoplePageWrapper({
                     siblingApps={FEEL_APPS}
                     tabs={tabs}
                     accentColor="text-blue-500"
+                    onFabClick={fabAction?.onClick}
+                    fabIcon={fabAction?.icon}
                 />
 
                 <div className="pb-32 px-4 pt-20 space-y-4">
                     {header}
                     {children}
                 </div>
-
-                {/* Mobile FAB */}
-                {fabAction && (
-                    <div className="fixed bottom-6 right-4 z-50">
-                        <button
-                            onClick={fabAction.onClick}
-                            className={`w-14 h-14 flex items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 text-white ${fabAction.highlight ? "bg-red-500" : "bg-blue-600"}`}
-                        >
-                            {fabAction.icon}
-                        </button>
-                    </div>
-                )}
             </div>
 
             {/* DESKTOP LAYOUT */}

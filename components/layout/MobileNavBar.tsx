@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import clsx from "clsx";
-import { ChevronLeft, ChevronDown, LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronDown, LucideIcon, Plus } from "lucide-react";
 import { PillTab } from "./MobilePillTabs";
 import { SiblingApp } from "./MobileAppHeader";
 
@@ -23,6 +23,12 @@ interface MobileNavBarProps {
     tabs: PillTab[];
     /** Theme color for accent */
     accentColor?: string;
+    /** Optional click handler for FAB (Feel) */
+    onFabClick?: () => void;
+    /** Optional event ID to dispatch for FAB (Flow) */
+    fabId?: string;
+    /** Optional icon for the FAB */
+    fabIcon?: React.ReactNode;
 }
 
 /**
@@ -38,6 +44,9 @@ export default function MobileNavBar({
     siblingApps,
     tabs,
     accentColor = "text-neutral-900",
+    onFabClick,
+    fabId,
+    fabIcon,
 }: MobileNavBarProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -282,6 +291,19 @@ export default function MobileNavBar({
                         })}
                     </div>
                 </div>
+
+                {/* GLOBAL MOBILE FAB - iOS Toolbar Style (Top Right) */}
+                {(onFabClick || fabId) && (
+                    <button
+                        onClick={() => {
+                            if (onFabClick) onFabClick();
+                            if (fabId) window.dispatchEvent(new CustomEvent('fab-action', { detail: { id: fabId } }));
+                        }}
+                        className={`flex items-center justify-center w-8 h-8 shrink-0 rounded-full shadow-sm bg-white/60 border border-white/70 active:scale-95 transition-transform ${colors.text}`}
+                    >
+                        {fabIcon || <Plus className="w-4 h-4" strokeWidth={2.5} />}
+                    </button>
+                )}
             </div>
         </div>
     );

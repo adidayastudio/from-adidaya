@@ -13,6 +13,7 @@ import {
 import styles from "./BottomTabBar.module.css";
 import FrostedGlassFilter from "./FrostedGlassFilter";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 
 export type TabKey = string;
 
@@ -30,7 +31,9 @@ export default function MobileBottomBar() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [isMoving, setIsMoving] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const { resolvedTheme } = useTheme();
 
     const globalTabs: TabConfig[] = [
         { key: "home", label: "Home", icon: House, path: "/dashboard" },
@@ -74,13 +77,14 @@ export default function MobileBottomBar() {
     };
 
     useEffect(() => {
+        setMounted(true);
         setIsMoving(true);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => setIsMoving(false), 500);
         return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
     }, [activeTabKey]);
 
-    const theme = 'light';
+    const theme = mounted && resolvedTheme === 'dark' ? 'dark' : 'light';
 
     const layoutTransition = {
         type: "tween",
@@ -168,9 +172,9 @@ export default function MobileBottomBar() {
                                                 <Icon
                                                     size={24}
                                                     strokeWidth={isActive ? 2.5 : 1.5}
-                                                    color={isActive ? "#FF3B30" : "rgba(0,0,0,0.65)"}
+                                                    color={isActive ? "#FF3B30" : theme === 'dark' ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)"}
                                                 />
-                                                <span className={styles.label} style={{ color: isActive ? "#FF3B30" : "rgba(0,0,0,0.65)" }}>
+                                                <span className={styles.label} style={{ color: isActive ? "#FF3B30" : theme === 'dark' ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)" }}>
                                                     {tab.label}
                                                 </span>
                                             </button>
@@ -187,7 +191,7 @@ export default function MobileBottomBar() {
                                     transition={{ duration: 0.15 }}
                                     className="flex items-center justify-center w-full h-full relative z-10"
                                 >
-                                    <activeTab.icon size={24} color="#000" />
+                                    <activeTab.icon size={24} color={theme === 'dark' ? "#fff" : "#000"} />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -217,7 +221,7 @@ export default function MobileBottomBar() {
                                     className="w-full h-full flex items-center justify-center relative z-10 cursor-pointer"
                                     onClick={toggleSearch}
                                 >
-                                    <Search size={24} color="rgba(0,0,0,0.65)" />
+                                    <Search size={24} color={theme === 'dark' ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)"} />
                                 </motion.button>
                             ) : (
                                 /* SEARCH MODE: Input */
@@ -233,9 +237,9 @@ export default function MobileBottomBar() {
                                         onSubmit={executeSearch}
                                         className="flex-1 h-full flex items-center w-full pl-4"
                                     >
-                                        <Search size={18} className="text-gray-500 mr-2 opacity-70 shrink-0" />
+                                        <Search size={18} className="text-gray-500 dark:text-neutral-400 mr-2 opacity-70 shrink-0" />
                                         <input
-                                            className="bg-transparent border-none outline-none text-[16px] w-full placeholder:text-gray-500/80 text-gray-900 font-medium"
+                                            className="bg-transparent border-none outline-none text-[16px] w-full placeholder:text-gray-500/80 dark:placeholder:text-neutral-400/80 text-gray-900 dark:text-white font-medium"
                                             placeholder={`Search ${activeTab.label}...`}
                                             value={searchQuery}
                                             onChange={(e) => setSearchQuery(e.target.value)}
@@ -246,14 +250,14 @@ export default function MobileBottomBar() {
                                         onClick={() => setIsSearchOpen(false)}
                                         className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-2"
                                         style={{
-                                            background: 'rgba(255,255,255,0.45)',
+                                            background: theme === 'dark' ? 'rgba(40,40,40,0.45)' : 'rgba(255,255,255,0.45)',
                                             backdropFilter: 'blur(12px)',
                                             WebkitBackdropFilter: 'blur(12px)',
-                                            border: '1px solid rgba(255,255,255,0.5)',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.4)',
+                                            border: theme === 'dark' ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.5)',
+                                            boxShadow: theme === 'dark' ? '0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.1)' : '0 2px 8px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.4)',
                                         }}
                                     >
-                                        <X size={16} color="rgba(0,0,0,0.6)" />
+                                        <X size={16} color={theme === 'dark' ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)"} />
                                     </button>
                                 </motion.div>
                             )}

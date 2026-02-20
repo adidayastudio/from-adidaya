@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useClock } from "@/hooks/useClock";
 import useUserProfile from "@/hooks/useUserProfile";
 import ClockActionModal from "@/components/feel/clock/ClockActionModal";
+import { useTheme } from "next-themes";
 
 /**
  * Floating Clock Accessory Bar — sits above the bottom tab bar.
@@ -25,8 +26,15 @@ export default function ClockAccessoryBar() {
         loading: clockLoading,
     } = useClock();
     const [isClockModalOpen, setIsClockModalOpen] = useState(false);
+    const { resolvedTheme } = useTheme();
+    const [mounted, setMounted] = useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const isDashboard = pathname === "/dashboard" || pathname === "/dashboard/";
+    const isDark = mounted && resolvedTheme === "dark";
 
     return (
         <>
@@ -45,23 +53,28 @@ export default function ClockAccessoryBar() {
                             transition={{ type: "spring", stiffness: 400, damping: 24, mass: 0.8 }}
                         >
                             <div
-                                className="relative overflow-hidden rounded-full flex items-center p-2.5 w-full"
+                                className="relative overflow-hidden rounded-full flex items-center p-2.5 w-full transition-colors"
                                 style={{
-                                    background:
-                                        "linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 100%)",
-                                    backdropFilter: "blur(40px) saturate(200%)",
-                                    WebkitBackdropFilter: "blur(40px) saturate(200%)",
-                                    border: "1px solid rgba(255,255,255,0.3)",
-                                    boxShadow:
-                                        "0 8px 32px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.4)",
+                                    background: isDark
+                                        ? "linear-gradient(180deg, rgba(40,40,40,0.5) 0%, rgba(20,20,20,0.3) 100%)"
+                                        : "linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.02) 100%)",
+                                    backdropFilter: "blur(48px) saturate(220%)",
+                                    WebkitBackdropFilter: "blur(48px) saturate(220%)",
+                                    border: isDark
+                                        ? "1px solid rgba(255,255,255,0.05)"
+                                        : "1px solid rgba(255,255,255,0.25)",
+                                    boxShadow: isDark
+                                        ? "0 8px 32px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05)"
+                                        : "0 8px 32px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04), inset 0 1px 1px rgba(255,255,255,0.6), inset 0 0 20px rgba(255,255,255,0.1)",
                                 }}
                             >
                                 {/* Glass specular highlight */}
                                 <div
-                                    className="absolute inset-0 rounded-full pointer-events-none"
+                                    className="absolute inset-0 rounded-full pointer-events-none transition-colors"
                                     style={{
-                                        background:
-                                            "linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(255,255,255,0.1) 100%)",
+                                        background: isDark
+                                            ? "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.02) 100%)"
+                                            : "linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(255,255,255,0.1) 100%)",
                                     }}
                                 />
 
@@ -79,16 +92,20 @@ export default function ClockAccessoryBar() {
                                             whileTap={{ scale: 0.85 }}
                                             transition={{ type: "spring", stiffness: 500, damping: 15 }}
                                             className={clsx(
-                                                "w-[40px] h-[40px] rounded-full flex items-center justify-center",
-                                                isCheckedIn ? "text-blue-600" : "text-neutral-400"
+                                                "w-[40px] h-[40px] rounded-full flex items-center justify-center transition-colors",
+                                                isCheckedIn ? (isDark ? "text-blue-300" : "text-blue-600") : (isDark ? "text-neutral-300" : "text-neutral-400")
                                             )}
                                             style={{
                                                 background: isCheckedIn
-                                                    ? "linear-gradient(135deg, rgba(191,219,254,0.7) 0%, rgba(147,197,253,0.4) 100%)"
-                                                    : "linear-gradient(135deg, rgba(229,231,235,0.6) 0%, rgba(209,213,219,0.3) 100%)",
+                                                    ? isDark
+                                                        ? "linear-gradient(135deg, rgba(59,130,246,0.3) 0%, rgba(37,99,235,0.15) 100%)"
+                                                        : "linear-gradient(135deg, rgba(191,219,254,0.7) 0%, rgba(147,197,253,0.4) 100%)"
+                                                    : isDark
+                                                        ? "linear-gradient(135deg, rgba(80,80,80,0.4) 0%, rgba(50,50,50,0.2) 100%)"
+                                                        : "linear-gradient(135deg, rgba(229,231,235,0.6) 0%, rgba(209,213,219,0.3) 100%)",
                                                 border: isCheckedIn
-                                                    ? "1px solid rgba(147,197,253,0.4)"
-                                                    : "1px solid rgba(209,213,219,0.3)",
+                                                    ? isDark ? "1px solid rgba(59,130,246,0.15)" : "1px solid rgba(147,197,253,0.4)"
+                                                    : isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(209,213,219,0.3)",
                                                 backdropFilter: "blur(12px)",
                                                 WebkitBackdropFilter: "blur(12px)",
                                             }}
@@ -96,13 +113,13 @@ export default function ClockAccessoryBar() {
                                             <Clock className="w-[18px] h-[18px]" strokeWidth={1.5} />
                                         </motion.div>
                                         <div>
-                                            <div className="text-[9px] font-semibold text-neutral-400 uppercase tracking-[0.12em] leading-none mb-0.5">
+                                            <div className="text-[9px] font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.12em] leading-none mb-0.5">
                                                 {isCheckedIn ? "On Duty" : "Offline"}
                                             </div>
                                             <div
                                                 className={clsx(
-                                                    "text-lg font-bold tracking-tighter tabular-nums leading-none",
-                                                    isCheckedIn ? "text-neutral-800" : "text-neutral-300"
+                                                    "text-lg font-bold tracking-tighter tabular-nums leading-none transition-colors",
+                                                    isCheckedIn ? (isDark ? "text-white" : "text-neutral-800") : (isDark ? "text-neutral-400" : "text-neutral-300")
                                                 )}
                                             >
                                                 {isCheckedIn ? formatTime(elapsed) : "00:00:00"}
@@ -130,8 +147,9 @@ export default function ClockAccessoryBar() {
                                     style={
                                         clockLoading
                                             ? {
-                                                background: "rgba(229,231,235,0.5)",
-                                                color: "#9ca3af",
+                                                background: isDark ? "rgba(60,60,60,0.5)" : "rgba(229,231,235,0.5)",
+                                                color: isDark ? "#6b7280" : "#9ca3af",
+                                                border: isDark ? "1px solid rgba(255,255,255,0.02)" : "none",
                                             }
                                             : isCheckedIn
                                                 ? {

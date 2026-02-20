@@ -17,6 +17,7 @@ const PROJECT_TABS = [
 ];
 
 import { FLOW_APPS } from "@/lib/navigation-config";
+import { usePathname } from "next/navigation";
 
 export default function ProjectsPageWrapper({
     breadcrumbItems,
@@ -29,6 +30,12 @@ export default function ProjectsPageWrapper({
     children: React.ReactNode;
     mobileToggle?: React.ReactNode;
 }) {
+    const pathname = usePathname();
+    let fabId = "PROJECT_NEW";
+    if (pathname.includes('/activity')) fabId = 'PROJECT_LOG_ACTIVITY';
+    else if (pathname.includes('/docs')) fabId = 'PROJECT_UPLOAD_DOC';
+    else if (pathname.includes('/reports')) fabId = 'PROJECT_EXPORT';
+
     return (
         <>
             {/* MOBILE LAYOUT */}
@@ -42,6 +49,7 @@ export default function ProjectsPageWrapper({
                     siblingApps={FLOW_APPS}
                     tabs={PROJECT_TABS}
                     accentColor="text-red-500"
+                    fabId={fabId}
                 />
 
                 {/* Mobile Toggle (Fixed Position) */}

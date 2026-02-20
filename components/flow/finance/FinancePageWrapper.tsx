@@ -8,6 +8,7 @@ import { FLOW_APPS, FINANCE_TABS, ALL_APPS } from "@/lib/navigation-config";
 import { Banknote } from "lucide-react";
 
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
+import { usePathname } from "next/navigation";
 
 export default function FinancePageWrapper({
     breadcrumbItems,
@@ -18,6 +19,13 @@ export default function FinancePageWrapper({
     header?: React.ReactNode;
     children: React.ReactNode;
 }) {
+    const pathname = usePathname();
+    let fabId = "FINANCE_NEW_REQUEST";
+    if (pathname.includes('/purchasing') || pathname.includes('/reimburse')) fabId = 'FINANCE_NEW_PURCHASE';
+    else if (pathname.includes('/petty-cash')) fabId = 'FINANCE_TOP_UP';
+    else if (pathname.includes('/funding-sources')) fabId = 'FINANCE_NEW_SOURCE';
+    else if (pathname.includes('/reports')) fabId = 'FINANCE_EXPORT';
+
     return (
         <>
             {/* MOBILE LAYOUT */}
@@ -31,6 +39,7 @@ export default function FinancePageWrapper({
                     siblingApps={FLOW_APPS}
                     tabs={FINANCE_TABS}
                     accentColor="text-red-500"
+                    fabId={fabId}
                 />
 
                 {/* Floating Personal/Team toggle */}

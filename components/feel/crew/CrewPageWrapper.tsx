@@ -58,6 +58,8 @@ export default function CrewPageWrapper({
                     siblingApps={FEEL_APPS}
                     tabs={CREW_TABS}
                     accentColor="text-blue-600"
+                    onFabClick={fabAction?.onClick}
+                    fabIcon={fabAction?.icon}
                 />
 
                 {/* Content with top padding */}

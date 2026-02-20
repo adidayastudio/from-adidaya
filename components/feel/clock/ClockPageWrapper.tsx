@@ -66,6 +66,8 @@ export default function ClockPageWrapper({
                     siblingApps={FEEL_APPS}
                     tabs={filteredTabs}
                     accentColor="text-blue-600"
+                    onFabClick={fabAction?.onClick}
+                    fabIcon={fabAction?.icon}
                 />
 
                 {/* Floating Personal/Team toggle */}
