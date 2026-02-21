@@ -16,7 +16,6 @@ import {
 } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
-import { isHolidayOrSunday } from "@/lib/holidays";
 
 interface CrewPerformanceProps { role?: string; }
 

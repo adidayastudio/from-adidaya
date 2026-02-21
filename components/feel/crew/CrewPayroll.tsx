@@ -8,7 +8,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, DailyLog, CrewMember, fetchRequests } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
-import { isHolidayOrSunday } from "@/lib/holidays";
+import { isCrewPaidHolidayOrSunday } from "@/lib/holidays";
 
 interface CrewPayrollProps {
     role?: string;
@@ -274,7 +274,7 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                     else if (log.status === "HALF_DAY") entry.days += 0.5;
 
                     // Base Pay Calculation
-                    const isHoliday = isHolidayOrSunday(log.date);
+                    const isHoliday = isCrewPaidHolidayOrSunday(log.date);
                     const dailyRate = isHoliday ? crew.overtimeDailyRate : crew.baseDailyRate;
                     const hourlyRate = dailyRate / 8;
                     entry.basePay += log.regularHours * hourlyRate;

@@ -46,6 +46,16 @@ export function isHoliday(date: string | Date): boolean {
     return isLegacyHoliday || is2026Holiday;
 }
 
+export function isCrewPaidHoliday(date: string | Date): boolean {
+    const d = new Date(date);
+    const dateStr = d.toISOString().split("T")[0];
+    const isLegacyHoliday = HOLIDAYS.includes(dateStr);
+    const h2026 = HOLIDAYS_2026.find(h => h.date === dateStr);
+    const is2026PaidHoliday = h2026 ? h2026.type === "holiday" : false;
+
+    return isLegacyHoliday || is2026PaidHoliday;
+}
+
 export function isSunday(date: string | Date): boolean {
     const d = new Date(date);
     return d.getDay() === 0;
@@ -53,4 +63,8 @@ export function isSunday(date: string | Date): boolean {
 
 export function isHolidayOrSunday(date: string | Date): boolean {
     return isSunday(date) || isHoliday(date);
+}
+
+export function isCrewPaidHolidayOrSunday(date: string | Date): boolean {
+    return isSunday(date) || isCrewPaidHoliday(date);
 }

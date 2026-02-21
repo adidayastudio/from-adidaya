@@ -8,7 +8,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, upsertDailyLog, deleteDailyLogEntry, DailyLog } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
-import { isHolidayOrSunday } from "@/lib/holidays";
+import { isCrewPaidHolidayOrSunday } from "@/lib/holidays";
 
 interface CrewDailyInputProps {
     role?: string;
@@ -159,7 +159,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
     const formatDate = (d: Date) => d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
     const formatDateShort = (d: Date) => d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
     const handleDateChange = (dir: "prev" | "next") => { const n = new Date(selectedDate); n.setDate(n.getDate() + (dir === "next" ? 1 : -1)); setSelectedDate(n); };
-    const isHolidayDay = isHolidayOrSunday(selectedDate);
+    const isHolidayDay = isCrewPaidHolidayOrSunday(selectedDate);
 
     const toggleRowSelection = (id: string) => { const n = new Set(selectedRows); n.has(id) ? n.delete(id) : n.add(id); setSelectedRows(n); };
     const selectAll = () => { selectedRows.size === entries.length ? setSelectedRows(new Set()) : setSelectedRows(new Set(entries.map(e => e.id))); };
