@@ -417,6 +417,114 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+/* --- HARDCODED HEX BACKGROUNDS (Tasks/Actions pages) --- */
+/* Main page background */
+.dark .bg-\[\#f8f9fa\] {
+  background-color: #0a0a0a !important;
+}
+
+.dark .bg-\[\#f8f9fa\]\/70 {
+  background-color: rgba(10, 10, 10, 0.7) !important;
+}
+
+/* Card theme backgrounds → darker tinted versions */
+.dark .bg-\[\#fcebef\] {
+  background-color: rgba(235, 82, 117, 0.12) !important;
+}
+
+/* pink */
+.dark .bg-\[\#fdf4e8\] {
+  background-color: rgba(242, 159, 75, 0.12) !important;
+}
+
+/* orange */
+.dark .bg-\[\#eef3fc\] {
+  background-color: rgba(84, 133, 234, 0.12) !important;
+}
+
+/* blue */
+.dark .bg-\[\#eaf5ec\] {
+  background-color: rgba(76, 176, 95, 0.12) !important;
+}
+
+/* green */
+.dark .bg-\[\#f4f4f5\] {
+  background-color: #1f1f1f !important;
+}
+
+/* gray */
+.dark .bg-\[\#eff4fc\] {
+  background-color: rgba(84, 133, 234, 0.12) !important;
+}
+
+/* blue alt */
+
+/* Card icon backgrounds */
+.dark .bg-\[\#f7d4dc\] {
+  background-color: rgba(235, 82, 117, 0.2) !important;
+}
+
+.dark .bg-\[\#fde2c9\] {
+  background-color: rgba(242, 159, 75, 0.2) !important;
+}
+
+.dark .bg-\[\#d4e1f8\] {
+  background-color: rgba(84, 133, 234, 0.2) !important;
+}
+
+.dark .bg-\[\#cfead4\] {
+  background-color: rgba(76, 176, 95, 0.2) !important;
+}
+
+.dark .bg-\[\#e4e4e7\] {
+  background-color: #2a2a2a !important;
+}
+
+/* Empty state / info backgrounds */
+.dark .bg-\[\#fcfcfd\] {
+  background-color: #171717 !important;
+}
+
+/* Modal backgrounds */
+.dark .bg-\[\#f0f0f0\] {
+  border-color: #333 !important;
+}
+
+/* Form elements */
+.dark .bg-gray-50 {
+  background-color: #1a1a1a !important;
+}
+
+/* Border overrides for custom hex borders */
+.dark .border-\[\#f0f0f0\] {
+  border-color: #333333 !important;
+}
+
+.dark .border-\[\#f7d4dc\] {
+  border-color: rgba(235, 82, 117, 0.25) !important;
+}
+
+.dark .border-\[\#fde2c9\] {
+  border-color: rgba(242, 159, 75, 0.25) !important;
+}
+
+.dark .border-\[\#e8effa\] {
+  border-color: rgba(84, 133, 234, 0.2) !important;
+}
+
+.dark .border-\[\#cfead4\] {
+  border-color: rgba(76, 176, 95, 0.2) !important;
+}
+
+.dark .border-blue-100 {
+  border-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Active tab pill backgrounds for scrolled state */
+.dark .bg-white\/60 {
+  background-color: rgba(38, 38, 38, 0.6) !important;
+}
+
 /* =========================================
    PILLAR THEMES
    ========================================= */
