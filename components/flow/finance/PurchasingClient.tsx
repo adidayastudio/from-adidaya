@@ -27,15 +27,16 @@ import { format, startOfMonth, endOfMonth, isBefore } from "date-fns";
 import { PurchasingItem, ApprovalStatus, FundingSource, PurchaseType, PurchaseStage } from "@/lib/types/finance-types";
 import { Project } from "@/types/project";
 import { formatCurrency, getPrimaryStatus, STATUS_THEMES, formatStatus, cleanEntityName } from "./modules/utils";
-import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
+import { getFinanceFileUrl, uploadFinanceFile, uploadFinanceFileExact } from "@/lib/api/storage";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
+import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
+import { FinanceItemCard } from "./FinanceItemCard";
 import { useSearchParams } from "next/navigation";
 import { fetchPurchasingRequests, fetchFundingSources, updatePurchasingStatus, deletePurchasingRequest } from "@/lib/client/finance-api";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { fetchTeamMembers } from "@/lib/api/clock_team";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { NewRequestDrawer } from "./modules/NewRequestDrawer";
-import { getFinanceFileUrl, uploadFinanceFile, uploadFinanceFileExact } from "@/lib/api/storage";
-import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 // Status Badge Helper
 function StatusBadge({ status }: { status: any }) {
@@ -1095,6 +1096,17 @@ export default function PurchasingClient() {
         setCurrentPage(1);
     }, [statusFilter, selectedProject, searchTerm, currentMonth, showAllMonths]);
 
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'FINANCE_NEW_PURCHASE') {
+                setEditingItem(null);
+                setIsDrawerOpen(true);
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
+
     // Load funding sources when paying items or on mount (lazy load implies better perf but simpler to just load)
     useEffect(() => {
         if (viewMode === 'team') {
@@ -1102,6 +1114,18 @@ export default function PurchasingClient() {
             loadFundingSources();
         }
     }, [viewMode]);
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'FINANCE_NEW_PURCHASE') {
+                setEditingItem(null);
+                setIsDrawerOpen(true);
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     const handleMonthChange = (direction: "prev" | "next") => {
         const newDate = new Date(currentMonth);
@@ -1374,62 +1398,53 @@ export default function PurchasingClient() {
         >
             <div className="flex flex-col gap-6">
                 {/* SUMMARY CARDS */}
-                {/* SUMMARY CARDS */}
-                <SummaryCardsRow className="lg:grid-cols-5">
-                    <SummaryCard
-                        icon={<Package className="w-5 h-5 text-red-600" />}
-                        iconBg="bg-red-50"
-                        label="Total Requests"
-                        value={summaryStats.total.toString()}
-                        subtext={formatCurrency(summaryStats.totalAmount)}
-                        onClick={() => setStatusFilter("ALL")}
-                        isActive={statusFilter === "ALL"}
-                        activeColor="ring-red-500"
-                    />
+                <div className="-mx-5 lg:mx-0">
+                    <FinanceSummaryCardsRow>
+                        <FinanceSummaryCard
+                            icon={<Package className="w-4 h-4 text-red-600" />}
+                            iconBg="bg-red-100"
+                            label="Total Requests"
+                            value={summaryStats.total.toString()}
+                            subtext={formatCurrency(summaryStats.totalAmount)}
+                            onClick={() => setStatusFilter("ALL")}
+                            isActive={statusFilter === "ALL"}
+                            activeColor="ring-red-500"
+                        />
 
-                    <SummaryCard
-                        icon={<Clock className="w-5 h-5 text-orange-600" />}
-                        iconBg="bg-orange-50"
-                        label="Pending"
-                        value={summaryStats.pending.toString()}
-                        subtext={formatCurrency(summaryStats.pendingAmount)}
-                        onClick={() => setStatusFilter("SUBMITTED")}
-                        isActive={statusFilter === "SUBMITTED"}
-                        activeColor="ring-orange-500"
-                    />
+                        <FinanceSummaryCard
+                            icon={<Clock className="w-4 h-4 text-orange-600" />}
+                            iconBg="bg-orange-100"
+                            label="Pending"
+                            value={summaryStats.pending.toString()}
+                            subtext={formatCurrency(summaryStats.pendingAmount)}
+                            onClick={() => setStatusFilter("SUBMITTED")}
+                            isActive={statusFilter === "SUBMITTED"}
+                            activeColor="ring-orange-500"
+                        />
 
-                    <SummaryCard
-                        icon={<CheckCircle2 className="w-5 h-5 text-blue-600" />}
-                        iconBg="bg-blue-50"
-                        label="Approved"
-                        value={summaryStats.approved.toString()}
-                        subtext={formatCurrency(summaryStats.approvedAmount)}
-                        onClick={() => setStatusFilter("APPROVED")}
-                        isActive={statusFilter === "APPROVED"}
-                        activeColor="ring-blue-500"
-                    />
+                        <FinanceSummaryCard
+                            icon={<CheckCircle2 className="w-4 h-4 text-blue-600" />}
+                            iconBg="bg-blue-100"
+                            label="Approved"
+                            value={summaryStats.approved.toString()}
+                            subtext={formatCurrency(summaryStats.approvedAmount)}
+                            onClick={() => setStatusFilter("APPROVED")}
+                            isActive={statusFilter === "APPROVED"}
+                            activeColor="ring-blue-500"
+                        />
 
-                    <SummaryCard
-                        icon={<CreditCard className="w-5 h-5 text-emerald-600" />}
-                        iconBg="bg-emerald-50"
-                        label="Paid"
-                        value={summaryStats.paid.toString()}
-                        subtext={formatCurrency(summaryStats.paidAmount)}
-                        onClick={() => setStatusFilter("PAID")}
-                        isActive={statusFilter === "PAID"}
-                        activeColor="ring-emerald-500"
-                    />
-
-                    <SummaryCard
-                        icon={<XCircle className="w-5 h-5 text-neutral-600" />}
-                        iconBg="bg-neutral-100"
-                        label="Rejected"
-                        value={summaryStats.rejected.toString()}
-                        onClick={() => setStatusFilter("REJECTED")}
-                        isActive={statusFilter === "REJECTED"}
-                        activeColor="ring-neutral-500"
-                    />
-                </SummaryCardsRow>
+                        <FinanceSummaryCard
+                            icon={<CreditCard className="w-4 h-4 text-emerald-600" />}
+                            iconBg="bg-emerald-100"
+                            label="Paid"
+                            value={summaryStats.paid.toString()}
+                            subtext={formatCurrency(summaryStats.paidAmount)}
+                            onClick={() => setStatusFilter("PAID")}
+                            isActive={statusFilter === "PAID"}
+                            activeColor="ring-emerald-500"
+                        />
+                    </FinanceSummaryCardsRow>
+                </div>
 
                 {/* ADVANCED TOOLBAR - MOBILE (1 LINE) - iOS GLASSY */}
                 <div className="flex md:hidden items-center gap-1.5 p-2 rounded-2xl bg-white/50 backdrop-blur-md border border-white/60 shadow-sm">
@@ -1649,10 +1664,10 @@ export default function PurchasingClient() {
                 </div>
             </div>
 
-            {/* MOBILE CARD VIEW - 2 LINE COMPACT */}
-            <div className="mt-6 block md:hidden space-y-2">
+            {/* MOBILE CARD VIEW */}
+            <div className="mt-6 block md:hidden space-y-3">
                 {filteredItems.length === 0 ? (
-                    <div className="bg-white/40 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-6 text-center">
+                    <div className="bg-white/40 backdrop-blur-md rounded-[24px] border border-white/50 shadow-sm p-6 text-center">
                         <Package className="w-10 h-10 text-neutral-300 mx-auto mb-2" />
                         <h4 className="text-sm font-semibold text-neutral-700">
                             {searchTerm ? "No results found" :
@@ -1665,87 +1680,94 @@ export default function PurchasingClient() {
                         {!searchTerm && statusFilter === "ALL" && !isBefore(currentMonth, startOfMonth(new Date())) && (
                             <button
                                 onClick={() => setIsDrawerOpen(true)}
-                                className="mt-3 px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg"
+                                className="mt-4 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl shadow-lg shadow-red-200/50"
                             >
-                                <Plus className="w-3 h-3 inline mr-1" />New Request
+                                <Plus className="w-4 h-4 inline mr-1.5" strokeWidth={2.5} />New Request
                             </button>
                         )}
                     </div>
                 ) : (
                     filteredItems.map((item) => {
-                        const isUnpaidApproved = item.approval_status === "APPROVED" && item.financial_status !== "PAID";
-                        const isRejected = item.approval_status === "REJECTED";
-                        return (
-                            <div
-                                key={item.id}
-                                onClick={() => setViewingItem(item)}
-                                className={clsx(
-                                    "backdrop-blur-md rounded-xl border shadow-sm px-3 py-2.5 cursor-pointer active:scale-[0.99] transition-all",
-                                    isRejected
-                                        ? "bg-neutral-100/80 border-neutral-200/60 opacity-60"
-                                        : isUnpaidApproved
-                                            ? "bg-orange-50/80 border-orange-200/60"
-                                            : "bg-white/60 border-white/50"
-                                )}
-                            >
-                                {/* Line 1: Item + Harga + Status */}
-                                <div className="flex items-center justify-between gap-2 mb-1.5">
-                                    <div className="text-[12px] font-semibold text-neutral-900 leading-tight flex-1 min-w-0">
-                                        {item.items && item.items.length > 1
-                                            ? `${item.items[0].name} + ${item.items.length - 1} more`
-                                            : (item.items?.[0]?.name || item.description)}
-                                    </div>
-                                    <span className="text-[12px] font-bold text-neutral-900 tabular-nums whitespace-nowrap">{formatCurrency(item.amount)}</span>
-                                    <StatusBadge status={getPrimaryStatus(item.approval_status, item.purchase_stage, item.financial_status)} />
-                                </div>
+                        const statusToUse = item.financial_status === 'PAID' ? 'Paid' :
+                            item.approval_status === 'APPROVED' ? 'Approved' :
+                                item.approval_status === 'REJECTED' ? 'Rejected' :
+                                    item.approval_status === 'NEED_REVISION' ? 'Revise' :
+                                        item.approval_status === 'SUBMITTED' ? 'Pending' : 'Draft';
 
-                                {/* Line 2: Kode + Tanggal + Kategori + Submitter + Actions */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1 text-[10px] text-neutral-400">
-                                        <span className="font-bold text-neutral-500">{item.project_code}</span>
-                                        <span>•</span>
-                                        <span>{format(new Date(item.date), "dd MMM")}</span>
-                                        <span>•</span>
-                                        <span className="capitalize">{formatStatus(item.type)}</span>
-                                        {isTeamView && item.submitted_by_name && (
-                                            <>
-                                                <span>•</span>
-                                                <span>{cleanEntityName(item.submitted_by_name).split(' ')[0]}</span>
-                                            </>
-                                        )}
-                                    </div>
-                                    {/* Action Icons */}
-                                    <div className="flex items-center gap-1">
-                                        {isTeamView && item.approval_status === "SUBMITTED" && (
-                                            <>
-                                                <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1 text-emerald-600 bg-emerald-50 rounded"><CheckCircle2 className="w-3.5 h-3.5" /></button>
-                                                <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1 text-rose-600 bg-rose-50 rounded"><Ban className="w-3.5 h-3.5" /></button>
-                                            </>
-                                        )}
-                                        {(["DRAFT", "SUBMITTED", "NEED_REVISION", "REJECTED"].includes(item.approval_status) || (["admin", "superadmin", "supervisor"].includes(userRole || "") ? true : false)) && (
-                                            <>
-                                                {/* Edit only for non-final or privileged */}
-                                                {(["DRAFT", "SUBMITTED", "NEED_REVISION"].includes(item.approval_status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
-                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1 text-neutral-500 bg-neutral-100 rounded"><Pencil className="w-3.5 h-3.5" /></button>
-                                                )}
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setDeletingItem(item);
-                                                    }}
-                                                    className="p-1 text-red-500 bg-red-50 rounded"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
+                        const renderMobileActions = () => {
+                            const isDraftOrRevise = item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION";
+                            const isSubmitted = item.approval_status === "SUBMITTED";
+                            const isApprovedNotPaid = item.approval_status === "APPROVED" && item.financial_status !== "PAID";
+                            const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
+
+                            return (
+                                <div className="flex items-center gap-1.5 w-full justify-end">
+                                    {isTeamView ? (
+                                        <>
+                                            {isAdmin && (
+                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 flex-shrink-0 active:scale-95 transition-all">
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
-                                            </>
-                                        )}
-                                        {isTeamView && item.approval_status === "APPROVED" && item.financial_status !== "PAID" && item.invoice_url && item.beneficiary_bank && (
-                                            <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1 text-emerald-600 bg-emerald-50 rounded"><CreditCard className="w-3.5 h-3.5" /></button>
-                                        )}
-                                        <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1 text-blue-600 bg-blue-50 rounded"><Eye className="w-3.5 h-3.5" /></button>
-                                    </div>
+                                            )}
+                                            {isSubmitted && (
+                                                <>
+                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 flex-shrink-0 active:scale-95 transition-all" title="Reject">
+                                                        <Ban className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2 rounded-xl bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                        <AlertCircle className="w-3.5 h-3.5" /> Revise
+                                                    </button>
+                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2 rounded-xl bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
+                                                        <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                                                    </button>
+                                                </>
+                                            )}
+                                            {isApprovedNotPaid && (
+                                                <>
+                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-2 rounded-xl bg-neutral-100 text-neutral-600 border border-neutral-200 flex-shrink-0 active:scale-95 transition-all" title="Edit">
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
+                                                        disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
+                                                        className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50 shadow-md shadow-emerald-200/50"
+                                                    >
+                                                        <CreditCard className="w-3.5 h-3.5" /> {(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) ? "Missing Data" : "Pay Now"}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 flex-shrink-0 active:scale-95 transition-all">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-2 rounded-xl bg-neutral-100 text-neutral-600 border border-neutral-200 flex-shrink-0 active:scale-95 transition-all">
+                                                <Eye className="w-4 h-4" />
+                                            </button>
+                                            {(isDraftOrRevise || (isSubmitted && isAdmin)) && (
+                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2 rounded-xl bg-neutral-900 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-neutral-400/50">
+                                                    <Pencil className="w-3.5 h-3.5" /> Edit
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
-                            </div>
+                            );
+                        };
+
+                        return (
+                            <FinanceItemCard
+                                key={item.id}
+                                idRef={item.id.replace('req_', 'PO-24-').substring(0, 9)}
+                                title={item.description || (item.items && item.items.length > 0 ? item.items[0].name : "Purchase Item")}
+                                projectCode={item.project_code || 'GEN'}
+                                date={format(new Date(item.date), "d MMM yyyy")}
+                                amount={item.amount}
+                                status={statusToUse}
+                                onClick={() => setViewingItem(item)}
+                                actions={statusToUse !== 'Paid' ? renderMobileActions() : undefined}
+                            />
                         )
                     })
                 )}
@@ -2166,25 +2188,27 @@ export default function PurchasingClient() {
             }
 
             {/* Delete Confirmation Modal */}
-            {deletingItem && (
-                <DeleteConfirmModal
-                    item={deletingItem}
-                    onClose={() => setDeletingItem(null)}
-                    onConfirm={async () => {
-                        setIsDeleting(true);
-                        try {
-                            await deletePurchasingRequest(deletingItem.id);
-                            loadData();
-                        } catch (error) {
-                            console.error("Failed to delete:", error);
-                        } finally {
-                            setIsDeleting(false);
-                            setDeletingItem(null);
-                        }
-                    }}
-                    isDeleting={isDeleting}
-                />
-            )}
+            {
+                deletingItem && (
+                    <DeleteConfirmModal
+                        item={deletingItem}
+                        onClose={() => setDeletingItem(null)}
+                        onConfirm={async () => {
+                            setIsDeleting(true);
+                            try {
+                                await deletePurchasingRequest(deletingItem.id);
+                                loadData();
+                            } catch (error) {
+                                console.error("Failed to delete:", error);
+                            } finally {
+                                setIsDeleting(false);
+                                setDeletingItem(null);
+                            }
+                        }}
+                        isDeleting={isDeleting}
+                    />
+                )
+            }
 
             <NewRequestDrawer
                 isOpen={isDrawerOpen}

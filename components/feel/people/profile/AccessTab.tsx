@@ -85,7 +85,7 @@ export default function AccessTab({ person, isMe }: { person: Person, isMe: bool
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* LEFT SIDE: Role Selection */}
             <div className="lg:col-span-4 space-y-6">
-                <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm transition-all duration-300">
+                <div className="bg-white p-5 rounded-[20px] shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-neutral-100">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 flex items-center justify-center">
                             <Shield className="w-5 h-5" />

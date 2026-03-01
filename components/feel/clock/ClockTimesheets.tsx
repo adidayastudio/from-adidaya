@@ -13,6 +13,7 @@ import { calculateStats, formatMinutes, ClockStats, calculateAdidayaScore } from
 import { useClockData } from "@/hooks/useClockData";
 import useUserProfile from "@/hooks/useUserProfile";
 import { AttendanceRecord } from "@/lib/api/clock";
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
 
 interface ClockTimesheetsProps {
     role?: UserRole;
@@ -1176,9 +1177,10 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                     row.status === 'ontime' ? 'bg-emerald-50 border-emerald-100' :
                                         'bg-white border-neutral-200';
                                 return (
-                                    <div key={`${row.id}-${row.date}-${row.userId}`} className={clsx("rounded-2xl border p-3.5 shadow-sm bg-white border-neutral-200", statusColor)}>
-                                        <div className="flex items-center gap-4">
-                                            {/* Left: Date Circle */}
+                                    <LiquidItemCard
+                                        key={`${row.id}-${row.date}-${row.userId}`}
+                                        className={statusColor}
+                                        leftAvatar={
                                             <div className="flex flex-col items-center justify-center w-[52px] h-[52px] rounded-full bg-neutral-100/80 border border-neutral-200/60 shrink-0">
                                                 <span className="text-base font-bold text-neutral-900 leading-none tracking-tight">
                                                     {format(new Date(row.date), "dd")}
@@ -1187,55 +1189,52 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                                     {format(new Date(row.date), "MMM")}
                                                 </span>
                                             </div>
-
-                                            {/* Middle: Content */}
-                                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                                                {/* Line 1: Day & Location */}
-                                                <div className="flex items-center gap-2">
-                                                    <span className={clsx("text-sm font-bold text-neutral-900 leading-none", (personalTeamView === "team" && isManager) && "truncate max-w-[120px]")}>
-                                                        {(personalTeamView === "team" && isManager) ? row.employee : format(new Date(row.date), "EEEE")}
-                                                    </span>
-                                                    {row.checkInLocationCode && (
-                                                        <a
-                                                            href={(row as any).checkInLatitude ? `https://www.google.com/maps?q=${(row as any).checkInLatitude},${(row as any).checkInLongitude}` : "#"}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className={clsx(
-                                                                "text-[10px] font-medium px-1.5 py-0.5 rounded truncate max-w-[80px]",
-                                                                (row as any).checkInLatitude ? "text-blue-600 bg-blue-50 hover:bg-blue-100 hover:underline" : "text-neutral-500 bg-neutral-100"
-                                                            )}
-                                                            onClick={(e) => {
-                                                                if (!(row as any).checkInLatitude) e.preventDefault();
-                                                            }}
-                                                        >
-                                                            {row.checkInLocationCode}
-                                                        </a>
-                                                    )}
+                                        }
+                                        title={
+                                            <div className="flex items-center gap-2">
+                                                <span className={clsx("text-sm font-bold text-neutral-900 leading-none", (personalTeamView === "team" && isManager) && "truncate max-w-[120px]")}>
+                                                    {(personalTeamView === "team" && isManager) ? row.employee : format(new Date(row.date), "EEEE")}
+                                                </span>
+                                                {row.checkInLocationCode && (
+                                                    <a
+                                                        href={(row as any).checkInLatitude ? `https://www.google.com/maps?q=${(row as any).checkInLatitude},${(row as any).checkInLongitude}` : "#"}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className={clsx(
+                                                            "text-[10px] font-medium px-1.5 py-0.5 rounded truncate max-w-[80px]",
+                                                            (row as any).checkInLatitude ? "text-blue-600 bg-blue-50 hover:bg-blue-100 hover:underline" : "text-neutral-500 bg-neutral-100"
+                                                        )}
+                                                        onClick={(e) => {
+                                                            if (!(row as any).checkInLatitude) e.preventDefault();
+                                                        }}
+                                                    >
+                                                        {row.checkInLocationCode}
+                                                    </a>
+                                                )}
+                                            </div>
+                                        }
+                                        subtitle={
+                                            <div className="flex items-center gap-3 text-xs leading-none">
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[10px] font-semibold text-neutral-400 uppercase">In</span>
+                                                    <span className="font-mono font-medium text-neutral-700">{row.clockIn}</span>
                                                 </div>
-
-                                                {/* Line 2: Stats (No Dividers, just spacing) */}
-                                                <div className="flex items-center gap-3 text-xs leading-none">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-[10px] font-semibold text-neutral-400 uppercase">In</span>
-                                                        <span className="font-mono font-medium text-neutral-700">{row.clockIn}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-[10px] font-semibold text-neutral-400 uppercase">Out</span>
-                                                        <span className="font-mono font-medium text-neutral-700">{row.clockOut}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-[10px] font-semibold text-neutral-400 uppercase">Dur</span>
-                                                        <span className="font-mono font-medium text-neutral-500">{row.duration.replace('h ', 'h').replace('m', 'm')}</span>
-                                                    </div>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[10px] font-semibold text-neutral-400 uppercase">Out</span>
+                                                    <span className="font-mono font-medium text-neutral-700">{row.clockOut}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-[10px] font-semibold text-neutral-400 uppercase">Dur</span>
+                                                    <span className="font-mono font-medium text-neutral-500">{row.duration.replace('h ', 'h').replace('m', 'm')}</span>
                                                 </div>
                                             </div>
-
-                                            {/* Right: Status */}
+                                        }
+                                        rightTop={
                                             <div className="shrink-0 scale-90 origin-right">
                                                 {getStatusBadge(row.status || "absent", true)}
                                             </div>
-                                        </div>
-                                    </div>
+                                        }
+                                    />
                                 );
                             })}
 

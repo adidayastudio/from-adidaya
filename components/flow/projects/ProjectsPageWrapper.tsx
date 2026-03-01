@@ -44,7 +44,7 @@ export default function ProjectsPageWrapper({
                 <MobileNavBar
                     appName="Projects"
                     appIcon={FolderKanban}
-                    parentHref="/flow"
+                    parentHref="/dashboard"
                     parentLabel="Flow"
                     siblingApps={FLOW_APPS}
                     tabs={PROJECT_TABS}

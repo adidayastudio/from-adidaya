@@ -1,5 +1,6 @@
-"use client";
+import { LiquidSummaryCard } from "@/components/shared/liquid/LiquidSummaryCard";
 
+// ... [existing imports]
 import { useMemo } from "react";
 import { Person } from "./types";
 import { Users, Clock, Zap, AlertTriangle, TrendingUp, Building2, Briefcase } from "lucide-react";
@@ -47,36 +48,38 @@ export default function OrgOverview({ people, onNavigate }: OrgOverviewProps) {
             </div>
 
             {/* TOP METRICS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <SummaryCard
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <LiquidSummaryCard
                     label="Total Headcount"
                     value={stats.total}
-                    sub={`${stats.active} Active / ${stats.onLeave} Away`}
-                    icon={Users}
+                    subtext={`${stats.active} Active / ${stats.onLeave} Away`}
+                    icon={<Users className="w-5 h-5 text-blue-600" />}
+                    iconBg="bg-blue-100"
                     onClick={() => onNavigate('directory', 'all')}
                 />
-                <SummaryCard
+                <LiquidSummaryCard
                     label="Avg Attendance"
                     value={`${stats.avgAttendance.toFixed(1)}%`}
-                    sub="Last 30 Days"
-                    icon={Clock}
-                    trend="stable"
+                    subtext="Last 30 Days"
+                    icon={<Clock className="w-5 h-5 text-emerald-600" />}
+                    iconBg="bg-emerald-100"
                     onClick={() => onNavigate('directory', 'attendance_issue')}
                 />
-                <SummaryCard
+                <LiquidSummaryCard
                     label="Performance Index"
                     value={stats.avgPerformance.toFixed(1)}
-                    sub="Organization Wide"
-                    icon={Zap}
-                    highlight
+                    subtext="Org Wide"
+                    icon={<Zap className="w-5 h-5 text-purple-600" />}
+                    iconBg="bg-purple-100"
                     onClick={() => onNavigate('directory', 'high_performers')}
                 />
-                <SummaryCard
+                <LiquidSummaryCard
                     label="High Workload"
                     value={stats.overloaded}
-                    sub="Potential Burnout Risks"
-                    icon={AlertTriangle}
-                    alert={stats.overloaded > 0}
+                    subtext="Burnout Risks"
+                    icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
+                    iconBg="bg-red-100"
+                    valueColor={stats.overloaded > 0 ? "text-red-500" : "text-neutral-900"}
                     onClick={() => onNavigate('directory', 'overloaded')}
                 />
             </div>
@@ -84,7 +87,7 @@ export default function OrgOverview({ people, onNavigate }: OrgOverviewProps) {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                 {/* DEPT DISTRIBUTION */}
-                <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
+                <div className="lg:col-span-2 bg-white p-6 rounded-[24px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="font-bold text-neutral-900 flex items-center gap-2">
                             <Building2 className="w-5 h-5 text-neutral-400" />
@@ -99,9 +102,9 @@ export default function OrgOverview({ people, onNavigate }: OrgOverviewProps) {
                                     <span className="font-medium text-neutral-700 group-hover:text-blue-600 transition-colors">{dept}</span>
                                     <span className="text-neutral-400">{count} staff</span>
                                 </div>
-                                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                                <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden flex items-center">
                                     <div
-                                        className="h-full bg-neutral-800 group-hover:bg-blue-600 transition-colors duration-300"
+                                        className="h-full bg-blue-600/80 group-hover:bg-blue-600 transition-colors duration-300 rounded-full"
                                         style={{ width: `${(count / stats.total) * 100}%` }}
                                     />
                                 </div>
@@ -111,65 +114,34 @@ export default function OrgOverview({ people, onNavigate }: OrgOverviewProps) {
                 </div>
 
                 {/* ROLE DISTRIBUTION & SIGNALS */}
-                <div className="space-y-6">
-                    <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm">
+                <div className="space-y-4">
+                    <div className="bg-white p-6 rounded-[24px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
                         <h3 className="font-bold text-neutral-900 flex items-center gap-2 mb-4">
                             <Briefcase className="w-5 h-5 text-neutral-400" />
                             Role Composition
                         </h3>
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                             {Object.entries(stats.roles).map(([role, count]) => (
-                                <div key={role} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg border border-neutral-100">
-                                    <div className="capitalize text-sm font-medium text-neutral-700">{role}</div>
-                                    <div className="text-xs font-bold px-2 py-1 bg-white rounded border border-neutral-200">{count}</div>
+                                <div key={role} className="flex items-center justify-between p-3 bg-neutral-50/50 rounded-xl border border-neutral-100">
+                                    <div className="capitalize text-[13px] font-bold text-neutral-700">{role}</div>
+                                    <div className="text-[12px] font-numeric font-bold px-2 py-0.5 bg-white rounded border border-neutral-200">{count}</div>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
-                        <h3 className="font-bold text-blue-900 flex items-center gap-2 mb-2">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50/30 p-6 rounded-[24px] border border-blue-100/50">
+                        <h3 className="font-bold text-blue-900 flex items-center gap-2 mb-2 tracking-tight">
                             <TrendingUp className="w-5 h-5" />
                             Insights
                         </h3>
-                        <p className="text-sm text-blue-700 mb-4">
+                        <p className="text-[13px] text-blue-800/80 font-medium mb-4 leading-relaxed">
                             Construction department has maintained 98% attendance for 3 consecutive months.
                         </p>
-                        <Button variant="outline" size="sm" className="w-full bg-white border-blue-200 text-blue-700 hover:bg-blue-50">
+                        <Button variant="outline" size="sm" className="w-full bg-white/60 border-blue-200/50 text-blue-800 hover:bg-white transition-colors rounded-xl shadow-sm">
                             View Analytics
                         </Button>
                     </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function SummaryCard({ label, value, sub, icon: Icon, trend, alert, highlight, onClick }: any) {
-    return (
-        <div
-            onClick={onClick}
-            className={clsx(
-                "p-5 rounded-2xl border flex flex-col justify-between h-32 cursor-pointer transition-all hover:shadow-md active:scale-95",
-                highlight ? "bg-neutral-900 text-white border-neutral-800" : "bg-white border-neutral-200 shadow-sm hover:border-blue-200"
-            )}
-        >
-            <div className="flex justify-between items-start">
-                <div className={clsx("text-xs font-bold uppercase tracking-wider", highlight ? "text-neutral-400" : "text-neutral-400")}>
-                    {label}
-                </div>
-                <Icon className={clsx("w-5 h-5", highlight ? "text-neutral-500" : "text-neutral-300")} />
-            </div>
-
-            <div>
-                <div className={clsx("text-3xl font-bold tracking-tight mb-1",
-                    highlight ? "text-white" : alert ? "text-red-500" : "text-neutral-900"
-                )}>
-                    {value}
-                </div>
-                <div className={clsx("text-[10px] font-medium flex items-center gap-1.5", highlight ? "text-neutral-400" : "text-neutral-500")}>
-                    {alert && <AlertTriangle className="w-3 h-3 text-red-500" />}
-                    {sub}
                 </div>
             </div>
         </div>

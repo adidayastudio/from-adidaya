@@ -116,7 +116,7 @@ export default function SkillsTab({ person, isSystem, isMe }: { person: Person, 
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-            <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm relative overflow-hidden">
+            <div className="bg-white p-5 rounded-[20px] shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-neutral-100 relative overflow-hidden">
                 {/* Decoration */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-bl-full -z-0 opacity-50" />
 

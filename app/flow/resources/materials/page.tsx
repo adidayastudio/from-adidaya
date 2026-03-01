@@ -4,10 +4,14 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Warehouse } from "lucide-react";
 import { ResourceStatusBadge } from "@/components/flow/resources/ResourceStatusBadge";
 
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
+
 // Mock Data
 const MOCK_MATERIALS = [
     {
         id: "MAT-001",
+        projectCode: "STR-01-01",
+        resourceCode: "MT-001",
         project: "Rumah Pak Budi",
         material: "Semen Holcim 50kg",
         in: 100,
@@ -17,6 +21,8 @@ const MOCK_MATERIALS = [
     },
     {
         id: "MAT-002",
+        projectCode: "VLL-02-01",
+        resourceCode: "MT-002",
         project: "Villa Puncak",
         material: "Pasir Beton (m3)",
         in: 50,
@@ -26,6 +32,8 @@ const MOCK_MATERIALS = [
     },
     {
         id: "MAT-003",
+        projectCode: "RVK-03-01",
+        resourceCode: "MT-003",
         project: "Renovasi Kantor",
         material: "Cat Dulux White 25kg",
         in: 10,
@@ -35,6 +43,8 @@ const MOCK_MATERIALS = [
     },
     {
         id: "MAT-004",
+        projectCode: "STR-01-01",
+        resourceCode: "MT-004",
         project: "Rumah Pak Budi",
         material: "Besi Beton 10mm",
         in: 200,
@@ -44,6 +54,8 @@ const MOCK_MATERIALS = [
     },
     {
         id: "MAT-005",
+        projectCode: "WH-00-01",
+        resourceCode: "MT-005",
         project: "Gudang Utama",
         material: "Kabel NYM 2x1.5",
         in: 500,
@@ -73,7 +85,7 @@ export default function MaterialsPage() {
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             {/* HEADER */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -101,47 +113,41 @@ export default function MaterialsPage() {
                 </button>
             </div>
 
-            {/* TABLE */}
-            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-neutral-50 border-b border-neutral-100 text-neutral-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-3">Project / Location</th>
-                            <th className="px-6 py-3">Material</th>
-                            <th className="px-6 py-3 text-right">In</th>
-                            <th className="px-6 py-3 text-right">Used</th>
-                            <th className="px-6 py-3 text-right">Remaining</th>
-                            <th className="px-6 py-3 text-right">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100">
-                        {filteredMaterials.length > 0 ? (
-                            filteredMaterials.map((item) => (
-                                <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                                    <td className="px-6 py-3 font-medium text-neutral-900">
-                                        <div className="flex items-center gap-2">
-                                            <Warehouse className="w-4 h-4 text-neutral-400" />
-                                            {item.project}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-3 text-neutral-600">{item.material}</td>
-                                    <td className="px-6 py-3 text-right text-neutral-600">{item.in}</td>
-                                    <td className="px-6 py-3 text-right text-neutral-600">{item.used}</td>
-                                    <td className="px-6 py-3 text-right font-medium text-neutral-900">{item.remaining}</td>
-                                    <td className="px-6 py-3 text-right">
-                                        <ResourceStatusBadge status={item.status} />
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={6} className="px-6 py-8 text-center text-neutral-500">
-                                    No materials found.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+            {/* LISTING */}
+            <div className="space-y-3">
+                {filteredMaterials.length > 0 ? (
+                    filteredMaterials.map((item) => (
+                        <LiquidItemCard
+                            key={item.id}
+                            leftAvatar={
+                                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/50">
+                                    <Warehouse className="w-5 h-5" />
+                                </div>
+                            }
+                            title={item.material}
+                            subtitle={item.project}
+                            badges={[
+                                <span key="code" className="text-[10px] text-neutral-400 font-mono tracking-widest bg-neutral-100 px-1.5 py-0.5 rounded">
+                                    {item.projectCode} • {item.resourceCode}
+                                </span>,
+                                <span key="stats" className="text-[10px] text-neutral-500 font-medium">
+                                    In: {item.in} | Used: {item.used}
+                                </span>
+                            ]}
+                            rightTop={
+                                <div className="text-right">
+                                    <div className="font-bold text-neutral-900 text-sm leading-none">{item.remaining}</div>
+                                    <div className="text-[10px] text-neutral-400 mt-1">Remaining</div>
+                                </div>
+                            }
+                            rightBottom={<ResourceStatusBadge status={item.status} />}
+                        />
+                    ))
+                ) : (
+                    <div className="py-12 text-center text-neutral-500 bg-white rounded-[20px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+                        No materials found.
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -133,20 +133,20 @@ export default function WebsiteSidebar({ activeView, onViewChange }: Props) {
                 className={clsx(
                     "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center justify-between",
                     isActive
-                        ? "text-orange-600 bg-orange-50"
+                        ? "text-blue-600 bg-blue-50/50"
                         : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
                 )}
             >
                 <div className="flex items-center gap-2">
                     {item.icon && (
-                        <span className={clsx("transition-colors", isActive ? "text-orange-600" : "text-neutral-400")}>
+                        <span className={clsx("transition-colors", isActive ? "text-blue-600" : "text-neutral-400")}>
                             <item.icon className="w-4 h-4" />
                         </span>
                     )}
                     <span>{item.label}</span>
                 </div>
                 {item.count !== undefined && (
-                    <span className={clsx("text-xs px-1.5 rounded", isActive ? "text-orange-600/80" : "text-neutral-400")}>
+                    <span className={clsx("text-xs px-1.5 rounded", isActive ? "text-blue-600/80" : "text-neutral-400")}>
                         {item.count}
                     </span>
                 )}

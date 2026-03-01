@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { ArrowLeft, Plus, X } from "lucide-react";
+import React, { useState } from "react";
+import { Plus, X, Globe, Target, Layers, ChevronDown, CheckCircle2 } from "lucide-react";
 import { SocialAccount, Platform } from "./types/social.types";
-import { Button } from "@/shared/ui/primitives/button/button";
-import { Input } from "@/shared/ui/primitives/input/input";
-import { Select } from "@/shared/ui/primitives/select/select";
+import { AnimatePresence, motion } from "framer-motion";
+import clsx from "clsx";
 
 type Props = {
     account: SocialAccount;
-    onSave: (data: Partial<SocialAccount> & { quota?: number; contentPillars?: string[] }) => void;
+    onSave: (data: Partial<SocialAccount>) => void;
     onBack: () => void;
+    onDelete?: (id: string) => void;
+    onArchive?: (id: string, archive: boolean) => void;
 };
 
 const PLATFORM_OPTIONS: { value: Platform; label: string }[] = [
@@ -23,25 +24,16 @@ const PLATFORM_OPTIONS: { value: Platform; label: string }[] = [
 
 const DEFAULT_PILLARS = ["Showcase", "Educational", "Culture", "Thought Leadership", "Social Proof", "Entertainment"];
 
-const PLATFORM_BADGE: Record<string, { code: string; color: string }> = {
-    INSTAGRAM: { code: "Instagram", color: "text-pink-600 bg-pink-50" },
-    TIKTOK: { code: "TikTok", color: "text-neutral-900 bg-neutral-100" },
-    LINKEDIN: { code: "LinkedIn", color: "text-blue-700 bg-blue-50" },
-    YOUTUBE: { code: "YouTube", color: "text-red-600 bg-red-50" },
-    FACEBOOK: { code: "Facebook", color: "text-blue-600 bg-blue-50" }
-};
-
-export default function AccountSettingsPage({ account, onSave, onBack }: Props) {
+export default function AccountSettingsPage({ account, onSave, onDelete, onArchive }: Props) {
     const [name, setName] = useState(account.name);
     const [handle, setHandle] = useState(account.handle);
     const [platform, setPlatform] = useState(account.platform);
-    const [code, setCode] = useState(account.name.slice(0, 3).toUpperCase());
-    const [quota, setQuota] = useState(24);
-    const [pillars, setPillars] = useState<string[]>(DEFAULT_PILLARS);
+    const [code, setCode] = useState(account.code || account.name.slice(0, 3).toUpperCase());
+    const [quota, setQuota] = useState(account.quota || 30);
+    const [pillars, setPillars] = useState<string[]>(account.contentPillars && account.contentPillars.length > 0 ? account.contentPillars : []);
     const [newPillar, setNewPillar] = useState("");
-
-    const platformBadge = PLATFORM_BADGE[account.platform] || { code: account.platform, color: "bg-neutral-100" };
-    const accountCode = account.name.slice(0, 3).toUpperCase();
+    const [isArchived, setIsArchived] = useState(account.isActive === false);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const handleSave = () => {
         onSave({
@@ -49,9 +41,19 @@ export default function AccountSettingsPage({ account, onSave, onBack }: Props) 
             name,
             handle,
             platform,
+            code,
             quota,
-            contentPillars: pillars
+            contentPillars: pillars,
+            isActive: !isArchived
         });
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000);
+    };
+
+    const handleArchiveToggle = () => {
+        const newState = !isArchived;
+        setIsArchived(newState);
+        onSave({ id: account.id, isActive: !newState });
     };
 
     const addPillar = () => {
@@ -65,132 +67,192 @@ export default function AccountSettingsPage({ account, onSave, onBack }: Props) 
         setPillars(pillars.filter(p => p !== pillar));
     };
 
-    return (
-        <div className="space-y-6">
-            {/* HEADER with Account Context */}
-            <div className="flex items-center gap-4">
-                <button
-                    onClick={onBack}
-                    className="p-2 rounded-lg bg-neutral-100 text-neutral-500 hover:bg-neutral-200 hover:text-neutral-700 transition-colors"
-                >
-                    <ArrowLeft className="w-4 h-4" />
-                </button>
+    const FormSection = ({ title, children, icon }: { title: string; children: React.ReactNode; icon?: React.ReactNode }) => (
+        <div className="space-y-3.5">
+            <div className="flex items-center gap-2 px-1">
+                {icon && <div className="text-orange-500 w-3.5 h-3.5">{icon}</div>}
+                <h3 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em]">{title}</h3>
+            </div>
+            <div className="bg-white border border-neutral-100 rounded-[32px] overflow-hidden shadow-sm shadow-black/[0.005]">
+                <div className="divide-y divide-neutral-50/50">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
 
-                <div className="flex-1 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-500 text-sm font-bold">
-                        {accountCode}
-                    </div>
-                    <div>
-                        <h1 className="text-lg font-bold text-neutral-900">{account.name}</h1>
+    const FormRow = ({ label, children, description }: { label: string; children: React.ReactNode; description?: string }) => (
+        <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-neutral-50/30 transition-colors">
+            <div className="space-y-0.5 sm:max-w-[200px]">
+                <div className="text-[14px] font-bold text-neutral-800 tracking-tight">{label}</div>
+                {description && <div className="text-[11px] text-neutral-400 font-medium">{description}</div>}
+            </div>
+            <div className="flex-1 w-full flex justify-end">
+                <div className="w-full sm:max-w-[320px]">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+
+    const InputStyles = "w-full bg-neutral-50/50 border border-neutral-100 rounded-2xl h-11 text-[14px] font-semibold text-neutral-800 px-4 focus:bg-white focus:border-orange-200 outline-none transition-all shadow-none font-sans";
+
+    return (
+        <div className="space-y-12 pb-32 animate-in fade-in slide-in-from-bottom-6 duration-1000 max-w-4xl mx-auto px-1 font-sans">
+            <div className="grid grid-cols-1 gap-12">
+                {/* IDENTITY SECTION */}
+                <FormSection title="Account Identity" icon={<Globe className="w-3.5 h-3.5" />}>
+                    <FormRow label="Internal Name" description="Team identifier.">
+                        <input
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            className={InputStyles}
+                            placeholder="e.g. Adidaya Studio"
+                        />
+                    </FormRow>
+                    <FormRow label="Social Platform" description="Primary content ecosystem.">
+                        <div className="relative w-full">
+                            <select
+                                value={platform}
+                                onChange={(e) => setPlatform(e.target.value as Platform)}
+                                className={clsx(InputStyles, "appearance-none cursor-pointer font-sans")}
+                                style={{
+                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+                                }}
+                            >
+                                {PLATFORM_OPTIONS.map(opt => (
+                                    <option key={opt.value} value={opt.value} className="font-sans" style={{ fontFamily: '-apple-system, sans-serif' }}>
+                                        {opt.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400">
+                                <ChevronDown size={18} strokeWidth={1.5} />
+                            </div>
+                        </div>
+                    </FormRow>
+                    <FormRow label="Public Handle" description="Username on platform.">
+                        <input
+                            value={handle}
+                            onChange={e => setHandle(e.target.value)}
+                            className={InputStyles}
+                            placeholder="@handle"
+                        />
+                    </FormRow>
+                    <FormRow label="Short Code" description="Dashboard indicator.">
+                        <input
+                            value={code}
+                            onChange={e => setCode(e.target.value.toUpperCase().slice(0, 3))}
+                            maxLength={3}
+                            className={clsx(InputStyles, "w-24 text-center font-bold uppercase tracking-[0.2em] text-orange-600")}
+                        />
+                    </FormRow>
+                </FormSection>
+
+                {/* TARGETS SECTION */}
+                <FormSection title="Performance Targets" icon={<Target className="w-3.5 h-3.5" />}>
+                    <FormRow label="Monthly Quota" description="Goal posts per month.">
+                        <div className="flex items-center gap-3">
+                            <input
+                                type="number"
+                                value={quota}
+                                onChange={e => setQuota(parseInt(e.target.value) || 0)}
+                                min={1}
+                                className={clsx(InputStyles, "w-24 text-center font-bold")}
+                            />
+                            <span className="text-[10px] font-bold text-neutral-400 tracking-widest uppercase shrink-0">POSTS / MO</span>
+                        </div>
+                    </FormRow>
+                </FormSection>
+
+                {/* CONTENT PILLARS */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between px-1">
                         <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${platformBadge.color}`}>
-                                {platformBadge.code}
-                            </span>
-                            <span className="text-xs text-neutral-400">Settings</span>
+                            <Layers className="w-3.5 h-3.5 text-orange-500" />
+                            <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Content Pillars</h3>
+                        </div>
+                        <span className="text-[9px] font-bold bg-neutral-100 text-neutral-500 px-3 py-1 rounded-full uppercase tracking-widest">{pillars.length} ACTIVE</span>
+                    </div>
+
+                    <div className="bg-white border border-neutral-100 rounded-[32px] p-8 shadow-sm">
+                        <div className="flex flex-wrap gap-2.5 mb-10">
+                            {pillars.map(pillar => (
+                                <div
+                                    key={pillar}
+                                    className="group flex items-center gap-2 bg-neutral-50 border border-neutral-100 text-neutral-800 text-[13px] font-semibold px-5 py-2.5 rounded-full hover:border-orange-500 hover:bg-orange-50/30 transition-all shadow-sm shadow-black/[0.01]"
+                                >
+                                    {pillar}
+                                    <button
+                                        onClick={() => removePillar(pillar)}
+                                        className="text-neutral-300 hover:text-red-500 transition-colors"
+                                    >
+                                        <X size={16} strokeWidth={2} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Redesigned Thick Pill Row - Flush Button on Right */}
+                        <div className="flex items-center bg-neutral-50/50 border border-neutral-100 rounded-full p-1 pl-6 focus-within:bg-white focus-within:ring-2 focus-within:ring-orange-500/10 transition-all overflow-hidden">
+                            <input
+                                placeholder="Name your next pillar..."
+                                value={newPillar}
+                                onChange={e => setNewPillar(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && addPillar()}
+                                className="bg-transparent border-none h-12 text-[14px] font-medium outline-none flex-1 pr-4"
+                            />
+                            <button
+                                className="bg-orange-500 hover:bg-orange-600 text-white rounded-full h-12 px-10 font-bold text-[14px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-orange-500/20 shrink-0"
+                                onClick={addPillar}
+                            >
+                                <Plus size={18} strokeWidth={2.5} />
+                                <span>Add Pillar</span>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <Button variant="primary" size="sm" onClick={handleSave}>Save Changes</Button>
-            </div>
+                {/* SAVE ACTION - Exact style match from Filter Drawer */}
+                <div className="pt-8 px-4 flex flex-col items-center gap-6 text-center">
+                    <button
+                        onClick={handleSave}
+                        className="w-full bg-orange-500 backdrop-blur-xl backdrop-saturate-[1.5] text-white py-4.5 rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-orange-500/30 border border-white/20 ring-1 ring-inset ring-white/10 flex items-center justify-center min-h-[64px]"
+                    >
+                        Save All Changes
+                    </button>
 
-            {/* BASIC INFO */}
-            <div className="space-y-4">
-                <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Basic Information</h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <label className="text-xs text-neutral-500">Account Name</label>
-                        <Input value={name} onChange={e => setName(e.target.value)} inputSize="sm" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-xs text-neutral-500">Platform</label>
-                        <Select
-                            value={platform}
-                            options={PLATFORM_OPTIONS}
-                            onChange={v => setPlatform(v as Platform)}
-                            selectSize="sm"
-                        />
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                        <label className="text-xs text-neutral-500">Handle</label>
-                        <Input value={handle} onChange={e => setHandle(e.target.value)} inputSize="sm" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <label className="text-xs text-neutral-500">Code (3 letters)</label>
-                        <Input
-                            value={code}
-                            onChange={e => setCode(e.target.value.toUpperCase().slice(0, 3))}
-                            inputSize="sm"
-                            maxLength={3}
-                            className="uppercase font-bold"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            <div className="border-t border-neutral-100" />
-
-            {/* QUOTA */}
-            <div className="space-y-4">
-                <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Monthly Quota</h3>
-
-                <div className="flex items-center gap-4">
-                    <div className="space-y-1.5 w-32">
-                        <label className="text-xs text-neutral-500">Posts per month</label>
-                        <Input
-                            type="number"
-                            value={quota}
-                            onChange={e => setQuota(parseInt(e.target.value) || 0)}
-                            inputSize="sm"
-                            min={1}
-                            max={100}
-                        />
-                    </div>
-                    <p className="text-xs text-neutral-400 mt-4">
-                        Target number of published posts per month for this account.
-                    </p>
-                </div>
-            </div>
-
-            <div className="border-t border-neutral-100" />
-
-            {/* CONTENT PILLARS */}
-            <div className="space-y-4">
-                <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Content Pillars</h3>
-
-                <div className="flex flex-wrap gap-2">
-                    {pillars.map(pillar => (
-                        <span
-                            key={pillar}
-                            className="inline-flex items-center gap-1.5 bg-neutral-100 text-neutral-700 text-xs px-2.5 py-1 rounded-full"
+                    <div className="w-full grid grid-cols-2 gap-3 mt-2">
+                        <button
+                            onClick={handleArchiveToggle}
+                            className="bg-neutral-100/80 text-neutral-600 py-4 rounded-full font-bold text-[14px] active:scale-95 transition-all text-center border border-neutral-200"
                         >
-                            {pillar}
-                            <button
-                                onClick={() => removePillar(pillar)}
-                                className="text-neutral-400 hover:text-red-500 transition-colors"
-                            >
-                                <X className="w-3 h-3" />
-                            </button>
-                        </span>
-                    ))}
-                </div>
+                            {isArchived ? "Unarchive Account" : "Archive Account"}
+                        </button>
+                        <button
+                            onClick={() => onDelete?.(account.id)}
+                            className="bg-red-50 text-red-500 py-4 rounded-full font-bold text-[14px] active:scale-95 transition-all text-center border border-red-100"
+                        >
+                            Delete Account
+                        </button>
+                    </div>
 
-                <div className="flex gap-2">
-                    <Input
-                        placeholder="Add new pillar..."
-                        value={newPillar}
-                        onChange={e => setNewPillar(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && addPillar()}
-                        inputSize="sm"
-                        className="w-48"
-                    />
-                    <Button variant="secondary" size="sm" onClick={addPillar} icon={<Plus className="w-3 h-3" />}>
-                        Add
-                    </Button>
+
+                    <AnimatePresence>
+                        {showSuccess && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="fixed bottom-32 left-1/2 -translate-x-1/2 z-[100] bg-neutral-900 text-white px-6 py-4 rounded-full shadow-2xl flex items-center gap-3 border border-white/10 backdrop-blur-xl"
+                            >
+                                <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                                    <CheckCircle2 size={16} strokeWidth={3} />
+                                </div>
+                                <span className="text-[14px] font-bold">Changes saved successfully</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </div>

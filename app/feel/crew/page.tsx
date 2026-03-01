@@ -24,11 +24,22 @@ export default function CrewPage() {
   const tabParam = searchParams.get("tab");
   const activeSection: CrewSection = (tabParam as CrewSection) || "directory";
 
-  const setActiveSection = (section: CrewSection) => {
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+  const [selectedRole, setSelectedRole] = useState(searchParams.get("role") || "all");
+  const [selectedStatus, setSelectedStatus] = useState(searchParams.get("status") || "all");
+  const [view, setView] = useState(searchParams.get("view") || "list");
+
+  // Sync state to URL
+  useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", section);
-    router.push(`${pathname}?${params.toString()}`);
-  };
+    if (searchQuery) params.set("search", searchQuery); else params.delete("search");
+    if (selectedRole !== "all") params.set("role", selectedRole); else params.delete("role");
+    if (selectedStatus !== "all") params.set("status", selectedStatus); else params.delete("status");
+    if (view !== "list") params.set("view", view); else params.delete("view");
+
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchQuery, selectedRole, selectedStatus, view]);
 
   const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
   const userRole = "admin";
@@ -37,23 +48,6 @@ export default function CrewPage() {
   const [triggerAddCrew, setTriggerAddCrew] = useState(0);
   const [triggerNewAssignment, setTriggerNewAssignment] = useState(0);
   const [triggerAddRequest, setTriggerAddRequest] = useState(0);
-
-  const renderSection = () => {
-    switch (activeSection) {
-      case "directory":
-        if (selectedCrewId) {
-          // Pass crewId, component will fetch data from database
-          return <CrewDetail crewId={selectedCrewId} onBack={() => setSelectedCrewId(null)} />;
-        }
-        return <CrewDirectory role={userRole} triggerOpen={triggerAddCrew} onViewDetail={setSelectedCrewId} />;
-      case "assignments": return <CrewAssignments role={userRole} triggerOpen={triggerNewAssignment} />;
-      case "daily-input": return <CrewDailyInput role={userRole} />;
-      case "payroll": return <CrewPayroll role={userRole} />;
-      case "performance": return <CrewPerformance role={userRole} />;
-      case "requests": return <CrewRequests role={userRole} triggerOpen={triggerAddRequest} />;
-      default: return <CrewDirectory role={userRole} />;
-    }
-  };
 
   const getBreadcrumbLabel = () => {
     switch (activeSection) {
@@ -85,40 +79,40 @@ export default function CrewPage() {
 
   const fab = getFabConfig();
 
-  // Import Button (add this to imports if not present, otherwise just use it)
-  // But wait, I need to check imports first. usage:
   const header = (
-    <PageHeader
-      title={
-        activeSection === "assignments" ? "Project Assignment" :
-          activeSection === "daily-input" ? "Daily Log" :
-            activeSection === "payroll" ? "Payroll" :
-              activeSection === "performance" ? "Performance & KPI" :
-                activeSection === "requests" ? "Requests" :
-                  activeSection === "directory" && selectedCrewId ? "Crew Detail" :
-                    "Crew Directory"
-      }
-      description={
-        activeSection === "assignments" ? "History of crew assignments to projects." :
-          activeSection === "daily-input" ? "Input daily attendance and overtime." :
-            activeSection === "payroll" ? "Calculated from daily logs." :
-              activeSection === "performance" ? "Weighted Score: 50% Attendance • 25% Overtime • 25% Rating" :
-                activeSection === "requests" ? "Leave, Cash Advance, and Reimbursement." :
-                  activeSection === "directory" && selectedCrewId ? "View and edit crew details." :
-                    "Manage field workers."
-      }
-      actions={
-        fab && (
-          <Button
-            variant="primary"
-            icon={fab.icon}
-            onClick={fab.onClick}
-          >
-            {fab.title}
-          </Button>
-        )
-      }
-    />
+    <div className="hidden lg:block">
+      <PageHeader
+        title={
+          activeSection === "assignments" ? "Project Assignment" :
+            activeSection === "daily-input" ? "Daily Log" :
+              activeSection === "payroll" ? "Payroll" :
+                activeSection === "performance" ? "Performance & KPI" :
+                  activeSection === "requests" ? "Requests" :
+                    activeSection === "directory" && selectedCrewId ? "Crew Detail" :
+                      "Crew Directory"
+        }
+        description={
+          activeSection === "assignments" ? "History of crew assignments to projects." :
+            activeSection === "daily-input" ? "Input daily attendance and overtime." :
+              activeSection === "payroll" ? "Calculated from daily logs." :
+                activeSection === "performance" ? "Weighted Score: 50% Attendance • 25% Overtime • 25% Rating" :
+                  activeSection === "requests" ? "Leave, Cash Advance, and Reimbursement." :
+                    activeSection === "directory" && selectedCrewId ? "View and edit crew details." :
+                      "Manage field workers."
+        }
+        actions={
+          fab && (
+            <Button
+              variant="primary"
+              icon={fab.icon}
+              onClick={fab.onClick}
+            >
+              {fab.title}
+            </Button>
+          )
+        }
+      />
+    </div>
   );
 
   // Listen for FAB actions from MobileBottomBar
@@ -151,7 +145,7 @@ export default function CrewPage() {
           const params = new URLSearchParams(searchParams.toString());
           params.set("tab", section);
           router.push(`?${params.toString()}`, { scroll: false });
-          // Reset other states as per original setActiveSection logic
+          // Reset other states
           setSelectedCrewId(null);
           setTriggerAddCrew(0);
           setTriggerNewAssignment(0);
@@ -163,9 +157,16 @@ export default function CrewPage() {
           onClick: fab.onClick,
           title: fab.title,
         } : undefined}
+        view={view as any}
+        onChangeView={setView}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedRole={selectedRole}
+        onRoleChange={setSelectedRole}
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
       >
         <div className="flex flex-col h-full animate-in fade-in duration-500 pb-24 lg:pb-0">
-          {/* Added Check: pb-24 for mobile FAB space */}
           {activeSection === "directory" && (
             selectedCrewId ? (
               <CrewDetail crewId={selectedCrewId} onBack={() => setSelectedCrewId(null)} />

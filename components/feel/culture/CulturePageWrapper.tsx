@@ -31,7 +31,7 @@ export default function CulturePageWrapper({
                 <MobileNavBar
                     appName="Culture"
                     appIcon={Sparkles}
-                    parentHref="/feel"
+                    parentHref="/dashboard"
                     parentLabel="Feel"
                     siblingApps={FEEL_APPS}
                     tabs={CULTURE_TABS}

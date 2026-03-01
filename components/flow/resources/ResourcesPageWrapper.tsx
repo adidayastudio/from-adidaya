@@ -2,6 +2,7 @@
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import MobileNavBar from "@/components/layout/MobileNavBar";
+import { LiquidMobileHeader } from "@/components/shared/liquid/LiquidMobileHeader";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { FLOW_APPS } from "@/lib/navigation-config";
 import { Package, LayoutDashboard, Boxes, Wrench, Archive } from "lucide-react";
@@ -31,14 +32,10 @@ export default function ResourcesPageWrapper({
         <>
             {/* MOBILE LAYOUT */}
             <div className="lg:hidden min-h-screen bg-neutral-100">
-                <MobileNavBar
-                    appName="Resources"
-                    appIcon={Package}
-                    parentHref="/flow"
-                    parentLabel="Flow"
-                    siblingApps={FLOW_APPS}
+                <LiquidMobileHeader
+                    title="Resources"
+                    backUrl="/dashboard"
                     tabs={RESOURCES_TABS}
-                    accentColor="text-red-500"
                 />
 
                 <div className="pb-32 px-4 pt-20 space-y-4">

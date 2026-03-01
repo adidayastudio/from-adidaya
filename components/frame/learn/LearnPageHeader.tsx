@@ -40,37 +40,39 @@ export default function LearnPageHeader({
 
   return (
     <div className="space-y-4">
-      <PageHeader
-        title="Learn"
-        description="Access SOPs, guidelines, templates, and organizational knowledge."
-        actions={
-          <div className="flex items-center gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-              <Input
-                value={searchQuery}
-                onChange={e => onSearchChange(e.target.value)}
-                placeholder="Search knowledge..."
-                inputSize="sm"
-                className="pl-9 w-64"
-              />
+      <div className="hidden lg:block">
+        <PageHeader
+          title="Learn"
+          description="Access SOPs, guidelines, templates, and organizational knowledge."
+          actions={
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <Input
+                  value={searchQuery}
+                  onChange={e => onSearchChange(e.target.value)}
+                  placeholder="Search knowledge..."
+                  inputSize="sm"
+                  className="pl-9 w-64"
+                />
+              </div>
+
+              {/* Add Knowledge */}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={onAddKnowledge}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                Add Knowledge
+              </Button>
             </div>
+          }
+        />
+      </div>
 
-            {/* Add Knowledge */}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={onAddKnowledge}
-              icon={<Plus className="w-4 h-4" />}
-            >
-              Add Knowledge
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="flex justify-between items-center">
+      <div className="hidden lg:flex justify-between items-center">
         {/* Filters on Left */}
         <div className="flex items-center gap-3">
           <Select

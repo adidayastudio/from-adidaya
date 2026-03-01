@@ -4,10 +4,14 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Wrench, ArrowRightLeft, AlertCircle } from "lucide-react";
 import { ResourceStatusBadge } from "@/components/flow/resources/ResourceStatusBadge";
 
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
+
 // Mock Data
 const MOCK_TOOLS = [
     {
         id: "TOOL-001",
+        projectCode: "STR-01-01",
+        resourceCode: "TL-001",
         tool: "Bor Listrik Bosch",
         location: "Gudang Utama",
         quantity: 1,
@@ -15,6 +19,8 @@ const MOCK_TOOLS = [
     },
     {
         id: "TOOL-002",
+        projectCode: "WH-00-01",
+        resourceCode: "TL-002",
         tool: "Genset 5000W",
         location: "Proyek Villa Puncak",
         quantity: 1,
@@ -22,13 +28,17 @@ const MOCK_TOOLS = [
     },
     {
         id: "TOOL-003",
+        projectCode: "VLL-02-01",
+        resourceCode: "TL-003",
         tool: "Molin Beton",
         location: "Rumah Pak Budi",
         quantity: 1,
-        status: "MOVED", // Recently moved there
+        status: "MOVED",
     },
     {
         id: "TOOL-004",
+        projectCode: "RVK-03-01",
+        resourceCode: "TL-004",
         tool: "Jackhammer",
         location: "Gudang Service",
         quantity: 1,
@@ -36,6 +46,8 @@ const MOCK_TOOLS = [
     },
     {
         id: "TOOL-005",
+        projectCode: "RVK-03-01",
+        resourceCode: "TL-005",
         tool: "Tangga Alumunium 5m",
         location: "Renovasi Kantor",
         quantity: 2,
@@ -63,7 +75,7 @@ export default function ToolsPage() {
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             {/* HEADER */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -96,51 +108,38 @@ export default function ToolsPage() {
                 </button>
             </div>
 
-            {/* TABLE */}
-            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-neutral-50 border-b border-neutral-100 text-neutral-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-3">Tool Name</th>
-                            <th className="px-6 py-3">Location</th>
-                            <th className="px-6 py-3 text-right">Quantity</th>
-                            <th className="px-6 py-3 text-right">Status</th>
-                            <th className="px-6 py-3 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100">
-                        {filteredTools.length > 0 ? (
-                            filteredTools.map((item) => (
-                                <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                                    <td className="px-6 py-3 font-medium text-neutral-900">
-                                        <div className="flex items-center gap-2">
-                                            <Wrench className="w-4 h-4 text-neutral-400" />
-                                            {item.tool}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-3 text-neutral-600">{item.location}</td>
-                                    <td className="px-6 py-3 text-right text-neutral-600">{item.quantity}</td>
-                                    <td className="px-6 py-3 text-right">
-                                        <ResourceStatusBadge status={item.status} />
-                                    </td>
-                                    <td className="px-6 py-3 text-right">
-                                        <div className="flex items-center justify-end gap-2">
-                                            <button className="text-xs font-medium text-neutral-500 hover:text-neutral-900 px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 transition-colors">
-                                                Update
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-neutral-500">
-                                    No tools found.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+            {/* LISTING */}
+            <div className="space-y-3">
+                {filteredTools.length > 0 ? (
+                    filteredTools.map((item) => (
+                        <LiquidItemCard
+                            key={item.id}
+                            leftAvatar={
+                                <div className="w-10 h-10 rounded-full bg-orange-50 text-orange-600 flex items-center justify-center border border-orange-100/50">
+                                    <Wrench className="w-5 h-5" />
+                                </div>
+                            }
+                            title={item.tool}
+                            subtitle={item.location}
+                            badges={[
+                                <span key="code" className="text-[10px] text-neutral-400 font-mono tracking-widest bg-neutral-100 px-1.5 py-0.5 rounded">
+                                    {item.projectCode} • {item.resourceCode}
+                                </span>
+                            ]}
+                            rightTop={
+                                <div className="text-right">
+                                    <div className="font-bold text-neutral-900 text-sm leading-none">{item.quantity} {item.quantity > 1 ? 'Units' : 'Unit'}</div>
+                                    <div className="text-[10px] text-neutral-400 mt-1">Quantity</div>
+                                </div>
+                            }
+                            rightBottom={<ResourceStatusBadge status={item.status} />}
+                        />
+                    ))
+                ) : (
+                    <div className="py-12 text-center text-neutral-500 bg-white rounded-[20px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+                        No tools found.
+                    </div>
+                )}
             </div>
         </div>
     );

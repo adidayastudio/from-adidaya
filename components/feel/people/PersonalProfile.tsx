@@ -93,7 +93,7 @@ export default function PersonalProfile({ person, isMe = false, onUpdate }: { pe
         <div className="space-y-6">
 
             {/* HEADER: IDENTITY & STATUS */}
-            <div className="bg-white p-6 rounded-2xl border border-neutral-200 shadow-sm flex flex-col md:flex-row gap-6 relative overflow-hidden">
+            <div className="bg-white p-6 rounded-[24px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col md:flex-row gap-6 relative overflow-hidden">
                 {/* System Background Decoration */}
                 {isSystem && (
                     <div className="absolute top-0 right-0 w-32 h-32 bg-neutral-100 rounded-bl-full -z-0 opacity-50" />

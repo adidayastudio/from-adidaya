@@ -9,7 +9,8 @@ import {
     Shield, Briefcase, Star, Clock, AlertCircle,
     UserX, Trophy, ChevronDown, ChevronUp, ArrowUpDown, X, Loader2
 } from "lucide-react";
-import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
+import { LiquidSummaryCard, LiquidSummaryCardsRow } from "@/components/shared/liquid/LiquidSummaryCard";
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
 import { Button } from "@/shared/ui/primitives/button/button";
 import GlobalDirectoryCard from "./GlobalDirectoryCard";
 import { Person } from "./types";
@@ -124,68 +125,62 @@ export default function GlobalDirectory({ className, people, role }: GlobalDirec
         <div className={clsx("space-y-6 w-full animate-in fade-in duration-500", className)}>
 
             {/* 1. SUMMARY CARDS */}
-            <SummaryCardsRow className="lg:grid-cols-6">
-                <SummaryCard
+            <LiquidSummaryCardsRow className="lg:grid-cols-6 overflow-x-auto flex lg:grid [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                <LiquidSummaryCard
                     label="Total Staff"
                     value={stats.total}
                     subtext="Human accounts"
                     icon={<Users className="w-5 h-5 text-blue-600" />}
                     iconBg="bg-blue-50"
-                    isActive={summaryFilter === "all"}
+                    className={summaryFilter === "all" ? "ring-2 ring-blue-500 border-blue-200 bg-blue-50/10" : ""}
                     onClick={() => setSummaryFilter("all")}
-                    activeColor="ring-blue-500 border-blue-200"
                 />
-                <SummaryCard
+                <LiquidSummaryCard
                     label="Active"
                     value={stats.active}
                     subtext="Currently working"
                     icon={<UserCheck className="w-5 h-5 text-emerald-600" />}
                     iconBg="bg-emerald-50"
-                    isActive={summaryFilter === "active"}
+                    className={summaryFilter === "active" ? "ring-2 ring-emerald-500 border-emerald-200 bg-emerald-50/10" : ""}
                     onClick={() => setSummaryFilter("active")}
-                    activeColor="ring-emerald-500 border-emerald-200"
                 />
-                <SummaryCard
+                <LiquidSummaryCard
                     label="Not Active"
                     value={stats.inactive}
                     subtext="Leave / Inactive"
                     icon={<UserX className="w-5 h-5 text-orange-600" />}
                     iconBg="bg-orange-50"
-                    isActive={summaryFilter === "inactive"}
+                    className={summaryFilter === "inactive" ? "ring-2 ring-orange-500 border-orange-200 bg-orange-50/10" : ""}
                     onClick={() => setSummaryFilter("inactive")}
-                    activeColor="ring-orange-500 border-orange-200"
                 />
-                <SummaryCard
+                <LiquidSummaryCard
                     label="Top Performer"
                     value={stats.top}
                     subtext="Score > 90"
                     icon={<Trophy className="w-5 h-5 text-amber-600" />}
                     iconBg="bg-amber-50"
-                    isActive={summaryFilter === "top_performer"}
+                    className={summaryFilter === "top_performer" ? "ring-2 ring-amber-500 border-amber-200 bg-amber-50/10" : ""}
                     onClick={() => setSummaryFilter("top_performer")}
-                    activeColor="ring-amber-500 border-amber-200"
                 />
-                <SummaryCard
+                <LiquidSummaryCard
                     label="Requires Review"
                     value={stats.review}
-                    subtext="Attendance < 80%"
+                    subtext="Rate < 80%"
                     icon={<AlertCircle className="w-5 h-5 text-rose-600" />}
                     iconBg="bg-rose-50"
-                    isActive={summaryFilter === "requires_review"}
+                    className={summaryFilter === "requires_review" ? "ring-2 ring-rose-500 border-rose-200 bg-rose-50/10" : ""}
                     onClick={() => setSummaryFilter("requires_review")}
-                    activeColor="ring-rose-500 border-rose-200"
                 />
-                <SummaryCard
-                    label="System Accounts"
+                <LiquidSummaryCard
+                    label="System Auth"
                     value={stats.system}
                     subtext="Service users"
                     icon={<Shield className="w-5 h-5 text-neutral-600" />}
                     iconBg="bg-neutral-100"
-                    isActive={summaryFilter === "system"}
+                    className={summaryFilter === "system" ? "ring-2 ring-neutral-500 border-neutral-200 bg-neutral-50/50" : ""}
                     onClick={() => setSummaryFilter("system")}
-                    activeColor="ring-neutral-500 border-neutral-200"
                 />
-            </SummaryCardsRow>
+            </LiquidSummaryCardsRow>
 
             {/* 2. TOOLBAR ROW (Copied from Crew/Clock) */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-2 w-full">
@@ -260,58 +255,47 @@ export default function GlobalDirectory({ className, people, role }: GlobalDirec
                         {filteredPeople.map((person) => {
                             const isSystem = person.account_type === "system_account";
                             return (
-                                <div
+                                <LiquidItemCard
                                     key={person.id}
                                     className={clsx(
-                                        "rounded-2xl border p-3.5 shadow-sm transition-all active:scale-[0.98]",
                                         isSystem ? "border-neutral-200 bg-neutral-50/50" :
-                                            (person.include_in_performance === false ? "bg-neutral-50/80 border-neutral-100 opacity-80" : "bg-white border-neutral-200")
+                                            (person.include_in_performance === false ? "bg-neutral-50/80 border-neutral-100 opacity-80" : "bg-white")
                                     )}
                                     onClick={() => router.push(`/feel/people/profile/${person.id}`)}
-                                >
-                                    <div className="flex items-center gap-4">
-                                        {/* Left: Avatar */}
-                                        <div className="shrink-0">
-                                            <div className={clsx(
-                                                "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-2 border-white shadow-sm",
-                                                isSystem ? "bg-neutral-200 text-neutral-500" : "bg-gradient-to-br from-blue-500 to-indigo-600 text-white"
-                                            )}>
-                                                {person.avatarUrl ? (
-                                                    <img src={person.avatarUrl} alt={person.name} className="w-full h-full rounded-full object-cover" />
-                                                ) : (
-                                                    person.initials
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Middle: Content */}
-                                        <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="text-sm font-bold text-neutral-900 truncate">
-                                                    {person.name}
-                                                </span>
-                                                {isSystem && <Shield className="w-3 h-3 text-neutral-400" />}
-                                            </div>
-                                            <div className="text-xs text-neutral-500 truncate">
-                                                {person.title}
-                                            </div>
-                                            <div className="text-[10px] text-neutral-400 font-mono mt-0.5">
-                                                {person.id_code || person.display_id || person.id_number || person.system_id}
-                                            </div>
-                                        </div>
-
-                                        {/* Right: Status / Performance */}
-                                        <div className="shrink-0 flex flex-col items-end gap-2">
-                                            {getStatusBadge(person.status, person.account_type)}
-                                            {!isSystem && person.performance && (
-                                                <div className="flex items-center gap-1 text-xs font-medium text-neutral-600">
-                                                    <Star className={clsx("w-3 h-3", (person.performance.performanceScore || 0) >= 90 ? "text-amber-400 fill-amber-400" : "text-neutral-300")} />
-                                                    {person.performance.performanceScore || "-"}
-                                                </div>
+                                    leftAvatar={
+                                        <div className={clsx(
+                                            "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-2 border-white shadow-sm",
+                                            isSystem ? "bg-neutral-200 text-neutral-500" : "bg-gradient-to-br from-blue-500 to-indigo-600 text-white"
+                                        )}>
+                                            {person.avatarUrl ? (
+                                                <img src={person.avatarUrl} alt={person.name} className="w-full h-full rounded-full object-cover" />
+                                            ) : (
+                                                person.initials
                                             )}
                                         </div>
-                                    </div>
-                                </div>
+                                    }
+                                    title={
+                                        <div className="flex items-center gap-1.5">
+                                            {person.name}
+                                            {isSystem && <Shield className="w-3 h-3 text-neutral-400" />}
+                                        </div>
+                                    }
+                                    subtitle={person.title}
+                                    badges={[
+                                        <span key="id" className="text-[10px] text-neutral-400 font-mono tracking-widest bg-neutral-100 px-1.5 py-0.5 rounded">
+                                            {person.id_code || person.display_id || person.id_number || person.system_id}
+                                        </span>
+                                    ]}
+                                    rightBottom={getStatusBadge(person.status, person.account_type)}
+                                    rightTop={
+                                        !isSystem && person.performance ? (
+                                            <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-700 bg-neutral-50 px-2 py-1 rounded-lg border border-neutral-100 shadow-sm mt-0.5">
+                                                <Star className={clsx("w-3.5 h-3.5", (person.performance.performanceScore || 0) >= 90 ? "text-amber-400 fill-amber-400" : "text-neutral-300")} />
+                                                {person.performance.performanceScore || "-"}
+                                            </div>
+                                        ) : null
+                                    }
+                                />
                             );
                         })}
                     </div>

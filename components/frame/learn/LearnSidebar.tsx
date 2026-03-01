@@ -9,7 +9,6 @@ import type { LucideIcon } from "lucide-react";
 type Props = {
   activeView: QuickView;
   onViewChange: (view: QuickView) => void;
-  onAskAI: () => void;
 };
 
 interface NavItemConfig {
@@ -27,7 +26,7 @@ const NAV_ITEMS: NavItemConfig[] = [
   { id: "favorite", label: "Favorites", shortLabel: "Faves", icon: Star },
 ];
 
-export default function LearnSidebar({ activeView, onViewChange, onAskAI }: Props) {
+export default function LearnSidebar({ activeView, onViewChange }: Props) {
   const [showFanMenu, setShowFanMenu] = useState(false);
 
   const handleNav = (id: QuickView) => {
@@ -39,18 +38,6 @@ export default function LearnSidebar({ activeView, onViewChange, onAskAI }: Prop
     <>
       {/* DESKTOP SIDEBAR */}
       <div className="space-y-6 hidden lg:block">
-        <button
-          onClick={onAskAI}
-          className="w-full flex items-center gap-2 px-3 py-3 rounded-xl bg-bg-soft border border-border-soft text-action-primary hover:bg-bg-raised transition-all group"
-        >
-          <div className="w-8 h-8 rounded-lg bg-white/50 flex items-center justify-center group-hover:bg-white transition-colors">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          <div className="text-left">
-            <div className="text-sm font-semibold">Ask Adidaya</div>
-            <div className="text-[10px] opacity-80">AI-powered knowledge search</div>
-          </div>
-        </button>
 
         <div className="space-y-1">
           <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-1 mb-2">Browse</div>

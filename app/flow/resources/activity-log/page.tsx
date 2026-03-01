@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Search, History, ArrowRight } from "lucide-react";
 import clsx from "clsx";
 
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
+
 // Mock Data
 const MOCK_LOGS = [
     {
@@ -63,7 +65,7 @@ function EventBadge({ event }: { event: string }) {
         Repaired: "bg-orange-50 text-orange-700 border-orange-200",
     };
     return (
-        <span className={clsx("px-2 py-0.5 rounded text-xs font-medium border", colors[event] || "bg-gray-50 text-gray-700")}>
+        <span className={clsx("px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border", colors[event] || "bg-gray-50 text-gray-700")}>
             {event}
         </span>
     );
@@ -79,7 +81,7 @@ export default function ActivityLogPage() {
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             {/* HEADER */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -102,45 +104,39 @@ export default function ActivityLogPage() {
                 />
             </div>
 
-            {/* TABLE */}
-            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-neutral-50 border-b border-neutral-100 text-neutral-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-3 w-40">Timestamp</th>
-                            <th className="px-6 py-3 w-32">Event</th>
-                            <th className="px-6 py-3">Resource</th>
-                            <th className="px-6 py-3">Details</th>
-                            <th className="px-6 py-3 text-right">User/Source</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100">
-                        {filteredLogs.length > 0 ? (
-                            filteredLogs.map((item) => (
-                                <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                                    <td className="px-6 py-3 text-neutral-500 font-mono text-xs">{item.timestamp}</td>
-                                    <td className="px-6 py-3">
-                                        <EventBadge event={item.event} />
-                                    </td>
-                                    <td className="px-6 py-3 font-medium text-neutral-900">
-                                        <div className="flex flex-col">
-                                            <span>{item.resource}</span>
-                                            <span className="text-xs text-neutral-400 font-normal">{item.type}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-3 text-neutral-600">{item.details}</td>
-                                    <td className="px-6 py-3 text-right text-neutral-500">{item.user}</td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={5} className="px-6 py-8 text-center text-neutral-500">
-                                    No logs found.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+            {/* LISTING */}
+            <div className="space-y-3">
+                {filteredLogs.length > 0 ? (
+                    filteredLogs.map((item) => (
+                        <LiquidItemCard
+                            key={item.id}
+                            leftAvatar={
+                                <div className="w-10 h-10 rounded-full bg-neutral-100 text-neutral-500 flex items-center justify-center border border-neutral-200/50">
+                                    <History className="w-5 h-5" />
+                                </div>
+                            }
+                            title={item.resource}
+                            subtitle={item.details}
+                            badges={[
+                                <EventBadge key="event" event={item.event} />,
+                                <span key="type" className="text-[10px] text-neutral-500 font-medium">{item.type}</span>
+                            ]}
+                            rightTop={
+                                <div className="text-right text-xs font-mono text-neutral-500">{item.timestamp}</div>
+                            }
+                            rightBottom={
+                                <div className="text-right text-xs font-medium text-neutral-500 mt-1 flex items-center gap-1 justify-end">
+                                    <span className="w-4 h-4 rounded-full bg-neutral-200 border border-neutral-300 flex items-center justify-center text-[8px] font-bold text-neutral-600">{item.user.charAt(0)}</span>
+                                    {item.user}
+                                </div>
+                            }
+                        />
+                    ))
+                ) : (
+                    <div className="py-12 text-center text-neutral-500 bg-white rounded-[20px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+                        No logs found.
+                    </div>
+                )}
             </div>
         </div>
     );

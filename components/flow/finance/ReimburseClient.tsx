@@ -35,7 +35,8 @@ import {
     MapPin,
     Copy,
     Check,
-    Filter
+    Filter,
+    Receipt
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,7 +44,8 @@ import { format, addMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO
 import { ReimburseRequest, ReimburseStatus, FundingSource } from "@/lib/types/finance-types";
 import { formatCurrency, STATUS_THEMES, cleanEntityName, getPrimaryStatus, formatStatus } from "./modules/utils";
 import { REIMBURSE_CATEGORY_OPTIONS } from "./modules/constants";
-import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
+import { FinanceItemCard } from "./FinanceItemCard";
+import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
 import { useSearchParams, useRouter } from "next/navigation";
 import { fetchReimburseRequests, updateReimburseStatus, deleteReimburseRequest, fetchFundingSources } from "@/lib/client/finance-api";
 import { fetchAllProjects } from "@/lib/api/projects";
@@ -970,16 +972,6 @@ export default function ReimburseClient() {
     };
     const initialStatus = searchParams.get("status") as ReimburseStatus | "ALL" | null;
 
-    // FAB Action Listener
-    useEffect(() => {
-        const handleFabAction = (e: any) => {
-            if (e.detail?.id === 'FINANCE_NEW_PURCHASE') {
-                setIsDrawerOpen(true);
-            }
-        };
-        window.addEventListener('fab-action', handleFabAction);
-        return () => window.removeEventListener('fab-action', handleFabAction);
-    }, []);
 
     // Load Data
     const loadData = async (isInitial = false) => {
@@ -1051,6 +1043,18 @@ export default function ReimburseClient() {
             loadFundingSources();
         }
     }, [isAuthLoading, userId, isTeamView]);
+
+    // FAB Action Listener
+    useEffect(() => {
+        const handleFabAction = (e: any) => {
+            if (e.detail?.id === 'FINANCE_NEW_PURCHASE') {
+                setEditingItem(null);
+                setIsDrawerOpen(true);
+            }
+        };
+        window.addEventListener('fab-action', handleFabAction);
+        return () => window.removeEventListener('fab-action', handleFabAction);
+    }, []);
 
     // Helpers
     const handleMonthChange = (direction: "prev" | "next") => {
@@ -1228,61 +1232,64 @@ export default function ReimburseClient() {
 
             <div className="flex flex-col gap-6">
                 {/* SUMMARY CARDS */}
-                <SummaryCardsRow className="lg:grid-cols-5">
-                    <SummaryCard
-                        icon={<Package className="w-5 h-5 text-red-600" />}
-                        iconBg="bg-red-50"
-                        label="Total Requests"
-                        value={summaryStats.total.toString()}
-                        subtext={formatCurrency(summaryStats.totalAmount)}
-                        onClick={() => setStatusFilter("ALL")}
-                        isActive={statusFilter === "ALL"}
-                        activeColor="ring-red-500"
-                    />
+                <div className="-mx-5 lg:mx-0">
+                    <FinanceSummaryCardsRow className="lg:grid-cols-5">
+                        <FinanceSummaryCard
+                            icon={<Package className="w-5 h-5 text-red-600" />}
+                            iconBg="bg-red-50"
+                            label="Total Requests"
+                            value={summaryStats.total.toString()}
+                            subtext={formatCurrency(summaryStats.totalAmount)}
+                            onClick={() => setStatusFilter("ALL")}
+                            isActive={statusFilter === "ALL"}
+                            activeColor="ring-red-500"
+                        />
 
-                    <SummaryCard
-                        icon={<Clock className="w-5 h-5 text-orange-600" />}
-                        iconBg="bg-orange-50"
-                        label="Pending"
-                        value={summaryStats.pending.toString()}
-                        subtext={formatCurrency(summaryStats.pendingAmount)}
-                        onClick={() => setStatusFilter("PENDING")}
-                        isActive={statusFilter === "PENDING"}
-                        activeColor="ring-orange-500"
-                    />
+                        <FinanceSummaryCard
+                            icon={<Clock className="w-5 h-5 text-orange-600" />}
+                            iconBg="bg-orange-50"
+                            label="Pending"
+                            value={summaryStats.pending.toString()}
+                            subtext={formatCurrency(summaryStats.pendingAmount)}
+                            onClick={() => setStatusFilter("PENDING")}
+                            isActive={statusFilter === "PENDING"}
+                            activeColor="ring-orange-500"
+                        />
 
-                    <SummaryCard
-                        icon={<CheckCircle2 className="w-5 h-5 text-blue-600" />}
-                        iconBg="bg-blue-50"
-                        label="Approved"
-                        value={summaryStats.approved.toString()}
-                        subtext={formatCurrency(summaryStats.approvedAmount)}
-                        onClick={() => setStatusFilter("APPROVED")}
-                        isActive={statusFilter === "APPROVED"}
-                        activeColor="ring-blue-500"
-                    />
+                        <FinanceSummaryCard
+                            icon={<CheckCircle2 className="w-5 h-5 text-blue-600" />}
+                            iconBg="bg-blue-50"
+                            label="Approved"
+                            value={summaryStats.approved.toString()}
+                            subtext={formatCurrency(summaryStats.approvedAmount)}
+                            onClick={() => setStatusFilter("APPROVED")}
+                            isActive={statusFilter === "APPROVED"}
+                            activeColor="ring-blue-500"
+                        />
 
-                    <SummaryCard
-                        icon={<CreditCard className="w-5 h-5 text-emerald-600" />}
-                        iconBg="bg-emerald-50"
-                        label="Paid"
-                        value={summaryStats.paid.toString()}
-                        subtext={formatCurrency(summaryStats.paidAmount)}
-                        onClick={() => setStatusFilter("PAID")}
-                        isActive={statusFilter === "PAID"}
-                        activeColor="ring-emerald-500"
-                    />
+                        <FinanceSummaryCard
+                            icon={<CreditCard className="w-5 h-5 text-emerald-600" />}
+                            iconBg="bg-emerald-50"
+                            label="Paid"
+                            value={summaryStats.paid.toString()}
+                            subtext={formatCurrency(summaryStats.paidAmount)}
+                            onClick={() => setStatusFilter("PAID")}
+                            isActive={statusFilter === "PAID"}
+                            activeColor="ring-emerald-500"
+                        />
 
-                    <SummaryCard
-                        icon={<XCircle className="w-5 h-5 text-neutral-600" />}
-                        iconBg="bg-neutral-100"
-                        label="Rejected"
-                        value={summaryStats.rejected.toString()}
-                        onClick={() => setStatusFilter("REJECTED")}
-                        isActive={statusFilter === "REJECTED"}
-                        activeColor="ring-neutral-500"
-                    />
-                </SummaryCardsRow>
+                        <FinanceSummaryCard
+                            icon={<XCircle className="w-5 h-5 text-neutral-600" />}
+                            iconBg="bg-neutral-100"
+                            label="Rejected"
+                            value={summaryStats.rejected.toString()}
+                            subtext="REJECTED"
+                            onClick={() => setStatusFilter("REJECTED")}
+                            isActive={statusFilter === "REJECTED"}
+                            activeColor="ring-neutral-500"
+                        />
+                    </FinanceSummaryCardsRow>
+                </div>
 
                 {/* ADVANCED TOOLBAR - MOBILE (1 LINE) - iOS GLASSY */}
                 <div className="flex md:hidden items-center gap-1.5 p-2 rounded-2xl bg-white/50 backdrop-blur-md border border-white/60 shadow-sm">
@@ -1530,83 +1537,80 @@ export default function ReimburseClient() {
                         </div>
                     ) : (
                         filteredItems.map((item) => {
-                            const isUnpaidApproved = item.status === "APPROVED" && item.financial_status !== "PAID" && false; // Reimburse logic
-                            const isRejected = item.status === "REJECTED";
-                            const isApproved = item.status === "APPROVED";
+                            const renderMobileActions = () => {
+                                const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
+                                const isPending = item.status === "PENDING";
+                                const isApprovedNotPaid = item.status === "APPROVED" && item.financial_status !== "PAID";
+                                const isDraftOrRevise = item.status === "DRAFT" || item.status === "NEED_REVISION";
+
+                                return (
+                                    <div className="flex items-center gap-1.5 w-full justify-end">
+                                        {isTeamView ? (
+                                            <>
+                                                {isAdmin && (
+                                                    <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 flex-shrink-0 active:scale-95 transition-all">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                                <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-2 rounded-xl bg-neutral-100 text-neutral-600 border border-neutral-200 flex-shrink-0 active:scale-95 transition-all">
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                {isPending && (
+                                                    <>
+                                                        <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 flex-shrink-0 active:scale-95 transition-all" title="Reject">
+                                                            <Ban className="w-4 h-4" />
+                                                        </button>
+                                                        <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2 rounded-xl bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                            <AlertCircle className="w-3.5 h-3.5" /> Revise
+                                                        </button>
+                                                        <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2 rounded-xl bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
+                                                            <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {isApprovedNotPaid && (
+                                                    <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
+                                                        <CreditCard className="w-3.5 h-3.5" /> Pay Now
+                                                    </button>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 flex-shrink-0 active:scale-95 transition-all">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-2 rounded-xl bg-neutral-100 text-neutral-600 border border-neutral-200 flex-shrink-0 active:scale-95 transition-all">
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                {(isPending || isDraftOrRevise) && (
+                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2 rounded-xl bg-neutral-900 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-neutral-400/50">
+                                                        <Pencil className="w-3.5 h-3.5" /> Edit
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            };
 
                             return (
-                                <div
+                                <FinanceItemCard
                                     key={item.id}
+                                    idRef={item.id.substring(0, 8).toUpperCase()}
+                                    title={item.items && item.items.length > 1
+                                        ? `${item.items[0].name} + ${item.items.length - 1} more`
+                                        : (item.items?.[0]?.name || item.description)}
+                                    projectCode={item.project?.project_code || 'GEN'}
+                                    date={format(new Date(item.date), "d MMM yyyy")}
+                                    amount={item.amount}
+                                    status={item.status}
                                     onClick={() => {
                                         if (isTeamView) setViewingItem(item);
                                         else { setEditingItem(item); setIsDrawerOpen(true); }
                                     }}
-                                    className={clsx(
-                                        "backdrop-blur-md rounded-xl border shadow-sm px-3 py-2.5 cursor-pointer active:scale-[0.99] transition-all",
-                                        isRejected
-                                            ? "bg-neutral-100/80 border-neutral-200/60 opacity-60"
-                                            : isApproved
-                                                ? "bg-emerald-50/60 border-emerald-100/60"
-                                                : "bg-white/60 border-white/50"
-                                    )}
-                                >
-                                    {/* Line 1: Item + Amount + Status */}
-                                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                                        <div className="text-[12px] font-semibold text-neutral-900 leading-tight flex-1 min-w-0">
-                                            {item.items && item.items.length > 1
-                                                ? `${item.items[0].name} + ${item.items.length - 1} more`
-                                                : (item.items?.[0]?.name || item.description)}
-                                        </div>
-                                        <span className="text-[12px] font-bold text-neutral-900 tabular-nums whitespace-nowrap">{formatCurrency(item.amount)}</span>
-                                        <StatusBadge status={item.status} />
-                                    </div>
-
-                                    {/* Line 2: Project + Date + Category + Submitter + Actions */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1 text-[10px] text-neutral-400">
-                                            <span className="font-bold text-neutral-500">{item.project?.project_code || "N/A"}</span>
-                                            <span>•</span>
-                                            <span>{format(new Date(item.date), "dd MMM")}</span>
-                                            <span>•</span>
-                                            <span className="capitalize">{item.category?.replace(/_/g, ' ').toLowerCase() || 'Uncategorized'}</span>
-                                            {isTeamView && (
-                                                <>
-                                                    <span>•</span>
-                                                    <span>{cleanEntityName(item.staff_name).split(' ')[0]}</span>
-                                                </>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-center gap-1">
-                                            {isTeamView && item.status === "PENDING" && (
-                                                <>
-                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1 text-emerald-600 bg-emerald-50 rounded"><CheckCircle2 className="w-3.5 h-3.5" /></button>
-                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1 text-rose-600 bg-rose-50 rounded"><Ban className="w-3.5 h-3.5" /></button>
-                                                </>
-                                            )}
-                                            {isTeamView && item.status === "APPROVED" && (
-                                                <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1 text-emerald-600 bg-emerald-50 rounded"><CreditCard className="w-3.5 h-3.5" /></button>
-                                            )}
-                                            {/* Edit for owner */}
-                                            {!isTeamView && (item.status === "DRAFT" || item.status === "NEED_REVISION" || item.status === "PENDING" || item.status === "REJECTED") && (
-                                                <>
-                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1 text-neutral-500 bg-neutral-100 rounded"><Pencil className="w-3.5 h-3.5" /></button>
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setDeletingItem(item);
-                                                        }}
-                                                        className="p-1 text-red-500 bg-red-50 rounded"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                </>
-                                            )}
-                                            <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1 text-blue-600 bg-blue-50 rounded"><Eye className="w-3.5 h-3.5" /></button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )
+                                    actions={item.status !== 'PAID' ? renderMobileActions() : undefined}
+                                />
+                            );
                         })
                     )}
                 </div>

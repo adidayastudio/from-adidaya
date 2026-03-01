@@ -1,7 +1,8 @@
 "use client";
 
+import { PageHeader } from "@/shared/ui/headers/PageHeader";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { Plus, ExternalLink } from "lucide-react";
+import { Search, Plus, ExternalLink } from "lucide-react";
 import { WebsiteView } from "./WebsiteView";
 
 type Props = {
@@ -61,37 +62,32 @@ export default function WebsitePageHeader({ view, onAdd }: Props) {
     const config = VIEW_CONFIG[view] || { title: "Website", description: "Manage content." };
 
     return (
-        <div className="flex flex-col gap-6 mb-8">
-            <div className="flex items-start justify-between border-b border-neutral-200 pb-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-neutral-900">
-                        {config.title}
-                    </h1>
-                    <p className="text-sm text-neutral-500 mt-1">
-                        {config.description}
-                    </p>
-                </div>
+        <div className="hidden lg:block mb-8">
+            <PageHeader
+                title={config.title}
+                description={config.description}
+                actions={
+                    <div className="flex items-center gap-3">
+                        {view === "dashboard" && (
+                            <a
+                                href="https://www.adidayastudio.id"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 text-xs h-8 px-3 gap-1.5 bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 active:bg-neutral-100"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                Visit Live Website
+                            </a>
+                        )}
 
-                <div className="flex items-center gap-3">
-                    {view === "dashboard" && (
-                        <a
-                            href="https://www.adidayastudio.id"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 text-xs h-8 px-3 gap-1.5 bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 active:bg-neutral-100"
-                        >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            Visit Live Website
-                        </a>
-                    )}
-
-                    {showAdd && onAdd && (
-                        <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />} onClick={onAdd}>
-                            {view === "studio-people" ? "Add Member" : view === "projects" ? "Add Project" : "Add New"}
-                        </Button>
-                    )}
-                </div>
-            </div>
+                        {showAdd && onAdd && (
+                            <Button variant="primary" size="sm" onClick={onAdd} icon={<Plus className="w-4 h-4" />}>
+                                {view === "studio-people" ? "Add Member" : view === "projects" ? "Add Project" : "Add New"}
+                            </Button>
+                        )}
+                    </div>
+                }
+            />
         </div>
     );
 }

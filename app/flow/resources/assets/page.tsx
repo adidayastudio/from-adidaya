@@ -4,28 +4,38 @@ import { useState, useEffect } from "react";
 import { Search, Filter, Building2, Tag } from "lucide-react";
 import { ResourceStatusBadge } from "@/components/flow/resources/ResourceStatusBadge";
 
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
+
 // Mock Data
 const MOCK_ASSETS = [
     {
         id: "AST-001",
+        projectCode: "VLL-02-01",
+        resourceCode: "AS-001",
         name: "Excavator Komatsu PC200",
         location: "Proyek Villa Puncak",
         status: "ACTIVE",
     },
     {
         id: "AST-002",
+        projectCode: "WH-00-01",
+        resourceCode: "AS-002",
         name: "Dump Truck Hino 500",
         location: "Gudang Utama",
         status: "MAINTENANCE",
     },
     {
         id: "AST-003",
+        projectCode: "PL-01-01",
+        resourceCode: "AS-003",
         name: "Mobile Crane 25T",
         location: "Pool Kendaraan",
         status: "INACTIVE",
     },
     {
         id: "AST-004",
+        projectCode: "RVK-03-01",
+        resourceCode: "AS-004",
         name: "Concrete Mixer Truck",
         location: "Renovasi Kantor",
         status: "ACTIVE",
@@ -53,7 +63,7 @@ export default function AssetsPage() {
     );
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-in fade-in duration-500">
             {/* HEADER */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -81,43 +91,32 @@ export default function AssetsPage() {
                 </button>
             </div>
 
-            {/* TABLE */}
-            <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-neutral-50 border-b border-neutral-100 text-neutral-500 font-medium">
-                        <tr>
-                            <th className="px-6 py-3">Asset Code</th>
-                            <th className="px-6 py-3">Asset Name</th>
-                            <th className="px-6 py-3">Location</th>
-                            <th className="px-6 py-3 text-right">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100">
-                        {filteredAssets.length > 0 ? (
-                            filteredAssets.map((item) => (
-                                <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                                    <td className="px-6 py-3 font-medium text-neutral-900">
-                                        <div className="flex items-center gap-2">
-                                            <Tag className="w-4 h-4 text-neutral-400" />
-                                            {item.id}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-3 font-medium text-neutral-900">{item.name}</td>
-                                    <td className="px-6 py-3 text-neutral-600">{item.location}</td>
-                                    <td className="px-6 py-3 text-right">
-                                        <ResourceStatusBadge status={item.status} />
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-neutral-500">
-                                    No assets found.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+            {/* LISTING */}
+            <div className="space-y-3">
+                {filteredAssets.length > 0 ? (
+                    filteredAssets.map((item) => (
+                        <LiquidItemCard
+                            key={item.id}
+                            leftAvatar={
+                                <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100/50">
+                                    <Building2 className="w-5 h-5" />
+                                </div>
+                            }
+                            title={item.name}
+                            subtitle={item.location}
+                            badges={[
+                                <span key="id" className="text-[10px] text-neutral-400 font-mono tracking-widest bg-neutral-100 px-1.5 py-0.5 rounded">
+                                    {item.projectCode} • {item.resourceCode}
+                                </span>
+                            ]}
+                            rightBottom={<ResourceStatusBadge status={item.status} />}
+                        />
+                    ))
+                ) : (
+                    <div className="py-12 text-center text-neutral-500 bg-white rounded-[20px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
+                        No assets found.
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -2,8 +2,7 @@
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import FinanceSidebar from "@/components/flow/finance/FinanceSidebar";
-import MobileNavBar from "@/components/layout/MobileNavBar";
-import MobileViewToggle from "@/components/flow/finance/MobileViewToggle";
+import FinanceMobileHeader from "@/components/flow/finance/FinanceMobileHeader";
 import { FLOW_APPS, FINANCE_TABS, ALL_APPS } from "@/lib/navigation-config";
 import { Banknote } from "lucide-react";
 
@@ -30,23 +29,10 @@ export default function FinancePageWrapper({
         <>
             {/* MOBILE LAYOUT */}
             <div className="lg:hidden min-h-screen bg-neutral-100">
-                {/* Single-row liquid glass nav bar */}
-                <MobileNavBar
-                    appName="Finance"
-                    appIcon={Banknote}
-                    parentHref="/flow"
-                    parentLabel="Flow"
-                    siblingApps={FLOW_APPS}
-                    tabs={FINANCE_TABS}
-                    accentColor="text-red-500"
-                    fabId={fabId}
-                />
-
-                {/* Floating Personal/Team toggle */}
-                <MobileViewToggle />
+                <FinanceMobileHeader fabId={fabId} backUrl="/dashboard" />
 
                 {/* Content with top padding */}
-                <div className="pb-32 px-4 pt-20 space-y-4">
+                <div className="pb-32 px-5 space-y-4 mt-2">
                     {header}
                     {children}
                 </div>

@@ -49,6 +49,13 @@ const STATUS_ORDER: Record<PostStatus, number> = {
     NEED_APPROVAL: 5, NEED_REVISION: 5, APPROVED: 6, SCHEDULED: 7, PUBLISHED: 8, ARCHIVED: 9
 };
 
+const PRIORITY_STYLES: Record<string, { label: string; bg: string; text: string }> = {
+    URGENT: { label: "Urgent", bg: "bg-red-500", text: "text-white" },
+    HIGH: { label: "High", bg: "bg-orange-100", text: "text-orange-700" },
+    MID: { label: "Mid", bg: "bg-blue-100", text: "text-blue-700" },
+    LOW: { label: "Low", bg: "bg-neutral-100", text: "text-neutral-600" },
+};
+
 export default function SocialBoardView({ posts, accounts, onEditPost, onCreatePost }: Props) {
     const getAccount = (id: string) => accounts?.find(a => a.id === id);
 
@@ -156,6 +163,7 @@ function BoardColumn({
                     const platformColor = acc ? PLATFORM_COLORS[acc.platform] : "bg-neutral-400";
                     const accountCode = acc?.name.slice(0, 3).toUpperCase() || "???";
                     const statusChip = STATUS_CHIP[post.status];
+                    const priorityStyle = post.priority ? PRIORITY_STYLES[post.priority.toUpperCase()] : null;
 
                     return (
                         <div
@@ -163,42 +171,55 @@ function BoardColumn({
                             onClick={() => onEditPost(post)}
                             className="bg-white p-4 rounded-xl shadow-sm border border-neutral-100 hover:shadow-lg hover:border-neutral-200 transition-all cursor-pointer group"
                         >
-                            {/* STATUS CHIP */}
-                            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusChip.color}`}>
-                                {statusChip.label}
-                            </span>
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                                {/* STATUS CHIP */}
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusChip.color}`}>
+                                    {statusChip.label}
+                                </span>
+
+                                {/* PRIORITY BADGE */}
+                                {priorityStyle && (
+                                    <span className={`text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border border-black/[0.03] shadow-sm ${priorityStyle.bg} ${priorityStyle.text}`}>
+                                        {priorityStyle.label}
+                                    </span>
+                                )}
+                            </div>
 
                             {/* TITLE */}
-                            <h4 className="text-sm font-semibold text-neutral-900 leading-snug mt-2 mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
+                            <h4 className="text-sm font-semibold text-neutral-900 leading-snug mb-2 line-clamp-2 transition-colors">
                                 {post.title}
                             </h4>
 
-                            {/* CONTENT TYPE */}
-                            {post.contentType && (
-                                <span className="text-[10px] uppercase font-medium text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded inline-block">
-                                    {post.contentType}
+                            {/* TYPE & PILLAR */}
+                            <div className="flex items-center gap-1.5 mb-2 overflow-hidden">
+                                {post.contentType && (
+                                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-500">
+                                        {post.contentType}
+                                    </span>
+                                )}
+                                <span className="text-[9px] font-bold text-neutral-300 uppercase truncate">
+                                    {post.contentPillar || "General"}
                                 </span>
-                            )}
+                            </div>
+
+                            <hr className="border-neutral-50 mb-2" />
 
                             {/* META ROW */}
-                            <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center justify-between">
                                 {/* DATE */}
-                                <span className="text-xs text-neutral-500">
-                                    {new Date(post.scheduledDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                <span className="text-xs font-bold text-neutral-400 tabular-nums">
+                                    {new Date(post.scheduledDate).toLocaleDateString("en-GB", { month: "short", day: "numeric" })}
                                 </span>
 
                                 <div className="flex items-center gap-2">
-                                    {/* PLATFORM DOT */}
-                                    <span className={`w-2.5 h-2.5 rounded-full ${platformColor}`} title={acc?.platform} />
-
-                                    {/* ACCOUNT CODE */}
-                                    <span className="text-[10px] font-bold text-neutral-500">{accountCode}</span>
+                                    {/* PLATFORM CODE */}
+                                    <span className="text-[10px] font-black text-neutral-300">{accountCode}</span>
 
                                     {/* ASSIGNEE INITIAL */}
                                     {post.assignee && (
-                                        <span className="w-6 h-6 rounded-full bg-neutral-100 flex items-center justify-center text-[10px] font-bold text-neutral-600" title={post.assignee}>
+                                        <div className="w-6 h-6 rounded-full bg-neutral-50 border border-neutral-100 flex items-center justify-center text-[10px] font-black text-neutral-400 uppercase overflow-hidden">
                                             {post.assignee.charAt(0)}
-                                        </span>
+                                        </div>
                                     )}
                                 </div>
                             </div>

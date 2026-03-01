@@ -94,6 +94,15 @@ export default function WebsiteDashboardPage() {
                     onViewChange={handleViewChange}
                 />
             }
+            onAdd={() => {
+                if (activeView === "studio-pillars") {
+                    pillarsRef.current?.addPillar();
+                } else if (activeView === "studio-people") {
+                    peopleRef.current?.openAddModal();
+                } else {
+                    console.log("Add clicked");
+                }
+            }}
         >
             <div className="space-y-8">
                 {activeView === "dashboard" && (

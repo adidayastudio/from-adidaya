@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Package, Wrench, Building2, AlertTriangle, ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
+import { LiquidSummaryCard } from "@/components/shared/liquid/LiquidSummaryCard";
 
 // Mock Data for Overview
 const MOCK_STATS = [
@@ -47,25 +48,7 @@ const RECENT_ACTIVITY = [
     { time: "Yesterday", user: "System", action: "Consumed", item: "Cat Dulux", location: "Renovasi Kantor" },
 ];
 
-function StatCard({ stat }: { stat: typeof MOCK_STATS[0] }) {
-    return (
-        <div className="bg-white p-6 rounded-2xl border border-neutral-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-start justify-between mb-4">
-                <div className={clsx("p-3 rounded-xl", `bg-${stat.color}-50 text-${stat.color}-600`)}>
-                    <stat.icon className="w-6 h-6" />
-                </div>
-                <div className={clsx("flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full", stat.trendUp ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700")}>
-                    {stat.trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {stat.trend}
-                </div>
-            </div>
-            <div>
-                <div className="text-3xl font-bold text-neutral-900 tracking-tight">{stat.value}</div>
-                <div className="text-sm text-neutral-500 font-medium mt-1">{stat.label}</div>
-            </div>
-        </div>
-    );
-}
+
 
 export default function ResourcesOverviewPage() {
     // FAB Action Listener
@@ -88,9 +71,16 @@ export default function ResourcesOverviewPage() {
             </div>
 
             {/* STATS GRID */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {MOCK_STATS.map((stat, i) => (
-                    <StatCard key={i} stat={stat} />
+                    <LiquidSummaryCard
+                        key={i}
+                        label={stat.label}
+                        value={stat.value}
+                        subtext={stat.unit}
+                        icon={<stat.icon className={`w-5 h-5 text-${stat.color}-600`} />}
+                        iconBg={`bg-${stat.color}-100`}
+                    />
                 ))}
             </div>
 
@@ -101,7 +91,7 @@ export default function ResourcesOverviewPage() {
                 <div className="lg:col-span-2 space-y-6">
 
                     {/* LOW STOCK ALERTS */}
-                    <div className="bg-white border border-neutral-200 rounded-2xl p-6">
+                    <div className="bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-neutral-100 rounded-[20px] p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="font-semibold text-neutral-900 flex items-center gap-2">
                                 <AlertTriangle className="w-5 h-5 text-orange-500" />
@@ -150,7 +140,7 @@ export default function ResourcesOverviewPage() {
                 {/* RIGHT COLUMN (1/3) */}
                 <div>
                     {/* RECENT ACTIVITY (Mini) */}
-                    <div className="bg-white border border-neutral-200 rounded-2xl p-6 h-full">
+                    <div className="bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-neutral-100 rounded-[20px] p-6 h-full">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="font-semibold text-neutral-900">Recent Activity</h3>
                             <Link href="/flow/resources/activity-log" className="text-sm font-medium text-neutral-500 hover:text-neutral-900">

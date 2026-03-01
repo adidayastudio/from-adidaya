@@ -1,18 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LearnView } from "./LearnPageHeader";
-import { QuickView, Department, KnowledgeType } from "./types";
-import { FileText, BookOpen, ClipboardList, Scale, Clock, Star, Video, Image, FolderOpen, Presentation, Table, FileSpreadsheet, ChevronDown, ChevronUp } from "lucide-react";
+import { QuickView, Department, KnowledgeType, SortOptionValue } from "./types";
+import { FileText, BookOpen, ClipboardList, Scale, Clock, Star, Video, Image, FolderOpen, Presentation, Table, FileSpreadsheet, ChevronDown, ChevronUp, ChevronRight, ExternalLink } from "lucide-react";
+import { LearnItemCard } from "./LearnItemCard";
 import clsx from "clsx";
+import { useUserContext } from "@/components/providers/UserProvider";
 
 type Props = {
   view: LearnView;
   quickView: QuickView;
-  department: Department;
-  docType: KnowledgeType | "ALL";
+  department: string[];
+  docType: string[];
   searchQuery: string;
+  items: KnowledgeItem[];
+  sortOption?: SortOptionValue;
+  onSortChange?: (val: SortOptionValue) => void;
 };
 
 // Knowledge item type
@@ -28,29 +33,6 @@ export type KnowledgeItem = {
 };
 
 // Mock knowledge items - IDs match detail page
-const MOCK_KNOWLEDGE: KnowledgeItem[] = [
-  // Documentation
-  { id: "sop-1", title: "Design Review Process", type: "SOP", category: "documentation", department: "DESIGN", lastUpdated: "2025-12-15", isFavorite: true, format: "document" },
-  { id: "checklist-1", title: "Project Handover Checklist", type: "CHECKLIST", category: "documentation", department: "CONSTRUCTION", lastUpdated: "2025-12-10", isFavorite: false, format: "document" },
-  { id: "workflow-1", title: "Invoice Processing Workflow", type: "WORKFLOW", category: "documentation", department: "FINANCE", lastUpdated: "2025-12-08", isFavorite: true, format: "document" },
-  { id: "policy-1", title: "Employee Leave Policy", type: "POLICY", category: "documentation", department: "HR", lastUpdated: "2025-12-01", isFavorite: false, format: "document" },
-  { id: "standard-1", title: "Material Quality Standard", type: "STANDARD", category: "documentation", department: "OPERATION", lastUpdated: "2025-11-28", isFavorite: false, format: "document" },
-  { id: "guideline-1", title: "Brand Guidelines", type: "GUIDELINE", category: "documentation", department: "DESIGN", lastUpdated: "2025-11-20", isFavorite: true, format: "pdf" },
-
-  // Templates
-  { id: "template-ppt-1", title: "Project Presentation Template", type: "TEMPLATE_PPT", category: "templates", department: "DESIGN", lastUpdated: "2025-12-12", isFavorite: false, format: "presentation" },
-  { id: "template-rab-1", title: "RAB Template - Residential", type: "TEMPLATE_RAB", category: "templates", department: "CONSTRUCTION", lastUpdated: "2025-12-05", isFavorite: true, format: "spreadsheet" },
-  { id: "template-drawing-1", title: "CAD Drawing Template", type: "TEMPLATE_DRAWING", category: "templates", department: "DESIGN", lastUpdated: "2025-11-25", isFavorite: false, format: "document" },
-  { id: "template-contract-1", title: "Contractor Agreement Template", type: "TEMPLATE_CONTRACT", category: "templates", department: "OPERATION", lastUpdated: "2025-11-18", isFavorite: false, format: "document" },
-  { id: "template-report-1", title: "Monthly Progress Report Template", type: "TEMPLATE_REPORT", category: "templates", department: "CONSTRUCTION", lastUpdated: "2025-11-10", isFavorite: false, format: "document" },
-
-  // References
-  { id: "video-1", title: "Site Inspection Tutorial", type: "VIDEO", category: "references", department: "CONSTRUCTION", lastUpdated: "2025-12-14", isFavorite: true, format: "video" },
-  { id: "designref-1", title: "Modern Kitchen Design References", type: "DESIGN_REF", category: "references", department: "DESIGN", lastUpdated: "2025-12-08", isFavorite: false, format: "image" },
-  { id: "material-1", title: "Marble & Stone Catalog 2025", type: "MATERIAL_CATALOG", category: "references", department: "DESIGN", lastUpdated: "2025-12-01", isFavorite: true, format: "pdf" },
-  { id: "vendor-1", title: "Approved Vendor List 2025", type: "VENDOR_LIST", category: "references", department: "OPERATION", lastUpdated: "2025-11-22", isFavorite: false, format: "spreadsheet" },
-  { id: "price-1", title: "Material Price Guide Q4 2025", type: "PRICE_REF", category: "references", department: "FINANCE", lastUpdated: "2025-11-15", isFavorite: false, format: "spreadsheet" },
-];
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
   SOP: <FileText className="w-4 h-4" />,
@@ -74,19 +56,21 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
 
 // Subtle department colors - muted, not too bright
 const DEPT_BADGE: Record<string, string> = {
-  DESIGN: "text-purple-600",
-  CONSTRUCTION: "text-orange-600",
-  FINANCE: "text-emerald-600",
-  HR: "text-blue-600",
-  OPERATION: "text-neutral-600",
+  AID: "text-purple-600",
+  SMP: "text-orange-600",
+  UDL: "text-emerald-600",
+  HFR: "text-blue-600",
+  PCC: "text-amber-600",
+  RBD: "text-rose-600",
 };
 
 const DEPT_LABEL: Record<string, string> = {
-  DESIGN: "Design",
-  CONSTRUCTION: "Construction",
-  FINANCE: "Finance",
-  HR: "HR",
-  OPERATION: "Operation",
+  AID: "Architecture, Interior, and Design",
+  SMP: "Structure and MEP Engineering",
+  UDL: "Urban Design and Landscape",
+  HFR: "Human Capital, Finance, and Resources",
+  PCC: "Procurement and Construction",
+  RBD: "Research and Business Development",
 };
 
 // Category badge - subtle background
@@ -121,11 +105,14 @@ function getTypeLabel(type: string): string {
   return TYPE_LABEL[type] || type;
 }
 
-export default function LearnContent({ view, quickView, department, docType, searchQuery }: Props) {
+export default function LearnContent({ view, quickView, department, docType, searchQuery, items: initialItems, sortOption, onSortChange }: Props) {
   const router = useRouter();
+  const { profile } = useUserContext();
+
+  const canManage = !!(profile?.role && ["superadmin", "admin", "administrator", "supervisor", "hr", "pm", "management", "owner"].includes(profile.role.toLowerCase()));
 
   const filteredItems = useMemo(() => {
-    let items = [...MOCK_KNOWLEDGE];
+    let items = [...initialItems];
 
     // Quick view filter (primary category)
     if (quickView === "documentation") items = items.filter(i => i.category === "documentation");
@@ -135,10 +122,14 @@ export default function LearnContent({ view, quickView, department, docType, sea
     if (quickView === "recent") items = items.slice(0, 5);
 
     // Department filter
-    if (department !== "ALL") items = items.filter(i => i.department === department);
+    if (department && !department.includes("ALL")) {
+      items = items.filter(i => department.includes(i.department));
+    }
 
     // Type filter
-    if (docType !== "ALL") items = items.filter(i => i.type === docType);
+    if (docType && !docType.includes("ALL")) {
+      items = items.filter(i => docType.includes(i.type));
+    }
 
     // Search
     if (searchQuery.trim()) {
@@ -154,26 +145,38 @@ export default function LearnContent({ view, quickView, department, docType, sea
   };
 
   if (view === "grouped") {
-    return <GroupedView items={filteredItems} onItemClick={handleItemClick} />;
+    return <GroupedView items={filteredItems} onItemClick={handleItemClick} canManage={canManage} docType={docType} quickView={quickView} sortOption={sortOption} />;
   }
 
-  return <ListView items={filteredItems} onItemClick={handleItemClick} />;
+  return <ListView items={filteredItems} onItemClick={handleItemClick} canManage={canManage} docType={docType} quickView={quickView} sortOption={sortOption} onSortChange={onSortChange} />;
 }
 
 type SortKey = "title" | "type" | "department" | "lastUpdated";
 type SortDir = "asc" | "desc";
 
-function ListView({ items, onItemClick }: { items: KnowledgeItem[]; onItemClick: (id: string) => void }) {
-  const [sortKey, setSortKey] = useState<SortKey>("title");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+function ListView({ items, onItemClick, canManage, docType, quickView, sortOption, onSortChange }: { items: KnowledgeItem[]; onItemClick: (id: string) => void; canManage: boolean; docType: string[]; quickView: QuickView; sortOption?: SortOptionValue; onSortChange?: (val: SortOptionValue) => void }) {
+  const [sortKey, setSortKey] = useState<SortKey>("lastUpdated");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  React.useEffect(() => {
+    if (sortOption) {
+      if (sortOption === "name-asc") { setSortKey("title"); setSortDir("asc"); }
+      else if (sortOption === "name-desc") { setSortKey("title"); setSortDir("desc"); }
+      else if (sortOption === "date-asc") { setSortKey("lastUpdated"); setSortDir("asc"); }
+      else if (sortOption === "date-desc") { setSortKey("lastUpdated"); setSortDir("desc"); }
+    }
+  }, [sortOption]);
 
   const toggleSort = (key: SortKey) => {
+    let newDir = "asc";
     if (sortKey === key) {
-      setSortDir(d => d === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
+      newDir = sortDir === "asc" ? "desc" : "asc";
     }
+    setSortKey(key);
+    setSortDir(newDir as SortDir);
+
+    if (key === "title") onSortChange?.(`name-${newDir}` as SortOptionValue);
+    else if (key === "lastUpdated") onSortChange?.(`date-${newDir}` as SortOptionValue);
   };
 
   const sortedItems = useMemo(() => {
@@ -203,93 +206,144 @@ function ListView({ items, onItemClick }: { items: KnowledgeItem[]; onItemClick:
   };
 
   if (items.length === 0) {
+    const isFavorite = quickView.includes('favorite');
+    const category = docType[0];
+    const categoryLabel = category ? category.toLowerCase() : (isFavorite ? 'favorite' : 'knowledge');
+    const naturalMessage = isFavorite
+      ? "You haven't added any favorites yet. Start bookmarking important items to see them here."
+      : `Ready to start building our library? Add your first ${categoryLabel} piece right here.`;
+
     return (
-      <div className="bg-white rounded-xl border border-neutral-100 p-12 text-center">
-        <div className="text-neutral-400 text-sm">No knowledge items found.</div>
+      <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+        <div className="relative mb-6">
+          <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full" />
+          <div className="relative w-24 h-24 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/20 flex items-center justify-center shadow-2xl">
+            <FolderOpen className="w-12 h-12 text-[#001F3F]/60" strokeWidth={1.5} />
+          </div>
+        </div>
+        <h3 className="text-xl font-bold text-[#001F3F] mb-2">{isFavorite ? "No favorites yet" : "No knowledge found"}</h3>
+        <p className="text-[#001F3F]/50 max-w-[280px] leading-relaxed mb-8">
+          {naturalMessage}
+        </p>
+        {canManage && (
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('ADIDAYA_OPEN_ADD_KNOWLEDGE'))}
+            className="px-8 py-3 bg-[#001F3F]/90 backdrop-blur-md text-white rounded-full font-bold text-[15px] shadow-lg active:scale-95 transition-all"
+          >
+            Add New Knowledge
+          </button>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
-      <table className="w-full text-left">
-        <thead>
-          <tr className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 bg-neutral-50/50">
-            <th className="px-4 py-3 cursor-pointer hover:text-neutral-600" onClick={() => toggleSort("title")}>
-              <div className="flex items-center gap-1">
-                Title
-                {sortKey === "title" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-              </div>
-            </th>
-            <th className="px-4 py-3 w-[140px] cursor-pointer hover:text-neutral-600" onClick={() => toggleSort("type")}>
-              <div className="flex items-center gap-1">
-                Type
-                {sortKey === "type" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-              </div>
-            </th>
-            <th className="px-4 py-3 w-[110px] cursor-pointer hover:text-neutral-600" onClick={() => toggleSort("department")}>
-              <div className="flex items-center gap-1">
-                Dept
-                {sortKey === "department" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-              </div>
-            </th>
-            <th className="px-4 py-3 w-[100px] cursor-pointer hover:text-neutral-600" onClick={() => toggleSort("lastUpdated")}>
-              <div className="flex items-center gap-1">
-                Updated
-                {sortKey === "lastUpdated" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-              </div>
-            </th>
-            <th className="px-4 py-3 w-[40px]"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedItems.map(item => (
-            <tr
-              key={item.id}
-              onClick={() => onItemClick(item.id)}
-              className="border-b border-neutral-50 last:border-b-0 hover:bg-neutral-50/70 transition-colors cursor-pointer group"
-            >
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="text-neutral-400 flex-shrink-0">{TYPE_ICON[item.type]}</div>
-                  <span className="text-sm font-medium text-neutral-900 group-hover:text-red-600 transition-colors">{item.title}</span>
+    <>
+      {/* Mobile: Card View */}
+      <div className="lg:hidden space-y-4">
+        {sortedItems.map((item) => (
+          <LearnItemCard
+            key={item.id}
+            title={item.title}
+            type={item.type}
+            department={item.department}
+            lastUpdated={item.lastUpdated}
+            isFavorite={item.isFavorite}
+            onClick={() => onItemClick(item.id)}
+          />
+        ))}
+      </div>
+
+      {/* Desktop: Table View */}
+      <div className="hidden lg:block bg-white rounded-xl border border-neutral-100 overflow-hidden">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider border-b border-neutral-100 bg-neutral-50/50">
+              <th className="px-4 py-3 cursor-pointer hover:text-neutral-600" onClick={() => toggleSort("title")}>
+                <div className="flex items-center gap-1">
+                  Title
+                  {sortKey === "title" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                 </div>
-              </td>
-              <td className="px-4 py-3">
-                <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${CATEGORY_BADGE[item.category]}`}>
-                  {getTypeLabel(item.type)}
-                </span>
-              </td>
-              <td className="px-4 py-3">
-                <span className={`text-xs font-medium ${DEPT_BADGE[item.department] || "text-neutral-600"}`}>
-                  {DEPT_LABEL[item.department] || item.department}
-                </span>
-              </td>
-              <td className="px-4 py-3 text-xs text-neutral-400">
-                {new Date(item.lastUpdated).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-              </td>
-              <td className="px-4 py-3">
-                {item.isFavorite && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
-              </td>
+              </th>
+              <th className="px-4 py-3 w-[140px] cursor-pointer hover:text-neutral-600" onClick={() => toggleSort("type")}>
+                <div className="flex items-center gap-1">
+                  Type
+                  {sortKey === "type" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                </div>
+              </th>
+              <th className="px-4 py-3 w-[110px] cursor-pointer hover:text-neutral-600" onClick={() => toggleSort("department")}>
+                <div className="flex items-center gap-1">
+                  Dept
+                  {sortKey === "department" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                </div>
+              </th>
+              <th className="px-4 py-3 w-[100px] cursor-pointer hover:text-neutral-600" onClick={() => toggleSort("lastUpdated")}>
+                <div className="flex items-center gap-1">
+                  Updated
+                  {sortKey === "lastUpdated" && (sortDir === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                </div>
+              </th>
+              <th className="px-4 py-3 w-[40px]"></th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {sortedItems.map(item => (
+              <tr
+                key={item.id}
+                onClick={() => onItemClick(item.id)}
+                className="border-b border-neutral-50 last:border-b-0 hover:bg-neutral-50/70 transition-colors cursor-pointer group"
+              >
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="text-neutral-400 flex-shrink-0">{TYPE_ICON[item.type]}</div>
+                    <span className="text-sm font-medium text-neutral-900 group-hover:text-red-600 transition-colors">{item.title}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${CATEGORY_BADGE[item.category]}`}>
+                    {getTypeLabel(item.type)}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`text-xs font-medium ${DEPT_BADGE[item.department] || "text-neutral-600"}`}>
+                    {DEPT_LABEL[item.department] || item.department}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-xs text-neutral-400">
+                  {new Date(item.lastUpdated).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </td>
+                <td className="px-4 py-3">
+                  {item.isFavorite && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 
-function GroupedView({ items, onItemClick }: { items: KnowledgeItem[]; onItemClick: (id: string) => void }) {
+function GroupedView({ items, onItemClick, canManage, docType, quickView, sortOption }: { items: KnowledgeItem[]; onItemClick: (id: string) => void; canManage: boolean; docType: string[]; quickView: QuickView; sortOption?: SortOptionValue }) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["DESIGN", "CONSTRUCTION"]));
 
   const grouped = useMemo(() => {
     const groups: Record<string, KnowledgeItem[]> = {};
-    items.forEach(item => {
+    const sorted = [...items];
+    if (sortOption) {
+      const mult = sortOption.endsWith("-asc") ? 1 : -1;
+      if (sortOption.startsWith("name")) {
+        sorted.sort((a, b) => mult * a.title.localeCompare(b.title));
+      } else if (sortOption.startsWith("date")) {
+        sorted.sort((a, b) => mult * a.lastUpdated.localeCompare(b.lastUpdated));
+      }
+    }
+    sorted.forEach(item => {
       if (!groups[item.department]) groups[item.department] = [];
       groups[item.department].push(item);
     });
     return groups;
-  }, [items]);
+  }, [items, sortOption]);
 
   const toggleGroup = (dept: string) => {
     setExpandedGroups(prev => {
@@ -302,8 +356,24 @@ function GroupedView({ items, onItemClick }: { items: KnowledgeItem[]; onItemCli
 
   if (Object.keys(grouped).length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-neutral-100 p-12 text-center">
-        <div className="text-neutral-400 text-sm">No knowledge items found.</div>
+      <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
+        <div className="relative mb-6">
+          <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full" />
+          <div className="relative w-24 h-24 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/20 flex items-center justify-center shadow-2xl">
+            <FolderOpen className="w-12 h-12 text-[#001F3F]/60" strokeWidth={1.5} />
+          </div>
+        </div>
+        <h3 className="text-xl font-bold text-[#001F3F] mb-2">No knowledge found</h3>
+        <p className="text-[#001F3F]/50 max-w-[260px] leading-relaxed mb-8">
+          This category is currently empty. Start by adding your first knowledge item here.
+        </p>
+        {canManage && (
+          <button
+            className="px-8 py-3 bg-[#001F3F]/90 backdrop-blur-md text-white rounded-full font-bold text-[15px] shadow-lg active:scale-95 transition-all"
+          >
+            Add New Knowledge
+          </button>
+        )}
       </div>
     );
   }
@@ -314,42 +384,58 @@ function GroupedView({ items, onItemClick }: { items: KnowledgeItem[]; onItemCli
         const isExpanded = expandedGroups.has(dept);
 
         return (
-          <div key={dept} className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
+          <div key={dept} className="bg-transparent lg:bg-white rounded-[24px] lg:rounded-xl border-none lg:border lg:border-neutral-100 overflow-hidden">
             <button
               onClick={() => toggleGroup(dept)}
-              className="w-full px-4 py-3 bg-neutral-50 border-b border-neutral-100 flex items-center justify-between hover:bg-neutral-100 transition-colors"
+              className="w-full px-4 py-3 bg-neutral-100/50 lg:bg-neutral-50 border-b border-neutral-200/50 lg:border-neutral-100 flex items-center justify-between hover:bg-neutral-100 transition-colors rounded-2xl lg:rounded-none group"
             >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-neutral-900">{DEPT_LABEL[dept] || dept}</span>
-                <span className="text-xs text-neutral-400">{deptItems.length} items</span>
+                <span className="text-sm font-bold text-neutral-900">{DEPT_LABEL[dept] || dept}</span>
+                {isExpanded ? <ChevronDown className="w-4 h-4 text-neutral-400 group-hover:text-neutral-600 transition-colors" /> : <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-600 transition-colors" />}
               </div>
-              {isExpanded ? <ChevronUp className="w-4 h-4 text-neutral-400" /> : <ChevronDown className="w-4 h-4 text-neutral-400" />}
+              <div className="px-2 py-0.5 bg-neutral-200/50 text-neutral-500 rounded-full text-[11px] font-medium border border-black/5">
+                {deptItems.length} items
+              </div>
             </button>
 
             {isExpanded && (
-              <div className="divide-y divide-neutral-50">
+              <div className="mt-3 lg:mt-0 lg:divide-y lg:divide-neutral-50 flex flex-col gap-3 lg:gap-0">
                 {deptItems.map(item => (
-                  <div
-                    key={item.id}
-                    onClick={() => onItemClick(item.id)}
-                    className="px-4 py-3 hover:bg-neutral-50/70 transition-colors cursor-pointer group flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="text-neutral-400">{TYPE_ICON[item.type]}</div>
-                      <div>
-                        <div className="text-sm font-medium text-neutral-900 group-hover:text-red-600 transition-colors">{item.title}</div>
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${CATEGORY_BADGE[item.category]}`}>
-                          {getTypeLabel(item.type)}
+                  <React.Fragment key={item.id}>
+                    {/* Mobile Grouped Item */}
+                    <div className="lg:hidden">
+                      <LearnItemCard
+                        title={item.title}
+                        type={item.type}
+                        department={item.department}
+                        lastUpdated={item.lastUpdated}
+                        isFavorite={item.isFavorite}
+                        onClick={() => onItemClick(item.id)}
+                      />
+                    </div>
+
+                    {/* Desktop Grouped Item */}
+                    <div
+                      onClick={() => onItemClick(item.id)}
+                      className="hidden lg:flex px-4 py-3 hover:bg-neutral-50/70 transition-colors cursor-pointer group items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="text-neutral-400">{TYPE_ICON[item.type]}</div>
+                        <div>
+                          <div className="text-sm font-medium text-neutral-900 group-hover:text-red-600 transition-colors">{item.title}</div>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${CATEGORY_BADGE[item.category]}`}>
+                            {getTypeLabel(item.type)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {item.isFavorite && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
+                        <span className="text-xs text-neutral-400">
+                          {new Date(item.lastUpdated).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                         </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      {item.isFavorite && <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />}
-                      <span className="text-xs text-neutral-400">
-                        {new Date(item.lastUpdated).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </span>
-                    </div>
-                  </div>
+                  </React.Fragment>
                 ))}
               </div>
             )}

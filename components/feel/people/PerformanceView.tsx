@@ -7,6 +7,8 @@ import PeoplePageHeader from "./PeoplePageHeader";
 import { useState } from "react";
 import { EmptyState } from "@/shared/ui/overlays/EmptyState";
 
+import { LiquidSummaryCard } from "@/components/shared/liquid/LiquidSummaryCard";
+
 export default function PerformanceView({ people }: { people: Person[] }) {
     const [view, setView] = useState<"list" | "card">("list"); // Simplifying for this view
     const [searchQuery, setSearchQuery] = useState("");
@@ -17,7 +19,7 @@ export default function PerformanceView({ people }: { people: Person[] }) {
     );
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in duration-500">
             {/* HEADER */}
             <div>
                 <h2 className="text-2xl font-bold text-neutral-900">Performance Index</h2>
@@ -25,11 +27,32 @@ export default function PerformanceView({ people }: { people: Person[] }) {
             </div>
 
             {/* KPI CARDS */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <KPICard title="Avg Involvement" value="85%" icon={<Target className="w-5 h-5 text-blue-500" />} />
-                <KPICard title="Platform Engagement" value="92%" icon={<Activity className="w-5 h-5 text-purple-500" />} />
-                <KPICard title="Top Performers" value={3} icon={<TrendingUp className="w-5 h-5 text-emerald-500" />} highlight />
-                <KPICard title="Need Support" value={1} icon={<Users className="w-5 h-5 text-orange-500" />} />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <LiquidSummaryCard
+                    label="Avg Involvement"
+                    value="85%"
+                    icon={<Target className="w-5 h-5 text-blue-600" />}
+                    iconBg="bg-blue-100"
+                />
+                <LiquidSummaryCard
+                    label="Platform Engagement"
+                    value="92%"
+                    icon={<Activity className="w-5 h-5 text-purple-600" />}
+                    iconBg="bg-purple-100"
+                />
+                <LiquidSummaryCard
+                    label="Top Performers"
+                    value={3}
+                    icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
+                    iconBg="bg-emerald-100"
+                    className="ring-2 ring-emerald-500 border-transparent bg-emerald-50/30"
+                />
+                <LiquidSummaryCard
+                    label="Need Support"
+                    value={1}
+                    icon={<Users className="w-5 h-5 text-orange-600" />}
+                    iconBg="bg-orange-100"
+                />
             </div>
 
             {/* TABLE */}
@@ -90,22 +113,7 @@ export default function PerformanceView({ people }: { people: Person[] }) {
     );
 }
 
-function KPICard({ title, value, icon, highlight }: { title: string; value: string | number; icon: React.ReactNode; highlight?: boolean }) {
-    return (
-        <div className={clsx(
-            "p-5 rounded-2xl border flex items-center justify-between",
-            highlight ? "bg-emerald-50 border-emerald-100" : "bg-white border-neutral-200"
-        )}>
-            <div>
-                <div className="text-sm text-neutral-500 font-medium mb-1">{title}</div>
-                <div className={clsx("text-2xl font-bold", highlight ? "text-emerald-900" : "text-neutral-900")}>{value}</div>
-            </div>
-            <div className={clsx("p-3 rounded-xl", highlight ? "bg-emerald-100" : "bg-neutral-50")}>
-                {icon}
-            </div>
-        </div>
-    );
-}
+
 
 function ScoreBar({ value, color }: { value: number; color: "blue" | "green" | "orange" }) {
     return (

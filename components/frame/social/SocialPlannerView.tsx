@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { SocialPost, SocialAccount, PostStatus } from "./types/social.types";
+import clsx from "clsx";
 
 type Props = {
     posts: SocialPost[];
@@ -79,7 +80,11 @@ export default function SocialPlannerView({ posts, accounts, currentDate, onNavi
                     e.stopPropagation();
                     onEditPost(post);
                 }}
-                className={`w-full text-left px-2 py-1 mb-1 rounded text-[10px] font-medium transition-all hover:brightness-95 flex items-center gap-1.5 ${statusBg} ${isPublished ? "opacity-60" : ""}`}
+                className={clsx(
+                    "w-full text-left px-2 py-1 mb-1 rounded text-[10px] font-medium transition-all hover:brightness-95 flex items-center gap-1.5",
+                    statusBg,
+                    isPublished && "opacity-60"
+                )}
             >
                 {/* Platform dot */}
                 <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${platformColor}`} />
@@ -94,50 +99,49 @@ export default function SocialPlannerView({ posts, accounts, currentDate, onNavi
     }
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
 
             {/* HEADER */}
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">{monthLabel}</h2>
-                <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-lg">
+            <div className="flex items-center justify-between mb-8">
+                <h2 className="text-[32px] font-extrabold text-neutral-900 tracking-tight leading-none">{monthLabel}</h2>
+                <div className="flex items-center gap-2">
                     <button
                         onClick={() => onNavigateMonth(-1)}
-                        className="p-1.5 hover:bg-white rounded shadow-sm text-neutral-500 transition-all"
+                        className="w-10 h-10 flex items-center justify-center bg-white border border-neutral-100 rounded-full shadow-sm text-neutral-500 hover:text-orange-500 hover:border-orange-100 transition-all active:scale-95"
                     >
-                        <ChevronLeft className="w-4 h-4" />
+                        <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <div className="w-px h-4 bg-neutral-200 mx-1" />
                     <button
                         onClick={() => onNavigateMonth(1)}
-                        className="p-1.5 hover:bg-white rounded shadow-sm text-neutral-500 transition-all"
+                        className="w-10 h-10 flex items-center justify-center bg-white border border-neutral-100 rounded-full shadow-sm text-neutral-500 hover:text-orange-500 hover:border-orange-100 transition-all active:scale-95"
                     >
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-5 h-5" />
                     </button>
                 </div>
             </div>
 
             {/* LEGEND */}
-            <div className="flex items-center gap-4 mb-4 text-[10px] text-neutral-400">
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-neutral-100" /> Not Started
+            <div className="flex items-center gap-6 mb-6 text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
+                <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-neutral-100" /> Not Started
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-orange-100" /> In Progress
+                <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-100" /> In Progress
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-blue-100" /> Ready
+                <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-100" /> Ready
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-3 h-3 rounded bg-green-100" /> Published
+                <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-green-100" /> Published
                 </div>
             </div>
 
             {/* CALENDAR BODY */}
-            <div className="flex-1 flex flex-col border border-neutral-100 rounded-xl overflow-hidden shadow-sm bg-white">
+            <div className="flex-1 flex flex-col border border-neutral-100 rounded-[32px] overflow-hidden shadow-sm bg-white">
                 {/* DAYS HEADER */}
-                <div className="grid grid-cols-7 border-b border-neutral-100 bg-neutral-50/50">
+                <div className="grid grid-cols-7 border-b border-neutral-100 bg-neutral-50/30">
                     {DAYS.map(day => (
-                        <div key={day} className="py-3 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                        <div key={day} className="py-4 text-center text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em]">
                             {day}
                         </div>
                     ))}
@@ -148,37 +152,42 @@ export default function SocialPlannerView({ posts, accounts, currentDate, onNavi
                     {grid.map((cell, idx) => {
                         const isToday = cell.day === new Date().getDate() && new Date().getMonth() === currentDate.getMonth() && new Date().getFullYear() === currentDate.getFullYear();
 
-                        if (!cell.day) return <div key={idx} className="bg-neutral-50/30 border-b border-r border-neutral-50" />;
+                        if (!cell.day) return <div key={idx} className="bg-neutral-50/20 border-b border-r border-neutral-100/50" />;
 
                         const dayPosts = posts.filter(p => p.scheduledDate === cell.dateStr);
 
                         return (
                             <div
                                 key={cell.dateStr}
-                                className="group relative border-b border-r border-neutral-100 p-2 min-h-[100px] hover:bg-neutral-50/50 transition-colors cursor-pointer"
+                                className="group relative border-b border-r border-neutral-100 p-2.5 min-h-[110px] hover:bg-neutral-50/50 transition-colors cursor-pointer"
                                 onClick={() => onCreatePost(cell.dateStr!)}
                             >
-                                <div className="flex justify-between items-start mb-2">
-                                    <span className={`text-xs font-semibold ${isToday ? "text-white bg-neutral-900 w-6 h-6 flex items-center justify-center rounded-full" : "text-neutral-400"}`}>
+                                <div className="flex justify-between items-start mb-3">
+                                    <span className={clsx(
+                                        "text-xs font-bold",
+                                        isToday ? "text-white bg-neutral-900 w-7 h-7 flex items-center justify-center rounded-full" : "text-neutral-400"
+                                    )}>
                                         {cell.day}
                                     </span>
 
                                     <button
-                                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-neutral-200 text-neutral-400 transition-all"
+                                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-neutral-200 text-neutral-400 transition-all"
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onCreatePost(cell.dateStr!);
                                         }}
                                     >
-                                        <Plus className="w-3 h-3" />
+                                        <Plus className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
 
                                 {/* POSTS */}
-                                <div className="space-y-0.5 overflow-hidden max-h-[80px]">
+                                <div className="space-y-1 overflow-hidden max-h-[85px]">
                                     {dayPosts.slice(0, 3).map(post => <PostPill key={post.id} post={post} />)}
                                     {dayPosts.length > 3 && (
-                                        <div className="text-[9px] text-neutral-400 text-center">+{dayPosts.length - 3} more</div>
+                                        <div className="text-[9px] font-bold text-neutral-300 text-center mt-1">
+                                            +{dayPosts.length - 3} MORE
+                                        </div>
                                     )}
                                 </div>
                             </div>

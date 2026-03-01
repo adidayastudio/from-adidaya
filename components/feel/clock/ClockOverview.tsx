@@ -11,7 +11,8 @@ import { canViewTeamData } from "@/lib/auth-utils";
 import { useClockData } from "@/hooks/useClockData";
 import useUserProfile from "@/hooks/useUserProfile";
 import { isOvertime as isOvertimeCheck, getShiftSchedule, getWorkHoursConfig, getStandardEndTime, formatTargetTime } from "@/lib/work-hours-utils";
-import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
+import { LiquidSummaryCard } from "@/components/shared/liquid/LiquidSummaryCard";
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
 
 interface ClockOverviewProps {
     userName: string;
@@ -353,40 +354,38 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
 
                     <div className="space-y-4 pt-4">
                         <h3 className="text-lg font-bold text-neutral-900">Monthly Summary <span className="text-neutral-400 font-normal text-sm ml-2">(January 2025)</span></h3>
-                        <SummaryCardsRow>
-                            <SummaryCard
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <LiquidSummaryCard
                                 icon={<Clock className="w-5 h-5 text-blue-600" />}
                                 iconBg="bg-blue-50"
                                 label="Working Hours"
-                                value={`${personalStats.workingHours} Hours`}
+                                value={`${personalStats.workingHours}`}
                                 subtext="Total this month"
                             />
-                            <SummaryCard
+                            <LiquidSummaryCard
                                 icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
                                 iconBg="bg-red-50"
                                 label="Late Arrivals"
-                                value={`${personalStats.lateCount} Days`}
+                                value={`${personalStats.lateCount}`}
                                 subtext="Month to date"
-                                isActive={personalStats.lateCount > 0}
-                                activeColor="ring-red-500 border-red-200 bg-red-50/10"
+                                className={personalStats.lateCount > 0 ? "ring-2 ring-red-500 border-red-200 bg-red-50/10" : ""}
                             />
-                            <SummaryCard
+                            <LiquidSummaryCard
                                 icon={<CalendarDays className="w-5 h-5 text-purple-600" />}
                                 iconBg="bg-purple-50"
                                 label="Leave History"
-                                value={`${personalStats.approvedLeaves} Days`}
+                                value={`${personalStats.approvedLeaves}`}
                                 subtext="Total approved"
                             />
-                            <SummaryCard
+                            <LiquidSummaryCard
                                 icon={<Plane className="w-5 h-5 text-emerald-600" />}
                                 iconBg="bg-emerald-50"
                                 label="Annual Leave"
-                                value={hasAnnualLeave ? "12 Days" : "0 Days"}
+                                value={hasAnnualLeave ? "12" : "0"}
                                 subtext={hasAnnualLeave ? "Available balance" : "No balance yet"}
-                                isActive={!hasAnnualLeave}
-                                activeColor="ring-orange-500 border-orange-200"
+                                className={!hasAnnualLeave ? "ring-2 ring-orange-500 border-orange-200" : ""}
                             />
-                        </SummaryCardsRow>
+                        </div>
                     </div>
                 </>
             )}
@@ -395,74 +394,66 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
             {viewMode === "team" && (
                 <>
                     {/* TEAM STATS */}
-                    <SummaryCardsRow>
-                        <SummaryCard
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
+                        <LiquidSummaryCard
                             icon={<UserCheck className="w-5 h-5 text-green-600" />}
                             iconBg="bg-green-50"
                             label="Checked In"
-                            value={`${teamCheckedIn} Active`}
+                            value={teamCheckedIn}
                             subtext="Currently working"
                         />
-                        <SummaryCard
+                        <LiquidSummaryCard
                             icon={<AlertTriangle className="w-5 h-5 text-orange-600" />}
                             iconBg="bg-orange-50"
                             label="Late Today"
-                            value={`${teamLate} Members`}
+                            value={teamLate}
                             subtext="Arrived after 09:00"
-                            isActive={teamLate > 0}
-                            activeColor="ring-orange-500 border-orange-200 bg-orange-50/10"
+                            className={teamLate > 0 ? "ring-2 ring-orange-500 border-orange-200 bg-orange-50/10" : ""}
                         />
-                        <SummaryCard
+                        <LiquidSummaryCard
                             icon={<UserX className="w-5 h-5 text-blue-600" />}
                             iconBg="bg-blue-50"
                             label="On Leave"
-                            value={`${teamOnLeave} Members`}
+                            value={teamOnLeave}
                             subtext="Approved leave"
                         />
-                        <SummaryCard
+                        <LiquidSummaryCard
                             icon={<ClipboardList className="w-5 h-5 text-amber-600" />}
                             iconBg="bg-amber-50"
                             label="Pending"
-                            value={`${leaves.filter(l => l.status === "pending").length} Requests`}
+                            value={leaves.filter(l => l.status === "pending").length}
                             subtext="Awaiting review"
-                            trend="up"
                         />
-                    </SummaryCardsRow>
+                    </div>
 
                     {/* TEAM LIST */}
-                    <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm mt-6">
-                        <div className="px-6 py-4 border-b border-neutral-100">
-                            <h4 className="font-semibold text-neutral-900">Today's Activity</h4>
-                        </div>
-                        <div className="divide-y divide-neutral-100">
+                    <div className="mt-8 space-y-4">
+                        <h4 className="font-semibold text-neutral-900 px-1">Today's Activity</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10 pb-10">
                             {combinedTeam.map((member, idx) => {
                                 const statusText = getStatusText(member);
                                 const isNotChecked = statusText.includes("Not yet");
 
                                 return (
-                                    <div key={member.id || idx} className="flex items-center justify-between px-6 py-4 hover:bg-neutral-50/50 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            {/* Assuming member has an avatar property, otherwise fallback to initials */}
-                                            {member.avatar_url ? (
-                                                <img src={member.avatar_url} alt={member.username} className="w-10 h-10 rounded-full object-cover" />
+                                    <LiquidItemCard
+                                        key={member.id || idx}
+                                        leftAvatar={
+                                            member.avatar_url ? (
+                                                <img src={member.avatar_url} alt={member.username} className="w-10 h-10 rounded-full object-cover border border-neutral-200/50" />
                                             ) : (
-                                                <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-medium text-sm">
+                                                <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-600 font-medium text-sm border border-neutral-200/50">
                                                     {member.username?.split(' ').map((n: string) => n[0]).join('') || "U"}
                                                 </div>
-                                            )}
-                                            <div>
-                                                <div className="font-medium text-neutral-900">{member.username}</div>
-                                                <div className={clsx("text-xs", isNotChecked ? "text-orange-500 font-medium" : "text-neutral-500")}>
-                                                    {statusText}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <StatusBadge status={member.status} />
-                                    </div>
+                                            )
+                                        }
+                                        title={member.username}
+                                        subtitle={<span className={clsx(isNotChecked ? "text-orange-500 font-medium" : "text-neutral-500")}>{statusText}</span>}
+                                        rightTop={<StatusBadge status={member.status} />}
+                                    />
                                 )
                             })}
                             {combinedTeam.length === 0 && (
-                                <div className="p-12 text-center text-neutral-400">
+                                <div className="col-span-1 md:col-span-2 py-12 text-center text-neutral-500 bg-white rounded-[20px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
                                     <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
                                     <p>No attendance logs for today yet.</p>
                                 </div>

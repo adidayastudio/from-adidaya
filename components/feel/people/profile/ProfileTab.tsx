@@ -656,7 +656,7 @@ export default function ProfileTab({ person, isSystem, isMe, onUpdate }: { perso
 
 function Section({ id, title, children, className, collapsed, onEdit, isEditing, isSaving, onSave, onCancel }: any) {
     return (
-        <div className={clsx("bg-white p-5 rounded-2xl border border-neutral-200 shadow-sm transition-all duration-300", isEditing && "ring-2 ring-blue-500/20 border-blue-200", className)}>
+        <div className={clsx("bg-white p-5 rounded-[20px] shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-neutral-100 transition-all duration-300", isEditing && "ring-2 ring-blue-500/20 border-blue-200", className)}>
             <div className="flex items-center justify-between mb-4">
                 <h3 className={clsx("text-sm font-bold uppercase tracking-wide", isEditing ? "text-blue-600" : "text-neutral-900")}>{title}</h3>
                 <div className="flex items-center gap-2">

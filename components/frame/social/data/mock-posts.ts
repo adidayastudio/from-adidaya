@@ -16,18 +16,21 @@ export const MOCK_ACCOUNTS: SocialAccount[] = [
         name: "Adidaya Instagram",
         platform: "INSTAGRAM",
         handle: "@adidayadesign",
+        isActive: true,
     },
     {
         id: "acc-2",
         name: "Adidaya TikTok",
         platform: "TIKTOK",
         handle: "@adidayadesign",
+        isActive: true,
     },
     {
         id: "acc-3",
         name: "CEO LinkedIn",
         platform: "LINKEDIN",
         handle: "Manu Stravo",
+        isActive: true,
     }
 ];
 
@@ -42,7 +45,8 @@ export const MOCK_POSTS: SocialPost[] = [
         scheduledDate: "2024-03-15",
         status: "PUBLISHED",
         insights: { views: 12500, likes: 850, comments: 45 },
-        publishedUrl: "https://instagram.com/p/..."
+        publishedUrl: "https://instagram.com/p/...",
+        priority: "MID"
     },
     {
         id: "post-2",
@@ -54,7 +58,8 @@ export const MOCK_POSTS: SocialPost[] = [
         scheduledDate: todayStr, // TODAY!
         scheduledTime: "18:00",
         status: "SCHEDULED",
-        assignee: "Sarah Designer"
+        assignee: "Sarah Designer",
+        priority: "HIGH"
     },
     {
         id: "post-3",
@@ -65,7 +70,8 @@ export const MOCK_POSTS: SocialPost[] = [
         contentPillar: "Culture",
         scheduledDate: yesterdayStr, // OVERDUE!
         status: "DESIGNING",
-        assignee: "Video Team"
+        assignee: "Video Team",
+        priority: "URGENT"
     },
     {
         id: "post-4",
@@ -76,7 +82,8 @@ export const MOCK_POSTS: SocialPost[] = [
         contentPillar: "Thought Leadership",
         scheduledDate: nextWeekStr,
         status: "WRITING",
-        assignee: "Manu Stravo"
+        assignee: "Manu Stravo",
+        priority: "MID"
     },
     {
         id: "post-5",
@@ -86,7 +93,8 @@ export const MOCK_POSTS: SocialPost[] = [
         contentType: "FEED",
         contentPillar: "Social Proof",
         scheduledDate: "2024-03-25",
-        status: "TODO"
+        status: "TODO",
+        priority: "HIGH"
     },
     {
         id: "post-6",
@@ -96,6 +104,7 @@ export const MOCK_POSTS: SocialPost[] = [
         contentType: "VIDEO",
         contentPillar: "Entertainment",
         scheduledDate: "2024-03-26",
-        status: "NOT_STARTED"
+        status: "NOT_STARTED",
+        priority: "LOW"
     }
 ];

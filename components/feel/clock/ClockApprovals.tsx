@@ -15,6 +15,7 @@ import { ClockConfirmationModal } from "./ClockConfirmationModal";
 import { ClockLeaveRequestDrawer } from "./ClockLeaveRequestDrawer";
 import { ClockOvertimeLogDrawer } from "./ClockOvertimeLogDrawer";
 import { ClockBusinessTripDrawer } from "./ClockBusinessTripDrawer";
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
 
 interface ClockApprovalsProps {
     role?: UserRole;
@@ -366,116 +367,201 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
             />
 
 
-            {/* TABLE */}
-            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-neutral-50 border-b border-neutral-200 text-xs text-neutral-500 uppercase font-semibold">
-                            <tr>
-                                <th className="px-6 py-4 cursor-pointer hover:bg-neutral-100 transition-colors" onClick={() => handleSort("date")}>
-                                    <div className="flex items-center gap-1">Submitted <ArrowUpDown className="w-3 h-3" /></div>
-                                </th>
-                                <th className="px-6 py-4 cursor-pointer hover:bg-neutral-100 transition-colors" onClick={() => handleSort("employee")}>
-                                    <div className="flex items-center gap-1">Employee <ArrowUpDown className="w-3 h-3" /></div>
-                                </th>
-                                <th className="px-6 py-4">Type</th>
-                                <th className="px-6 py-4">Details</th>
-                                <th className="px-6 py-4">Dates</th>
-                                <th className="px-6 py-4 cursor-pointer hover:bg-neutral-100 transition-colors" onClick={() => handleSort("status")}>
-                                    <div className="flex items-center gap-1">Status <ArrowUpDown className="w-3 h-3" /></div>
-                                </th>
-                                <th className="px-6 py-4 text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-100 text-neutral-600">
-                            {filteredData.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} className="px-6 py-16 text-center">
-                                        <div className="flex flex-col items-center justify-center gap-4">
-                                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
-                                                <Clock className="w-8 h-8 text-amber-400" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <h3 className="font-semibold text-neutral-700">No requests to review</h3>
-                                                <p className="text-sm text-neutral-400 max-w-xs mx-auto">
-                                                    No approval requests found for {formatMonthYear(currentMonth)}.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredData.map((item) => (
-                                    <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
-                                        <td className="px-6 py-4 font-mono text-xs">
-                                            {format(new Date(item.submittedAt), "MMM dd")}
-                                            <span className="text-neutral-400 ml-1 block text-[10px]">
-                                                {format(new Date(item.submittedAt), "HH:mm")}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 font-medium text-neutral-900">{item.employee}</td>
-                                        <td className="px-6 py-4">
-                                            <div className={clsx("inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight border",
-                                                item.type === "Leave Request" ? "bg-blue-50 text-blue-600 border-blue-100" :
-                                                    item.type === "Overtime" ? "bg-purple-50 text-purple-600 border-purple-100" :
-                                                        "bg-teal-50 text-teal-600 border-teal-100"
-                                            )}>
-                                                {item.type}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 max-w-xs">
-                                            <div className="truncate font-medium">{item.details}</div>
-                                            {item.status === "rejected" && item.rejectReason && (
-                                                <div className="text-[10px] text-rose-500 italic mt-0.5 truncate">
-                                                    Reason: {item.rejectReason}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap font-mono text-xs text-neutral-500">
-                                            {item.dates}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            {getStatusBadge(item.status)}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <button
-                                                    onClick={() => handleView(item)}
-                                                    className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-colors"
-                                                    title="View Details"
-                                                >
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
+            <>
+                {/* MOBILE LIST VIEW (Cards) */}
+                <div className="md:hidden space-y-4">
+                    {filteredData.map((item) => (
+                        <LiquidItemCard
+                            key={item.id}
+                            className={clsx(
+                                item.status === 'approved' ? 'bg-emerald-50 border-emerald-100' :
+                                    item.status === 'rejected' ? 'bg-rose-50 border-rose-100' :
+                                        item.status === 'pending' ? 'bg-yellow-50 border-yellow-100' :
+                                            'bg-white border-neutral-200'
+                            )}
+                            leftAvatar={
+                                <div className="flex flex-col items-center justify-center w-[52px] h-[52px] rounded-full bg-neutral-100/80 border border-neutral-200/60 shrink-0">
+                                    <span className="text-base font-bold text-neutral-900 leading-none tracking-tight">
+                                        {format(new Date(item.submittedAt), "dd")}
+                                    </span>
+                                    <span className="text-[9px] font-bold text-neutral-500 uppercase leading-none mt-0.5 tracking-wide">
+                                        {format(new Date(item.submittedAt), "MMM")}
+                                    </span>
+                                </div>
+                            }
+                            title={
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-sm font-bold text-neutral-900 leading-none truncate max-w-[150px]">
+                                        {item.employee}
+                                    </span>
+                                    <span className="text-xs font-semibold text-neutral-500">
+                                        {item.type}
+                                    </span>
+                                </div>
+                            }
+                            subtitle={
+                                <div className="flex flex-col gap-0.5 text-[11px] text-neutral-500 mt-1">
+                                    <span className="font-medium text-neutral-800 line-clamp-1">{item.details}</span>
+                                    <span className="font-mono text-[10px]">{item.dates}</span>
+                                </div>
+                            }
+                            rightTop={
+                                <div className="shrink-0 scale-90 origin-right">
+                                    {getStatusBadge(item.status)}
+                                </div>
+                            }
+                            rightBottom={
+                                <div className="flex items-center gap-1 mt-1">
+                                    <button
+                                        onClick={() => handleView(item)}
+                                        className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-colors"
+                                    >
+                                        <Eye className="w-3.5 h-3.5" />
+                                    </button>
+                                    {item.status === "pending" && (
+                                        <>
+                                            <button
+                                                onClick={() => handleActionClick(item, "approve")}
+                                                disabled={actionLoading === item.id}
+                                                className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 disabled:opacity-50 transition-colors"
+                                            >
+                                                <Check className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleActionClick(item, "reject")}
+                                                disabled={actionLoading === item.id}
+                                                className="p-1.5 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50 transition-colors"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            }
+                        />
+                    ))}
+                    {filteredData.length === 0 && (
+                        <div className="text-center py-10 px-4 bg-white rounded-xl border border-neutral-200 border-dashed">
+                            <div className="w-12 h-12 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <Clock className="w-6 h-6 text-amber-400" />
+                            </div>
+                            <h3 className="text-sm font-semibold text-neutral-900">No requests to review</h3>
+                            <p className="text-xs text-neutral-500 mt-1">No approval requests found for {formatMonthYear(currentMonth)}.</p>
+                        </div>
+                    )}
+                </div>
 
-                                                {item.status === "pending" && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleActionClick(item, "approve")}
-                                                            disabled={actionLoading === item.id}
-                                                            className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 disabled:opacity-50 transition-colors"
-                                                            title="Approve"
-                                                        >
-                                                            <Check className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleActionClick(item, "reject")}
-                                                            disabled={actionLoading === item.id}
-                                                            className="p-1.5 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50 transition-colors"
-                                                            title="Reject"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </button>
-                                                    </>
-                                                )}
+                {/* DESKTOP TABLE VIEW - Hidden on mobile */}
+                <div className="hidden md:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-neutral-50 border-b border-neutral-200 text-xs text-neutral-500 uppercase font-semibold">
+                                <tr>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-neutral-100 transition-colors" onClick={() => handleSort("date")}>
+                                        <div className="flex items-center gap-1">Submitted <ArrowUpDown className="w-3 h-3" /></div>
+                                    </th>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-neutral-100 transition-colors" onClick={() => handleSort("employee")}>
+                                        <div className="flex items-center gap-1">Employee <ArrowUpDown className="w-3 h-3" /></div>
+                                    </th>
+                                    <th className="px-6 py-4">Type</th>
+                                    <th className="px-6 py-4">Details</th>
+                                    <th className="px-6 py-4">Dates</th>
+                                    <th className="px-6 py-4 cursor-pointer hover:bg-neutral-100 transition-colors" onClick={() => handleSort("status")}>
+                                        <div className="flex items-center gap-1">Status <ArrowUpDown className="w-3 h-3" /></div>
+                                    </th>
+                                    <th className="px-6 py-4 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-neutral-100 text-neutral-600">
+                                {filteredData.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={7} className="px-6 py-16 text-center">
+                                            <div className="flex flex-col items-center justify-center gap-4">
+                                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
+                                                    <Clock className="w-8 h-8 text-amber-400" />
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="font-semibold text-neutral-700">No requests to review</h3>
+                                                    <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                                        No approval requests found for {formatMonthYear(currentMonth)}.
+                                                    </p>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ) : (
+                                    filteredData.map((item) => (
+                                        <tr key={item.id} className="hover:bg-neutral-50/50 transition-colors">
+                                            <td className="px-6 py-4 font-mono text-xs">
+                                                {format(new Date(item.submittedAt), "MMM dd")}
+                                                <span className="text-neutral-400 ml-1 block text-[10px]">
+                                                    {format(new Date(item.submittedAt), "HH:mm")}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 font-medium text-neutral-900">{item.employee}</td>
+                                            <td className="px-6 py-4">
+                                                <div className={clsx("inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight border",
+                                                    item.type === "Leave Request" ? "bg-blue-50 text-blue-600 border-blue-100" :
+                                                        item.type === "Overtime" ? "bg-purple-50 text-purple-600 border-purple-100" :
+                                                            "bg-teal-50 text-teal-600 border-teal-100"
+                                                )}>
+                                                    {item.type}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 max-w-xs">
+                                                <div className="truncate font-medium">{item.details}</div>
+                                                {item.status === "rejected" && item.rejectReason && (
+                                                    <div className="text-[10px] text-rose-500 italic mt-0.5 truncate">
+                                                        Reason: {item.rejectReason}
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap font-mono text-xs text-neutral-500">
+                                                {item.dates}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {getStatusBadge(item.status)}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <button
+                                                        onClick={() => handleView(item)}
+                                                        className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-colors"
+                                                        title="View Details"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+
+                                                    {item.status === "pending" && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleActionClick(item, "approve")}
+                                                                disabled={actionLoading === item.id}
+                                                                className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 disabled:opacity-50 transition-colors"
+                                                                title="Approve"
+                                                            >
+                                                                <Check className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleActionClick(item, "reject")}
+                                                                disabled={actionLoading === item.id}
+                                                                className="p-1.5 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50 transition-colors"
+                                                                title="Reject"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            </>
             {/* VIEW DRAWERS */}
             {
                 viewLeave && (

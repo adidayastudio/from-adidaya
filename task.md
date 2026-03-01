@@ -9,5 +9,5 @@
 - [x] Implement Form Submission for Purchasing <!-- id: 10 -->
 - [x] Implement Form Submission for Reimbursement <!-- id: 11 -->
 - [x] Remove Mock Data <!-- id: 12 -->
-- [ ] Implement File Upload (Bucket + API + Forms) <!-- id: 14 -->
-- [ ] Verify Data Flow (Input & Display) <!-- id: 13 -->
+- [x] Implement File Upload (Bucket + API + Forms) <!-- id: 14 -->
+- [x] Verify Data Flow (Input & Display) <!-- id: 13 -->

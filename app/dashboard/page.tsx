@@ -53,8 +53,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import WorkPersonaCard from "@/components/dashboard/WorkPersonaCard";
 import { resolveWorkPersona, WorkMetrics } from "@/lib/workPersonaLogic";
 import DashboardHeader from "@/components/dashboard/revamp/DashboardHeader";
-import DashboardCarousel from "@/components/dashboard/revamp/DashboardCarousel";
-import AppLauncher from "@/components/dashboard/revamp/AppLauncher";
+import ActivitySummaryCard from "@/components/dashboard/revamp/ActivitySummaryCard";
+import VibeCard from "@/components/dashboard/revamp/VibeCard";
+import WorkspaceGrid from "@/components/dashboard/revamp/WorkspaceGrid";
 
 const DEFAULT_FAVORITES = ["Projects", "Finance", "Resources", "Clock", "People", "Career", "Crew"];
 
@@ -228,10 +229,11 @@ export default function DashboardPage() {
           <div className="w-full pb-32 md:px-0 px-4">
 
             {/* NEW REVAMPED DASHBOARD (MOBILE) */}
-            <div className="md:hidden space-y-2 mb-24">
+            <div className="md:hidden">
               <DashboardHeader onOpenNotifications={() => setIsNotifSheetOpen(true)} />
-              <DashboardCarousel persona={persona} />
-              <AppLauncher />
+              <ActivitySummaryCard />
+              <VibeCard />
+              <WorkspaceGrid />
             </div>
 
             {/* DESKTOP APP GRID (WITH THEMED BACKGROUNDS) */}

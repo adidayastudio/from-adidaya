@@ -2,11 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Star, Download, Share2, Edit, FileText, BookOpen, ClipboardList, Scale, Video, Image, FolderOpen, Presentation, Table, FileSpreadsheet, ExternalLink, ChevronRight, Play, Check, Circle, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Star, Download, Share2, Edit, Pencil, FileText, BookOpen, ClipboardList, Scale, Video, Image, FolderOpen, Presentation, Table, FileSpreadsheet, ExternalLink, ChevronRight, Play, Check, Circle, AlertTriangle, ChevronLeft, Share, MoreVertical, Trash2, Maximize2, ZoomIn, ZoomOut, X as CloseIcon, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import PageWrapper from "@/components/layout/PageWrapper";
 import clsx from "clsx";
+import { createClient } from "@/utils/supabase/client";
+import { Loader2 } from "lucide-react";
+import KnowledgeDrawer from "@/components/frame/learn/KnowledgeDrawer";
+import { TYPE_LABEL, DEPT_LABEL } from "@/components/frame/learn/types";
+import JSZip from "jszip";
+
+const supabase = createClient();
 
 // Types
 type KnowledgeType = string;
@@ -23,6 +30,7 @@ type KnowledgeItem = {
     chapters?: { id: string; title: string; content: string }[];
     checklistItems?: { id: string; text: string; required: boolean }[];
     workflowSteps?: { id: string; title: string; description: string; decision?: { yes: string; no: string } }[];
+    files?: { name: string; file_url: string }[];
     fileUrl?: string;
     fileSize?: string;
     videoUrl?: string;
@@ -299,34 +307,130 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
     PRICE_REF: <FileSpreadsheet className="w-5 h-5" />,
 };
 
-const TYPE_LABEL: Record<string, string> = {
-    SOP: "SOP", WORKFLOW: "Workflow", GUIDELINE: "Guideline", POLICY: "Policy",
-    STANDARD: "Standard", CHECKLIST: "Checklist", TEMPLATE_PPT: "PPT Template",
-    TEMPLATE_RAB: "RAB Template", TEMPLATE_DRAWING: "Drawing Template",
-    TEMPLATE_CONTRACT: "Contract Template", TEMPLATE_REPORT: "Report Template",
-    VIDEO: "Video", PHOTO: "Photo", DESIGN_REF: "Design Ref",
-    MATERIAL_CATALOG: "Material Catalog", VENDOR_LIST: "Vendor List", PRICE_REF: "Price Ref",
-};
-
-const DEPT_LABEL: Record<string, string> = {
-    DESIGN: "Design", CONSTRUCTION: "Construction", FINANCE: "Finance", HR: "HR", OPERATION: "Operation",
-};
 
 export default function LearnDetailPage() {
     const params = useParams();
     const router = useRouter();
     const [isFavorite, setIsFavorite] = useState(false);
-    const [activeChapter, setActiveChapter] = useState<string>("1");
+    const [showEditDrawer, setShowEditDrawer] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
+    const [activeChapter, setActiveChapter] = useState<string>("0");
     const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
-
-    const item = MOCK_KNOWLEDGE.find(k => k.id === params.id);
+    const [item, setItem] = useState<KnowledgeItem | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [relatedItems, setRelatedItems] = useState<KnowledgeItem[]>([]);
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const [showZoomModal, setShowZoomModal] = useState(false);
+    const [expandedAsset, setExpandedAsset] = useState<number | null>(0);
+    const [zoomAssetIndex, setZoomAssetIndex] = useState<number>(-1);
 
     useEffect(() => {
-        if (item) {
-            setIsFavorite(item.isFavorite);
-            if (item.chapters?.length) setActiveChapter(item.chapters[0].id);
+        const handleScroll = () => setScrolled(window.scrollY > 20);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    useEffect(() => {
+        const fetchItem = async () => {
+            if (!params.id) return;
+            setLoading(true);
+            try {
+                const { data, error } = await supabase
+                    .from('knowledge_items')
+                    .select('*')
+                    .eq('id', params.id as string)
+                    .single();
+
+                if (error) throw error;
+                if (data) {
+                    const mappedItem: KnowledgeItem = {
+                        id: data.id,
+                        title: data.title,
+                        type: data.type,
+                        category: data.category as any,
+                        department: data.department,
+                        lastUpdated: data.created_at,
+                        isFavorite: false, // Need actual favorite logic later
+                        content: data.description || "",
+                        fileUrl: data.file_url,
+                        chapters: data.metadata?.chapters,
+                        checklistItems: data.metadata?.checklistItems,
+                        workflowSteps: data.metadata?.workflowSteps,
+                        files: data.metadata?.files || (data.file_url ? [{ name: data.title || "Asset Document", file_url: data.file_url }] : []),
+                    };
+                    setItem(mappedItem);
+                    setIsFavorite(data.is_favorite || false);
+
+                    // Fetch related
+                    const { data: related } = await supabase
+                        .from('knowledge_items')
+                        .select('*')
+                        .eq('department', data.department)
+                        .neq('id', data.id)
+                        .limit(3);
+
+                    if (related) {
+                        setRelatedItems(related.map((r: any): KnowledgeItem => ({
+                            id: r.id,
+                            title: r.title,
+                            type: r.type,
+                            category: r.category as any,
+                            department: r.department,
+                            lastUpdated: r.created_at,
+                            isFavorite: r.is_favorite || false,
+                            content: r.description || "",
+                            fileUrl: r.file_url,
+                            chapters: r.metadata?.chapters,
+                            checklistItems: r.metadata?.checklistItems,
+                            workflowSteps: r.metadata?.workflowSteps,
+                            files: r.metadata?.files || (r.file_url ? [{ name: r.title || "Asset Document", file_url: r.file_url }] : []),
+                        })));
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching knowledge item:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchItem();
+    }, [params.id]);
+
+    const toggleFavorite = async () => {
+        if (!item) return;
+        const newState = !isFavorite;
+        setIsFavorite(newState);
+        try {
+            const { error } = await supabase
+                .from('knowledge_items')
+                .update({ is_favorite: newState })
+                .eq('id', item.id);
+            if (error) throw error;
+        } catch (err) {
+            console.error("Error toggling favorite:", err);
+            setIsFavorite(!newState); // revert
         }
-    }, [item]);
+    };
+
+    const handleShare = async () => {
+        if (!item) return;
+        try {
+            const shareUrl = `${window.location.origin}/frame/learn/${item.id}?shared=true`;
+            await navigator.clipboard.writeText(shareUrl);
+            alert("Link copied to clipboard!");
+        } catch (err) {
+            alert("Failed to copy link");
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-neutral-400 animate-spin" />
+            </div>
+        );
+    }
 
     if (!item) {
         return (
@@ -346,12 +450,32 @@ export default function LearnDetailPage() {
     const isChecklist = item.type === "CHECKLIST" && item.checklistItems;
     const isWorkflow = item.type === "WORKFLOW" && item.workflowSteps;
     const hasChapters = item.chapters && item.chapters.length > 0 && !isChecklist && !isWorkflow;
-    const currentChapter = item.chapters?.find(c => c.id === activeChapter);
+    const currentChapter = item.chapters?.find((c, idx) => idx.toString() === activeChapter);
 
-    const relatedItems = MOCK_KNOWLEDGE.filter(k => k.department === item.department && k.id !== item.id).slice(0, 3);
+    const handleDownload = async (url?: string, filename?: string) => {
+        const downloadUrl = url || item?.fileUrl;
+        const downloadName = filename || item?.title || "download";
+        if (!downloadUrl) return;
+        try {
+            const response = await fetch(downloadUrl);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = downloadName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(blobUrl);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Download failed:", error);
+            window.open(downloadUrl, '_blank');
+        }
+    };
+
 
     const toggleCheck = (id: string) => {
-        setCheckedItems(prev => {
+        setCheckedItems((prev: Set<string>) => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id);
             else next.add(id);
@@ -359,168 +483,506 @@ export default function LearnDetailPage() {
         });
     };
 
-    return (
-        <div className="min-h-screen bg-neutral-50 p-6">
-            <Breadcrumb items={[{ label: "Frame" }, { label: "Learn", href: "/frame/learn" }, { label: item.title }]} />
+    const isShared = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get("shared") === "true" : false;
 
-            <PageWrapper
-                sidebar={
-                    <DetailSidebar
-                        item={item}
-                        activeChapter={activeChapter}
-                        onChapterChange={setActiveChapter}
-                        relatedItems={relatedItems}
-                        onBack={() => router.push("/frame/learn")}
-                        onItemClick={(id) => router.push(`/frame/learn/${id}`)}
-                    />
-                }
-            >
-                <div className="space-y-6">
-                    {/* HEADER */}
-                    <div className="bg-white rounded-xl border border-neutral-100 p-6">
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-500">
-                                    {TYPE_ICON[item.type]}
-                                </div>
-                                <div>
-                                    <h1 className="text-xl font-bold text-neutral-900">{item.title}</h1>
-                                    <div className="flex items-center gap-2 mt-1 text-xs text-neutral-500">
-                                        <span className="font-medium text-neutral-700">{TYPE_LABEL[item.type]}</span>
-                                        <span>•</span>
-                                        <span>{DEPT_LABEL[item.department]}</span>
-                                        <span>•</span>
-                                        <span>Updated {new Date(item.lastUpdated).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
-                                        {item.fileSize && <><span>•</span><span>{item.fileSize}</span></>}
-                                        {item.videoDuration && <><span>•</span><span>{item.videoDuration}</span></>}
+    // --- Mobile Top Bar (matches Learn browse page toolbar style) ---
+    const mobileTopBar = !isShared ? (
+        <div className={clsx(
+            "lg:hidden fixed top-0 left-0 right-0 z-50 pt-12 pointer-events-none"
+        )}>
+            {/* Background Mask */}
+            <div className={clsx(
+                "absolute inset-0 bg-white/60 transition-all duration-500 pointer-events-none",
+                scrolled ? "opacity-100" : "opacity-0"
+            )} style={{
+                maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
+                backdropFilter: scrolled ? 'blur(16px)' : 'none',
+                height: '80px'
+            }} />
+
+            <div className="flex items-center justify-between px-5 pointer-events-auto relative z-10 pb-2">
+                {/* Back button - wrapped in pill like browse page */}
+                <div className={clsx(
+                    "p-1 rounded-full shadow-sm border border-black/[0.03] transition-all duration-300",
+                    scrolled ? "bg-white/40 backdrop-blur-md" : "bg-white"
+                )}>
+                    <button
+                        onClick={() => router.push("/frame/learn")}
+                        className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all duration-200"
+                    >
+                        <ChevronLeft className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
+                    </button>
+                </div>
+
+                {/* Centered Title */}
+                <div className={clsx(
+                    "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 font-bold text-gray-900 text-[18px] transition-opacity duration-300",
+                    scrolled ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}>
+                    {item.title.length > 20 ? item.title.substring(0, 20) + "…" : item.title}
+                </div>
+
+                {/* Right toolbar - pill with action buttons (fav → share → edit) */}
+                <div className={clsx(
+                    "flex items-center gap-1 p-1 rounded-full shadow-sm border border-black/[0.03] transition-all duration-300",
+                    scrolled ? "bg-white/40 backdrop-blur-md" : "bg-white"
+                )}>
+                    <button
+                        onClick={toggleFavorite}
+                        className={clsx(
+                            "w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all duration-200",
+                            isFavorite ? "text-yellow-500" : "text-gray-700"
+                        )}
+                    >
+                        <Star className="w-5 h-5" fill={isFavorite ? "currentColor" : "none"} strokeWidth={1.5} />
+                    </button>
+                    <button
+                        onClick={handleShare}
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-50 active:scale-90 transition-all duration-200"
+                    >
+                        <Share className="w-5 h-5" strokeWidth={1.5} />
+                    </button>
+                    <button
+                        onClick={() => setShowEditDrawer(true)}
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-gray-700 hover:bg-gray-50 active:scale-90 transition-all duration-200"
+                    >
+                        <Pencil className="w-5 h-5" strokeWidth={1.5} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    ) : null;
+
+    // --- Page content (used in both shared and normal views) ---
+    const pageContent = (
+        <div className="space-y-5">
+            <KnowledgeDrawer
+                isOpen={showEditDrawer}
+                onClose={() => setShowEditDrawer(false)}
+                mode="edit"
+                initialData={item}
+                onSuccess={(data) => {
+                    if (data?.deleted) router.push("/frame/learn");
+                    else window.location.reload();
+                }}
+            />
+
+            {/* Header — flat, no card wrapper */}
+            <div>
+                <h1 className="text-[28px] font-bold text-neutral-900 leading-tight tracking-tight mb-3">{item.title}</h1>
+                <div className="flex items-center gap-2 flex-wrap mb-3">
+                    <span className="text-teal-600 bg-teal-50 px-2.5 py-1 rounded-full font-semibold text-[12px] capitalize">{DEPT_LABEL[item.department]?.toLowerCase()}</span>
+                    <span className="text-neutral-400 text-[12px]">•</span>
+                    <span className="text-[12px] font-medium text-neutral-500 capitalize">{item.category}</span>
+                    <span className="text-neutral-400 text-[12px]">•</span>
+                    <span className="text-[12px] font-medium text-neutral-500 capitalize">{TYPE_LABEL[item.type]?.toLowerCase()}</span>
+                </div>
+            </div>
+
+            {/* Description — plain text, no box */}
+            {item.content && (
+                <p className="text-[15px] text-neutral-600 leading-relaxed">{item.content}</p>
+            )}
+
+            {/* Assets / Preview */}
+            {(item.files && item.files.length > 0) ? (
+                <div className="space-y-3">
+                    <h3 className="text-[12px] font-bold text-neutral-400 uppercase tracking-widest">Assets ({item.files.length})</h3>
+                    {item.files.map((asset, idx) => {
+                        const isExpanded = expandedAsset === idx;
+                        return (
+                            <div key={idx} className="bg-white rounded-2xl overflow-hidden border border-black/[0.05]">
+                                {/* Asset header row */}
+                                <div
+                                    className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-neutral-50 active:scale-[0.99] transition-all duration-200"
+                                    onClick={() => setExpandedAsset(isExpanded ? null : idx)}
+                                >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <FileText size={16} className="text-neutral-400 shrink-0" />
+                                        <span className="font-medium text-[14px] text-neutral-900 truncate">{asset.name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDownload(asset.file_url, asset.name); }}
+                                            className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all duration-200 active:scale-90"
+                                        >
+                                            <Download size={14} />
+                                        </button>
+                                        <div className="w-8 h-8 flex items-center justify-center text-neutral-400">
+                                            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                        </div>
                                     </div>
                                 </div>
+
+                                {/* Expanded preview */}
+                                {isExpanded && (
+                                    <div className="px-4 pb-4">
+                                        <div className="relative aspect-[3/4] md:aspect-video bg-neutral-50 rounded-xl overflow-hidden border border-black/[0.04] group">
+                                            <AssetPreview url={asset.file_url} title={asset.name} />
+                                            <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setZoomAssetIndex(idx); setShowZoomModal(true); }}
+                                                    className="w-9 h-9 bg-black/50 hover:bg-black/70 backdrop-blur-md rounded-full text-white flex items-center justify-center transition-all duration-200 active:scale-90"
+                                                >
+                                                    <Maximize2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex items-center gap-2">
-                                <button onClick={() => setIsFavorite(!isFavorite)} className={clsx("p-2 rounded-lg transition-colors", isFavorite ? "bg-yellow-100 text-yellow-600" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200")}>
-                                    <Star className={clsx("w-4 h-4", isFavorite && "fill-yellow-500")} />
-                                </button>
-                                <button className="p-2 rounded-lg bg-neutral-100 text-neutral-500 hover:bg-neutral-200 transition-colors"><Share2 className="w-4 h-4" /></button>
-                                <button className="p-2 rounded-lg bg-neutral-100 text-neutral-500 hover:bg-neutral-200 transition-colors"><Edit className="w-4 h-4" /></button>
-                            </div>
+                        );
+                    })}
+                </div>
+            ) : item.fileUrl && (
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[12px] font-bold text-neutral-400 uppercase tracking-widest">Preview</h3>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => { setZoomAssetIndex(-1); setShowZoomModal(true); }}
+                                className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-full transition-all duration-200 active:scale-90 text-neutral-500"
+                            >
+                                <Maximize2 size={14} />
+                            </button>
+                            <button
+                                onClick={() => handleDownload()}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-full text-[12px] font-bold flex items-center gap-2 hover:bg-blue-700 transition-all duration-200 active:scale-90"
+                            >
+                                <Download className="w-3.5 h-3.5" />
+                                Download
+                            </button>
                         </div>
                     </div>
 
-                    {/* CONTENT */}
-                    <div className="bg-white rounded-xl border border-neutral-100 p-6">
-                        {isVideo ? (
-                            <div className="aspect-video bg-neutral-900 rounded-lg flex items-center justify-center relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                <button className="relative z-10 w-16 h-16 rounded-full bg-white/90 flex items-center justify-center text-neutral-900 hover:bg-white transition-colors shadow-xl">
-                                    <Play className="w-6 h-6 ml-1" />
-                                </button>
-                                <div className="absolute bottom-4 left-4 text-white z-10">
-                                    <p className="text-sm font-medium">{item.title}</p>
-                                    <p className="text-xs text-white/70">{item.videoDuration} • Video Tutorial</p>
-                                </div>
+                    <div className="relative aspect-[3/4] md:aspect-video bg-neutral-50 rounded-2xl overflow-hidden border border-black/[0.05] group">
+                        <AssetPreview url={item.fileUrl} title={item.title} />
+                        <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <p className="text-white text-xs font-medium opacity-80">Click full screen for better view</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CONTEXTUAL CONTENT */}
+            {((isVideo && !item.fileUrl) || isChecklist || isWorkflow || hasChapters || (!item.fileUrl && !item.content && !isChecklist && !isWorkflow && !hasChapters)) && (
+                <div className="bg-white rounded-xl border border-neutral-100 p-6">
+                    {(isVideo && !item.fileUrl) ? (
+                        <div className="aspect-video bg-neutral-900 rounded-lg flex items-center justify-center relative overflow-hidden">
+                            <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent" />
+                            <button className="relative z-10 w-16 h-16 rounded-full bg-white/90 flex items-center justify-center text-neutral-900 shadow-xl active:scale-90 transition-all duration-200 hover:bg-white inline-flex">
+                                <Play className="w-6 h-6 ml-1" />
+                            </button>
+                        </div>
+                    ) : isChecklist ? (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-semibold text-neutral-900">Checklist Items</h3>
+                                <span className="text-sm text-neutral-500">{checkedItems.size}/{item.checklistItems!.length} completed</span>
                             </div>
-                        ) : isFile ? (
-                            <div className="py-8">
-                                <div className="flex items-start gap-6">
-                                    <div className="w-20 h-20 bg-neutral-100 rounded-2xl flex items-center justify-center text-neutral-400 flex-shrink-0">
-                                        {TYPE_ICON[item.type]}
+                            {item.checklistItems!.map((ci, idx) => (
+                                <div key={idx} onClick={() => toggleCheck(idx.toString())} className={clsx("flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all", checkedItems.has(idx.toString()) ? "bg-green-50 border-green-200" : "bg-white border-neutral-100 hover:border-neutral-200")}>
+                                    <div className={clsx("w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5", checkedItems.has(idx.toString()) ? "bg-green-500 text-white" : "border-2 border-neutral-300")}>
+                                        {checkedItems.has(idx.toString()) && <Check className="w-3 h-3" />}
                                     </div>
                                     <div className="flex-1">
-                                        <h3 className="text-lg font-semibold text-neutral-900 mb-2">{item.title}</h3>
-                                        <p className="text-sm text-neutral-600 mb-4">{item.content}</p>
-                                        <div className="flex items-center gap-3">
-                                            <Button variant="secondary" size="sm" icon={<ExternalLink className="w-4 h-4" />}>Preview</Button>
-                                            <Button variant="primary" size="sm" icon={<Download className="w-4 h-4" />}>Download</Button>
-                                        </div>
+                                        <span className={clsx("text-sm", checkedItems.has(idx.toString()) ? "text-neutral-500 line-through" : "text-neutral-900")}>{ci.text}</span>
                                     </div>
                                 </div>
-                            </div>
-                        ) : isChecklist ? (
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-semibold text-neutral-900">Checklist Items</h3>
-                                    <span className="text-sm text-neutral-500">{checkedItems.size}/{item.checklistItems!.length} completed</span>
-                                </div>
-                                {item.checklistItems!.map((ci) => (
-                                    <div
-                                        key={ci.id}
-                                        onClick={() => toggleCheck(ci.id)}
-                                        className={clsx("flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all", checkedItems.has(ci.id) ? "bg-green-50 border-green-200" : "bg-white border-neutral-100 hover:border-neutral-200")}
-                                    >
-                                        <div className={clsx("w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5", checkedItems.has(ci.id) ? "bg-green-500 text-white" : "border-2 border-neutral-300")}>
-                                            {checkedItems.has(ci.id) && <Check className="w-3 h-3" />}
-                                        </div>
-                                        <div className="flex-1">
-                                            <span className={clsx("text-sm", checkedItems.has(ci.id) ? "text-neutral-500 line-through" : "text-neutral-900")}>{ci.text}</span>
-                                            {ci.required && <span className="ml-2 text-[10px] font-medium text-red-500">Required</span>}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : isWorkflow ? (
-                            <div className="space-y-4">
-                                <h3 className="text-lg font-semibold text-neutral-900 mb-4">Workflow Steps</h3>
-                                {item.workflowSteps!.map((step, idx) => (
-                                    <div key={step.id} className="relative pl-8">
-                                        <div className="absolute left-0 top-0 w-6 h-6 rounded-full bg-red-100 text-red-600 flex items-center justify-center text-xs font-bold">{idx + 1}</div>
-                                        {idx < item.workflowSteps!.length - 1 && <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-neutral-200" />}
-                                        <div className="bg-neutral-50 rounded-lg p-4 ml-2">
-                                            <h4 className="font-semibold text-neutral-900 mb-1">{step.title}</h4>
-                                            <p className="text-sm text-neutral-600">{step.description}</p>
-                                            {step.decision && (
-                                                <div className="mt-3 flex gap-2">
-                                                    <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-700">✓ {step.decision.yes}</span>
-                                                    <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">✗ {step.decision.no}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : hasChapters ? (
-                            <div className="prose prose-sm max-w-none">
-                                <h2 className="text-lg font-semibold text-neutral-900 mb-4">{currentChapter?.title}</h2>
-                                <div className="text-neutral-700 leading-relaxed whitespace-pre-line">{currentChapter?.content}</div>
-                                <div className="flex items-center justify-between mt-8 pt-6 border-t border-neutral-100 not-prose">
-                                    {item.chapters!.findIndex(c => c.id === activeChapter) > 0 ? (
-                                        <button onClick={() => { const idx = item.chapters!.findIndex(c => c.id === activeChapter); if (idx > 0) setActiveChapter(item.chapters![idx - 1].id); }} className="text-sm text-neutral-500 hover:text-neutral-900">← Previous</button>
-                                    ) : <div />}
-                                    {item.chapters!.findIndex(c => c.id === activeChapter) < item.chapters!.length - 1 && (
-                                        <button onClick={() => { const idx = item.chapters!.findIndex(c => c.id === activeChapter); if (idx < item.chapters!.length - 1) setActiveChapter(item.chapters![idx + 1].id); }} className="text-sm text-red-600 font-medium hover:text-red-700">Next →</button>
-                                    )}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="text-center py-12 text-neutral-400">No content available</div>
-                        )}
-                    </div>
-
-                    {!isFile && (
-                        <div className="flex justify-end">
-                            <Button variant="secondary" size="sm" icon={<Download className="w-4 h-4" />}>Export as PDF</Button>
+                            ))}
                         </div>
+                    ) : isWorkflow ? (
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold text-neutral-900 mb-4">Workflow Steps</h3>
+                            {item.workflowSteps!.map((step, idx) => (
+                                <div key={idx} className="relative pl-8">
+                                    <div className="absolute left-0 top-0 w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">{idx + 1}</div>
+                                    {idx < item.workflowSteps!.length - 1 && <div className="absolute left-[11px] top-6 bottom-0 w-0.5 bg-neutral-200" />}
+                                    <div className="bg-neutral-50 rounded-lg p-4 ml-2">
+                                        <h4 className="font-semibold text-neutral-900 mb-1">{step.title}</h4>
+                                        <p className="text-sm text-neutral-600">{step.description}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : hasChapters ? (
+                        <div className="prose prose-sm max-w-none">
+                            <h2 className="text-lg font-semibold text-neutral-900 mb-4">{currentChapter?.title}</h2>
+                            <div className="text-neutral-700 leading-relaxed whitespace-pre-line">{currentChapter?.content}</div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-12 text-neutral-400">No content available</div>
                     )}
                 </div>
-            </PageWrapper>
+            )}
+            {/* Related Items - Mobile only (desktop shows in sidebar) */}
+            {!isShared && relatedItems.length > 0 && (
+                <div className="lg:hidden space-y-3 mt-2">
+                    <h3 className="text-[12px] font-bold text-neutral-400 uppercase tracking-widest">Related</h3>
+                    <div className="space-y-2">
+                        {relatedItems.map(related => (
+                            <button
+                                key={related.id}
+                                onClick={() => router.push(`/frame/learn/${related.id}`)}
+                                className="w-full text-left bg-white rounded-2xl px-4 py-3.5 border border-black/[0.05] flex items-center justify-between group hover:bg-neutral-50 active:scale-[0.98] transition-all duration-200"
+                            >
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <FileText size={16} className="text-neutral-400 shrink-0" />
+                                    <span className="font-medium text-[14px] text-neutral-900 truncate">{related.title}</span>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-neutral-300 group-hover:text-neutral-500 shrink-0" />
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+
+    // --- Shared view: minimal wrapper covering the whole screen ---
+    if (isShared) {
+        return (
+            <div className="min-h-[100dvh] bg-neutral-100 flex flex-col fixed inset-0 z-[99999]">
+                {/* Header for shared view - glassy like Learn toolbar */}
+                <div className="sticky top-0 z-10 pointer-events-none">
+                    <div className={clsx(
+                        "absolute inset-0 transition-all duration-500 pointer-events-none",
+                        scrolled ? "bg-white/60 opacity-100" : "bg-white opacity-100"
+                    )} style={{
+                        maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
+                        WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
+                        backdropFilter: scrolled ? 'blur(16px)' : 'none',
+                    }} />
+                    <div className="flex items-center justify-between px-5 py-4 pointer-events-auto relative z-10">
+                        <div className="flex items-center gap-2.5">
+                            <img src="/logo-adidaya-red.svg" alt="Adidaya" className="w-6 h-6" />
+                            <span className="font-bold text-[17px] text-neutral-900 tracking-tight">Adidaya</span>
+                        </div>
+                        {(item.fileUrl || (item.files && item.files.length > 0)) && (
+                            <button
+                                onClick={async () => {
+                                    const files = item.files && item.files.length > 0 ? item.files : (item.fileUrl ? [{ file_url: item.fileUrl, name: item.title || 'download' }] : []);
+                                    if (files.length === 0) return;
+                                    if (files.length === 1) {
+                                        handleDownload(files[0].file_url, files[0].name);
+                                    } else {
+                                        try {
+                                            const zip = new JSZip();
+                                            for (const file of files) {
+                                                const response = await fetch(file.file_url);
+                                                const blob = await response.blob();
+                                                const ext = file.name.includes('.') ? '' : '.bin';
+                                                zip.file(file.name + ext, blob);
+                                            }
+                                            const zipBlob = await zip.generateAsync({ type: 'blob' });
+                                            const url = window.URL.createObjectURL(zipBlob);
+                                            const a = document.createElement('a');
+                                            a.href = url;
+                                            a.download = `${item.title?.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'download'}_assets.zip`;
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            window.URL.revokeObjectURL(url);
+                                            document.body.removeChild(a);
+                                        } catch (err) {
+                                            console.error('Zip download failed:', err);
+                                            for (const file of files) {
+                                                handleDownload(file.file_url, file.name);
+                                            }
+                                        }
+                                    }
+                                }}
+                                className="px-5 py-2.5 bg-blue-600 text-white rounded-full text-[13px] font-bold flex items-center gap-2 hover:bg-blue-700 transition-all duration-200 active:scale-90"
+                            >
+                                <Download className="w-4 h-4" />
+                                Download{item.files && item.files.length > 1 ? ` (${item.files.length})` : ''}
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                <div
+                    className="flex-1 overflow-y-auto pt-6 px-4 pb-12"
+                    onScroll={(e) => {
+                        const target = e.target as HTMLDivElement;
+                        setScrolled(target.scrollTop > 10);
+                    }}
+                >
+                    {pageContent}
+                </div>
+
+                {/* Zoom Modal */}
+                {showZoomModal && (
+                    <div className="fixed inset-0 z-[100000] bg-black/95 backdrop-blur-sm flex items-center justify-center animate-in fade-in duration-200">
+                        <div className="absolute top-0 inset-x-0 p-4 flex items-center justify-between z-10 bg-gradient-to-b from-black/50 to-transparent pb-8">
+                            <h3 className="text-white font-medium text-sm drop-shadow-md">
+                                {zoomAssetIndex >= 0 && item.files
+                                    ? item.files[zoomAssetIndex].name
+                                    : item.title}
+                            </h3>
+                            <button
+                                onClick={() => { setShowZoomModal(false); setZoomLevel(1); }}
+                                className="w-10 h-10 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white flex items-center justify-center transition-all duration-200 active:scale-90"
+                            >
+                                <CloseIcon size={20} />
+                            </button>
+                        </div>
+                        <div className="w-full h-full p-4 md:p-12 flex items-center justify-center">
+                            <div className="w-full h-full max-w-5xl rounded-lg overflow-hidden relative shadow-2xl ring-1 ring-white/10">
+                                <AssetPreview
+                                    url={zoomAssetIndex >= 0 && item.files ? item.files[zoomAssetIndex].file_url : (item.fileUrl || "")}
+                                    title={item.title}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // --- Normal view ---
+    return (
+        <>
+            {mobileTopBar}
+
+            <div className="min-h-screen bg-neutral-50">
+                <Breadcrumb items={[{ label: "Frame" }, { label: "Learn", href: "/frame/learn" }, { label: item.title }]} />
+
+                <PageWrapper
+                    sidebar={
+                        <div className="hidden lg:block">
+                            <DetailSidebar
+                                item={item}
+                                activeChapter={activeChapter}
+                                onChapterChange={setActiveChapter}
+                                relatedItems={relatedItems}
+                                onBack={() => router.push("/frame/learn")}
+                                onItemClick={(id: string) => router.push(`/frame/learn/${id}`)}
+                                canManage={true}
+                                onEdit={() => setShowEditDrawer(true)}
+                            />
+                        </div>
+                    }
+                >
+                    <div className="pt-28 pb-32 lg:pt-0 lg:pb-4">
+                        {pageContent}
+                    </div>
+                </PageWrapper>
+
+                {/* ZOOM MODAL */}
+                {showZoomModal && (item.fileUrl || (item.files && item.files.length > 0)) && (
+                    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col p-6 animate-in fade-in duration-300">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="text-white">
+                                <h2 className="text-lg font-bold">
+                                    {zoomAssetIndex >= 0 && item.files && item.files[zoomAssetIndex] ? item.files[zoomAssetIndex].name : item.title}
+                                </h2>
+                                <p className="text-white/50 text-xs">Premium Asset Preview</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="bg-white/10 rounded-full px-4 py-2 flex items-center gap-4 text-white border border-white/10">
+                                    <button onClick={() => setZoomLevel(prev => Math.max(0.2, prev - 0.2))}><ZoomOut size={18} /></button>
+                                    <span className="text-sm font-mono w-12 text-center">{Math.round(zoomLevel * 100)}%</span>
+                                    <button onClick={() => setZoomLevel(prev => Math.min(5, prev + 0.2))}><ZoomIn size={18} /></button>
+                                </div>
+                                <button
+                                    onClick={() => { setShowZoomModal(false); setZoomLevel(1); }}
+                                    className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-white border border-white/10 active:scale-95 transition-all"
+                                >
+                                    <CloseIcon size={24} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 w-full h-full overflow-hidden flex items-center justify-center">
+                            <div
+                                style={{
+                                    transform: `scale(${zoomLevel})`,
+                                    transition: 'transform 0.2s cubic-bezier(0.2, 0, 0.2, 1)',
+                                    width: '100%',
+                                    height: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                                className="origin-center"
+                            >
+                                <AssetPreview
+                                    url={zoomAssetIndex >= 0 && item.files && item.files[zoomAssetIndex] ? item.files[zoomAssetIndex].file_url : item.fileUrl || ""}
+                                    title={zoomAssetIndex >= 0 && item.files && item.files[zoomAssetIndex] ? item.files[zoomAssetIndex].name : item.title}
+                                    isZoomed
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Mobile sidebar overlay - render empty to prevent PageWrapper from rendering it */}
+        </>
+    );
+}
+
+function AssetPreview({ url, title, isZoomed = false }: { url: string; title: string; isZoomed?: boolean }) {
+    const isImage = url.match(/\.(jpeg|jpg|gif|png|webp|avif)$/i);
+    const isPDF = url.match(/\.(pdf)$/i);
+
+    if (isImage) {
+        return (
+            <img
+                src={url}
+                alt={title}
+                className={clsx(
+                    "w-full h-full object-contain",
+                    !isZoomed && "pointer-events-none"
+                )}
+            />
+        );
+    }
+
+    if (isPDF) {
+        return (
+            <iframe
+                src={`${url}#toolbar=0&view=FitH`}
+                className="w-full h-full border-none"
+                title={title}
+            />
+        );
+    }
+
+    return (
+        <div className="flex flex-col items-center justify-center h-full p-12 text-center text-neutral-400 gap-4">
+            <FileText size={48} strokeWidth={1} />
+            <div>
+                <p className="text-sm font-bold text-neutral-600">Asset type not previewable</p>
+                <p className="text-xs">Click Download for full access</p>
+            </div>
         </div>
     );
 }
 
-function DetailSidebar({ item, activeChapter, onChapterChange, relatedItems, onBack, onItemClick }: { item: KnowledgeItem; activeChapter: string; onChapterChange: (id: string) => void; relatedItems: KnowledgeItem[]; onBack: () => void; onItemClick: (id: string) => void; }) {
+function DetailSidebar({ item, activeChapter, onChapterChange, relatedItems, onBack, onItemClick, canManage, onEdit }: { item: KnowledgeItem; activeChapter: string; onChapterChange: (id: string) => void; relatedItems: KnowledgeItem[]; onBack: () => void; onItemClick: (id: string) => void; canManage?: boolean; onEdit?: () => void; }) {
     const hasChapters = item.chapters && item.chapters.length > 0 && item.type !== "CHECKLIST" && item.type !== "WORKFLOW";
 
     return (
         <div className="space-y-6">
-            <button onClick={onBack} className="flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 transition-colors">
-                <ArrowLeft className="w-4 h-4" />Back to Learn
-            </button>
+            <div className="flex items-center justify-end">
+                {canManage && (
+                    <button
+                        onClick={onEdit}
+                        className="w-10 h-10 bg-white border border-black/5 rounded-full flex items-center justify-center text-neutral-500 hover:bg-neutral-50 shadow-sm active:scale-95 transition-all"
+                    >
+                        <Edit className="w-4 h-4" strokeWidth={1.5} />
+                    </button>
+                )}
+            </div>
 
             {hasChapters && (
                 <div className="space-y-2">
                     <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Contents</div>
                     <div className="space-y-0.5">
                         {item.chapters!.map((chapter, idx) => (
-                            <button key={chapter.id} onClick={() => onChapterChange(chapter.id)} className={clsx("w-full text-left rounded-lg px-3 py-2 text-sm transition-all flex items-center gap-2", activeChapter === chapter.id ? "text-red-600 bg-red-50 font-medium" : "text-neutral-600 hover:bg-neutral-50")}>
+                            <button key={idx} onClick={() => onChapterChange(idx.toString())} className={clsx("w-full text-left rounded-lg px-3 py-2 text-sm transition-all flex items-center gap-2", activeChapter === idx.toString() ? "text-red-600 bg-red-50 font-medium" : "text-neutral-600 hover:bg-neutral-50")}>
                                 <span className="text-[10px] text-neutral-400 w-4">{idx + 1}.</span>
                                 <span className="truncate">{chapter.title}</span>
                             </button>

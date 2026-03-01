@@ -31,7 +31,7 @@ export default function CalendarPageWrapper({
                 <MobileNavBar
                     appName="Calendar"
                     appIcon={Calendar}
-                    parentHref="/feel"
+                    parentHref="/dashboard"
                     parentLabel="Feel"
                     siblingApps={FEEL_APPS}
                     tabs={CALENDAR_TABS}

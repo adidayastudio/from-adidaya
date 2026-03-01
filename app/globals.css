@@ -253,6 +253,7 @@ body {
   overflow-x: hidden !important;
 }
 
+
 /* GLOBAL FOCUS OVERRIDE */
 *:focus-visible {
   outline-color: var(--brand-red);
@@ -267,4 +268,20 @@ textarea:focus {
   outline: none !important;
   /* Let Tailwind ring handle it, or custom styles */
   --tw-ring-color: var(--brand-red-soft);
+}
+
+/* Hide mobile bottom navigation when this class is on html/body */
+html.hide-mobile-nav .lg\:hidden.fixed.bottom-6 {
+  display: none !important;
+}
+
+/* 🟢 FORCE SANS-SERIF ON ALL FORM ELEMENTS (ESPECIALLY SAFARI DROPDOWNS) */
+select,
+option,
+input,
+textarea,
+button,
+.font-sans,
+* {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
 }

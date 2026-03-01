@@ -1,7 +1,7 @@
 
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import PageWrapper from "@/components/layout/PageWrapper";
-import MobileNavBar from "@/components/layout/MobileNavBar";
+import { LiquidMobileHeader } from "@/components/shared/liquid/LiquidMobileHeader";
 import ClockSidebar, { ClockSection } from "@/components/feel/clock/ClockSidebar";
 import { FolderKanban, LayoutDashboard, CalendarDays, UserX, Hourglass, Briefcase, CheckSquare, Clock } from "lucide-react";
 import { UserRole } from "@/hooks/useUserProfile";
@@ -58,16 +58,20 @@ export default function ClockPageWrapper({
             {/* MOBILE LAYOUT */}
             <div className="lg:hidden min-h-screen bg-neutral-100 pb-20">
                 {/* Single-row liquid glass nav bar */}
-                <MobileNavBar
-                    appName="Clock"
-                    appIcon={Clock}
-                    parentHref="/feel"
-                    parentLabel="Feel"
-                    siblingApps={FEEL_APPS}
+                <LiquidMobileHeader
+                    title="Clock"
+                    backUrl="/dashboard"
                     tabs={filteredTabs}
-                    accentColor="text-blue-600"
-                    onFabClick={fabAction?.onClick}
-                    fabIcon={fabAction?.icon}
+                    actions={
+                        fabAction ? (
+                            <button
+                                onClick={fabAction.onClick}
+                                className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors"
+                            >
+                                {fabAction.icon}
+                            </button>
+                        ) : undefined
+                    }
                 />
 
                 {/* Floating Personal/Team toggle */}

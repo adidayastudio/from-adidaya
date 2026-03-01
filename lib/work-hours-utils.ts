@@ -2,17 +2,37 @@
  * Work Hours Utility Functions
  * 
  * Centralized logic for calculating work hours, overtime, and targets
- * based on day of week:
+ * based on day of week and season:
+ * 
+ * REGULAR:
  * - Monday-Friday: 09:00 - 17:00 (8 hours)
  * - Saturday: 09:00 - 14:00 (5 hours)
+ * 
+ * RAMADAN (19 Feb - 19 Mar 2026):
+ * - Monday-Friday: 09:00 - 16:00 (7 hours)
+ * - Saturday: 09:00 - 13:00 (4 hours)
  */
 
 export interface WorkHoursConfig {
     startHour: number;      // e.g., 9 (09:00)
     endHour: number;        // e.g., 17 (17:00)
     workMinutes: number;    // e.g., 480 (8 hours)
+    workHours: number;      // e.g., 8
     isWorkDay: boolean;     // Sunday = false
     dayName: string;
+    isRamadan: boolean;
+}
+
+/** Check if a date falls within Ramadan 2026: 19 Feb – 19 Mar */
+function isRamadanPeriod(date: Date): boolean {
+    const year = date.getFullYear();
+    if (year !== 2026) return false;
+    const month = date.getMonth(); // 0-indexed: Jan=0, Feb=1, Mar=2
+    const day = date.getDate();
+    // Feb 19 to Mar 19 inclusive
+    if (month === 1 && day >= 19) return true; // Feb 19-28
+    if (month === 2 && day <= 19) return true;  // Mar 1-19
+    return false;
 }
 
 /**
@@ -21,36 +41,49 @@ export interface WorkHoursConfig {
 export function getWorkHoursConfig(date: Date | string): WorkHoursConfig {
     const d = typeof date === 'string' ? new Date(date) : date;
     const dayOfWeek = d.getDay(); // 0 = Sunday, 6 = Saturday
+    const ramadan = isRamadanPeriod(d);
+
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
     // Sunday
     if (dayOfWeek === 0) {
         return {
             startHour: 9,
-            endHour: 17,
+            endHour: ramadan ? 16 : 17,
             workMinutes: 0,
+            workHours: 0,
             isWorkDay: false,
-            dayName: 'Sunday'
+            dayName: 'Sunday',
+            isRamadan: ramadan
         };
     }
 
     // Saturday
     if (dayOfWeek === 6) {
+        const endHour = ramadan ? 13 : 14;
+        const workHours = ramadan ? 4 : 5;
         return {
             startHour: 9,
-            endHour: 14,
-            workMinutes: 5 * 60, // 5 hours = 300 minutes
+            endHour,
+            workMinutes: workHours * 60,
+            workHours,
             isWorkDay: true,
-            dayName: 'Saturday'
+            dayName: 'Saturday',
+            isRamadan: ramadan
         };
     }
 
     // Monday - Friday
+    const endHour = ramadan ? 16 : 17;
+    const workHours = ramadan ? 7 : 8;
     return {
         startHour: 9,
-        endHour: 17,
-        workMinutes: 8 * 60, // 8 hours = 480 minutes
+        endHour,
+        workMinutes: workHours * 60,
+        workHours,
         isWorkDay: true,
-        dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek]
+        dayName: dayNames[dayOfWeek],
+        isRamadan: ramadan
     };
 }
 
@@ -158,5 +191,6 @@ export function getShiftSchedule(date?: Date | string): string {
         return "Off Day";
     }
 
-    return `09:00 - ${config.endHour.toString().padStart(2, '0')}:00`;
+    const schedule = `09:00 - ${config.endHour.toString().padStart(2, '0')}:00`;
+    return config.isRamadan ? `${schedule} (Ramadan)` : schedule;
 }

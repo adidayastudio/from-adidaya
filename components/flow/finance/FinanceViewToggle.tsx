@@ -45,7 +45,7 @@ export function FinanceViewToggle() {
                 ref={personalRef}
                 onClick={() => setViewMode("personal")}
                 className={clsx(
-                    "relative z-10 flex items-center gap-2 px-3 h-full rounded-full text-sm font-medium transition-colors duration-200",
+                    "relative z-10 flex items-center gap-2 px-4 h-full rounded-full text-[14px] font-medium transition-colors duration-200",
                     viewMode === "personal"
                         ? "text-neutral-900"
                         : "text-neutral-500 hover:text-neutral-700"
@@ -57,7 +57,7 @@ export function FinanceViewToggle() {
                 ref={teamRef}
                 onClick={() => setViewMode("team")}
                 className={clsx(
-                    "relative z-10 flex items-center gap-2 px-3 h-full rounded-full text-sm font-medium transition-colors duration-200",
+                    "relative z-10 flex items-center gap-2 px-4 h-full rounded-full text-[14px] font-medium transition-colors duration-200",
                     viewMode === "team"
                         ? "text-neutral-900"
                         : "text-neutral-500 hover:text-neutral-700"

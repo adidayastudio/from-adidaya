@@ -13,17 +13,17 @@ export default function GlobalDirectoryCard({ person }: GlobalDirectoryCardProps
 
     return (
         <div className={clsx(
-            "group relative p-4 rounded-2xl border transition-all duration-300",
-            "bg-white/60 hover:bg-white/80 backdrop-blur-md shadow-sm hover:shadow-md",
+            "group relative p-4 rounded-[20px] shadow-[0_2px_12px_rgba(0,0,0,0.03)] border transition-all duration-300",
+            "bg-white hover:bg-neutral-50/50 hover:shadow-md",
             "flex flex-col gap-4",
             isSystem ? "border-neutral-200 bg-neutral-50/50" :
-                (person.include_in_performance === false ? "bg-orange-50/30 border-orange-100/40 text-orange-900/80" : "border-white/40 bg-white/60 hover:bg-white/80")
+                (person.include_in_performance === false ? "bg-orange-50/30 border-orange-100/40 text-orange-900/80" : "border-neutral-100")
         )}>
             {/* Header: Identity */}
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <div className={clsx(
-                        "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shadow-inner ring-2 ring-white",
+                        "w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shadow-inner ring-2 ring-neutral-50",
                         isSystem ? "bg-neutral-200 text-neutral-500" : "bg-gradient-to-br from-blue-500 to-indigo-600 text-white"
                     )}>
                         {person.avatarUrl ? (

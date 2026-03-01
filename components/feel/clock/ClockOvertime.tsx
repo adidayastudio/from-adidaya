@@ -19,6 +19,7 @@ import {
 import { ClockConfirmationModal } from "./ClockConfirmationModal";
 import { getOvertimeStart, getWorkMinutes } from "@/lib/work-hours-utils";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
 
 interface ClockOvertimeProps {
     role?: UserRole;
@@ -495,193 +496,338 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
                 </div>
             )}
 
-            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead className="bg-neutral-50 border-b border-neutral-200">
-                            <tr>
-                                {isManager && viewMode === "team" && (
-                                    <th
-                                        className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
-                                        onClick={() => handleSort("employee")}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            Employee
-                                            {sortBy === "employee" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                        </div>
-                                    </th>
-                                )}
-                                <th
-                                    className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
-                                    onClick={() => handleSort("date")}
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Date
-                                        {sortBy === "date" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                    </div>
-                                </th>
-                                <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Start Time</th>
-                                <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">End Time</th>
-                                <th
-                                    className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
-                                    onClick={() => handleSort("overtime")}
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Duration
-                                        {sortBy === "overtime" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                    </div>
-                                </th>
-                                <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Status</th>
-                                <th className="text-right px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-100">
-                            {filteredData.map((row) => (
-                                <tr key={row.id} className="hover:bg-neutral-50/50 transition-colors">
-                                    {isManager && viewMode === "team" && <td className="px-6 py-4 font-medium text-neutral-900">{row.employee}</td>}
-                                    <td className="px-6 py-4 text-neutral-700 font-mono text-xs">{row.date}</td>
-                                    <td className="px-6 py-4 font-mono">
+            <>
+                {/* MOBILE LIST VIEW (Cards) */}
+                <div className="md:hidden space-y-4">
+                    {filteredData.map((row) => (
+                        <LiquidItemCard
+                            key={row.id}
+                            className={clsx(
+                                row.status === 'approved' ? 'bg-emerald-50 border-emerald-100' :
+                                    row.status === 'rejected' ? 'bg-rose-50 border-rose-100' :
+                                        row.status === 'pending' ? 'bg-yellow-50 border-yellow-100' :
+                                            'bg-white border-neutral-200'
+                            )}
+                            leftAvatar={
+                                <div className="flex flex-col items-center justify-center w-[52px] h-[52px] rounded-full bg-neutral-100/80 border border-neutral-200/60 shrink-0">
+                                    <span className="text-base font-bold text-neutral-900 leading-none tracking-tight">
+                                        {format(new Date(row.date), "dd")}
+                                    </span>
+                                    <span className="text-[9px] font-bold text-neutral-500 uppercase leading-none mt-0.5 tracking-wide">
+                                        {format(new Date(row.date), "MMM")}
+                                    </span>
+                                </div>
+                            }
+                            title={
+                                <div className="flex flex-col gap-0.5">
+                                    {(isManager && viewMode === "team") && (
+                                        <span className="text-sm font-bold text-neutral-900 leading-none truncate max-w-[150px]">
+                                            {row.employee}
+                                        </span>
+                                    )}
+                                    <div className="flex items-center gap-1.5 text-xs text-neutral-700 font-mono mt-0.5">
                                         {row.hasCorrection && row.originalClockIn !== row.clockIn ? (
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-neutral-400 line-through text-xs">{row.originalClockIn}</span>
+                                            <>
+                                                <span className="text-neutral-400 line-through text-[10px]">{row.originalClockIn}</span>
                                                 <span className="text-emerald-600 font-medium">{row.clockIn}</span>
-                                            </div>
+                                            </>
                                         ) : (
-                                            <span className="text-neutral-900">{row.clockIn}</span>
+                                            <span>{row.clockIn}</span>
                                         )}
-                                    </td>
-                                    <td className="px-6 py-4 font-mono">
+                                        <span className="text-neutral-400">-</span>
                                         {row.hasCorrection && row.originalClockOut !== row.clockOut ? (
-                                            <div className="flex flex-col gap-0.5">
-                                                <span className="text-neutral-400 line-through text-xs">{row.originalClockOut}</span>
+                                            <>
+                                                <span className="text-neutral-400 line-through text-[10px]">{row.originalClockOut}</span>
                                                 <span className="text-emerald-600 font-medium">{row.clockOut}</span>
-                                            </div>
+                                            </>
                                         ) : (
-                                            <span className="text-neutral-900">{row.clockOut}</span>
+                                            <span>{row.clockOut}</span>
                                         )}
-                                    </td>
-                                    <td className="px-6 py-4 text-emerald-600 font-medium">+{formatDuration(row.overtimeMinutes)}</td>
-                                    <td className="px-6 py-4">
-                                        {getStatusBadge(row.status)}
-                                        {row.status === "rejected" && row.rejectReason && (
-                                            <div className="text-[10px] text-rose-500 italic mt-0.5 truncate max-w-[150px]" title={row.rejectReason}>
-                                                {row.rejectReason}
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center justify-end gap-1">
-                                            {/* TEAM VIEW ACTIONS */}
-                                            {isManager && viewMode === "team" ? (
+                                    </div>
+                                </div>
+                            }
+                            subtitle={
+                                <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium mt-0.5">
+                                    +{formatDuration(row.overtimeMinutes)}
+                                </div>
+                            }
+                            rightTop={
+                                <div className="shrink-0 scale-90 origin-right">
+                                    {getStatusBadge(row.status)}
+                                </div>
+                            }
+                            rightBottom={
+                                <div className="flex items-center gap-1 mt-1">
+                                    {/* TEAM VIEW ACTIONS */}
+                                    {isManager && viewMode === "team" ? (
+                                        <>
+                                            <button
+                                                onClick={() => onViewLog?.(row.original)}
+                                                className="p-1 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                                            >
+                                                <Eye className="w-3 h-3" />
+                                            </button>
+                                            {row.status === "pending" && (
                                                 <>
                                                     <button
-                                                        onClick={() => onViewLog?.(row.original)}
-                                                        className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
-                                                        title="View Details"
+                                                        onClick={() => handleApprove(row)}
+                                                        disabled={actionLoading === row.id}
+                                                        className="p-1 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 disabled:opacity-50"
                                                     >
-                                                        <Eye className="w-3.5 h-3.5" />
+                                                        <Check className="w-3 h-3" />
                                                     </button>
-                                                    {row.status === "pending" && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => handleApprove(row)}
-                                                                disabled={actionLoading === row.id}
-                                                                className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 disabled:opacity-50"
-                                                                title="Approve (with Correction)"
-                                                            >
-                                                                <Check className="w-3.5 h-3.5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleReject(row.id, row.userId, row.date)}
-                                                                disabled={actionLoading === row.id}
-                                                                className="p-1.5 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50"
-                                                                title="Reject"
-                                                            >
-                                                                <X className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                /* PERSONAL VIEW ACTIONS */
-                                                <>
-                                                    {/* Edit: Pending Only */}
-                                                    {row.status === "pending" && (
-                                                        <button
-                                                            onClick={() => onEditLog?.(row.original)}
-                                                            disabled={actionLoading === row.id}
-                                                            className="p-1.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 disabled:opacity-50"
-                                                            title="Edit"
-                                                        >
-                                                            <Edit className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    )}
-                                                    {/* Cancel: Pending or Approved */}
-                                                    {(row.status === "pending" || row.status === "approved") && (
-                                                        <button
-                                                            onClick={() => handleCancel(row.id, row.userId, row.date, row.status)}
-                                                            disabled={actionLoading === row.id}
-                                                            className="p-1.5 rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200 disabled:opacity-50"
-                                                            title={row.status === "approved" ? "Cancel Approved Request" : "Cancel Request"}
-                                                        >
-                                                            <Ban className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    )}
-                                                    {/* Delete: Rejected or Cancelled (Not Approved/Pending) */}
-                                                    {(row.status === "rejected" || row.status === "cancelled") && (
-                                                        <button
-                                                            onClick={() => handleDelete(row.id, row.userId, row.date)}
-                                                            disabled={actionLoading === row.id}
-                                                            className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 disabled:opacity-50"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        onClick={() => handleReject(row.id, row.userId, row.date)}
+                                                        disabled={actionLoading === row.id}
+                                                        className="p-1 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
                                                 </>
                                             )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filteredData.length === 0 && (
+                                        </>
+                                    ) : (
+                                        /* PERSONAL VIEW ACTIONS */
+                                        <>
+                                            {row.status === "pending" && (
+                                                <button
+                                                    onClick={() => onEditLog?.(row.original)}
+                                                    disabled={actionLoading === row.id}
+                                                    className="p-1 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 disabled:opacity-50"
+                                                >
+                                                    <Edit className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                            {(row.status === "pending" || row.status === "approved") && (
+                                                <button
+                                                    onClick={() => handleCancel(row.id, row.userId, row.date, row.status)}
+                                                    disabled={actionLoading === row.id}
+                                                    className="p-1 rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200 disabled:opacity-50"
+                                                >
+                                                    <Ban className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                            {(row.status === "rejected" || row.status === "cancelled") && (
+                                                <button
+                                                    onClick={() => handleDelete(row.id, row.userId, row.date)}
+                                                    disabled={actionLoading === row.id}
+                                                    className="p-1 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 disabled:opacity-50"
+                                                >
+                                                    <Trash className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            }
+                        />
+                    ))}
+                    {filteredData.length === 0 && (
+                        <div className="text-center py-10 px-4 bg-white rounded-xl border border-neutral-200 border-dashed">
+                            {loading ? (
+                                <GlobalLoading />
+                            ) : (
+                                <>
+                                    <div className="w-12 h-12 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <Hourglass className="w-6 h-6 text-purple-400" />
+                                    </div>
+                                    <h3 className="text-sm font-semibold text-neutral-900">No Overtime</h3>
+                                    <p className="text-xs text-neutral-500 mt-1">Try changing the month or filters.</p>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* DESKTOP LIST VIEW - Hidden on mobile */}
+                <div className="hidden md:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-neutral-50 border-b border-neutral-200">
                                 <tr>
-                                    <td colSpan={isManager && viewMode === "team" ? 8 : 7} className="px-6 py-16 text-center">
-                                        {loading ? (
-                                            <GlobalLoading />
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center gap-4">
-                                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
-                                                    <Hourglass className="w-8 h-8 text-purple-400" />
+                                    {isManager && viewMode === "team" && (
+                                        <th
+                                            className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
+                                            onClick={() => handleSort("employee")}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Employee
+                                                {sortBy === "employee" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                            </div>
+                                        </th>
+                                    )}
+                                    <th
+                                        className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
+                                        onClick={() => handleSort("date")}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Date
+                                            {sortBy === "date" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                        </div>
+                                    </th>
+                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Start Time</th>
+                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">End Time</th>
+                                    <th
+                                        className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
+                                        onClick={() => handleSort("overtime")}
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Duration
+                                            {sortBy === "overtime" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                        </div>
+                                    </th>
+                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Status</th>
+                                    <th className="text-right px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-neutral-100">
+                                {filteredData.map((row) => (
+                                    <tr key={row.id} className="hover:bg-neutral-50/50 transition-colors">
+                                        {isManager && viewMode === "team" && <td className="px-6 py-4 font-medium text-neutral-900">{row.employee}</td>}
+                                        <td className="px-6 py-4 text-neutral-700 font-mono text-xs">{row.date}</td>
+                                        <td className="px-6 py-4 font-mono">
+                                            {row.hasCorrection && row.originalClockIn !== row.clockIn ? (
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-neutral-400 line-through text-xs">{row.originalClockIn}</span>
+                                                    <span className="text-emerald-600 font-medium">{row.clockIn}</span>
                                                 </div>
-                                                <div className="space-y-1">
-                                                    <h3 className="font-semibold text-neutral-700">No overtime records this month</h3>
-                                                    <p className="text-sm text-neutral-400 max-w-xs mx-auto">
-                                                        {viewMode === "team"
-                                                            ? `No overtime logged by your team in ${formatMonthYear(currentMonth)}.`
-                                                            : `You haven't logged any overtime in ${formatMonthYear(currentMonth)}.`
-                                                        }
-                                                    </p>
+                                            ) : (
+                                                <span className="text-neutral-900">{row.clockIn}</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 font-mono">
+                                            {row.hasCorrection && row.originalClockOut !== row.clockOut ? (
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-neutral-400 line-through text-xs">{row.originalClockOut}</span>
+                                                    <span className="text-emerald-600 font-medium">{row.clockOut}</span>
                                                 </div>
-                                                {viewMode === "personal" && onLogOvertime && (
-                                                    <Button
-                                                        variant="secondary"
-                                                        className="!rounded-full mt-2"
-                                                        icon={<Plus className="w-4 h-4" />}
-                                                        onClick={onLogOvertime}
-                                                    >
-                                                        Log Overtime
-                                                    </Button>
+                                            ) : (
+                                                <span className="text-neutral-900">{row.clockOut}</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-emerald-600 font-medium">+{formatDuration(row.overtimeMinutes)}</td>
+                                        <td className="px-6 py-4">
+                                            {getStatusBadge(row.status)}
+                                            {row.status === "rejected" && row.rejectReason && (
+                                                <div className="text-[10px] text-rose-500 italic mt-0.5 truncate max-w-[150px]" title={row.rejectReason}>
+                                                    {row.rejectReason}
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-end gap-1">
+                                                {/* TEAM VIEW ACTIONS */}
+                                                {isManager && viewMode === "team" ? (
+                                                    <>
+                                                        <button
+                                                            onClick={() => onViewLog?.(row.original)}
+                                                            className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+                                                            title="View Details"
+                                                        >
+                                                            <Eye className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        {row.status === "pending" && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleApprove(row)}
+                                                                    disabled={actionLoading === row.id}
+                                                                    className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 disabled:opacity-50"
+                                                                    title="Approve (with Correction)"
+                                                                >
+                                                                    <Check className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleReject(row.id, row.userId, row.date)}
+                                                                    disabled={actionLoading === row.id}
+                                                                    className="p-1.5 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50"
+                                                                    title="Reject"
+                                                                >
+                                                                    <X className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    /* PERSONAL VIEW ACTIONS */
+                                                    <>
+                                                        {/* Edit: Pending Only */}
+                                                        {row.status === "pending" && (
+                                                            <button
+                                                                onClick={() => onEditLog?.(row.original)}
+                                                                disabled={actionLoading === row.id}
+                                                                className="p-1.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 disabled:opacity-50"
+                                                                title="Edit"
+                                                            >
+                                                                <Edit className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                        {/* Cancel: Pending or Approved */}
+                                                        {(row.status === "pending" || row.status === "approved") && (
+                                                            <button
+                                                                onClick={() => handleCancel(row.id, row.userId, row.date, row.status)}
+                                                                disabled={actionLoading === row.id}
+                                                                className="p-1.5 rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200 disabled:opacity-50"
+                                                                title={row.status === "approved" ? "Cancel Approved Request" : "Cancel Request"}
+                                                            >
+                                                                <Ban className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                        {/* Delete: Rejected or Cancelled (Not Approved/Pending) */}
+                                                        {(row.status === "rejected" || row.status === "cancelled") && (
+                                                            <button
+                                                                onClick={() => handleDelete(row.id, row.userId, row.date)}
+                                                                disabled={actionLoading === row.id}
+                                                                className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 disabled:opacity-50"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filteredData.length === 0 && (
+                                    <tr>
+                                        <td colSpan={isManager && viewMode === "team" ? 8 : 7} className="px-6 py-16 text-center">
+                                            {loading ? (
+                                                <GlobalLoading />
+                                            ) : (
+                                                <div className="flex flex-col items-center justify-center gap-4">
+                                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-100 to-purple-50 flex items-center justify-center">
+                                                        <Hourglass className="w-8 h-8 text-purple-400" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <h3 className="font-semibold text-neutral-700">No overtime records this month</h3>
+                                                        <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                                            {viewMode === "team"
+                                                                ? `No overtime logged by your team in ${formatMonthYear(currentMonth)}.`
+                                                                : `You haven't logged any overtime in ${formatMonthYear(currentMonth)}.`
+                                                            }
+                                                        </p>
+                                                    </div>
+                                                    {viewMode === "personal" && onLogOvertime && (
+                                                        <Button
+                                                            variant="secondary"
+                                                            className="!rounded-full mt-2"
+                                                            icon={<Plus className="w-4 h-4" />}
+                                                            onClick={onLogOvertime}
+                                                        >
+                                                            Log Overtime
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div >
                 </div >
-            </div >
+            </>
 
             <ClockConfirmationModal
                 isOpen={confirmConfig.isOpen}

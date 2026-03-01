@@ -31,7 +31,7 @@ export default function CareerPageWrapper({
                 <MobileNavBar
                     appName="Career"
                     appIcon={Briefcase}
-                    parentHref="/feel"
+                    parentHref="/dashboard"
                     parentLabel="Feel"
                     siblingApps={FEEL_APPS}
                     tabs={CAREER_TABS}

@@ -21,6 +21,10 @@ export type SocialAccount = {
     platform: Platform;
     handle: string;
     avatar?: string;
+    isActive?: boolean;
+    quota?: number;
+    code?: string;
+    contentPillars?: string[];
 };
 
 export type SocialPost = {
@@ -38,10 +42,13 @@ export type SocialPost = {
     // Scheduling
     scheduledDate: string; // YYYY-MM-DD
     scheduledTime?: string; // HH:MM
+    hashtags?: string[];
 
     // Workflow
     status: PostStatus;
+    priority?: "URGENT" | "HIGH" | "MID" | "LOW";
     assignee?: string;
+    storyboard?: any;
 
     // Post-Publication
     publishedUrl?: string;

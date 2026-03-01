@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { X, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
-import { SocialPost, PostStatus, ContentType, SocialAccount, Platform } from "./types/social.types";
-import { Select } from "@/shared/ui/primitives/select/select";
-import { Input } from "@/shared/ui/primitives/input/input";
-import { Button } from "@/shared/ui/primitives/button/button";
+import clsx from "clsx";
+import { SocialPost, PostStatus, ContentType, SocialAccount } from "./types/social.types";
+
+type Slide = { id: string; heading: string; content: string };
+type Scene = { id: string; scene: number; duration: string; heading: string; description: string };
 
 type Props = {
     isOpen: boolean;
@@ -17,15 +18,13 @@ type Props = {
     onDelete?: (postId: string) => void;
 };
 
-type Slide = { id: string; heading: string; content: string };
-type Scene = { id: string; scene: number; duration: string; heading: string; description: string };
-
 const STATUS_OPTIONS: { value: PostStatus; label: string }[] = [
     { value: "NOT_STARTED", label: "Not Started" },
     { value: "TODO", label: "To Do" },
     { value: "WRITING", label: "Writing" },
     { value: "DESIGNING", label: "Designing" },
     { value: "IN_REVIEW", label: "In Review" },
+    { value: "NEED_REVISION", label: "Need Revision" },
     { value: "NEED_APPROVAL", label: "Need Approval" },
     { value: "APPROVED", label: "Approved" },
     { value: "SCHEDULED", label: "Scheduled" },
@@ -33,20 +32,11 @@ const STATUS_OPTIONS: { value: PostStatus; label: string }[] = [
 ];
 
 const CONTENT_TYPE_OPTIONS: { value: ContentType; label: string }[] = [
-    { value: "FEED", label: "Feed Post (LinkedIn)" },
-    { value: "CAROUSEL", label: "Carousel (Instagram)" },
-    { value: "REEL", label: "Reel (Instagram)" },
-    { value: "VIDEO", label: "Video (TikTok)" },
-    { value: "STORY", label: "Story (All)" },
-    { value: "TEXT", label: "Text Only" },
-];
-
-const PLATFORM_OPTIONS: { value: Platform; label: string }[] = [
-    { value: "INSTAGRAM", label: "Instagram" },
-    { value: "TIKTOK", label: "TikTok" },
-    { value: "LINKEDIN", label: "LinkedIn" },
-    { value: "YOUTUBE", label: "YouTube" },
-    { value: "FACEBOOK", label: "Facebook" },
+    { value: "FEED", label: "Feed Post" },
+    { value: "CAROUSEL", label: "Carousel" },
+    { value: "REEL", label: "Reel" },
+    { value: "VIDEO", label: "Video" },
+    { value: "STORY", label: "Story" },
 ];
 
 const PILLAR_OPTIONS = [
@@ -59,35 +49,45 @@ const PILLAR_OPTIONS = [
     { value: "Entertainment", label: "Entertainment" },
 ];
 
-export default function SocialPostCreator({ isOpen, onClose, initialDate, postToEdit, accounts, onSave, onDelete }: Props) {
+const PRIORITY_OPTIONS = [
+    { value: "LOW", label: "Low" },
+    { value: "MID", label: "Mid" },
+    { value: "HIGH", label: "High" },
+    { value: "URGENT", label: "Urgent" },
+];
 
+export default function SocialPostCreator({ isOpen, onClose, initialDate, postToEdit, accounts, onSave, onDelete }: Props) {
     const [formData, setFormData] = useState<Partial<SocialPost>>({
         accountId: accounts?.[0]?.id || "",
         platform: accounts?.[0]?.platform || "INSTAGRAM",
         status: "NOT_STARTED",
         contentType: "FEED",
         contentPillar: "",
-        scheduledDate: initialDate || new Date().toISOString().split('T')[0],
-        scheduledTime: "",
+        scheduledDate: initialDate || new Date().toISOString().split("T")[0],
+        scheduledTime: "10:00",
         title: "",
         caption: "",
         assignee: "",
-        publishedUrl: ""
+        priority: "MID",
     });
 
-    const [slides, setSlides] = useState<Slide[]>([{ id: "slide-1", heading: "", content: "" }]);
-    const [scenes, setScenes] = useState<Scene[]>([{ id: "scene-1", scene: 1, duration: "", heading: "", description: "" }]);
     const [hashtags, setHashtags] = useState<string[]>([]);
     const [hashtagInput, setHashtagInput] = useState("");
-    const [expandedSlides, setExpandedSlides] = useState<string[]>(["slide-1"]);
+    const [slides, setSlides] = useState<Slide[]>([{ id: "slide-1", heading: "", content: "" }]);
+    const [scenes, setScenes] = useState<Scene[]>([{ id: "scene-1", scene: 1, duration: "", heading: "", description: "" }]);
 
     useEffect(() => {
         if (isOpen) {
             if (postToEdit) {
                 setFormData(postToEdit);
-                setSlides([{ id: "slide-1", heading: "", content: "" }]);
-                setScenes([{ id: "scene-1", scene: 1, duration: "", heading: "", description: "" }]);
-                setHashtags([]);
+                setHashtags(postToEdit.hashtags || []);
+                if (postToEdit.storyboard) {
+                    if (["CAROUSEL", "STORY"].includes(postToEdit.contentType)) {
+                        setSlides(postToEdit.storyboard);
+                    } else if (["VIDEO", "REEL"].includes(postToEdit.contentType)) {
+                        setScenes(postToEdit.storyboard);
+                    }
+                }
             } else {
                 setFormData({
                     accountId: accounts?.[0]?.id || "",
@@ -95,362 +95,349 @@ export default function SocialPostCreator({ isOpen, onClose, initialDate, postTo
                     status: "NOT_STARTED",
                     contentType: "FEED",
                     contentPillar: "",
-                    scheduledDate: initialDate || new Date().toISOString().split('T')[0],
-                    scheduledTime: "",
+                    scheduledDate: initialDate || new Date().toISOString().split("T")[0],
+                    scheduledTime: "10:00",
                     title: "",
                     caption: "",
                     assignee: "",
-                    publishedUrl: ""
+                    priority: "MID",
                 });
+                setHashtags([]);
                 setSlides([{ id: "slide-1", heading: "", content: "" }]);
                 setScenes([{ id: "scene-1", scene: 1, duration: "", heading: "", description: "" }]);
-                setHashtags([]);
             }
         }
     }, [isOpen, postToEdit, initialDate, accounts]);
 
     if (!isOpen) return null;
 
+    const isSlideType = ["CAROUSEL", "STORY"].includes(formData.contentType || "");
+    const isVideoType = ["VIDEO", "REEL"].includes(formData.contentType || "");
+
     const handleSave = () => {
-        if (!formData.title || !formData.scheduledDate) return;
+        if (!formData.title || !formData.scheduledDate || !formData.accountId) return;
         const newPost: SocialPost = {
             ...formData as SocialPost,
-            id: postToEdit?.id || `post-${Date.now()}`
+            id: postToEdit?.id || "",
+            hashtags,
+            storyboard: isSlideType ? slides : (isVideoType ? scenes : null)
         };
         onSave(newPost);
         onClose();
     };
 
-    const isSlideType = ["FEED", "CAROUSEL", "STORY"].includes(formData.contentType || "");
-    const isVideoType = ["VIDEO", "REEL"].includes(formData.contentType || "");
+    const addSlide = () => setSlides([...slides, { id: `slide-${Date.now()}`, heading: "", content: "" }]);
+    const removeSlide = (id: string) => slides.length > 1 && setSlides(slides.filter(s => s.id !== id));
 
-    const addSlide = () => {
-        const newId = `slide-${slides.length + 1}`;
-        setSlides([...slides, { id: newId, heading: "", content: "" }]);
-        setExpandedSlides([...expandedSlides, newId]);
-    };
-
-    const removeSlide = (id: string) => {
-        if (slides.length <= 1) return;
-        setSlides(slides.filter(s => s.id !== id));
-    };
-
-    const addScene = () => {
-        setScenes([...scenes, { id: `scene-${scenes.length + 1}`, scene: scenes.length + 1, duration: "", heading: "", description: "" }]);
-    };
-
-    const removeScene = (id: string) => {
-        if (scenes.length <= 1) return;
-        setScenes(scenes.filter(s => s.id !== id).map((s, i) => ({ ...s, scene: i + 1 })));
-    };
-
-    const toggleSlide = (id: string) => {
-        setExpandedSlides(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-    };
+    const addScene = () => setScenes([...scenes, { id: `scene-${Date.now()}`, scene: scenes.length + 1, duration: "", heading: "", description: "" }]);
+    const removeScene = (id: string) => scenes.length > 1 && setScenes(scenes.filter(s => s.id !== id).map((s, i) => ({ ...s, scene: i + 1 })));
 
     const addHashtag = () => {
-        if (hashtagInput.trim() && !hashtags.includes(hashtagInput.trim())) {
-            setHashtags([...hashtags, hashtagInput.trim().replace(/^#/, '')]);
+        const tag = hashtagInput.trim().replace(/^#/, "");
+        if (tag && !hashtags.includes(tag)) {
+            setHashtags([...hashtags, tag]);
             setHashtagInput("");
         }
     };
 
-    const removeHashtag = (tag: string) => {
-        setHashtags(hashtags.filter(h => h !== tag));
-    };
+    const removeHashtag = (tag: string) => setHashtags(hashtags.filter(h => h !== tag));
 
-    const accountOptions = accounts?.map(a => ({ value: a.id, label: a.name })) || [];
-
-    // Sync platform when account changes
     const handleAccountChange = (accountId: string) => {
         const acc = accounts?.find(a => a.id === accountId);
         setFormData(f => ({ ...f, accountId, platform: acc?.platform || f.platform }));
     };
 
+    const Label = ({ children }: { children: React.ReactNode }) => (
+        <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-1.5 font-sans">
+            {children}
+        </label>
+    );
+
+    const InputStyles = "w-full bg-white/40 backdrop-blur-md border border-black/5 rounded-full h-11 text-[14px] font-medium text-neutral-800 px-5 focus:bg-white focus:border-orange-200 outline-none transition-all shadow-sm shadow-black/[0.02] placeholder:text-neutral-300 font-sans appearance-none";
+
     return (
         <>
-            <div className="fixed inset-0 bg-neutral-900/20 backdrop-blur-sm z-40 transition-opacity" onClick={onClose} />
+            <div className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-[90] transition-all duration-500" onClick={onClose} />
 
-            <div className="fixed inset-y-0 right-0 w-[560px] bg-white shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="fixed bottom-2 left-2 right-2 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/40 rounded-[56px] shadow-2xl z-[100] animate-in slide-in-from-bottom duration-500 overflow-hidden flex flex-col max-h-[92vh]">
 
-                {/* HEADER */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-100 bg-neutral-50">
-                    <h2 className="text-sm font-semibold text-neutral-900">{postToEdit ? "Edit Post" : "New Post"}</h2>
-                    <button onClick={onClose} className="text-neutral-400 hover:text-neutral-900 transition-colors">
-                        <X className="w-5 h-5" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-orange-400/10 blur-[120px] pointer-events-none" />
+
+                <div className="flex-shrink-0 pt-3 flex justify-center relative z-10">
+                    <div className="w-10 h-1 rounded-full bg-neutral-200/50" />
+                </div>
+
+                <div className="flex items-center justify-between px-10 py-6 relative z-10">
+                    <div>
+                        <h3 className="text-[20px] font-bold text-neutral-900 tracking-tight font-sans">
+                            {postToEdit ? "Update Post" : "Add New Post"}
+                        </h3>
+                        <p className="text-[10px] font-bold text-orange-500 uppercase tracking-widest mt-1 font-sans">Social Content Planner</p>
+                    </div>
+                    <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-xl border border-black/5 flex items-center justify-center text-neutral-400 hover:text-neutral-900 active:scale-95 transition-all shadow-sm">
+                        <X size={20} strokeWidth={1.5} />
                     </button>
                 </div>
 
-                {/* BODY */}
-                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                <div className="flex-1 overflow-y-auto px-10 pt-2 pb-12 space-y-8 relative z-10">
 
-                    {/* TITLE */}
-                    <Input
-                        placeholder="Post Title"
-                        value={formData.title || ""}
-                        onChange={e => setFormData(f => ({ ...f, title: e.target.value }))}
-                        inputSize="lg"
-                        className="font-semibold"
-                    />
-
-                    {/* INLINE FIELDS ROW 1: Account + Platform */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-neutral-400">Account</label>
-                            <Select
-                                value={formData.accountId || ""}
-                                options={accountOptions}
-                                onChange={handleAccountChange}
-                                selectSize="sm"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-neutral-400">Platform</label>
-                            <Select
-                                value={formData.platform || "INSTAGRAM"}
-                                options={PLATFORM_OPTIONS}
-                                onChange={(v) => setFormData(f => ({ ...f, platform: v as Platform }))}
-                                selectSize="sm"
-                            />
-                        </div>
-                    </div>
-
-                    {/* INLINE FIELDS ROW 2: Type + Status */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-neutral-400">Content Type</label>
-                            <Select
-                                value={formData.contentType || "FEED"}
-                                options={CONTENT_TYPE_OPTIONS}
-                                onChange={(v) => setFormData(f => ({ ...f, contentType: v as ContentType }))}
-                                selectSize="sm"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-neutral-400">Status</label>
-                            <Select
-                                value={formData.status || "NOT_STARTED"}
-                                options={STATUS_OPTIONS}
-                                onChange={(v) => setFormData(f => ({ ...f, status: v as PostStatus }))}
-                                selectSize="sm"
-                            />
-                        </div>
-                    </div>
-
-                    {/* INLINE FIELDS ROW 3: Pillar + Date */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-neutral-400">Content Pillar</label>
-                            <Select
-                                value={formData.contentPillar || ""}
-                                options={PILLAR_OPTIONS}
-                                onChange={(v) => setFormData(f => ({ ...f, contentPillar: v }))}
-                                selectSize="sm"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-neutral-400">Due Date</label>
-                            <Input
-                                type="date"
-                                value={formData.scheduledDate || ""}
-                                onChange={e => setFormData(f => ({ ...f, scheduledDate: e.target.value }))}
-                                inputSize="sm"
-                            />
-                        </div>
-                    </div>
-
-                    {/* INLINE FIELDS ROW 4: Time + Assignee */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-neutral-400">Time</label>
-                            <Input
-                                type="time"
-                                value={formData.scheduledTime || ""}
-                                onChange={e => setFormData(f => ({ ...f, scheduledTime: e.target.value }))}
-                                inputSize="sm"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[11px] text-neutral-400">Assignee</label>
-                            <Input
-                                placeholder="Name"
-                                value={formData.assignee || ""}
-                                onChange={e => setFormData(f => ({ ...f, assignee: e.target.value }))}
-                                inputSize="sm"
-                            />
-                        </div>
-                    </div>
-
-                    <hr className="border-neutral-100" />
-
-                    {/* SLIDES */}
-                    {isSlideType && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Slides</h3>
-                                <Button variant="secondary" size="sm" onClick={addSlide} icon={<Plus className="w-3 h-3" />}>
-                                    Add
-                                </Button>
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <Label>Account</Label>
+                                <div className="relative">
+                                    <select
+                                        value={formData.accountId}
+                                        onChange={(e) => handleAccountChange(e.target.value)}
+                                        className={InputStyles}
+                                    >
+                                        {accounts.map(acc => (
+                                            <option key={acc.id} value={acc.id}>{acc.name}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
+                                        <ChevronDown size={18} strokeWidth={1.5} />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="space-y-2">
-                                {slides.map((slide, idx) => (
-                                    <div key={slide.id} className="border border-neutral-100 rounded-lg overflow-hidden">
-                                        <button
-                                            onClick={() => toggleSlide(slide.id)}
-                                            className="w-full flex items-center justify-between px-3 py-2 bg-neutral-50 hover:bg-neutral-100 transition-colors"
-                                        >
+                            <div>
+                                <Label>Post Title</Label>
+                                <input
+                                    placeholder="Brief internal title..."
+                                    value={formData.title}
+                                    onChange={(e) => setFormData(f => ({ ...f, title: e.target.value }))}
+                                    className={InputStyles}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <Label>Format</Label>
+                                <div className="relative">
+                                    <select
+                                        value={formData.contentType}
+                                        onChange={(e) => setFormData(f => ({ ...f, contentType: e.target.value as ContentType }))}
+                                        className={InputStyles}
+                                    >
+                                        {CONTENT_TYPE_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
+                                        <ChevronDown size={18} strokeWidth={1.5} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label>Status</Label>
+                                <div className="relative">
+                                    <select
+                                        value={formData.status}
+                                        onChange={(e) => setFormData(f => ({ ...f, status: e.target.value as PostStatus }))}
+                                        className={InputStyles}
+                                    >
+                                        {STATUS_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
+                                        <ChevronDown size={18} strokeWidth={1.5} />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <Label>Content Pillar</Label>
+                                <div className="relative">
+                                    <select
+                                        value={formData.contentPillar}
+                                        onChange={(e) => setFormData(f => ({ ...f, contentPillar: e.target.value }))}
+                                        className={InputStyles}
+                                    >
+                                        {PILLAR_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
+                                        <ChevronDown size={18} strokeWidth={1.5} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label>Priority</Label>
+                                <div className="relative">
+                                    <select
+                                        value={formData.priority}
+                                        onChange={(e) => setFormData(f => ({ ...f, priority: e.target.value as any }))}
+                                        className={clsx(InputStyles, "font-bold text-orange-500")}
+                                    >
+                                        {PRIORITY_OPTIONS.map(opt => (
+                                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
+                                        <ChevronDown size={18} strokeWidth={1.5} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <Label>Assignee</Label>
+                                <input
+                                    placeholder="Who is responsible?"
+                                    value={formData.assignee}
+                                    onChange={(e) => setFormData(f => ({ ...f, assignee: e.target.value }))}
+                                    className={InputStyles}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label>Date</Label>
+                                    <input
+                                        type="date"
+                                        value={formData.scheduledDate}
+                                        onChange={(e) => setFormData(f => ({ ...f, scheduledDate: e.target.value }))}
+                                        className={InputStyles}
+                                    />
+                                </div>
+                                <div>
+                                    <Label>Time</Label>
+                                    <input
+                                        type="time"
+                                        value={formData.scheduledTime}
+                                        onChange={(e) => setFormData(f => ({ ...f, scheduledTime: e.target.value }))}
+                                        className={InputStyles}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Storyboard / Carousel Section */}
+                    {(isSlideType || isVideoType) && (
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between px-2">
+                                <Label>{isSlideType ? "Carousel Slides" : "Video Storyboard"}</Label>
+                                <button
+                                    onClick={isSlideType ? addSlide : addScene}
+                                    className="h-8 px-4 rounded-full bg-neutral-900 text-white font-bold text-[10px] flex items-center gap-2 active:scale-95 transition-all shadow-lg font-sans"
+                                >
+                                    <Plus size={14} />
+                                    <span>Add {isSlideType ? "Slide" : "Scene"}</span>
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {(isSlideType ? slides : scenes).map((item: any, idx) => (
+                                    <div key={item.id} className="bg-white/40 backdrop-blur-md rounded-[32px] border border-black/5 overflow-hidden">
+                                        <div className="px-6 py-3 flex items-center justify-between border-b border-black/5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-[10px] font-bold">
+                                                    {idx + 1}
+                                                </div>
+                                                <span className="text-[13px] font-bold text-neutral-800 font-sans">{isSlideType ? (idx === 0 ? "Cover Slide" : `Slide ${idx + 1}`) : `Scene ${idx + 1}`}</span>
+                                            </div>
                                             <div className="flex items-center gap-2">
-                                                {expandedSlides.includes(slide.id) ? <ChevronDown className="w-3 h-3 text-neutral-400" /> : <ChevronRight className="w-3 h-3 text-neutral-400" />}
-                                                <span className="text-xs font-medium text-neutral-700">{idx === 0 ? "Cover" : `Slide ${idx + 1}`}</span>
-                                            </div>
-                                            {slides.length > 1 && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); removeSlide(slide.id); }}
-                                                    className="text-neutral-300 hover:text-red-500 transition-colors"
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
+                                                {!isSlideType && <span className="text-[9px] font-bold text-neutral-400 bg-neutral-100/50 px-2 py-0.5 rounded-full font-sans uppercase">{item.duration || "5s"}</span>}
+                                                <button onClick={() => isSlideType ? removeSlide(item.id) : removeScene(item.id)} className="text-neutral-300 hover:text-red-500 transition-colors">
+                                                    <Trash2 size={14} />
                                                 </button>
-                                            )}
-                                        </button>
-                                        {expandedSlides.includes(slide.id) && (
-                                            <div className="p-3 space-y-2">
-                                                <Input
-                                                    placeholder="Heading"
-                                                    value={slide.heading}
-                                                    onChange={e => setSlides(prev => prev.map(s => s.id === slide.id ? { ...s, heading: e.target.value } : s))}
-                                                    inputSize="sm"
-                                                />
-                                                <textarea
-                                                    className="w-full text-sm border border-neutral-200 rounded-lg p-2 min-h-[60px] resize-none focus:ring-1 focus:ring-neutral-300"
-                                                    placeholder="Content text..."
-                                                    value={slide.content}
-                                                    onChange={e => setSlides(prev => prev.map(s => s.id === slide.id ? { ...s, content: e.target.value } : s))}
-                                                />
                                             </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* SCENES */}
-                    {isVideoType && (
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Scenes</h3>
-                                <Button variant="secondary" size="sm" onClick={addScene} icon={<Plus className="w-3 h-3" />}>
-                                    Add
-                                </Button>
-                            </div>
-
-                            <div className="space-y-2">
-                                {scenes.map((scene) => (
-                                    <div key={scene.id} className="border border-neutral-100 rounded-lg p-3 space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-medium text-neutral-700">Scene {scene.scene}</span>
-                                            {scenes.length > 1 && (
-                                                <button onClick={() => removeScene(scene.id)} className="text-neutral-300 hover:text-red-500 transition-colors">
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
-                                            )}
                                         </div>
-                                        <div className="grid grid-cols-4 gap-2">
-                                            <Input
-                                                placeholder="Duration"
-                                                value={scene.duration}
-                                                onChange={e => setScenes(prev => prev.map(s => s.id === scene.id ? { ...s, duration: e.target.value } : s))}
-                                                inputSize="sm"
+                                        <div className="p-5 space-y-4">
+                                            <input
+                                                placeholder={isSlideType ? "Slide Heading" : "Scene Title"}
+                                                value={item.heading}
+                                                className={clsx(InputStyles, "h-9 px-4 text-[13px]")}
+                                                onChange={e => isSlideType ?
+                                                    setSlides(s => s.map(x => x.id === item.id ? { ...x, heading: e.target.value } : x)) :
+                                                    setScenes(s => s.map(x => x.id === item.id ? { ...x, heading: e.target.value } : x))
+                                                }
                                             />
-                                            <div className="col-span-3">
-                                                <Input
-                                                    placeholder="Scene heading"
-                                                    value={scene.heading}
-                                                    onChange={e => setScenes(prev => prev.map(s => s.id === scene.id ? { ...s, heading: e.target.value } : s))}
-                                                    inputSize="sm"
-                                                />
-                                            </div>
+                                            <textarea
+                                                placeholder={isSlideType ? "Slide content..." : "Script / Action description..."}
+                                                className="w-full bg-white/40 border border-black/5 rounded-[24px] p-4 text-[13px] min-h-[80px] outline-none font-sans leading-relaxed"
+                                                value={isSlideType ? item.content : item.description}
+                                                onChange={e => isSlideType ?
+                                                    setSlides(s => s.map(x => x.id === item.id ? { ...x, content: e.target.value } : x)) :
+                                                    setScenes(s => s.map(x => x.id === item.id ? { ...x, description: e.target.value } : x))
+                                                }
+                                            />
                                         </div>
-                                        <textarea
-                                            className="w-full text-sm border border-neutral-200 rounded-lg p-2 min-h-[50px] resize-none focus:ring-1 focus:ring-neutral-300"
-                                            placeholder="Scene description..."
-                                            value={scene.description}
-                                            onChange={e => setScenes(prev => prev.map(s => s.id === scene.id ? { ...s, description: e.target.value } : s))}
-                                        />
                                     </div>
                                 ))}
                             </div>
                         </div>
                     )}
 
-                    <hr className="border-neutral-100" />
-
-                    {/* HASHTAGS */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Hashtags</label>
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                            {hashtags.map(tag => (
-                                <span key={tag} className="inline-flex items-center gap-1 bg-neutral-100 text-neutral-700 text-xs px-2 py-1 rounded-full">
-                                    #{tag}
-                                    <button onClick={() => removeHashtag(tag)} className="hover:text-red-500">×</button>
-                                </span>
-                            ))}
-                        </div>
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="Add hashtag..."
-                                value={hashtagInput}
-                                onChange={e => setHashtagInput(e.target.value)}
-                                onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addHashtag())}
-                                inputSize="sm"
-                                className="flex-1"
+                    <div className="space-y-6">
+                        <div>
+                            <Label>Main Caption</Label>
+                            <textarea
+                                placeholder="What's this post about?"
+                                value={formData.caption}
+                                onChange={(e) => setFormData(f => ({ ...f, caption: e.target.value }))}
+                                className="w-full bg-white/40 backdrop-blur-md border border-black/5 rounded-[32px] p-5 text-[14px] min-h-[140px] focus:bg-white focus:border-orange-200 outline-none transition-all shadow-sm shadow-black/[0.02] placeholder:text-neutral-300 font-sans leading-relaxed"
                             />
-                            <Button variant="secondary" size="sm" onClick={addHashtag}>Add</Button>
+                        </div>
+
+                        <div>
+                            <Label>Hashtags</Label>
+                            <div className="flex flex-col gap-3">
+                                <div className="flex flex-wrap gap-2 min-h-12 p-1">
+                                    {hashtags.map(tag => (
+                                        <span key={tag} className="inline-flex items-center gap-2 bg-white/60 backdrop-blur-md px-4 py-1.5 rounded-full border border-black/5 text-[13px] font-bold text-neutral-800 shadow-sm font-sans">
+                                            <span className="text-orange-500">#</span>{tag}
+                                            <button onClick={() => removeHashtag(tag)} className="text-neutral-300 hover:text-red-500 transition-colors">×</button>
+                                        </span>
+                                    ))}
+                                    {hashtags.length === 0 && <span className="text-neutral-300 text-[13px] font-medium p-2 font-sans">No tags added yet</span>}
+                                </div>
+                                <div className="flex gap-3">
+                                    <input
+                                        placeholder="Add target tag..."
+                                        value={hashtagInput}
+                                        onChange={(e) => setHashtagInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addHashtag())}
+                                        className={InputStyles}
+                                    />
+                                    <button
+                                        onClick={addHashtag}
+                                        className="h-11 px-8 bg-neutral-900 text-white rounded-full font-bold text-[13px] active:scale-95 transition-all shadow-lg font-sans"
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <hr className="border-neutral-100" />
-
-                    {/* CAPTION */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">Caption</label>
-                        <textarea
-                            className="w-full min-h-[100px] text-sm leading-relaxed text-neutral-700 placeholder:text-neutral-300 border border-neutral-200 rounded-lg focus:ring-1 focus:ring-neutral-400 resize-none p-3"
-                            placeholder="Write your caption here..."
-                            value={formData.caption || ""}
-                            onChange={e => setFormData(f => ({ ...f, caption: e.target.value }))}
-                        />
-                    </div>
-
-                    {/* URL */}
-                    <div className="space-y-1">
-                        <label className="text-[11px] text-neutral-400">Published URL</label>
-                        <Input
-                            placeholder="https://..."
-                            value={formData.publishedUrl || ""}
-                            onChange={e => setFormData(f => ({ ...f, publishedUrl: e.target.value }))}
-                            inputSize="sm"
-                        />
-                    </div>
                 </div>
 
-                {/* FOOTER */}
-                <div className="p-4 border-t border-neutral-100 bg-neutral-50 flex items-center justify-between">
-                    {postToEdit && onDelete ? (
-                        <Button variant="secondary" size="sm" onClick={() => { onDelete(postToEdit.id); onClose(); }}>
-                            Delete
-                        </Button>
-                    ) : <span />}
-
-                    <div className="flex gap-2">
-                        <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
-                        <Button variant="primary" size="sm" onClick={handleSave}>
-                            {postToEdit ? "Save" : "Create"}
-                        </Button>
-                    </div>
+                <div className="px-10 pb-12 pt-4 flex gap-4 relative z-10 border-t border-black/5">
+                    {postToEdit && onDelete && (
+                        <button
+                            onClick={() => { if (confirm("Delete this content?")) { onDelete(postToEdit.id); onClose(); } }}
+                            className="bg-red-50 text-red-500 h-[56px] w-[56px] rounded-full flex items-center justify-center active:scale-95 transition-all border border-red-100/50"
+                        >
+                            <Trash2 size={22} />
+                        </button>
+                    )}
+                    <button
+                        onClick={handleSave}
+                        className="flex-1 bg-orange-500 text-white h-[56px] rounded-full font-bold text-[16px] active:scale-[0.98] transition-all shadow-xl shadow-orange-500/30 border border-white/20 ring-1 ring-inset ring-white/10 font-sans"
+                    >
+                        {postToEdit ? "Update Content" : "Create Content"}
+                    </button>
                 </div>
-
             </div>
         </>
     );

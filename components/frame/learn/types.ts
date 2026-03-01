@@ -1,6 +1,6 @@
 export type QuickView = "all" | "documentation" | "templates" | "references" | "recent" | "favorite";
 
-export type Department = "ALL" | "DESIGN" | "CONSTRUCTION" | "FINANCE" | "HR" | "OPERATION";
+export type Department = "ALL" | "AID" | "SMP" | "UDL" | "HFR" | "PCC" | "RBD";
 
 export const DOCUMENTATION_TYPES = ["SOP", "WORKFLOW", "GUIDELINE", "POLICY", "STANDARD", "CHECKLIST"] as const;
 export const TEMPLATE_TYPES = ["TEMPLATE_PPT", "TEMPLATE_RAB", "TEMPLATE_DRAWING", "TEMPLATE_CONTRACT", "TEMPLATE_REPORT"] as const;
@@ -10,12 +10,22 @@ export type KnowledgeType = typeof DOCUMENTATION_TYPES[number] | typeof TEMPLATE
 
 export const DEPARTMENT_OPTIONS: { value: Department; label: string }[] = [
     { value: "ALL", label: "All Departments" },
-    { value: "DESIGN", label: "Design" },
-    { value: "CONSTRUCTION", label: "Construction" },
-    { value: "FINANCE", label: "Finance" },
-    { value: "HR", label: "HR & People" },
-    { value: "OPERATION", label: "Operation" },
+    { value: "AID", label: "Architecture, Interior, and Design" },
+    { value: "SMP", label: "Structure and MEP Engineering" },
+    { value: "UDL", label: "Urban Design and Landscape" },
+    { value: "HFR", label: "Human Capital, Finance, and Resources" },
+    { value: "PCC", label: "Procurement and Construction" },
+    { value: "RBD", label: "Research and Business Development" },
 ];
+
+export const DEPT_LABEL: Record<string, string> = {
+    AID: "Architecture, Interior, and Design",
+    SMP: "Structure and MEP Engineering",
+    UDL: "Urban Design and Landscape",
+    HFR: "Human Capital, Finance, and Resources",
+    PCC: "Procurement and Construction",
+    RBD: "Research and Business Development",
+};
 
 export const TYPE_LABEL: Record<string, string> = {
     SOP: "SOP",
@@ -58,3 +68,12 @@ export function getTypeOptions(quickView: QuickView): { value: KnowledgeType | "
 
     return options;
 }
+
+export type SortOptionValue = "name-asc" | "name-desc" | "date-desc" | "date-asc";
+
+export const SORT_OPTIONS: { value: SortOptionValue; label: string }[] = [
+    { value: "name-asc", label: "Name (A to Z)" },
+    { value: "name-desc", label: "Name (Z to A)" },
+    { value: "date-desc", label: "Newest First" },
+    { value: "date-asc", label: "Oldest First" },
+];

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
 import { useFinance } from "./FinanceContext";
+import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
 import {
     Wallet,
     Plus,
@@ -131,46 +132,27 @@ export default function PettyCashClient() {
             header={<FinanceHeader title="Petty Cash" subtitle="Manage cash pools for your projects." hideToggle />}
         >
             {/* OVERVIEW STATS */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {/* Total Float Card - Elegant & Soft */}
-                <div className="relative rounded-2xl p-6 border border-neutral-100 shadow-sm flex flex-col justify-between h-40 overflow-hidden group bg-white">
-                    {/* Subtle Gradient Blob */}
-                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-rose-50 rounded-full blur-3xl opacity-60 group-hover:bg-rose-100 transition-all duration-500" />
+            {/* OVERVIEW STATS */}
+            <div className="-mx-5 lg:mx-0 mb-8">
+                <FinanceSummaryCardsRow>
+                    <FinanceSummaryCard
+                        icon={<Wallet className="w-5 h-5 text-rose-500" />}
+                        iconBg="bg-rose-100"
+                        label={`Active across ${MOCK_POOLS.length} projects`}
+                        value={formatCurrency(totalFloat)}
+                        subtext="Total Float"
+                        valueColor="text-neutral-900"
+                    />
 
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="p-1.5 bg-rose-50 rounded-lg">
-                                <Wallet className="w-4 h-4 text-rose-500" />
-                            </div>
-                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Total Float</span>
-                        </div>
-                        <div className="text-4xl font-bold text-neutral-900 tracking-tight">
-                            {formatCurrency(totalFloat)}
-                        </div>
-                    </div>
-                    <div className="text-sm text-neutral-500 font-medium z-10 relative">
-                        active across <span className="text-neutral-900 font-bold">{MOCK_POOLS.length}</span> projects
-                    </div>
-                </div>
-
-                {/* Quick Actions / Info - Cleaner White Version */}
-                <div className="bg-white rounded-2xl p-6 border border-neutral-100 shadow-sm flex flex-col justify-center items-start h-40 relative overflow-hidden group">
-                    {/* Decorative background circle */}
-                    <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-rose-50 rounded-full blur-2xl opacity-60 group-hover:bg-rose-100 transition-all duration-500" />
-
-                    <div className="relative z-10 max-w-md w-full">
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="text-lg font-bold text-neutral-900">Needs Top Up?</h3>
-                            <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                        </div>
-                        <p className="text-neutral-500 text-sm mb-4 leading-relaxed">
-                            <span className="font-bold text-rose-600">{MOCK_POOLS.filter(p => p.balance < 1000000).length} pools</span> are running low (under 1jt).
-                        </p>
-                        <button className="w-full bg-rose-500 hover:bg-rose-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all transform active:scale-95 flex items-center justify-center gap-2 shadow-rose-200">
-                            Check Low Balance <ArrowDownRight className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
+                    <FinanceSummaryCard
+                        icon={<Building2 className="w-5 h-5 text-neutral-600" />}
+                        iconBg="bg-neutral-100"
+                        label="Needs Top Up?"
+                        value={`${MOCK_POOLS.filter(p => p.balance < 1000000).length} pools`}
+                        subtext="Under limit"
+                        valueColor="text-rose-500"
+                    />
+                </FinanceSummaryCardsRow>
             </div>
 
             {/* POOLS GRID */}
@@ -179,7 +161,7 @@ export default function PettyCashClient() {
                 <span className="bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full text-xs font-bold">{MOCK_POOLS.length}</span>
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-12">
                 {MOCK_POOLS.map((pool) => {
                     const percentage = Math.min((pool.balance / pool.limit) * 100, 100);
                     const isLow = pool.balance < 1000000;
@@ -188,58 +170,59 @@ export default function PettyCashClient() {
                         <div
                             key={pool.id}
                             onClick={() => setDrawerPoolId(pool.id)}
-                            className="bg-white rounded-2xl border border-neutral-200 p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col shadow-sm"
+                            className="bg-white rounded-[24px] border border-neutral-100 p-4 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group flex flex-col shadow-[0_2px_12px_rgba(0,0,0,0.02)]"
                         >
                             {/* Card Header */}
-                            <div className="flex items-start justify-between mb-6">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm border border-neutral-100 flex items-center justify-center text-neutral-400 group-hover:bg-rose-50 group-hover:text-rose-500 group-hover:border-rose-100 transition-all duration-300">
-                                        <Building2 className="w-5 h-5" />
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3 w-full">
+                                    <div className="w-10 h-10 rounded-full bg-neutral-50 shadow-[0_2px_8px_rgba(0,0,0,0.02)] border border-neutral-100 flex items-center justify-center text-neutral-400 group-hover:bg-rose-50 group-hover:text-rose-500 group-hover:border-rose-100 transition-all duration-300 shrink-0">
+                                        <Building2 className="w-4 h-4" />
                                     </div>
-                                    <div className="min-w-0">
-                                        <h4 className="font-bold text-neutral-900 truncate pr-2 max-w-[140px] leading-tight opacity-90 group-hover:opacity-100 transition-opacity">
+                                    <div className="min-w-0 flex-1">
+                                        <h4 className="text-[17px] font-bold text-neutral-900 truncate leading-tight tracking-tight">
                                             {pool.projectName}
                                         </h4>
-                                        <p className="text-[10px] text-neutral-400 font-medium truncate mt-0.5 group-hover:text-rose-400 transition-colors">
-                                            via {pool.sourceAccount}
-                                        </p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <p className="text-[12px] text-neutral-400 font-medium truncate group-hover:text-rose-400 transition-colors">
+                                                via {pool.sourceAccount}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="p-1 rounded-full hover:bg-rose-50 text-neutral-300 group-hover:text-rose-400 transition-colors">
-                                    <ChevronRight className="w-5 h-5" />
                                 </div>
                             </div>
 
                             {/* Balance Info */}
-                            <div className="mb-6">
-                                <div className="text-2xl font-bold text-neutral-900 tracking-tight group-hover:scale-105 transition-transform origin-left text-shadow-sm">
+                            <div className="mb-4">
+                                <div className="text-[20px] font-bold text-neutral-900 tracking-tight font-numeric">
                                     {formatCurrency(pool.balance)}
                                 </div>
-                                <div className="flex items-center gap-2 mt-2 text-xs font-medium text-neutral-500">
-                                    <div className="flex-1 h-2 bg-neutral-100 rounded-full overflow-hidden border border-neutral-100">
+                                <div className="flex items-center gap-2 mt-2 text-[12px] font-medium text-neutral-400">
+                                    <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                                         <div
-                                            className={clsx("h-full rounded-full transition-all duration-500 shadow-sm", isLow ? "bg-red-500" : "bg-gradient-to-r from-emerald-400 to-emerald-500")}
+                                            className={clsx("h-full rounded-full transition-all duration-500", isLow ? "bg-red-500" : "bg-emerald-500")}
                                             style={{ width: `${percentage}%` }}
                                         />
                                     </div>
-                                    <span className="whitespace-nowrap">{percentage.toFixed(0)}% of Limit</span>
+                                    <span className="whitespace-nowrap tabular-nums">{percentage.toFixed(0)}%</span>
                                 </div>
                             </div>
 
                             {/* Footer Actions */}
-                            <div className="mt-auto pt-4 border-t border-dashed border-neutral-200 flex gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); setTopUpPoolId(pool.id); }}
-                                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-rose-500 text-white hover:bg-rose-600 text-xs font-bold transition-all shadow-sm active:scale-95 shadow-rose-200"
-                                >
-                                    <Plus className="w-4 h-4" /> Top Up
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); /* Adjust logic */ }}
-                                    className="px-3 py-2.5 rounded-xl border border-neutral-200 hover:bg-white hover:border-rose-200 hover:text-rose-500 text-neutral-400 transition-all active:scale-95 shadow-sm bg-white/50"
-                                >
-                                    <RefreshCw className="w-4 h-4" />
-                                </button>
+                            <div className="mt-auto pt-3 border-t border-neutral-100/60 flex items-center justify-between opacity-60 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
+                                    {pool.transactions.length} Transactions
+                                </span>
+                                <div className="flex gap-1.5">
+                                    <button
+                                        onClick={(e) => { e.stopPropagation(); setTopUpPoolId(pool.id); }}
+                                        className="w-8 h-8 flex items-center justify-center rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-50 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors">
+                                        <ChevronRight className="w-4 h-4" />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     );

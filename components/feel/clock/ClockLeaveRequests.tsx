@@ -15,6 +15,7 @@ import {
     updateRequestStatus
 } from "@/lib/api/clock";
 import { ClockConfirmationModal } from "./ClockConfirmationModal";
+import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
 
 interface ClockLeaveRequestsProps {
     role?: UserRole;
@@ -492,188 +493,314 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", viewMode, 
             )}
 
             {displayMode === "list" ? (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 border-b border-neutral-200">
-                                <tr>
-                                    {isManager && viewMode === "team" && (
+                <>
+                    {/* MOBILE LIST VIEW (Cards) */}
+                    <div className="md:hidden space-y-4">
+                        {filteredData.map((row) => (
+                            <LiquidItemCard
+                                key={row.id}
+                                className={clsx(
+                                    row.status === 'approved' ? 'bg-emerald-50 border-emerald-100' :
+                                        row.status === 'rejected' ? 'bg-rose-50 border-rose-100' :
+                                            row.status === 'pending' ? 'bg-yellow-50 border-yellow-100' :
+                                                'bg-white border-neutral-200'
+                                )}
+                                leftAvatar={
+                                    <div className="flex flex-col items-center justify-center w-[52px] h-[52px] rounded-full bg-neutral-100/80 border border-neutral-200/60 shrink-0">
+                                        <span className="text-base font-bold text-neutral-900 leading-none tracking-tight">
+                                            {format(parseISO(row.from), "dd")}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-neutral-500 uppercase leading-none mt-0.5 tracking-wide">
+                                            {format(parseISO(row.from), "MMM")}
+                                        </span>
+                                    </div>
+                                }
+                                title={
+                                    <div className="flex flex-col gap-0.5">
+                                        {(isManager && viewMode === "team") && (
+                                            <span className="text-sm font-bold text-neutral-900 leading-none truncate max-w-[150px]">
+                                                {row.employee}
+                                            </span>
+                                        )}
+                                        <span className={clsx("text-xs font-semibold", (isManager && viewMode === "team") ? "text-neutral-500" : "text-neutral-900")}>
+                                            {row.type}
+                                        </span>
+                                    </div>
+                                }
+                                subtitle={
+                                    <div className="flex items-center gap-1.5 text-[11px] text-neutral-500 mt-0.5">
+                                        <span>{format(parseISO(row.from), "dd MMM")} - {format(parseISO(row.to), "dd MMM")}</span>
+                                        <span>•</span>
+                                        <span className="font-medium text-neutral-700">{row.days} {row.days === 1 ? 'day' : 'days'}</span>
+                                    </div>
+                                }
+                                rightTop={
+                                    <div className="shrink-0 scale-90 origin-right">
+                                        {getStatusBadge(row.status)}
+                                    </div>
+                                }
+                                rightBottom={
+                                    <div className="flex items-center gap-1 mt-1">
+                                        {/* TEAM VIEW ACTIONS */}
+                                        {viewMode === "team" && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleView(row)}
+                                                    className="p-1 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-colors"
+                                                >
+                                                    <Eye className="w-3 h-3" />
+                                                </button>
+                                                {isManager && row.status === "pending" && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleApprove(row.id, row.userId, row.from, row.to)}
+                                                            disabled={actionLoading === row.id}
+                                                            className="p-1 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 disabled:opacity-50 transition-colors"
+                                                        >
+                                                            <Check className="w-3 h-3" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleReject(row.id, row.userId, row.from, row.to)}
+                                                            disabled={actionLoading === row.id}
+                                                            className="p-1 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50 transition-colors"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                        {/* PERSONAL VIEW ACTIONS */}
+                                        {viewMode === "personal" && row.userId === profile?.id && (
+                                            <>
+                                                {row.status === "pending" && (
+                                                    <button
+                                                        onClick={() => handleEdit(row)}
+                                                        disabled={actionLoading === row.id}
+                                                        className="p-1 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 disabled:opacity-50 transition-colors"
+                                                    >
+                                                        <Edit className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                                {(row.status === "pending" || row.status === "approved") && (
+                                                    <button
+                                                        onClick={() => handleCancel(row.id, row.userId, row.from, row.to, row.status)}
+                                                        disabled={actionLoading === row.id}
+                                                        className="p-1 rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200 disabled:opacity-50 transition-colors"
+                                                    >
+                                                        <Ban className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                                {row.status !== "approved" && (
+                                                    <button
+                                                        onClick={() => handleDelete(row.id, row.userId, row.from, row.to)}
+                                                        disabled={actionLoading === row.id}
+                                                        className="p-1 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-50 transition-colors"
+                                                    >
+                                                        <Trash className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                }
+                            />
+                        ))}
+                        {filteredData.length === 0 && (
+                            <div className="text-center py-10 px-4 bg-white rounded-xl border border-neutral-200 border-dashed">
+                                <div className="w-12 h-12 bg-neutral-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                                    <CalendarRange className="w-6 h-6 text-neutral-400" />
+                                </div>
+                                <h3 className="text-sm font-semibold text-neutral-900">No Leave Requests</h3>
+                                <p className="text-xs text-neutral-500 mt-1">Try changing the month or filters.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* DESKTOP LIST VIEW - Hidden on mobile */}
+                    <div className="hidden md:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                    <tr>
+                                        {isManager && viewMode === "team" && (
+                                            <th
+                                                className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
+                                                onClick={() => handleSort("employee")}
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    Employee
+                                                    {sortBy === "employee" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                                </div>
+                                            </th>
+                                        )}
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Type</th>
                                         <th
                                             className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
-                                            onClick={() => handleSort("employee")}
+                                            onClick={() => handleSort("date")}
                                         >
                                             <div className="flex items-center gap-1">
-                                                Employee
-                                                {sortBy === "employee" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
+                                                From
+                                                {sortBy === "date" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                                             </div>
                                         </th>
-                                    )}
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Type</th>
-                                    <th
-                                        className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
-                                        onClick={() => handleSort("date")}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            From
-                                            {sortBy === "date" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                        </div>
-                                    </th>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">To</th>
-                                    <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Days</th>
-                                    <th
-                                        className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
-                                        onClick={() => handleSort("status")}
-                                    >
-                                        <div className="flex items-center gap-1">
-                                            Status
-                                            {sortBy === "status" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                        </div>
-                                    </th>
-                                    <th className="text-right px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100">
-                                {filteredData.map((row) => (
-                                    <tr key={row.id} className="hover:bg-neutral-50/50 transition-colors">
-                                        {isManager && viewMode === "team" && <td className="px-6 py-4 font-medium text-neutral-900">{row.employee}</td>}
-                                        <td className="px-6 py-4 text-neutral-700">{row.type}</td>
-                                        <td className="px-6 py-4 text-neutral-700 font-mono text-xs">{format(parseISO(row.from), "MMM dd, yyyy")}</td>
-                                        <td className="px-6 py-4 text-neutral-700 font-mono text-xs">{format(parseISO(row.to), "MMM dd, yyyy")}</td>
-                                        <td className="px-6 py-4 font-medium text-neutral-900">{row.days}</td>
-                                        <td className="px-6 py-4">
-                                            {getStatusBadge(row.status)}
-                                            {row.status === "rejected" && row.rejectReason && (
-                                                <div className="text-[10px] text-rose-500 italic mt-0.5 truncate max-w-[150px]" title={row.rejectReason}>
-                                                    {row.rejectReason}
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-end gap-1">
-
-                                                {/* TEAM VIEW ACTIONS */}
-                                                {viewMode === "team" && (
-                                                    <>
-                                                        {/* View Details (Always) */}
-                                                        <button
-                                                            onClick={() => handleView(row)}
-                                                            className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-colors"
-                                                            title="View Details"
-                                                        >
-                                                            <Eye className="w-3.5 h-3.5" />
-                                                        </button>
-
-                                                        {/* Manager: Approve/Reject (Pending only) */}
-                                                        {isManager && row.status === "pending" && (
-                                                            <>
-                                                                <button
-                                                                    onClick={() => handleApprove(row.id, row.userId, row.from, row.to)}
-                                                                    disabled={actionLoading === row.id}
-                                                                    className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 disabled:opacity-50 transition-colors"
-                                                                    title="Approve"
-                                                                >
-                                                                    <Check className="w-3.5 h-3.5" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleReject(row.id, row.userId, row.from, row.to)}
-                                                                    disabled={actionLoading === row.id}
-                                                                    className="p-1.5 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50 transition-colors"
-                                                                    title="Reject"
-                                                                >
-                                                                    <X className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                    </>
-                                                )}
-
-                                                {/* PERSONAL VIEW ACTIONS */}
-                                                {viewMode === "personal" && row.userId === profile?.id && (
-                                                    <>
-                                                        {/* Edit (Pending only) */}
-                                                        {row.status === "pending" && (
-                                                            <button
-                                                                onClick={() => handleEdit(row)}
-                                                                disabled={actionLoading === row.id}
-                                                                className="p-1.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 disabled:opacity-50 transition-colors"
-                                                                title="Edit"
-                                                            >
-                                                                <Edit className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        )}
-
-                                                        {/* Cancel (Pending or Approved) */}
-                                                        {(row.status === "pending" || row.status === "approved") && (
-                                                            <button
-                                                                onClick={() => handleCancel(row.id, row.userId, row.from, row.to, row.status)}
-                                                                disabled={actionLoading === row.id}
-                                                                className="p-1.5 rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200 disabled:opacity-50 transition-colors"
-                                                                title={row.status === "approved" ? "Cancel Approved Request" : "Cancel Request"}
-                                                            >
-                                                                <Ban className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        )}
-
-                                                        {/* Delete (Pending, Rejected, or Cancelled) - Not Approved */}
-                                                        {row.status !== "approved" && (
-                                                            <button
-                                                                onClick={() => handleDelete(row.id, row.userId, row.from, row.to)}
-                                                                disabled={actionLoading === row.id}
-                                                                className="p-1.5 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-50 transition-colors"
-                                                                title="Delete"
-                                                            >
-                                                                <Trash className="w-3.5 h-3.5" />
-                                                            </button>
-                                                        )}
-                                                    </>
-                                                )}
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">To</th>
+                                        <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Days</th>
+                                        <th
+                                            className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100"
+                                            onClick={() => handleSort("status")}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                Status
+                                                {sortBy === "status" && (sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                                             </div>
-                                        </td>
+                                        </th>
+                                        <th className="text-right px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Actions</th>
                                     </tr>
-                                ))}
-                                {filteredData.length === 0 && (
-                                    <tr>
-                                        <td colSpan={7} className="px-6 py-16 text-center">
-                                            {loading ? (
-                                                <div className="text-neutral-500">Loading...</div>
-                                            ) : (
-                                                <div className="flex flex-col items-center gap-3">
-                                                    <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
-                                                        <CalendarRange className="w-8 h-8 text-neutral-400" />
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                    {filteredData.map((row) => (
+                                        <tr key={row.id} className="hover:bg-neutral-50/50 transition-colors">
+                                            {isManager && viewMode === "team" && <td className="px-6 py-4 font-medium text-neutral-900">{row.employee}</td>}
+                                            <td className="px-6 py-4 text-neutral-700">{row.type}</td>
+                                            <td className="px-6 py-4 text-neutral-700 font-mono text-xs">{format(parseISO(row.from), "MMM dd, yyyy")}</td>
+                                            <td className="px-6 py-4 text-neutral-700 font-mono text-xs">{format(parseISO(row.to), "MMM dd, yyyy")}</td>
+                                            <td className="px-6 py-4 font-medium text-neutral-900">{row.days}</td>
+                                            <td className="px-6 py-4">
+                                                {getStatusBadge(row.status)}
+                                                {row.status === "rejected" && row.rejectReason && (
+                                                    <div className="text-[10px] text-rose-500 italic mt-0.5 truncate max-w-[150px]" title={row.rejectReason}>
+                                                        {row.rejectReason}
                                                     </div>
-                                                    <div className="space-y-1">
-                                                        <p className="text-neutral-700 font-medium">
-                                                            {viewMode === "team"
-                                                                ? `No team leave requests for ${formatMonthYear(currentMonth)}`
-                                                                : `No leave requests in ${formatMonthYear(currentMonth)}`
-                                                            }
-                                                        </p>
-                                                        <p className="text-sm text-neutral-500">
-                                                            {viewMode === "team"
-                                                                ? "Everyone's present and accounted for! 📋"
-                                                                : "Need time off? Submit a new request and take a well-deserved break! 🌴"
-                                                            }
-                                                        </p>
-                                                    </div>
-                                                    {viewMode === "personal" && (
-                                                        <Button
-                                                            variant="primary"
-                                                            className="!rounded-full mt-2"
-                                                            icon={<Plus className="w-4 h-4" />}
-                                                            onClick={onNewRequest}
-                                                        >
-                                                            New Request
-                                                        </Button>
+                                                )}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center justify-end gap-1">
+
+                                                    {/* TEAM VIEW ACTIONS */}
+                                                    {viewMode === "team" && (
+                                                        <>
+                                                            {/* View Details (Always) */}
+                                                            <button
+                                                                onClick={() => handleView(row)}
+                                                                className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition-colors"
+                                                                title="View Details"
+                                                            >
+                                                                <Eye className="w-3.5 h-3.5" />
+                                                            </button>
+
+                                                            {/* Manager: Approve/Reject (Pending only) */}
+                                                            {isManager && row.status === "pending" && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleApprove(row.id, row.userId, row.from, row.to)}
+                                                                        disabled={actionLoading === row.id}
+                                                                        className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 disabled:opacity-50 transition-colors"
+                                                                        title="Approve"
+                                                                    >
+                                                                        <Check className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleReject(row.id, row.userId, row.from, row.to)}
+                                                                        disabled={actionLoading === row.id}
+                                                                        className="p-1.5 rounded-full bg-rose-100 text-rose-600 hover:bg-rose-200 disabled:opacity-50 transition-colors"
+                                                                        title="Reject"
+                                                                    >
+                                                                        <X className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </>
+                                                    )}
+
+                                                    {/* PERSONAL VIEW ACTIONS */}
+                                                    {viewMode === "personal" && row.userId === profile?.id && (
+                                                        <>
+                                                            {/* Edit (Pending only) */}
+                                                            {row.status === "pending" && (
+                                                                <button
+                                                                    onClick={() => handleEdit(row)}
+                                                                    disabled={actionLoading === row.id}
+                                                                    className="p-1.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 disabled:opacity-50 transition-colors"
+                                                                    title="Edit"
+                                                                >
+                                                                    <Edit className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+
+                                                            {/* Cancel (Pending or Approved) */}
+                                                            {(row.status === "pending" || row.status === "approved") && (
+                                                                <button
+                                                                    onClick={() => handleCancel(row.id, row.userId, row.from, row.to, row.status)}
+                                                                    disabled={actionLoading === row.id}
+                                                                    className="p-1.5 rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200 disabled:opacity-50 transition-colors"
+                                                                    title={row.status === "approved" ? "Cancel Approved Request" : "Cancel Request"}
+                                                                >
+                                                                    <Ban className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+
+                                                            {/* Delete (Pending, Rejected, or Cancelled) - Not Approved */}
+                                                            {row.status !== "approved" && (
+                                                                <button
+                                                                    onClick={() => handleDelete(row.id, row.userId, row.from, row.to)}
+                                                                    disabled={actionLoading === row.id}
+                                                                    className="p-1.5 rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-50 transition-colors"
+                                                                    title="Delete"
+                                                                >
+                                                                    <Trash className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </>
                                                     )}
                                                 </div>
-                                            )}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {filteredData.length === 0 && (
+                                        <tr>
+                                            <td colSpan={7} className="px-6 py-16 text-center">
+                                                {loading ? (
+                                                    <div className="text-neutral-500">Loading...</div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-3">
+                                                        <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
+                                                            <CalendarRange className="w-8 h-8 text-neutral-400" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-neutral-700 font-medium">
+                                                                {viewMode === "team"
+                                                                    ? `No team leave requests for ${formatMonthYear(currentMonth)}`
+                                                                    : `No leave requests in ${formatMonthYear(currentMonth)}`
+                                                                }
+                                                            </p>
+                                                            <p className="text-sm text-neutral-500">
+                                                                {viewMode === "team"
+                                                                    ? "Everyone's present and accounted for! 📋"
+                                                                    : "Need time off? Submit a new request and take a well-deserved break! 🌴"
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                        {viewMode === "personal" && (
+                                                            <Button
+                                                                variant="primary"
+                                                                className="!rounded-full mt-2"
+                                                                icon={<Plus className="w-4 h-4" />}
+                                                                onClick={onNewRequest}
+                                                            >
+                                                                New Request
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
+                </>
             ) : (
                 /* CALENDAR VIEW */
                 <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm p-4">

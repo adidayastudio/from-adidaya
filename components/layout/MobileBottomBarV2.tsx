@@ -3,13 +3,11 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
-    House,
     Search,
     X,
-    Briefcase,
-    Zap,
-    LayoutGrid
 } from "lucide-react";
+import { IoHome, IoFlash, IoBriefcase } from "react-icons/io5";
+import { FaBullseye } from "react-icons/fa";
 import styles from "./BottomTabBar.module.css";
 import FrostedGlassFilter from "./FrostedGlassFilter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,10 +34,10 @@ export default function MobileBottomBar() {
     const { resolvedTheme } = useTheme();
 
     const globalTabs: TabConfig[] = [
-        { key: "home", label: "Home", icon: House, path: "/dashboard" },
-        { key: "task", label: "Task", icon: LayoutGrid, path: "/task" },
-        { key: "action", label: "Action", icon: Zap, path: "/action" },
-        { key: "project", label: "Project", icon: Briefcase, path: "/project" },
+        { key: "home", label: "Home", icon: IoHome, path: "/dashboard" },
+        { key: "task", label: "Tasks", icon: FaBullseye, path: "/task" },
+        { key: "action", label: "Actions", icon: IoFlash, path: "/action" },
+        { key: "project", label: "Projects", icon: IoBriefcase, path: "/project" },
     ];
 
     const activeTabKey = useMemo(() => {
@@ -159,6 +157,11 @@ export default function MobileBottomBar() {
                                     {globalTabs.map((tab) => {
                                         const isActive = activeTabKey === tab.key;
                                         const Icon = tab.icon;
+
+                                        const activeColor = "#007AFF"; // iOS style blue for ANY active tab
+                                        const inactiveColor = theme === 'dark' ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)";
+                                        const iconColor = isActive ? activeColor : inactiveColor;
+
                                         return (
                                             <button
                                                 key={tab.key}
@@ -171,10 +174,9 @@ export default function MobileBottomBar() {
                                             >
                                                 <Icon
                                                     size={24}
-                                                    strokeWidth={isActive ? 2.5 : 1.5}
-                                                    color={isActive ? "#FF3B30" : theme === 'dark' ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)"}
+                                                    color={iconColor}
                                                 />
-                                                <span className={styles.label} style={{ color: isActive ? "#FF3B30" : theme === 'dark' ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)" }}>
+                                                <span className={styles.label} style={{ color: iconColor }}>
                                                     {tab.label}
                                                 </span>
                                             </button>

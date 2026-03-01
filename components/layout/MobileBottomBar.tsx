@@ -6,9 +6,9 @@ import {
     House,
     Search,
     X,
-    Briefcase,
+    Sun,
     Zap,
-    LayoutGrid
+    Target
 } from "lucide-react";
 import styles from "./BottomTabBar.module.css";
 import FrostedGlassFilter from "./FrostedGlassFilter";
@@ -39,9 +39,9 @@ export default function MobileBottomBar() {
     // --- 1. GLOBAL TABS CONFIGURATION ---
     const globalTabs: TabConfig[] = [
         { key: "home", label: "Home", icon: House, path: "/dashboard" },
-        { key: "task", label: "Task", icon: LayoutGrid, path: "/flow" }, // Mapping Task to Flow/General
-        { key: "action", label: "Action", icon: Zap, path: "/frame" },  // Mapping Action to Frame/QuickActions
-        { key: "project", label: "Project", icon: Briefcase, path: "/flow/projects" },
+        { key: "task", label: "Tasks", icon: Target, path: "/flow" }, // Mapping Task to Flow/General
+        { key: "action", label: "Actions", icon: Zap, path: "/frame" },  // Mapping Action to Frame/QuickActions
+        { key: "project", label: "Projects", icon: Sun, path: "/flow/projects" },
     ];
 
     // --- 2. Determine Active Tab ---
@@ -157,6 +157,9 @@ export default function MobileBottomBar() {
                                     {globalTabs.map((tab) => {
                                         const isActive = activeTabKey === tab.key;
                                         const Icon = tab.icon;
+                                        const activeColor = tab.key === "task" ? "#007AFF" : "#000000";
+                                        const inactiveColor = "rgba(0,0,0,0.65)";
+                                        const iconColor = isActive ? activeColor : inactiveColor;
                                         return (
                                             <button
                                                 key={tab.key}
@@ -169,10 +172,11 @@ export default function MobileBottomBar() {
                                             >
                                                 <Icon
                                                     size={24}
-                                                    strokeWidth={isActive ? 2.5 : 1.5}
-                                                    color={isActive ? "#FF3B30" : "rgba(0,0,0,0.65)"}
+                                                    strokeWidth={isActive ? 2.5 : 2}
+                                                    color={iconColor}
+                                                    fill={tab.key === "task" ? "none" : iconColor}
                                                 />
-                                                <span className={styles.label} style={{ color: isActive ? "#FF3B30" : "rgba(0,0,0,0.65)" }}>
+                                                <span className={styles.label} style={{ color: iconColor }}>
                                                     {tab.label}
                                                 </span>
                                             </button>

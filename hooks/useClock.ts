@@ -54,6 +54,10 @@ export function useClock() {
             }
 
             if (error) {
+                // Ignore benign AbortErrors caused by request cancellation during unmounts/re-renders
+                if (error.message?.includes("aborted") || error.message?.includes("AbortError")) {
+                    return;
+                }
                 console.error("❌ Error checking active session:", error.message);
                 return;
             }
@@ -65,7 +69,9 @@ export function useClock() {
                 setIsCheckedIn(false);
                 setStartTime(null);
             }
-        } catch (error) {
+        } catch (error: any) {
+            // Silence AbortErrors here as well
+            if (error?.name === 'AbortError' || error?.message?.includes('aborted')) return;
             console.error("Error in checkActiveSession:", error);
         } finally {
             setLoading(false);

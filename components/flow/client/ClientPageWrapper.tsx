@@ -34,7 +34,7 @@ export default function ClientPageWrapper({
                 <MobileNavBar
                     appName="Client"
                     appIcon={User}
-                    parentHref="/flow"
+                    parentHref="/dashboard"
                     parentLabel="Flow"
                     siblingApps={FLOW_APPS}
                     tabs={CLIENT_TABS}

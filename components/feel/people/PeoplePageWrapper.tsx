@@ -1,7 +1,7 @@
 "use client";
 
 import PageWrapper from "@/components/layout/PageWrapper";
-import MobileNavBar from "@/components/layout/MobileNavBar";
+import { LiquidMobileHeader } from "@/components/shared/liquid/LiquidMobileHeader";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { FEEL_APPS } from "@/lib/navigation-config";
 import { Heart, Users, UserCircle, Gift, Star } from "lucide-react";
@@ -40,19 +40,23 @@ export default function PeoplePageWrapper({
         <>
             {/* MOBILE LAYOUT */}
             <div className="lg:hidden min-h-screen bg-neutral-100">
-                <MobileNavBar
-                    appName="People"
-                    appIcon={Heart}
-                    parentHref="/feel"
-                    parentLabel="Feel"
-                    siblingApps={FEEL_APPS}
+                <LiquidMobileHeader
+                    title="People"
+                    backUrl="/dashboard"
                     tabs={tabs}
-                    accentColor="text-blue-500"
-                    onFabClick={fabAction?.onClick}
-                    fabIcon={fabAction?.icon}
+                    actions={
+                        fabAction && (
+                            <button
+                                onClick={fabAction.onClick}
+                                className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-neutral-50 active:bg-neutral-100 transition-colors text-neutral-700"
+                            >
+                                {fabAction.icon}
+                            </button>
+                        )
+                    }
                 />
 
-                <div className="pb-32 px-4 pt-20 space-y-4">
+                <div className="pb-32 px-5 space-y-4 mt-2">
                     {header}
                     {children}
                 </div>
