@@ -22,7 +22,7 @@ export default function VibeCard() {
 
     if (loading) {
         return (
-            <div className="mx-4 my-4 h-[180px] rounded-[28px] bg-neutral-100 animate-pulse" />
+            <div className="mx-4 my-4 h-[180px] rounded-[28px] bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
         );
     }
 

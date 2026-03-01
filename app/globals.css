@@ -122,6 +122,302 @@
 }
 
 /* =========================================
+   DARK MODE OVERRIDES
+   ========================================= */
+.dark {
+  /* BACKGROUND COLORS (DARK MODE) */
+  --bg-0: #0a0a0a;
+  --bg-100: #0f0f0f;
+  --bg-200: #171717;
+  --bg-300: #262626;
+  --bg-400: #404040;
+
+  --bg-surface: #171717;
+  --bg-raised: #1a1a1a;
+  --bg-overlay: rgba(255, 255, 255, 0.05);
+
+  /* TEXT COLORS (DARK MODE) */
+  --text-primary: #f5f5f5;
+  --text-secondary: #a3a3a3;
+  --text-tertiary: #737373;
+  --text-muted: #525252;
+  --text-inverse: #0a0a0a;
+
+  /* BORDER COLORS (DARK MODE) */
+  --border-light: #262626;
+  --border-default: #333333;
+  --border-strong: #525252;
+
+  /* SYSTEM STATES (DARK BACKGROUNDS) */
+  --success-bg: rgba(34, 197, 94, 0.12);
+  --warning-bg: rgba(234, 179, 8, 0.12);
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --info-bg: rgba(59, 130, 246, 0.12);
+
+  /* SHADOWS (DARK MODE — MINIMAL) */
+  --shadow-soft: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 12px rgba(217, 16, 17, 0.25);
+}
+
+/* DARK PILLAR THEMES */
+.dark .theme-frame {
+  --bg-soft: #1a1a1a;
+  --border-soft: #262626;
+}
+
+.dark .theme-flow {
+  --bg-soft: rgba(217, 16, 17, 0.08);
+  --border-soft: rgba(217, 16, 17, 0.15);
+}
+
+.dark .theme-feel {
+  --bg-soft: rgba(33, 118, 255, 0.08);
+  --border-soft: rgba(33, 118, 255, 0.15);
+}
+
+/* =========================================
+   GLOBAL DARK-MODE CLASS REMAPPINGS
+   Automatically converts the most common
+   Tailwind light-mode classes to dark equivalents.
+   Components with explicit dark: overrides
+   will still take priority.
+   ========================================= */
+
+/* --- BACKGROUNDS --- */
+.dark .bg-white:not([class*="dark\:bg-"]) {
+  background-color: #171717 !important;
+}
+
+.dark .bg-neutral-50:not([class*="dark\:bg-"]) {
+  background-color: #171717 !important;
+}
+
+.dark .bg-neutral-100:not([class*="dark\:bg-"]) {
+  background-color: #1f1f1f !important;
+}
+
+.dark .bg-neutral-200:not([class*="dark\:bg-"]) {
+  background-color: #262626 !important;
+}
+
+.dark .bg-gray-50:not([class*="dark\:bg-"]) {
+  background-color: #171717 !important;
+}
+
+.dark .bg-gray-100:not([class*="dark\:bg-"]) {
+  background-color: #1f1f1f !important;
+}
+
+/* Semi-transparent white backgrounds → dark equivalents */
+.dark .bg-white\/90 {
+  background-color: rgba(23, 23, 23, 0.9) !important;
+}
+
+.dark .bg-white\/80 {
+  background-color: rgba(23, 23, 23, 0.8) !important;
+}
+
+.dark .bg-white\/70 {
+  background-color: rgba(23, 23, 23, 0.7) !important;
+}
+
+.dark .bg-white\/60 {
+  background-color: rgba(23, 23, 23, 0.6) !important;
+}
+
+.dark .bg-white\/50 {
+  background-color: rgba(23, 23, 23, 0.5) !important;
+}
+
+.dark .bg-white\/40 {
+  background-color: rgba(23, 23, 23, 0.4) !important;
+}
+
+.dark .bg-white\/20 {
+  background-color: rgba(23, 23, 23, 0.2) !important;
+}
+
+.dark .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.dark .bg-white\/95 {
+  background-color: rgba(23, 23, 23, 0.95) !important;
+}
+
+/* --- TEXT COLORS --- */
+.dark .text-neutral-900:not([class*="dark\:text-"]) {
+  color: #f5f5f5 !important;
+}
+
+.dark .text-neutral-800:not([class*="dark\:text-"]) {
+  color: #e5e5e5 !important;
+}
+
+.dark .text-neutral-700:not([class*="dark\:text-"]) {
+  color: #d4d4d4 !important;
+}
+
+.dark .text-neutral-600:not([class*="dark\:text-"]) {
+  color: #a3a3a3 !important;
+}
+
+.dark .text-neutral-500:not([class*="dark\:text-"]) {
+  color: #737373 !important;
+}
+
+.dark .text-neutral-400:not([class*="dark\:text-"]) {
+  color: #525252 !important;
+}
+
+.dark .text-gray-900:not([class*="dark\:text-"]) {
+  color: #f5f5f5 !important;
+}
+
+.dark .text-gray-800:not([class*="dark\:text-"]) {
+  color: #e5e5e5 !important;
+}
+
+.dark .text-gray-700:not([class*="dark\:text-"]) {
+  color: #d4d4d4 !important;
+}
+
+.dark .text-gray-600:not([class*="dark\:text-"]) {
+  color: #a3a3a3 !important;
+}
+
+.dark .text-gray-500:not([class*="dark\:text-"]) {
+  color: #737373 !important;
+}
+
+/* --- BORDERS --- */
+.dark .border-neutral-200:not([class*="dark\:border-"]) {
+  border-color: #2a2a2a !important;
+}
+
+.dark .border-neutral-100:not([class*="dark\:border-"]) {
+  border-color: #262626 !important;
+}
+
+.dark .border-neutral-300:not([class*="dark\:border-"]) {
+  border-color: #333333 !important;
+}
+
+.dark .border-neutral-50:not([class*="dark\:border-"]) {
+  border-color: #1f1f1f !important;
+}
+
+.dark .border-gray-200:not([class*="dark\:border-"]) {
+  border-color: #2a2a2a !important;
+}
+
+.dark .border-white:not([class*="dark\:border-"]) {
+  border-color: #262626 !important;
+}
+
+.dark .border-white\/60 {
+  border-color: rgba(64, 64, 64, 0.6) !important;
+}
+
+.dark .border-white\/50 {
+  border-color: rgba(64, 64, 64, 0.5) !important;
+}
+
+.dark .border-white\/40 {
+  border-color: rgba(64, 64, 64, 0.4) !important;
+}
+
+/* --- DIVIDE --- */
+.dark .divide-neutral-100> :not([hidden])~ :not([hidden]) {
+  border-color: #262626 !important;
+}
+
+.dark .divide-neutral-200> :not([hidden])~ :not([hidden]) {
+  border-color: #2a2a2a !important;
+}
+
+/* --- SHADOWS --- */
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .shadow-xl {
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .shadow-2xl {
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* --- HOVER STATES --- */
+.dark .hover\:bg-neutral-50:hover {
+  background-color: #262626 !important;
+}
+
+.dark .hover\:bg-neutral-100:hover {
+  background-color: #2a2a2a !important;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: #262626 !important;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: #2a2a2a !important;
+}
+
+.dark .hover\:bg-neutral-200:hover {
+  background-color: #333333 !important;
+}
+
+/* --- RING (FOCUS STATES) --- */
+.dark .ring-neutral-200 {
+  --tw-ring-color: #333333 !important;
+}
+
+.dark .ring-neutral-100 {
+  --tw-ring-color: #262626 !important;
+}
+
+/* --- PLACEHOLDER --- */
+.dark .placeholder\:text-neutral-400::placeholder {
+  color: #525252 !important;
+}
+
+.dark .placeholder\:text-neutral-500::placeholder {
+  color: #404040 !important;
+}
+
+.dark .placeholder\:text-gray-400::placeholder {
+  color: #525252 !important;
+}
+
+/* --- PROSEMIRROR / TIPTAP DARK --- */
+.dark .ProseMirror h1,
+.dark .ProseMirror h2,
+.dark .ProseMirror h3 {
+  color: #f5f5f5;
+}
+
+.dark .ProseMirror p {
+  color: #a3a3a3;
+}
+
+.dark .prose blockquote {
+  border-left-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* =========================================
    PILLAR THEMES
    ========================================= */
 

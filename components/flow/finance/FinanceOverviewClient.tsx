@@ -11,6 +11,7 @@ import {
     Users,
     ShoppingCart,
     Plus,
+    User,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFinance } from "./FinanceContext";
@@ -29,7 +30,7 @@ import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 export default function FinanceOverviewClient() {
-    const { viewMode, isLoading: isAuthLoading } = useFinance();
+    const { viewMode, setViewMode, canAccessTeam, isLoading: isAuthLoading } = useFinance();
     const currentMonth = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedType, setSelectedType] = useState<RequestType>("PURCHASE");
@@ -86,11 +87,33 @@ export default function FinanceOverviewClient() {
                 { label: "Flow", href: "/flow" },
                 { label: "Finance", href: "/flow/finance" }
             ]}
+            rightToolbar={
+                <>
+                    {canAccessTeam && (
+                        <button
+                            onClick={() => setViewMode(viewMode === 'team' ? 'personal' : 'team')}
+                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
+                        >
+                            {viewMode === 'team' ? (
+                                <Users className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
+                            ) : (
+                                <User className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
+                            )}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => window.dispatchEvent(new CustomEvent('fab-action', { detail: { id: 'FINANCE_NEW_REQUEST' } }))}
+                        className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
+                    >
+                        <Plus className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
+                    </button>
+                </>
+            }
         >
             <div className="space-y-6">
                 {/* FINANCE PULSE */}
                 <div className="-mx-5 lg:hidden">
-                    <FinancePulse />
+                    <FinancePulse pulseData={data?.pulse} />
                 </div>
 
                 {/* HEADER */}
@@ -180,7 +203,7 @@ export default function FinanceOverviewClient() {
                             onClick={() => handleNavigation('/flow/finance/purchasing', { view: viewMode })}
                             className="flex items-center gap-1.5 mb-4 group"
                         >
-                            <h2 className="text-[17px] font-bold text-neutral-900 tracking-tight">Recent Purchasing</h2>
+                            <h2 className="text-[17px] font-bold text-neutral-900 dark:text-white tracking-tight">Recent Purchasing</h2>
                             <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                         </button>
 
@@ -202,7 +225,7 @@ export default function FinanceOverviewClient() {
                                             />
                                         ))}
                                     {(!data.lists.goodsReceived?.length && !data.lists.invoices?.length) && (
-                                        <p className="text-sm text-neutral-400 italic">No pending items found.</p>
+                                        <p className="text-sm text-neutral-400 dark:text-neutral-500 italic">No pending items found.</p>
                                     )}
                                 </>
                             ) : (
@@ -220,7 +243,7 @@ export default function FinanceOverviewClient() {
                                         />
                                     ))}
                                     {data.lists.myPurchaseHistory.length === 0 && (
-                                        <p className="text-sm text-neutral-400 italic">No purchase history found.</p>
+                                        <p className="text-sm text-neutral-400 dark:text-neutral-500 italic">No purchase history found.</p>
                                     )}
                                 </>
                             )}
@@ -233,7 +256,7 @@ export default function FinanceOverviewClient() {
                             onClick={() => handleNavigation('/flow/finance/reimburse', { view: viewMode })}
                             className="flex items-center gap-1.5 mb-4 group opacity-50"
                         >
-                            <h2 className="text-[17px] font-bold text-neutral-900 tracking-tight">Recent Reimbursement</h2>
+                            <h2 className="text-[17px] font-bold text-neutral-900 dark:text-white tracking-tight">Recent Reimbursement</h2>
                             <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>

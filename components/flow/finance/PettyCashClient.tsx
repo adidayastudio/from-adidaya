@@ -156,9 +156,9 @@ export default function PettyCashClient() {
             </div>
 
             {/* POOLS GRID */}
-            <h3 className="text-lg font-bold text-neutral-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-4 flex items-center gap-2">
                 Active Pools
-                <span className="bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full text-xs font-bold">{MOCK_POOLS.length}</span>
+                <span className="bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 px-2 py-0.5 rounded-full text-xs font-bold">{MOCK_POOLS.length}</span>
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-12">
@@ -170,20 +170,20 @@ export default function PettyCashClient() {
                         <div
                             key={pool.id}
                             onClick={() => setDrawerPoolId(pool.id)}
-                            className="bg-white rounded-[24px] border border-neutral-100 p-4 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group flex flex-col shadow-[0_2px_12px_rgba(0,0,0,0.02)]"
+                            className="bg-white dark:bg-neutral-900 rounded-[24px] border border-neutral-100 dark:border-neutral-800 p-4 hover:shadow-[0_4px_20px_rgba(0,0,0,0.04)] dark:hover:shadow-neutral-900/50 hover:-translate-y-0.5 transition-all duration-300 cursor-pointer group flex flex-col shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:shadow-none"
                         >
                             {/* Card Header */}
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3 w-full">
-                                    <div className="w-10 h-10 rounded-full bg-neutral-50 shadow-[0_2px_8px_rgba(0,0,0,0.02)] border border-neutral-100 flex items-center justify-center text-neutral-400 group-hover:bg-rose-50 group-hover:text-rose-500 group-hover:border-rose-100 transition-all duration-300 shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-neutral-50 dark:bg-neutral-800 shadow-[0_2px_8px_rgba(0,0,0,0.02)] dark:shadow-none border border-neutral-100 dark:border-neutral-700 flex items-center justify-center text-neutral-400 group-hover:bg-rose-50 dark:group-hover:bg-rose-500/10 group-hover:text-rose-500 group-hover:border-rose-100 dark:group-hover:border-rose-500/20 transition-all duration-300 shrink-0">
                                         <Building2 className="w-4 h-4" />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h4 className="text-[17px] font-bold text-neutral-900 truncate leading-tight tracking-tight">
+                                        <h4 className="text-[17px] font-bold text-neutral-900 dark:text-white truncate leading-tight tracking-tight">
                                             {pool.projectName}
                                         </h4>
                                         <div className="flex items-center gap-1.5 mt-0.5">
-                                            <p className="text-[12px] text-neutral-400 font-medium truncate group-hover:text-rose-400 transition-colors">
+                                            <p className="text-[12px] text-neutral-400 dark:text-neutral-500 font-medium truncate group-hover:text-rose-400 dark:group-hover:text-rose-400 transition-colors">
                                                 via {pool.sourceAccount}
                                             </p>
                                         </div>
@@ -193,11 +193,11 @@ export default function PettyCashClient() {
 
                             {/* Balance Info */}
                             <div className="mb-4">
-                                <div className="text-[20px] font-bold text-neutral-900 tracking-tight font-numeric">
+                                <div className="text-[20px] font-bold text-neutral-900 dark:text-white tracking-tight font-numeric">
                                     {formatCurrency(pool.balance)}
                                 </div>
-                                <div className="flex items-center gap-2 mt-2 text-[12px] font-medium text-neutral-400">
-                                    <div className="flex-1 h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                                <div className="flex items-center gap-2 mt-2 text-[12px] font-medium text-neutral-400 dark:text-neutral-500">
+                                    <div className="flex-1 h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                                         <div
                                             className={clsx("h-full rounded-full transition-all duration-500", isLow ? "bg-red-500" : "bg-emerald-500")}
                                             style={{ width: `${percentage}%` }}
@@ -208,18 +208,18 @@ export default function PettyCashClient() {
                             </div>
 
                             {/* Footer Actions */}
-                            <div className="mt-auto pt-3 border-t border-neutral-100/60 flex items-center justify-between opacity-60 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
+                            <div className="mt-auto pt-3 border-t border-neutral-100/60 dark:border-neutral-800/60 flex items-center justify-between opacity-60 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
                                     {pool.transactions.length} Transactions
                                 </span>
                                 <div className="flex gap-1.5">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setTopUpPoolId(pool.id); }}
-                                        className="w-8 h-8 flex items-center justify-center rounded-full bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors"
+                                        className="w-8 h-8 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
                                     >
                                         <Plus className="w-4 h-4" />
                                     </button>
-                                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-50 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 transition-colors">
+                                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-neutral-50 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors">
                                         <ChevronRight className="w-4 h-4" />
                                     </div>
                                 </div>

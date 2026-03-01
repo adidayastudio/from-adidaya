@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
     Search,
     X,
@@ -25,9 +25,14 @@ interface TabConfig {
 export default function MobileBottomBar() {
     const pathname = usePathname();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+
+    useEffect(() => {
+        setSearchQuery(searchParams.get("q") || "");
+    }, [searchParams]);
     const [isMoving, setIsMoving] = useState(false);
     const [mounted, setMounted] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -58,20 +63,59 @@ export default function MobileBottomBar() {
     const toggleSearch = () => {
         if (isSearchOpen) {
             setIsSearchOpen(false);
+            if (searchQuery) {
+                setSearchQuery("");
+                const params = new URLSearchParams(window.location.search);
+                params.delete("q");
+                router.push(`${pathname}?${params.toString()}`);
+            }
         } else {
-            setSearchQuery("");
             setIsSearchOpen(true);
         }
     };
 
+    const handleSearchChange = (val: string) => {
+        setSearchQuery(val);
+        const params = new URLSearchParams(window.location.search);
+
+        if (val.trim()) {
+            params.set("q", val.trim());
+        } else {
+            params.delete("q");
+        }
+
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
     const executeSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!searchQuery.trim()) return;
-        const params = new URLSearchParams();
-        params.set("q", searchQuery);
-        params.set("context", activeTabKey);
-        router.push(`/search?${params.toString()}`);
-        setIsSearchOpen(false);
+
+        // Hide keyboard when enter is pressed
+        const activeElement = document.activeElement as HTMLElement;
+        if (activeElement) {
+            activeElement.blur();
+        }
+    };
+
+    const getSearchPlaceholder = () => {
+        if (pathname === '/dashboard') return "Search Home...";
+
+        const segments = pathname.split('/').filter(Boolean);
+        if (segments.length > 0) {
+            const lastSegment = segments[segments.length - 1];
+            // Don't format raw IDs (e.g., if it's a UUID)
+            if (lastSegment.length > 20 && lastSegment.includes('-')) {
+                if (segments.length > 1) {
+                    const parentSegment = segments[segments.length - 2];
+                    const formatted = parentSegment.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                    return `Search in ${formatted}...`;
+                }
+                return "Search...";
+            }
+            const formatted = lastSegment.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            return `Search ${formatted}...`;
+        }
+        return `Search ${activeTab.label}...`;
     };
 
     useEffect(() => {
@@ -242,14 +286,21 @@ export default function MobileBottomBar() {
                                         <Search size={18} className="text-gray-500 dark:text-neutral-400 mr-2 opacity-70 shrink-0" />
                                         <input
                                             className="bg-transparent border-none outline-none text-[16px] w-full placeholder:text-gray-500/80 dark:placeholder:text-neutral-400/80 text-gray-900 dark:text-white font-medium"
-                                            placeholder={`Search ${activeTab.label}...`}
+                                            placeholder={getSearchPlaceholder()}
                                             value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onChange={(e) => handleSearchChange(e.target.value)}
                                             autoFocus
                                         />
                                     </form>
                                     <button
-                                        onClick={() => setIsSearchOpen(false)}
+                                        type="button"
+                                        onClick={() => {
+                                            if (searchQuery) {
+                                                handleSearchChange("");
+                                            } else {
+                                                setIsSearchOpen(false);
+                                            }
+                                        }}
                                         className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center mr-2"
                                         style={{
                                             background: theme === 'dark' ? 'rgba(40,40,40,0.45)' : 'rgba(255,255,255,0.45)',

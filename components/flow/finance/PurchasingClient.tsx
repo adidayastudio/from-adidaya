@@ -14,11 +14,14 @@ import {
     Send,
     XCircle,
     Package,
-    ExternalLink,
     Copy,
-    Check,
     Upload,
-    Filter
+    Filter,
+    ListFilter,
+    Check,
+    User,
+    Users,
+    ExternalLink
 } from "lucide-react";
 import { CATEGORY_OPTIONS } from "./modules/constants";
 import clsx from "clsx";
@@ -31,7 +34,7 @@ import { getFinanceFileUrl, uploadFinanceFile, uploadFinanceFileExact } from "@/
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
 import { FinanceItemCard } from "./FinanceItemCard";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { fetchPurchasingRequests, fetchFundingSources, updatePurchasingStatus, deletePurchasingRequest } from "@/lib/client/finance-api";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { fetchTeamMembers } from "@/lib/api/clock_team";
@@ -110,17 +113,17 @@ function Pagination({
     if (totalItems === 0) return null;
 
     return (
-        <div className="flex items-center justify-between px-6 py-4 bg-white/50 backdrop-blur-sm border-t border-neutral-100">
-            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                Showing <span className="text-neutral-900">{startItem}-{endItem}</span> of <span className="text-neutral-900">{totalItems}</span>
+        <div className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border-t border-neutral-100 dark:border-neutral-800">
+            <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+                Showing <span className="text-neutral-900 dark:text-white">{startItem}-{endItem}</span> of <span className="text-neutral-900 dark:text-white">{totalItems}</span>
             </div>
             <div className="flex items-center gap-2">
                 <button
                     onClick={() => onPageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="p-2 hover:bg-neutral-100 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                    className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
                 >
-                    <ChevronLeft className="w-4 h-4 text-neutral-600" />
+                    <ChevronLeft className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
                 </button>
                 <div className="flex items-center gap-1">
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
@@ -133,15 +136,15 @@ function Pagination({
                                     className={clsx(
                                         "w-8 h-8 rounded-full text-xs font-bold transition-all",
                                         currentPage === page
-                                            ? "bg-neutral-900 text-white shadow-lg shadow-neutral-200"
-                                            : "text-neutral-500 hover:bg-neutral-100"
+                                            ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-lg shadow-neutral-200 dark:shadow-none"
+                                            : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                     )}
                                 >
                                     {page}
                                 </button>
                             );
                         } else if (page === currentPage - 2 || page === currentPage + 2) {
-                            return <span key={page} className="text-neutral-300 mx-1">...</span>;
+                            return <span key={page} className="text-neutral-300 dark:text-neutral-600 mx-1">...</span>;
                         }
                         return null;
                     })}
@@ -149,9 +152,9 @@ function Pagination({
                 <button
                     onClick={() => onPageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="p-2 hover:bg-neutral-100 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                    className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
                 >
-                    <ChevronRight className="w-4 h-4 text-neutral-600" />
+                    <ChevronRight className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
                 </button>
             </div>
         </div>
@@ -940,10 +943,26 @@ function InvoicePreviewModal({
 }
 
 export default function PurchasingClient() {
-    const { viewMode, userId, isLoading: isAuthLoading, userRole } = useFinance();
+    const { viewMode, setViewMode, canAccessTeam, userId, isLoading: isAuthLoading, userRole } = useFinance();
     const searchParams = useSearchParams();
-    const [searchTerm, setSearchTerm] = useState("");
+    const router = useRouter();
+    const pathname = usePathname();
+
+    // Read search term from URL query parameter 'q' (controlled by MobileBottomBar)
+    const searchTerm = searchParams.get('q') || "";
+
+    // Sync back to URL when desktop search input changes
+    const setSearchTerm = (val: string) => {
+        const params = new URLSearchParams(window.location.search);
+        if (val.trim()) {
+            params.set('q', val.trim());
+        } else {
+            params.delete('q');
+        }
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
     const [items, setItems] = useState<PurchasingItem[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -1388,12 +1407,43 @@ export default function PurchasingClient() {
 
     return (
         <FinancePageWrapper
-            breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Purchasing" }]}
+            breadcrumbItems={[{ label: "Flow", href: "/flow" }, { label: "Finance", href: "/flow/finance" }, { label: "Purchasing", href: "/flow/finance/purchasing" }]}
             header={
                 <FinanceHeader
                     title="Purchasing"
                     subtitle={isTeamView ? "Manage all staff purchase requests." : "Track your material and tool requests."}
                 />
+            }
+            rightToolbar={
+                <>
+                    {canAccessTeam && (
+                        <button
+                            onClick={() => setViewMode(viewMode === 'team' ? 'personal' : 'team')}
+                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
+                        >
+                            {viewMode === 'team' ? (
+                                <Users className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
+                            ) : (
+                                <User className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
+                            )}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setShowFilters(true)}
+                        className={clsx(
+                            "w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative",
+                            (selectedProject !== "ALL" || categoryFilter !== "ALL" || showAllMonths) ? "text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-500/10" : "text-gray-700 dark:text-white"
+                        )}
+                    >
+                        <ListFilter className="w-5 h-5" strokeWidth={1.5} />
+                    </button>
+                    <button
+                        onClick={() => window.dispatchEvent(new CustomEvent('fab-action', { detail: { id: 'FINANCE_NEW_PURCHASE' } }))}
+                        className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
+                    >
+                        <Plus className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
+                    </button>
+                </>
             }
         >
             <div className="flex flex-col gap-6">
@@ -1446,129 +1496,87 @@ export default function PurchasingClient() {
                     </FinanceSummaryCardsRow>
                 </div>
 
-                {/* ADVANCED TOOLBAR - MOBILE (1 LINE) - iOS GLASSY */}
-                <div className="flex md:hidden items-center gap-1.5 p-2 rounded-2xl bg-white/50 backdrop-blur-md border border-white/60 shadow-sm">
-                    {/* Search Icon Button */}
-                    <button
-                        onClick={() => {
-                            const input = document.getElementById('mobile-search-input');
-                            if (input) {
-                                input.classList.toggle('hidden');
-                                if (!input.classList.contains('hidden')) input.focus();
-                            }
-                        }}
-                        className={clsx(
-                            "p-2.5 rounded-full backdrop-blur-sm border shadow-sm transition-all",
-                            searchTerm
-                                ? "bg-red-500/10 border-red-200/60 text-red-600"
-                                : "bg-white/80 border-white/60 text-neutral-500"
-                        )}
-                    >
-                        <Search className="w-4 h-4" />
-                    </button>
-
-                    {/* Month Selector - iOS Glassy */}
-                    <div className="flex items-center gap-0.5 p-1 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 shadow-sm">
-                        <button
-                            onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
-                            className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
-                        >
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                            onClick={() => setShowAllMonths(!showAllMonths)}
-                            className={clsx(
-                                "text-[11px] font-bold min-w-[42px] text-center transition-colors",
-                                showAllMonths ? "text-red-600" : "text-neutral-700"
-                            )}
-                        >
-                            {showAllMonths ? "ALL" : format(currentMonth, "MMM-yy")}
-                        </button>
-                        <button
-                            onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
-                            className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
-                        >
-                            <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-
-                    {/* Project Dropdown (Native) */}
-                    <div className="relative">
-                        <div className="h-9 px-3 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-[11px] font-bold text-neutral-700 shadow-sm flex items-center gap-1">
-                            <span>{selectedProject === "ALL" ? "ALL" : projects.find(p => p.id === selectedProject)?.projectCode || "ALL"}</span>
-                            <ChevronDown className="w-3 h-3 text-neutral-400" />
+                {/* MOBILE TOOLBAR (Search + Filters per user request) */}
+                <div className="flex flex-col gap-2 md:hidden">
+                    {/* Quick Filters Row */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
+                        {/* Month Selector */}
+                        <div className="flex items-center gap-0.5 p-1 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm shrink-0">
+                            <button
+                                onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
+                                className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                            >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                                onClick={() => setShowAllMonths(!showAllMonths)}
+                                className={clsx(
+                                    "text-[11px] font-bold min-w-[42px] text-center transition-colors px-1",
+                                    showAllMonths ? "text-red-600 dark:text-red-400" : "text-neutral-700 dark:text-neutral-300"
+                                )}
+                            >
+                                {showAllMonths ? "ALL" : format(currentMonth, "MMM-yy")}
+                            </button>
+                            <button
+                                onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
+                                className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                            >
+                                <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
                         </div>
-                        <select
-                            value={selectedProject}
-                            onChange={(e) => setSelectedProject(e.target.value)}
-                            className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
-                        >
-                            <option value="ALL">All Projects</option>
-                            {projects.map(p => (
-                                <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
-                            ))}
-                        </select>
-                    </div>
 
-                    {/* Category Dropdown (Native) */}
-                    <div className="relative">
-                        <div className="h-9 px-3 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-[11px] font-bold text-neutral-700 shadow-sm flex items-center gap-1">
-                            <span>
-                                {categoryFilter === "ALL"
-                                    ? "All Categories"
-                                    : CATEGORY_OPTIONS.find(c => c.value === categoryFilter)?.label || categoryFilter}
-                            </span>
-                            <ChevronDown className="w-3 h-3 text-neutral-400" />
+                        {/* Project Dropdown */}
+                        <div className="relative shrink-0">
+                            <div className="h-9 px-3 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 shadow-sm flex items-center gap-1">
+                                <span>{selectedProject === "ALL" ? "ALL" : projects.find(p => p.id === selectedProject)?.projectCode || "ALL"}</span>
+                                <ChevronDown className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+                            </div>
+                            <select
+                                value={selectedProject}
+                                onChange={(e) => setSelectedProject(e.target.value)}
+                                className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
+                            >
+                                <option value="ALL">All Projects</option>
+                                {projects.map(p => (
+                                    <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
+                                ))}
+                            </select>
                         </div>
-                        <select
-                            value={categoryFilter}
-                            onChange={(e) => setCategoryFilter(e.target.value as any)}
-                            className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
-                        >
-                            <option value="ALL">All Categories</option>
-                            {CATEGORY_OPTIONS.map(cat => (
-                                <option key={cat.value} value={cat.value}>
-                                    {cat.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
 
-                    {/* Removed Category Icon Filter as requested to be a dropdown */}
+                        {/* Category Dropdown */}
+                        <div className="relative shrink-0">
+                            <div className="h-9 px-3 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 shadow-sm flex items-center gap-1">
+                                <span>
+                                    {categoryFilter === "ALL"
+                                        ? "All Categories"
+                                        : CATEGORY_OPTIONS.find(c => c.value === categoryFilter)?.label || categoryFilter}
+                                </span>
+                                <ChevronDown className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+                            </div>
+                            <select
+                                value={categoryFilter}
+                                onChange={(e) => setCategoryFilter(e.target.value as any)}
+                                className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
+                            >
+                                <option value="ALL">All Categories</option>
+                                {CATEGORY_OPTIONS.map(cat => (
+                                    <option key={cat.value} value={cat.value}>
+                                        {cat.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-
-                    {/* Spacer */}
-                    <div className="flex-1" />
-
-                    {/* Export Icon - iOS Glassy */}
-                    <button
-                        onClick={handleExport}
-                        className="p-2.5 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-neutral-500 shadow-sm hover:text-neutral-700 transition-colors"
-                    >
-                        <Download className="w-4 h-4" />
-                    </button>
-
-
-                    {/* New Icon - Red Accent (only for current/future months) */}
-                    {!isBefore(currentMonth, startOfMonth(new Date())) && (
+                        {/* Export Icon */}
                         <button
-                            onClick={() => { setEditingItem(null); setIsDrawerOpen(true); }}
-                            className="p-2.5 bg-red-600 rounded-full text-white shadow-md shadow-red-200/50 hover:bg-red-700 transition-colors"
+                            onClick={handleExport}
+                            className="shrink-0 h-9 px-3 flex justify-center items-center gap-1.5 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 shadow-sm hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
                         >
-                            <Plus className="w-4 h-4" />
+                            <Download className="w-3.5 h-3.5" />
+                            <span className="text-[11px] font-bold">Export</span>
                         </button>
-                    )}
+                    </div>
                 </div>
-
-                {/* Mobile Search Input (Hidden by default) - iOS Glassy */}
-                <input
-                    id="mobile-search-input"
-                    type="text"
-                    placeholder="Search..."
-                    className="hidden md:hidden w-full mt-2 h-10 px-4 bg-white/80 backdrop-blur-sm rounded-xl border border-white/60 shadow-sm text-sm text-neutral-700 placeholder:text-neutral-400"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
 
                 {/* ADVANCED TOOLBAR - DESKTOP  */}
                 <div className="hidden md:flex flex-row gap-2 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40">
@@ -1667,9 +1675,9 @@ export default function PurchasingClient() {
             {/* MOBILE CARD VIEW */}
             <div className="mt-6 block md:hidden space-y-3">
                 {filteredItems.length === 0 ? (
-                    <div className="bg-white/40 backdrop-blur-md rounded-[24px] border border-white/50 shadow-sm p-6 text-center">
-                        <Package className="w-10 h-10 text-neutral-300 mx-auto mb-2" />
-                        <h4 className="text-sm font-semibold text-neutral-700">
+                    <div className="bg-white/40 dark:bg-neutral-900/60 backdrop-blur-md rounded-[24px] border border-white/50 dark:border-neutral-800 shadow-sm dark:shadow-none p-6 text-center">
+                        <Package className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+                        <h4 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
                             {searchTerm ? "No results found" :
                                 statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
                                     isBefore(currentMonth, startOfMonth(new Date()))
@@ -1680,7 +1688,7 @@ export default function PurchasingClient() {
                         {!searchTerm && statusFilter === "ALL" && !isBefore(currentMonth, startOfMonth(new Date())) && (
                             <button
                                 onClick={() => setIsDrawerOpen(true)}
-                                className="mt-4 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl shadow-lg shadow-red-200/50"
+                                className="mt-4 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl shadow-lg shadow-red-200/50 dark:shadow-red-900/30"
                             >
                                 <Plus className="w-4 h-4 inline mr-1.5" strokeWidth={2.5} />New Request
                             </button>
@@ -1705,7 +1713,7 @@ export default function PurchasingClient() {
                                     {isTeamView ? (
                                         <>
                                             {isAdmin && (
-                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 flex-shrink-0 active:scale-95 transition-all">
+                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
                                             )}
@@ -1724,7 +1732,7 @@ export default function PurchasingClient() {
                                             )}
                                             {isApprovedNotPaid && (
                                                 <>
-                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-2 rounded-xl bg-neutral-100 text-neutral-600 border border-neutral-200 flex-shrink-0 active:scale-95 transition-all" title="Edit">
+                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 flex-shrink-0 active:scale-95 transition-all" title="Edit">
                                                         <Pencil className="w-4 h-4" />
                                                     </button>
                                                     <button
@@ -1739,10 +1747,10 @@ export default function PurchasingClient() {
                                         </>
                                     ) : (
                                         <>
-                                            <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 flex-shrink-0 active:scale-95 transition-all">
+                                            <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
-                                            <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-2 rounded-xl bg-neutral-100 text-neutral-600 border border-neutral-200 flex-shrink-0 active:scale-95 transition-all">
+                                            <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 flex-shrink-0 active:scale-95 transition-all">
                                                 <Eye className="w-4 h-4" />
                                             </button>
                                             {(isDraftOrRevise || (isSubmitted && isAdmin)) && (
@@ -2330,6 +2338,148 @@ export default function PurchasingClient() {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Filter Bottom Sheet / Modal */}
+            {showFilters && (
+                <div className="fixed md:hidden inset-0 z-[100] flex items-end justify-center">
+                    <div
+                        className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity"
+                        onClick={() => setShowFilters(false)}
+                    />
+                    <div className="relative w-full mx-2 mb-2 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[56px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border border-white/40 p-8 flex flex-col gap-8 max-h-[85dvh]">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="text-[22px] font-bold text-neutral-900 tracking-tight">Filters</h3>
+                            <div className="flex items-center gap-3">
+                                {(selectedProject !== "ALL" || categoryFilter !== "ALL" || showAllMonths) && (
+                                    <button
+                                        onClick={() => {
+                                            setSelectedProject("ALL");
+                                            setCategoryFilter("ALL");
+                                            setShowAllMonths(false);
+                                            setCurrentMonth(new Date());
+                                        }}
+                                        className="text-[13px] font-medium text-blue-600 hover:text-blue-700 active:scale-95 transition-all outline-none"
+                                    >
+                                        Clear Filters
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setShowFilters(false)}
+                                    className="w-10 h-10 bg-white/50 backdrop-blur-xl border border-black/5 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <X size={20} className="text-neutral-500" strokeWidth={1.5} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-8 overflow-y-auto pb-4 pr-1 scrollbar-hide">
+                            {/* Project Filter */}
+                            <div className="space-y-4">
+                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Project</h4>
+                                <div className="flex flex-wrap gap-2.5">
+                                    {[{ id: "ALL", projectCode: "ALL", projectName: "All Projects" }, ...projects].map((p) => {
+                                        const isSelected = selectedProject === p.id;
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => setSelectedProject(p.id)}
+                                                className={clsx(
+                                                    "px-4 py-2 rounded-full text-[13px] transition-all border",
+                                                    isSelected
+                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
+                                                        : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04] hover:bg-neutral-100"
+                                                )}
+                                            >
+                                                {p.projectCode === "ALL" ? "All Projects" : `${p.projectCode} - ${p.projectName}`}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Category Filter */}
+                            <div className="space-y-4">
+                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Category</h4>
+                                <div className="flex flex-wrap gap-2.5">
+                                    {[{ value: "ALL", label: "All Categories" }, ...CATEGORY_OPTIONS].map((cat) => {
+                                        const isSelected = categoryFilter === cat.value;
+                                        return (
+                                            <button
+                                                key={cat.value}
+                                                onClick={() => setCategoryFilter(cat.value as any)}
+                                                className={clsx(
+                                                    "px-4 py-2 rounded-full text-[13px] transition-all border",
+                                                    isSelected
+                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
+                                                        : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04] hover:bg-neutral-100"
+                                                )}
+                                            >
+                                                {cat.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Month Filter */}
+                            <div className="space-y-4">
+                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Month</h4>
+                                <div className="flex items-center gap-2 p-1 bg-white/40 backdrop-blur-md rounded-full border border-black/[0.04] w-fit">
+                                    <button
+                                        onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
+                                        className="p-2 text-neutral-400 hover:text-neutral-600 transition-colors"
+                                    >
+                                        <ChevronLeft className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => setShowAllMonths(!showAllMonths)}
+                                        className={clsx(
+                                            "text-[13px] font-bold min-w-[60px] text-center transition-colors px-4 py-1.5 rounded-full border",
+                                            showAllMonths
+                                                ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-sm"
+                                                : "bg-transparent text-neutral-700 border-transparent"
+                                        )}
+                                    >
+                                        {showAllMonths ? "ALL" : format(currentMonth, "MMM yyyy")}
+                                    </button>
+                                    <button
+                                        onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
+                                        className="p-2 text-neutral-400 hover:text-neutral-600 transition-colors"
+                                    >
+                                        <ChevronRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Export Data */}
+                            <div className="space-y-4">
+                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Actions</h4>
+                                <button
+                                    onClick={() => {
+                                        setShowFilters(false);
+                                        handleExport();
+                                    }}
+                                    className="px-5 py-3 rounded-full text-[13px] transition-all border bg-white/40 backdrop-blur-md text-neutral-700 border-black/[0.04] hover:bg-neutral-100 shadow-sm flex items-center gap-2 font-bold w-fit"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    Export to PDF
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Footer Action */}
+                        <div className="pt-2">
+                            <button
+                                onClick={() => setShowFilters(false)}
+                                className="w-full bg-[#001F3F] backdrop-blur-xl backdrop-saturate-[1.5] text-white py-4 rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-[#001F3F]/30 mb-1 border border-white/20 ring-1 ring-inset ring-white/10"
+                            >
+                                Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </FinancePageWrapper >
     );

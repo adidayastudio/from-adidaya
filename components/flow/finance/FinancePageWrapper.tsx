@@ -13,10 +13,12 @@ export default function FinancePageWrapper({
     breadcrumbItems,
     header,
     children,
+    rightToolbar,
 }: {
     breadcrumbItems: { label: string; href?: string }[];
     header?: React.ReactNode;
     children: React.ReactNode;
+    rightToolbar?: React.ReactNode;
 }) {
     const pathname = usePathname();
     let fabId = "FINANCE_NEW_REQUEST";
@@ -28,8 +30,8 @@ export default function FinancePageWrapper({
     return (
         <>
             {/* MOBILE LAYOUT */}
-            <div className="lg:hidden min-h-screen bg-neutral-100">
-                <FinanceMobileHeader fabId={fabId} backUrl="/dashboard" />
+            <div className="lg:hidden min-h-screen bg-neutral-100 dark:bg-neutral-950 transition-colors">
+                <FinanceMobileHeader fabId={fabId} backUrl="/dashboard" rightToolbar={rightToolbar} />
 
                 {/* Content with top padding */}
                 <div className="pb-32 px-5 space-y-4 mt-2">
@@ -39,7 +41,7 @@ export default function FinancePageWrapper({
             </div>
 
             {/* DESKTOP LAYOUT */}
-            <div className="hidden lg:block min-h-screen bg-neutral-50 p-6">
+            <div className="hidden lg:block min-h-screen bg-neutral-50 dark:bg-neutral-950 p-6 transition-colors">
                 <Breadcrumb items={breadcrumbItems} />
                 <PageWrapper sidebar={<FinanceSidebar />} isTransparent>
                     <div className="space-y-8 w-full animate-in fade-in duration-500">

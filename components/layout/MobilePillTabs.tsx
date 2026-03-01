@@ -73,9 +73,9 @@ export default function MobilePillTabs({
                                     variant === "light"
                                         ? active
                                             // Active: Soft rose/pink glass fill - iOS style  
-                                            ? "bg-rose-100/90 text-rose-800 shadow-sm border border-rose-200/50"
+                                            ? "bg-rose-100/90 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 shadow-sm border border-rose-200/50 dark:border-rose-500/20"
                                             // Inactive: Transparent glass with subtle border
-                                            : "bg-white/40 text-neutral-500 border border-neutral-300/40 hover:bg-white/60 hover:text-neutral-700"
+                                            : "bg-white/40 text-neutral-500 dark:text-neutral-400 border border-neutral-300/40 dark:border-neutral-700 hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-700 dark:hover:text-neutral-300"
                                         : active
                                             // Dark variant - active
                                             ? "bg-rose-500/90 text-white shadow-sm border border-rose-400/50"

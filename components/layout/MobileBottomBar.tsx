@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
     House,
     Search,
@@ -13,6 +13,7 @@ import {
 import styles from "./BottomTabBar.module.css";
 import FrostedGlassFilter from "./FrostedGlassFilter";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 
 // Define Tab Type
 export type TabKey = string;
@@ -27,14 +28,25 @@ interface TabConfig {
 export default function MobileBottomBar() {
     const pathname = usePathname();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     // Search Mode State
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+
+    useEffect(() => {
+        setSearchQuery(searchParams.get("q") || "");
+    }, [searchParams]);
 
     // State for liquid animation
     const [isMoving, setIsMoving] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const { resolvedTheme } = useTheme();
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // --- 1. GLOBAL TABS CONFIGURATION ---
     const globalTabs: TabConfig[] = [
@@ -64,22 +76,59 @@ export default function MobileBottomBar() {
     const toggleSearch = () => {
         if (isSearchOpen) {
             setIsSearchOpen(false);
+            if (searchQuery) {
+                setSearchQuery("");
+                const params = new URLSearchParams(window.location.search);
+                params.delete("q");
+                router.push(`${pathname}?${params.toString()}`);
+            }
         } else {
-            setSearchQuery("");
             setIsSearchOpen(true);
         }
     };
 
+    const handleSearchChange = (val: string) => {
+        setSearchQuery(val);
+        const params = new URLSearchParams(window.location.search);
+
+        if (val.trim()) {
+            params.set("q", val.trim());
+        } else {
+            params.delete("q");
+        }
+
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
     const executeSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!searchQuery.trim()) return;
 
-        const params = new URLSearchParams();
-        params.set("q", searchQuery);
-        params.set("context", activeTabKey);
-        router.push(`/search?${params.toString()}`);
+        // Hide keyboard when enter is pressed
+        const activeElement = document.activeElement as HTMLElement;
+        if (activeElement) {
+            activeElement.blur();
+        }
+    };
 
-        setIsSearchOpen(false);
+    const getSearchPlaceholder = () => {
+        if (pathname === '/dashboard') return "Search Home...";
+
+        const segments = pathname.split('/').filter(Boolean);
+        if (segments.length > 0) {
+            const lastSegment = segments[segments.length - 1];
+            // Don't format raw IDs (e.g., if it's a UUID)
+            if (lastSegment.length > 20 && lastSegment.includes('-')) {
+                if (segments.length > 1) {
+                    const parentSegment = segments[segments.length - 2];
+                    const formatted = parentSegment.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                    return `Search in ${formatted}...`;
+                }
+                return "Search...";
+            }
+            const formatted = lastSegment.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            return `Search ${formatted}...`;
+        }
+        return `Search ${activeTab.label}...`;
     };
 
     // Animation Effect
@@ -94,7 +143,7 @@ export default function MobileBottomBar() {
         };
     }, [activeTabKey]);
 
-    const theme = 'light';
+    const theme = mounted && resolvedTheme === 'dark' ? 'dark' : 'light';
 
     // ANIMATION CONFIG
     const layoutTransition = {
@@ -157,8 +206,8 @@ export default function MobileBottomBar() {
                                     {globalTabs.map((tab) => {
                                         const isActive = activeTabKey === tab.key;
                                         const Icon = tab.icon;
-                                        const activeColor = tab.key === "task" ? "#007AFF" : "#000000";
-                                        const inactiveColor = "rgba(0,0,0,0.65)";
+                                        const activeColor = tab.key === "task" ? (theme === 'dark' ? "#32ADE6" : "#007AFF") : (theme === 'dark' ? "#FFFFFF" : "#000000");
+                                        const inactiveColor = theme === 'dark' ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)";
                                         const iconColor = isActive ? activeColor : inactiveColor;
                                         return (
                                             <button
@@ -198,7 +247,7 @@ export default function MobileBottomBar() {
                                     <div className={styles.glassOverlay} />
                                     <div className={styles.glassSpecular} />
 
-                                    <activeTab.icon size={24} color="#000" className="relative z-10" />
+                                    <activeTab.icon size={24} color={theme === 'dark' ? "#ffffff" : "#000000"} className="relative z-10" />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -228,7 +277,7 @@ export default function MobileBottomBar() {
                                     <div className={styles.glassOverlay} />
                                     <div className={styles.glassSpecular} />
 
-                                    <Search size={24} color="rgba(0,0,0,0.65)" className="relative z-10" />
+                                    <Search size={24} color={theme === 'dark' ? "rgba(255,255,255,0.65)" : "rgba(0,0,0,0.65)"} className="relative z-10" />
                                 </motion.button>
                             ) : (
                                 /* --- 2. SEARCH MODE: INPUT --- */
@@ -249,12 +298,12 @@ export default function MobileBottomBar() {
                                         onSubmit={executeSearch}
                                         className="flex-1 h-full flex items-center relative z-10 w-full pl-4"
                                     >
-                                        <Search size={18} className="text-gray-500 mr-2 opacity-70 shrink-0" />
+                                        <Search size={18} className="text-gray-500 dark:text-neutral-400 mr-2 opacity-70 shrink-0" />
                                         <input
-                                            className="bg-transparent border-none outline-none text-[16px] w-full placeholder:text-gray-500/80 text-gray-900 font-medium"
-                                            placeholder={`Search ${activeTab.label}...`}
+                                            className="bg-transparent border-none outline-none text-[16px] w-full placeholder:text-gray-500/80 dark:placeholder:text-neutral-400/80 text-gray-900 dark:text-white font-medium"
+                                            placeholder={getSearchPlaceholder()}
                                             value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            onChange={(e) => handleSearchChange(e.target.value)}
                                             autoFocus
                                         />
                                     </form>

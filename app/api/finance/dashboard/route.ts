@@ -44,6 +44,11 @@ export async function GET(request: NextRequest) {
         const lastDayLastMonth = new Date(lastMonthYear, lastMonthNum, 0).getDate();
         const endOfLastMonth = `${lastMonthYear}-${String(lastMonthNum).padStart(2, '0')}-${String(lastDayLastMonth).padStart(2, '0')}`;
 
+        // 7 Days Ago for Pulse
+        const sevenDaysAgoDate = new Date();
+        sevenDaysAgoDate.setDate(now.getDate() - 7);
+        const startOf7DaysAgo = `${sevenDaysAgoDate.getFullYear()}-${String(sevenDaysAgoDate.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgoDate.getDate()).padStart(2, '0')}`;
+
         // Get project IDs for this workspace to filter requests
         let workspaceProjectIds: string[] = [];
         if (workspaceId) {
@@ -79,7 +84,8 @@ export async function GET(request: NextRequest) {
             invoices,
             staffClaims,
             myPurchaseHistory,
-            myReimburseHistory
+            myReimburseHistory,
+            pulsePurchases
         ] = await Promise.all([
             // Team Paid Purchasing (This Month)
             applyProjectFilter(supabase.from('purchasing_requests').select('amount').eq('financial_status', 'PAID').gte('payment_date', startOfThisMonth).lte('payment_date', endOfThisMonth)),
@@ -177,7 +183,13 @@ export async function GET(request: NextRequest) {
                 .gte('date', startOfThisMonth)
                 .lte('date', endOfThisMonth)
                 .order('date', { ascending: false })
-                .limit(5)
+                .limit(5),
+
+            // TEAM - Pulse Purchases (Last 7 Days) for Metrics
+            applyProjectFilter(supabase.from('purchasing_requests')
+                .select('date, amount')
+                .gte('date', startOf7DaysAgo)
+                .lte('date', endOfThisMonth))
         ]);
 
         // Check for errors in any of the queries
@@ -226,6 +238,33 @@ export async function GET(request: NextRequest) {
         const reimbursePendingCount = reimbursePending.data?.length || 0;
         const reimbursePendingAmount = reimbursePending.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
 
+        // CALCULATIONS - PULSE METRICS
+        const rawPulsePurchases = pulsePurchases?.data || [];
+        // Group by day
+        const dailyPulse: Record<string, number> = {};
+        let total7d = 0;
+        let daysWithSpends = 0;
+
+        rawPulsePurchases.forEach((p: any) => {
+            const d = p.date.split('T')[0];
+            dailyPulse[d] = (dailyPulse[d] || 0) + (p.amount || 0);
+        });
+
+        const pulseValues = Object.values(dailyPulse);
+        pulseValues.forEach(amt => {
+            if (amt > 0) {
+                total7d += amt;
+                daysWithSpends++;
+            }
+        });
+
+        const pulseAvgDaily = daysWithSpends > 0 ? total7d / 7 : 0;
+        const pulseMaxDaily = pulseValues.length > 0 ? Math.max(...pulseValues) : 0;
+        const pulseToday = dailyPulse[endOfThisMonth] || 0; // approximate
+
+        const stabilityIndex = pulseAvgDaily > 0 ? (pulseMaxDaily / pulseAvgDaily) : 0;
+        const commitmentPressure = totalBalance > 0 ? (outstandingAmount + reimbursePendingAmount) / totalBalance : (outstandingAmount > 0 ? 1 : 0);
+
         // CALCULATIONS - PERSONAL
         const myPaidPurchasesCount = myPaidPurchases.count || 0;
         const myPaidPurchasesAmount = myPaidPurchases.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
@@ -264,6 +303,13 @@ export async function GET(request: NextRequest) {
                     pendingPurchases: { count: myPendingPurchasesCount, amount: myPendingPurchasesAmount },
                     pendingReimburse: { count: myPendingReimburseCount, amount: myPendingReimburseAmount }
                 }
+            },
+            pulse: {
+                avgDaily: pulseAvgDaily,
+                today: pulseToday,
+                stabilityIndex: isFinite(stabilityIndex) ? stabilityIndex : 0,
+                commitmentPressure: isFinite(commitmentPressure) ? commitmentPressure : 0,
+                dailyData: dailyPulse
             },
             lists: {
                 goodsReceived: goodsReceived.data || [],

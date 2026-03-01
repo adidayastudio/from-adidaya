@@ -384,6 +384,13 @@ export interface FinanceDashboardData {
             pendingReimburse: { count: number; amount: number };
         };
     };
+    pulse?: {
+        avgDaily: number;
+        today: number;
+        stabilityIndex: number;
+        commitmentPressure: number;
+        dailyData: Record<string, number>;
+    };
     lists: {
         goodsReceived: any[];
         invoices: any[];

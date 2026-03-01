@@ -46,7 +46,7 @@ import { formatCurrency, STATUS_THEMES, cleanEntityName, getPrimaryStatus, forma
 import { REIMBURSE_CATEGORY_OPTIONS } from "./modules/constants";
 import { FinanceItemCard } from "./FinanceItemCard";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { fetchReimburseRequests, updateReimburseStatus, deleteReimburseRequest, fetchFundingSources } from "@/lib/client/finance-api";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { fetchTeamMembers } from "@/lib/api/clock_team";
@@ -117,17 +117,17 @@ function Pagination({
     if (totalItems === 0) return null;
 
     return (
-        <div className="flex items-center justify-between px-6 py-4 bg-white/50 backdrop-blur-sm border-t border-neutral-100">
-            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                Showing <span className="text-neutral-900">{startItem}-{endItem}</span> of <span className="text-neutral-900">{totalItems}</span>
+        <div className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border-t border-neutral-100 dark:border-neutral-800">
+            <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+                Showing <span className="text-neutral-900 dark:text-white">{startItem}-{endItem}</span> of <span className="text-neutral-900 dark:text-white">{totalItems}</span>
             </div>
             <div className="flex items-center gap-2">
                 <button
                     onClick={() => onPageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="p-2 hover:bg-neutral-100 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                    className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
                 >
-                    <ChevronLeft className="w-4 h-4 text-neutral-600" />
+                    <ChevronLeft className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
                 </button>
                 <div className="flex items-center gap-1">
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
@@ -140,15 +140,15 @@ function Pagination({
                                     className={clsx(
                                         "w-8 h-8 rounded-full text-xs font-bold transition-all",
                                         currentPage === page
-                                            ? "bg-neutral-900 text-white shadow-lg shadow-neutral-200"
-                                            : "text-neutral-500 hover:bg-neutral-100"
+                                            ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-lg shadow-neutral-200 dark:shadow-none"
+                                            : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                     )}
                                 >
                                     {page}
                                 </button>
                             );
                         } else if (page === currentPage - 2 || page === currentPage + 2) {
-                            return <span key={page} className="text-neutral-300 mx-1">...</span>;
+                            return <span key={page} className="text-neutral-300 dark:text-neutral-600 mx-1">...</span>;
                         }
                         return null;
                     })}
@@ -156,9 +156,9 @@ function Pagination({
                 <button
                     onClick={() => onPageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="p-2 hover:bg-neutral-100 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
+                    className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-all disabled:opacity-30 disabled:hover:bg-transparent"
                 >
-                    <ChevronRight className="w-4 h-4 text-neutral-600" />
+                    <ChevronRight className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
                 </button>
             </div>
         </div>
@@ -911,8 +911,22 @@ function ViewModal({
 export default function ReimburseClient() {
     const { viewMode, setViewMode, canAccessTeam, userId, userRole, isLoading: isAuthLoading } = useFinance();
     const router = useRouter();
+    const pathname = usePathname();
     const searchParams = useSearchParams();
-    const [searchTerm, setSearchTerm] = useState("");
+
+    // Read search term from URL query parameter 'q' (controlled by MobileBottomBar)
+    const searchTerm = searchParams.get('q') || "";
+
+    // Sync back to URL when desktop search input changes
+    const setSearchTerm = (val: string) => {
+        const params = new URLSearchParams(window.location.search);
+        if (val.trim()) {
+            params.set('q', val.trim());
+        } else {
+            params.delete('q');
+        }
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
 
     // Filters
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -1292,31 +1306,13 @@ export default function ReimburseClient() {
                 </div>
 
                 {/* ADVANCED TOOLBAR - MOBILE (1 LINE) - iOS GLASSY */}
-                <div className="flex md:hidden items-center gap-1.5 p-2 rounded-2xl bg-white/50 backdrop-blur-md border border-white/60 shadow-sm">
-                    {/* Search Icon Button */}
-                    <button
-                        onClick={() => {
-                            const input = document.getElementById('mobile-search-input');
-                            if (input) {
-                                input.classList.toggle('hidden');
-                                if (!input.classList.contains('hidden')) input.focus();
-                            }
-                        }}
-                        className={clsx(
-                            "p-2.5 rounded-full backdrop-blur-sm border shadow-sm transition-all",
-                            searchTerm
-                                ? "bg-red-500/10 border-red-200/60 text-red-600"
-                                : "bg-white/80 border-white/60 text-neutral-500"
-                        )}
-                    >
-                        <Search className="w-4 h-4" />
-                    </button>
+                <div className="flex md:hidden items-center gap-1.5 p-2 rounded-2xl bg-white/50 dark:bg-neutral-900/50 backdrop-blur-md border border-white/60 dark:border-neutral-800 shadow-sm dark:shadow-none">
 
                     {/* Month Selector - iOS Glassy */}
-                    <div className="flex items-center gap-0.5 p-1 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 shadow-sm">
+                    <div className="flex items-center gap-0.5 p-1 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm">
                         <button
                             onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
-                            className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
+                            className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
                         >
                             <ChevronLeft className="w-3.5 h-3.5" />
                         </button>
@@ -1324,14 +1320,14 @@ export default function ReimburseClient() {
                             onClick={() => setShowAllMonths(!showAllMonths)}
                             className={clsx(
                                 "text-[11px] font-bold min-w-[42px] text-center transition-colors",
-                                showAllMonths ? "text-red-600" : "text-neutral-700"
+                                showAllMonths ? "text-red-600 dark:text-red-400" : "text-neutral-700 dark:text-neutral-300"
                             )}
                         >
                             {showAllMonths ? "ALL" : format(currentMonth, "MMM-yy")}
                         </button>
                         <button
                             onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
-                            className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
+                            className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
                         >
                             <ChevronRight className="w-3.5 h-3.5" />
                         </button>
@@ -1339,9 +1335,9 @@ export default function ReimburseClient() {
 
                     {/* Project Dropdown (Native) */}
                     <div className="relative">
-                        <div className="h-9 px-3 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-[11px] font-bold text-neutral-700 shadow-sm flex items-center gap-1">
+                        <div className="h-9 px-3 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 shadow-sm flex items-center gap-1">
                             <span>{selectedProject === "ALL" ? "ALL" : projects.find(p => p.id === selectedProject)?.projectCode || "ALL"}</span>
-                            <ChevronDown className="w-3 h-3 text-neutral-400" />
+                            <ChevronDown className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
                         </div>
                         <select
                             value={selectedProject}
@@ -1357,13 +1353,13 @@ export default function ReimburseClient() {
 
                     {/* Category Dropdown (Native) */}
                     <div className="relative">
-                        <div className="h-9 px-3 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 text-[11px] font-bold text-neutral-700 shadow-sm flex items-center gap-1">
+                        <div className="h-9 px-3 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 shadow-sm flex items-center gap-1">
                             <span>
                                 {categoryFilter === "ALL"
                                     ? "All Categories"
                                     : REIMBURSE_CATEGORY_OPTIONS.find(c => c.value === categoryFilter)?.label || categoryFilter}
                             </span>
-                            <ChevronDown className="w-3 h-3 text-neutral-400" />
+                            <ChevronDown className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
                         </div>
                         <select
                             value={categoryFilter}
@@ -1387,7 +1383,7 @@ export default function ReimburseClient() {
                         onClick={handleExport}
                         disabled={isExporting || filteredItems.length === 0}
                         className={clsx(
-                            "p-2.5 bg-white/80 backdrop-blur-sm rounded-full border border-white/60 shadow-sm text-neutral-500 hover:text-neutral-700 transition-colors",
+                            "p-2.5 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors",
                             (isExporting || filteredItems.length === 0) && "opacity-50 cursor-not-allowed"
                         )}
                     >
@@ -1405,16 +1401,6 @@ export default function ReimburseClient() {
                         </button>
                     )} */}
                 </div>
-
-                {/* Mobile Search Input (Hidden by default) - iOS Glassy */}
-                <input
-                    id="mobile-search-input"
-                    type="text"
-                    placeholder="Search..."
-                    className="hidden md:hidden w-full mt-2 h-10 px-4 bg-white/80 backdrop-blur-sm rounded-xl border border-white/60 shadow-sm text-sm text-neutral-700 placeholder:text-neutral-400"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
 
                 {/* ADVANCED TOOLBAR - DESKTOP */}
                 <div className="hidden md:flex flex-row gap-4 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40 shadow-sm">
@@ -1516,9 +1502,9 @@ export default function ReimburseClient() {
                 {/* MOBILE CARD LIST */}
                 <div className="mt-6 block md:hidden space-y-2">
                     {filteredItems.length === 0 ? (
-                        <div className="bg-white/40 backdrop-blur-md rounded-2xl border border-white/50 shadow-sm p-6 text-center">
-                            <Package className="w-10 h-10 text-neutral-300 mx-auto mb-2" />
-                            <h4 className="text-sm font-semibold text-neutral-700">
+                        <div className="bg-white/40 dark:bg-neutral-900/60 backdrop-blur-md rounded-2xl border border-white/50 dark:border-neutral-800 shadow-sm dark:shadow-none p-6 text-center">
+                            <Package className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+                            <h4 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
                                 {searchTerm ? "No results found" :
                                     statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
                                         isBefore(currentMonth, startOfMonth(new Date()))
