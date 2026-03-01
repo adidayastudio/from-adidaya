@@ -77,8 +77,8 @@ export default function ClockPageWrapper({
                 {/* Floating Personal/Team toggle */}
                 <ClockMobileViewToggle />
 
-                {/* Content with top padding */}
-                <div className="pb-32 px-4 pt-20 space-y-4">
+                {/* Content */}
+                <div className="pb-32 px-4 space-y-4">
                     {/* Header is optional here or part of each section */}
                     {header}
                     {children}

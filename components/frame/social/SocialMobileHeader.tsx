@@ -130,7 +130,7 @@ export default function SocialMobileHeader({
     return (
         <>
             {/* Fixed Floating Top Bar */}
-            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 pt-12 pointer-events-none">
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-50 pt-6 pointer-events-none">
                 {/* Background Mask - Linear Blur effect */}
                 <div className={clsx(
                     "absolute inset-0 bg-white/60 transition-all duration-500 pointer-events-none",
@@ -538,7 +538,7 @@ export default function SocialMobileHeader({
 
             {/* Large Scrollable Title Area - Only show if no title prop (detail view) */}
             {!title && (
-                <div className="lg:hidden pt-28 pb-2">
+                <div className="lg:hidden pt-20 pb-2">
                     <div className="px-5 pb-1">
                         <h1 className="text-[32px] font-bold text-gray-900 tracking-tight">Social</h1>
                     </div>
@@ -548,7 +548,7 @@ export default function SocialMobileHeader({
             {/* Scrollable Tabs - Becomes Fixed on Scroll */}
             {!hideTabs && (
                 <div className={`lg:hidden z-30 transition-all duration-300 ${scrolled
-                    ? "fixed top-[100px] left-5 right-5 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-black/[0.04] p-[2px] rounded-[24px] shadow-[0_8px_32px_-12px_rgba(0,0,0,0.1)]"
+                    ? "fixed top-[80px] left-5 right-5 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-black/[0.04] p-[2px] rounded-[24px] shadow-[0_8px_32px_-12px_rgba(0,0,0,0.1)]"
                     : "relative bg-transparent pb-4 mt-2"
                     }`}>
                     <div className={`flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${scrolled ? 'px-0' : 'px-5'}`}>
@@ -573,7 +573,7 @@ export default function SocialMobileHeader({
             )}
 
             {/* Spacer to prevent content jump when tabs become fixed */}
-            {scrolled && !hideTabs && !title && <div className="lg:hidden h-[76px]" />}
+            {scrolled && !hideTabs && !title && <div className="lg:hidden h-[56px]" />}
         </>
     );
 }

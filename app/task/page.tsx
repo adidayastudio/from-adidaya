@@ -521,8 +521,8 @@ export default function TaskPage() {
       {/* HEADER SECTION - STICKY WITH GLASS EFFECT WHEN SCROLLED */}
       <div
         className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled
-          ? "bg-[#f8f9fa]/70 backdrop-blur-xl border-b border-black/[0.05] pt-12 pb-3"
-          : "bg-[#f8f9fa] pt-14 pb-4"
+          ? "bg-[#f8f9fa]/70 backdrop-blur-xl border-b border-black/[0.05] pt-6 pb-2"
+          : "bg-[#f8f9fa] pt-8 pb-4"
           } px-5`}
       >
         {/* Top Header Row */}

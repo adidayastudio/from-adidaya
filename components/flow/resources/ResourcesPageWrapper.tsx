@@ -38,7 +38,7 @@ export default function ResourcesPageWrapper({
                     tabs={RESOURCES_TABS}
                 />
 
-                <div className="pb-32 px-4 pt-20 space-y-4">
+                <div className="pb-32 px-4 space-y-4">
                     {header}
                     {children}
                 </div>
