@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, ClipboardList, CalendarClock, Wallet, TrendingUp, FileCheck } from "lucide-react";
+import { Users, ClipboardList, CalendarClock, Wallet, TrendingUp, FileCheck, Plus } from "lucide-react";
 import clsx from "clsx";
 import { UserRole } from "@/hooks/useUserProfile";
 
@@ -59,6 +59,46 @@ export default function CrewSidebar({ activeSection, onSectionChange, role = "st
         </div>
       </aside>
 
+      {/* MOBILE BOTTOM NAVIGATION */}
+      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 w-full px-4 max-w-sm safe-area-bottom">
+        {/* 1. Main Nav Bar (Pill) */}
+        <div className="flex-1 bg-white/50 backdrop-blur-sm backdrop-saturate-150 shadow-sm rounded-full px-2 py-1.5 flex justify-between items-center border border-white/40">
+          {visibleItems.map((item) => {
+            const isActive = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onSectionChange(item.id)}
+                className={clsx(
+                  "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+                  isActive && "bg-blue-50"
+                )}
+              >
+                <item.icon
+                  className={clsx(
+                    "w-5 h-5 transition-colors",
+                    isActive ? "text-blue-600" : "text-neutral-400"
+                  )}
+                  strokeWidth={isActive ? 2 : 1.5}
+                />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* 2. Add Crew FAB */}
+        {fabAction && (
+          <button
+            onClick={fabAction.onClick}
+            className={clsx(
+              "w-12 h-12 flex items-center justify-center rounded-full shadow-lg text-white transition-transform active:scale-95 flex-shrink-0",
+              fabAction.highlight ? "bg-red-500" : "bg-blue-600"
+            )}
+          >
+            {fabAction.icon || <Plus className="w-6 h-6" />}
+          </button>
+        )}
+      </div>
     </>
   );
 }

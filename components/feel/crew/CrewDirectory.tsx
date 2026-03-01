@@ -97,17 +97,61 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
     const [showFilterPopup, setShowFilterPopup] = useState(false);
 
+    // Sync from URL params (especially for mobile header control)
+    useEffect(() => {
+        const search = searchParams.get("search");
+        if (search !== null && search !== searchQuery) setSearchQuery(search);
+
+        const roles = searchParams.get("roles") || searchParams.get("role");
+        if (roles) {
+            const roleArray = roles.split(",") as CrewRole[];
+            if (JSON.stringify(roleArray) !== JSON.stringify(selectedRoles)) setSelectedRoles(roleArray);
+        } else if (selectedRoles.length > 0) {
+            setSelectedRoles([]);
+        }
+
+        const statuses = searchParams.get("statuses") || searchParams.get("status");
+        if (statuses) {
+            const statusArray = statuses.split(",") as CrewStatus[];
+            if (JSON.stringify(statusArray) !== JSON.stringify(selectedStatuses)) setSelectedStatuses(statusArray);
+        } else if (selectedStatuses.length > 0) {
+            setSelectedStatuses([]);
+        }
+
+        const view = searchParams.get("view") as ViewMode;
+        if (view && view !== viewMode) setViewMode(view);
+
+        const card = searchParams.get("card") as FilterCard;
+        if (card && card !== activeCard) setActiveCard(card);
+    }, [searchParams]);
+
     // Sync state to URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
 
         if (searchQuery) params.set("search", searchQuery); else params.delete("search");
-        if (selectedRoles.length > 0) params.set("roles", selectedRoles.join(",")); else params.delete("roles");
-        if (selectedStatuses.length > 0) params.set("statuses", selectedStatuses.join(",")); else params.delete("statuses");
+
+        // Handle both roles (plural) and role (singular) for compatibility
+        if (selectedRoles.length > 0) {
+            params.set("roles", selectedRoles.join(","));
+            if (selectedRoles.length === 1) params.set("role", selectedRoles[0]);
+            else params.delete("role");
+        } else {
+            params.delete("roles");
+            params.delete("role");
+        }
+
+        if (selectedStatuses.length > 0) {
+            params.set("statuses", selectedStatuses.join(","));
+            if (selectedStatuses.length === 1) params.set("status", selectedStatuses[0]);
+            else params.delete("status");
+        } else {
+            params.delete("statuses");
+            params.delete("status");
+        }
 
         if (selectedProjects.length > 0) {
             params.set("projects", selectedProjects.join(","));
-            // Sync single param for compatibility with single-select views
             params.set("project", selectedProjects[0]);
         } else {
             params.delete("projects");
@@ -594,98 +638,127 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 </div>
             )}
 
-            {/* List View */}
-            {viewMode === "list" && filteredCrew.length > 0 && (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 border-b border-neutral-200">
-                                <tr>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon col="name" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-
-                                    {/* Desktop Headers */}
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 hidden sm:table-cell" onClick={() => handleSort("role")}><div className="flex items-center gap-1">Role <SortIcon col="role" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 hidden sm:table-cell" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon col="project" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100 hidden sm:table-cell" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon col="status" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-
-                                    {/* Mobile Consolidated Header */}
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase sm:hidden">Details</th>
-
-                                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100">
-                                {filteredCrew.map((crew) => (
-                                    <tr key={crew.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
-                                        <td className="px-4 py-3 align-top sm:align-middle">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{crew.initials}</div>
-                                                <span className="font-medium text-neutral-900">{crew.name}</span>
-                                            </div>
-                                        </td>
-
-                                        {/* Desktop Columns */}
-                                        <td className="px-4 py-3 hidden sm:table-cell"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span></td>
-                                        <td className="px-4 py-3 hidden sm:table-cell">{crew.projectCode ? <span className="px-2 py-1 text-xs font-mono bg-neutral-100 text-neutral-600 rounded">{formatProjectCode(crew.projectCode)}</span> : <span className="text-neutral-400 text-xs">-</span>}</td>
-                                        <td className="px-4 py-3 hidden sm:table-cell"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span></td>
-
-                                        {/* Mobile Consolidated Column */}
-                                        <td className="px-4 py-3 sm:hidden align-middle">
-                                            <div className="flex flex-wrap items-center gap-1.5">
-                                                <span className={clsx("px-2 py-1 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>
-                                                    {CREW_ROLE_LABELS[crew.role].en}
-                                                </span>
-                                                {crew.projectCode && (
-                                                    <span className="px-2 py-1 text-[10px] font-mono bg-neutral-100 text-neutral-600 rounded">
-                                                        {formatProjectCode(crew.projectCode)}
-                                                    </span>
-                                                )}
-                                                <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
-                                                    {crew.status === "ACTIVE" ? "Active" : "Inactive"}
-                                                </span>
-                                            </div>
-                                        </td>
-
-                                        <td className="px-4 py-3 text-right align-middle" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex items-center justify-end gap-1">
-                                                <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-4 h-4" /></button>
-                                                <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* Board View */}
-            {viewMode === "board" && filteredCrew.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {/* CONTENT (TABLE & CARDS) */}
+            <div className="space-y-4">
+                {/* MOBILE CARDS (Replaces both List/Board mobile logic) */}
+                <div className="lg:hidden space-y-3">
                     {filteredCrew.map((crew) => (
-                        <div key={crew.id} className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
-                            <div className="flex items-center gap-3 mb-3">
-                                <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold flex-shrink-0">{crew.initials}</div>
-                                <div className="min-w-0 flex-1">
-                                    <div className="font-semibold text-neutral-900 truncate">{crew.name}</div>
-                                    <span className={clsx("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span>
+                        <div
+                            key={crew.id}
+                            className="bg-white/50 backdrop-blur-md rounded-2xl border border-white/40 p-4 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
+                            onClick={() => onViewDetail?.(crew.id)}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
+                                        {crew.initials}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-neutral-900">{crew.name}</div>
+                                        <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                                            {CREW_ROLE_LABELS[crew.role].en}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
+                                        {crew.status}
+                                    </span>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+
+                            <div className="flex items-center justify-between pt-4 border-t border-black/[0.03]">
                                 <div className="flex items-center gap-2">
-                                    {crew.projectCode && <span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(crew.projectCode)}</span>}
-                                    <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span>
+                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Project</span>
+                                    {crew.projectCode ? (
+                                        <span className="px-2 py-1 text-[10px] font-mono bg-neutral-100 text-neutral-600 rounded font-bold">
+                                            {formatProjectCode(crew.projectCode)}
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] font-bold text-neutral-300">UNASSIGNED</span>
+                                    )}
                                 </div>
-                                <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                                    <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-3.5 h-3.5" /></button>
-                                    <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                    <button onClick={() => openEditDrawer(crew)} className="p-2.5 rounded-xl bg-blue-50 text-blue-600 active:scale-90 transition-all">
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => openDeleteConfirm(crew)} className="p-2.5 rounded-xl bg-red-50 text-red-50 hover:text-red-600 active:scale-90 transition-all">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
-            )}
+
+                {/* DESKTOP VIEWS */}
+                <div className="hidden lg:block">
+                    {/* List View */}
+                    {viewMode === "list" ? (
+                        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead className="bg-neutral-50 border-b border-neutral-200">
+                                        <tr>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon col="name" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("role")}><div className="flex items-center gap-1">Role <SortIcon col="role" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon col="project" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                            <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon col="status" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                            <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-neutral-100">
+                                        {filteredCrew.map((crew) => (
+                                            <tr key={crew.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{crew.initials}</div>
+                                                        <span className="font-medium text-neutral-900">{crew.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span></td>
+                                                <td className="px-4 py-3">{crew.projectCode ? <span className="px-2 py-1 text-xs font-mono bg-neutral-100 text-neutral-600 rounded">{formatProjectCode(crew.projectCode)}</span> : <span className="text-neutral-400 text-xs">-</span>}</td>
+                                                <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span></td>
+                                                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-4 h-4" /></button>
+                                                        <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    ) : (
+                        /* Board View */
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                            {filteredCrew.map((crew) => (
+                                <div key={crew.id} className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold flex-shrink-0">{crew.initials}</div>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="font-semibold text-neutral-900 truncate">{crew.name}</div>
+                                            <span className={clsx("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+                                        <div className="flex items-center gap-2">
+                                            {crew.projectCode && <span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(crew.projectCode)}</span>}
+                                            <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span>
+                                        </div>
+                                        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                                            <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-3.5 h-3.5" /></button>
+                                            <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Add Drawer */}
             {showAddDrawer && (

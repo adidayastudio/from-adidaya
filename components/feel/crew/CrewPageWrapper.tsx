@@ -1,23 +1,8 @@
-
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import PageWrapper from "@/components/layout/PageWrapper";
-import MobileNavBar from "@/components/layout/MobileNavBar";
 import CrewSidebar, { CrewSection } from "@/components/feel/crew/CrewSidebar";
-import { Users, ClipboardList, CalendarClock, Wallet, TrendingUp, FileCheck, HardHat } from "lucide-react";
+import CrewMobileHeader from "@/components/feel/crew/CrewMobileHeader";
 import { UserRole } from "@/hooks/useUserProfile";
-
-import { FEEL_APPS } from "@/lib/navigation-config";
-
-// Define Crew Tabs matching CrewSidebar logic
-// Href uses query params to switch sections
-const CREW_TABS = [
-    { id: "directory", label: "Directory", href: "/feel/crew", icon: Users },
-    { id: "assignments", label: "Assignment", href: "/feel/crew?tab=assignments", icon: ClipboardList },
-    { id: "daily-input", label: "Daily Log", href: "/feel/crew?tab=daily-input", icon: CalendarClock },
-    { id: "payroll", label: "Payroll", href: "/feel/crew?tab=payroll", icon: Wallet },
-    { id: "performance", label: "KPI", href: "/feel/crew?tab=performance", icon: TrendingUp },
-    { id: "requests", label: "Requests", href: "/feel/crew?tab=requests", icon: FileCheck },
-];
 
 interface CrewPageWrapperProps {
     breadcrumbItems: { label: string; href?: string }[];
@@ -33,6 +18,15 @@ interface CrewPageWrapperProps {
         title: string;
         highlight?: boolean;
     };
+    // Mobile Header Props
+    view?: string;
+    onChangeView?: (v: any) => void;
+    selectedRole?: string;
+    onRoleChange?: (role: string) => void;
+    selectedStatus?: string;
+    onStatusChange?: (status: string) => void;
+    searchQuery?: string;
+    onSearchChange?: (q: string) => void;
 }
 
 export default function CrewPageWrapper({
@@ -42,44 +36,45 @@ export default function CrewPageWrapper({
     activeSection,
     onSectionChange,
     role,
-    fabAction
+    fabAction,
+    view,
+    onChangeView,
+    selectedRole,
+    onRoleChange,
+    selectedStatus,
+    onStatusChange,
+    searchQuery,
+    onSearchChange,
 }: CrewPageWrapperProps) {
 
     return (
         <>
             {/* MOBILE LAYOUT */}
-            <div className="lg:hidden min-h-screen bg-neutral-100 pb-20">
-                {/* Single-row liquid glass nav bar */}
-                <MobileNavBar
-                    appName="Crew"
-                    appIcon={HardHat}
-                    parentHref="/feel"
-                    parentLabel="Feel"
-                    siblingApps={FEEL_APPS}
-                    tabs={CREW_TABS}
-                    accentColor="text-blue-600"
-                    onFabClick={fabAction?.onClick}
-                    fabIcon={fabAction?.icon}
+            <div className="lg:hidden min-h-screen bg-neutral-100">
+                <CrewMobileHeader
+                    onAddCrew={fabAction?.onClick}
+                    backUrl="/dashboard"
+                    view={view}
+                    onChangeView={onChangeView}
+                    selectedRole={selectedRole}
+                    onRoleChange={onRoleChange}
+                    selectedStatus={selectedStatus}
+                    onStatusChange={onStatusChange}
+                    searchQuery={searchQuery}
+                    onSearchChange={onSearchChange}
                 />
 
-                {/* Content with top padding */}
-                <div className="px-4 pt-20 space-y-4">
-                    {/* Header if needed */}
+                <div className="pb-32 px-4 space-y-4">
                     {header}
                     {children}
                 </div>
 
-                {/* Mobile FAB Removed - Handled by MobileBottomBar */}
-                {/* {fabAction && (
-                    <div className="fixed bottom-6 right-4 z-50">
-                        <button
-                            onClick={fabAction.onClick}
-                            className={`w-14 h-14 flex items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 text-white ${fabAction.highlight ? "bg-red-500" : "bg-blue-600"}`}
-                        >
-                            {fabAction.icon}
-                        </button>
-                    </div>
-                )} */}
+                <CrewSidebar
+                    activeSection={activeSection}
+                    onSectionChange={onSectionChange}
+                    role={role}
+                    fabAction={fabAction}
+                />
             </div>
 
             {/* DESKTOP LAYOUT */}

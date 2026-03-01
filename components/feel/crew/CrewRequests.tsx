@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
 import { Plus, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Check, X, Clock, Download, ArrowUpDown, FileText, Upload, Users, Edit, Trash, Ban, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -120,16 +121,46 @@ const FormInput = ({ label, type = "text", value, onChange, placeholder }: { lab
 );
 
 export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
     const [requests, setRequests] = useState<CrewRequest[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
     const [crew, setCrew] = useState<{ id: string; name: string; role: CrewRole; projectCode?: string }[]>([]);
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
 
-    const [searchQuery, setSearchQuery] = useState("");
-    const [activeCard, setActiveCard] = useState<FilterCard>("ALL");
-    const [selectedType, setSelectedType] = useState<RequestType | "ALL">("ALL");
-    const [selectedProject, setSelectedProject] = useState("ALL");
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+    const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
+    const [selectedType, setSelectedType] = useState<RequestType | "ALL">((searchParams.get("type") as any) || "ALL");
+    const [selectedProject, setSelectedProject] = useState(searchParams.get("project") || "ALL");
+
+    // Sync FROM URL
+    useEffect(() => {
+        const search = searchParams.get("search");
+        if (search !== null && search !== searchQuery) setSearchQuery(search);
+
+        const card = searchParams.get("card") as FilterCard;
+        if (card && card !== activeCard) setActiveCard(card);
+
+        const project = searchParams.get("project") || "ALL";
+        if (project !== selectedProject) setSelectedProject(project);
+
+        const type = searchParams.get("type") as any;
+        if (type && type !== selectedType) setSelectedType(type);
+    }, [searchParams]);
+
+    // Sync TO URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+        if (searchQuery) params.set("search", searchQuery); else params.delete("search");
+        if (activeCard && activeCard !== "ALL") params.set("card", activeCard); else params.delete("card");
+        if (selectedProject !== "ALL") params.set("project", selectedProject); else params.delete("project");
+        if (selectedType !== "ALL") params.set("type", selectedType); else params.delete("type");
+
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [searchQuery, activeCard, selectedProject, selectedType]);
 
     // Period Selection State
     const [anchorDate, setAnchorDate] = useState(() => {
@@ -538,61 +569,155 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
 
             {requests.length === 0 && <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center"><Users className="w-12 h-12 mx-auto text-neutral-300 mb-4" /><h3 className="font-medium text-neutral-600 mb-2">No requests yet</h3><p className="text-sm text-neutral-400 mb-4">Submit leave, cash advance, or reimbursement requests.</p><Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => { resetForm(); setShowDrawer(true); }}>Add Request</Button></div>}
 
+            {/* CONTENT (TABLE & CARDS) */}
             {filtered.length > 0 && (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 border-b border-neutral-200">
-                                <tr>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Name</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden sm:table-cell">Project</th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("type")}><div className="flex items-center gap-1">Type <SortIcon c="type" /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell">Details</th>
-                                    <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center justify-center gap-1">Status <SortIcon c="status" /></div></th>
-                                    {(role && ["pm", "admin", "super_admin", "supervisor"].includes(role)) && <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-24">Actions</th>}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100">
-                                {filtered.map(r => (
-                                    <tr key={r.id} className="hover:bg-neutral-50 transition-colors">
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(r.crewName)}</div>
-                                                <div>
-                                                    <div className="font-medium text-neutral-900">{r.crewName || "Unknown"}</div>
-                                                    <div className="text-xs text-neutral-500">{r.crewRole ? (CREW_ROLE_LABELS[r.crewRole]?.en || r.crewRole) : "-"}</div>
+                <div className="space-y-4">
+                    {/* MOBILE CARDS */}
+                    <div className="lg:hidden space-y-3">
+                        {filtered.map((r) => (
+                            <div
+                                key={r.id}
+                                className="bg-white/50 backdrop-blur-md rounded-2xl border border-white/40 p-4 shadow-sm active:scale-[0.98] transition-all"
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
+                                            {getInitials(r.crewName)}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-neutral-900">{r.crewName || "Unknown"}</div>
+                                            <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                                                {r.crewRole ? (CREW_ROLE_LABELS[r.crewRole]?.en || r.crewRole) : "-"}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        {getStatusBadge(r.status)}
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-4 py-4 border-y border-black/[0.03]">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Request / Project</div>
+                                        <div className="flex items-center gap-2">
+                                            {getTypeBadge(r.type)}
+                                            <span className="font-mono text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded font-bold text-neutral-600">{r.projectCode || "OFFICE"}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Details</div>
+                                        <div className="text-right">
+                                            {r.type === "LEAVE" ? (
+                                                <div className="text-sm font-bold text-neutral-700">
+                                                    {formatDate(r.startDate)} → {r.endDate ? formatDate(r.endDate) : "?"}
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 hidden sm:table-cell"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{r.projectCode || "-"}</span></td>
-                                        <td className="px-4 py-3">{getTypeBadge(r.type)}</td>
-                                        <td className="px-4 py-3 hidden md:table-cell">
-                                            {r.type === "LEAVE" && <span className="text-neutral-600 text-xs">{formatDate(r.startDate)} → {r.endDate ? formatDate(r.endDate) : "?"}</span>}
-                                            {(r.type === "KASBON" || r.type === "REIMBURSE") && <span className="text-neutral-600 text-xs">{r.amount ? formatNum(r.amount) : "0"}</span>}
-                                            {r.proofUrl && <a href={r.proofUrl} target="_blank" rel="noreferrer"><FileText className="w-3 h-3 text-blue-500 inline ml-2 hover:underline" /></a>}
-                                        </td>
-                                        <td className="px-4 py-3 text-center">{getStatusBadge(r.status)}</td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                {(role && ["pm", "admin", "super_admin", "supervisor"].includes(role)) && r.status === "PENDING" && (
-                                                    <>
-                                                        <button onClick={() => handleApprove(r)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200" title="Approve"><Check className="w-3.5 h-3.5" /></button>
-                                                        <button onClick={() => handleReject(r.id)} className="p-1.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200" title="Reject"><X className="w-3.5 h-3.5" /></button>
-                                                    </>
-                                                )}
-                                                {r.status === "PENDING" && (
-                                                    <>
-                                                        <button onClick={() => handleEdit(r)} className="p-1.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
-                                                        <button onClick={() => handleCancel(r.id)} className="p-1.5 rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200" title="Cancel"><Ban className="w-3.5 h-3.5" /></button>
-                                                    </>
-                                                )}
-                                                <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200" title="Delete"><Trash className="w-3.5 h-3.5" /></button>
-                                            </div>
-                                        </td>
+                                            ) : (
+                                                <div className="text-sm font-bold text-blue-600">
+                                                    Rp {r.amount ? formatNum(r.amount) : "0"}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {r.reason && (
+                                        <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-100/50">
+                                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Reason</div>
+                                            <p className="text-xs text-neutral-600 line-clamp-2">{r.reason}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center justify-between mt-4">
+                                    <span className="text-[10px] font-bold text-neutral-400 italic">
+                                        Requested: {new Date(r.createdAt).toLocaleDateString("id-ID")}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {(role && ["pm", "admin", "super_admin", "supervisor"].includes(role)) && r.status === "PENDING" && (
+                                            <>
+                                                <button onClick={() => handleApprove(r)} className="p-2.5 rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-90 transition-all">
+                                                    <Check className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleReject(r.id)} className="p-2.5 rounded-xl bg-red-500 text-white shadow-lg shadow-red-500/20 active:scale-90 transition-all">
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        )}
+                                        {r.status === "PENDING" && (
+                                            <>
+                                                <button onClick={() => handleEdit(r)} className="p-2.5 rounded-xl bg-blue-50 text-blue-600 active:scale-90 transition-all">
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleCancel(r.id)} className="p-2.5 rounded-xl bg-amber-50 text-amber-600 active:scale-90 transition-all">
+                                                    <Ban className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        )}
+                                        <button onClick={() => handleDelete(r.id)} className="p-2.5 rounded-xl bg-neutral-100 text-neutral-500 active:scale-90 transition-all">
+                                            <Trash className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* DESKTOP TABLE */}
+                    <div className="hidden lg:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                    <tr>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Name</th>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden sm:table-cell">Project</th>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("type")}><div className="flex items-center gap-1">Type <SortIcon c="type" /></div></th>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell">Details</th>
+                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center justify-center gap-1">Status <SortIcon c="status" /></div></th>
+                                        {(role && ["pm", "admin", "super_admin", "supervisor"].includes(role)) && <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-24">Actions</th>}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                    {filtered.map(r => (
+                                        <tr key={r.id} className="hover:bg-neutral-50 transition-colors">
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(r.crewName)}</div>
+                                                    <div>
+                                                        <div className="font-medium text-neutral-900">{r.crewName || "Unknown"}</div>
+                                                        <div className="text-xs text-neutral-500">{r.crewRole ? (CREW_ROLE_LABELS[r.crewRole]?.en || r.crewRole) : "-"}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 hidden sm:table-cell"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{r.projectCode || "-"}</span></td>
+                                            <td className="px-4 py-3">{getTypeBadge(r.type)}</td>
+                                            <td className="px-4 py-3 hidden md:table-cell">
+                                                {r.type === "LEAVE" && <span className="text-neutral-600 text-xs">{formatDate(r.startDate)} → {r.endDate ? formatDate(r.endDate) : "?"}</span>}
+                                                {(r.type === "KASBON" || r.type === "REIMBURSE") && <span className="text-neutral-600 text-xs">{r.amount ? formatNum(r.amount) : "0"}</span>}
+                                                {r.proofUrl && <a href={r.proofUrl} target="_blank" rel="noreferrer"><FileText className="w-3 h-3 text-blue-500 inline ml-2 hover:underline" /></a>}
+                                            </td>
+                                            <td className="px-4 py-3 text-center">{getStatusBadge(r.status)}</td>
+                                            <td className="px-4 py-3 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    {(role && ["pm", "admin", "super_admin", "supervisor"].includes(role)) && r.status === "PENDING" && (
+                                                        <>
+                                                            <button onClick={() => handleApprove(r)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200" title="Approve"><Check className="w-3.5 h-3.5" /></button>
+                                                            <button onClick={() => handleReject(r.id)} className="p-1.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200" title="Reject"><X className="w-3.5 h-3.5" /></button>
+                                                        </>
+                                                    )}
+                                                    {r.status === "PENDING" && (
+                                                        <>
+                                                            <button onClick={() => handleEdit(r)} className="p-1.5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
+                                                            <button onClick={() => handleCancel(r.id)} className="p-1.5 rounded-full bg-amber-100 text-amber-600 hover:bg-amber-200" title="Cancel"><Ban className="w-3.5 h-3.5" /></button>
+                                                        </>
+                                                    )}
+                                                    <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-full bg-neutral-100 text-neutral-600 hover:bg-neutral-200" title="Delete"><Trash className="w-3.5 h-3.5" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}

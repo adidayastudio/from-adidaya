@@ -139,7 +139,15 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
         return searchParams.get("project") || searchParams.get("projects")?.split(",")[0] || "";
     });
 
-    // Sync project to URL
+    // Sync project FROM URL
+    useEffect(() => {
+        const project = searchParams.get("project") || searchParams.get("projects")?.split(",")[0];
+        if (project && project !== selectedProject) {
+            setSelectedProject(project);
+        }
+    }, [searchParams]);
+
+    // Sync project TO URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
         if (selectedProject) {
@@ -151,7 +159,7 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
             params.delete("projects");
         }
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [selectedProject, searchParams, router, pathname]);
+    }, [selectedProject]);
 
     // Anchor date is the reference. 
     // For Weekly: It's the Sunday of the selected week.
@@ -539,50 +547,113 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                 </div>
             )}
 
-            {/* TABLE */}
+            {/* CONTENT (TABLE & CARDS) */}
             {sortedPayroll.length > 0 && (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 border-b border-neutral-200">
-                                <tr>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
-                                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell">Days</th>
-                                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Base</th>
-                                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell">OT</th>
-                                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden lg:table-cell">Adj</th>
-                                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("total")}><div className="flex items-center justify-end gap-1">Total <SortIcon column="total" /></div></th>
-                                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-20">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100">
-                                {sortedPayroll.map((e) => {
-                                    const adj = e.reimburse - e.kasbon;
-                                    return (
-                                        <tr key={e.id} className="hover:bg-neutral-50 transition-colors">
-                                            <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{e.initials}</div><div><span className="font-medium text-neutral-900">{e.crewName}</span><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}</div></div></div></td>
-                                            <td className="px-4 py-3 text-right text-neutral-600 hidden md:table-cell">{e.days}</td>
-                                            <td className="px-4 py-3 text-right text-neutral-700">{formatNumFull(e.basePay)}</td>
-                                            <td className="px-4 py-3 text-right text-blue-600 hidden md:table-cell">{formatNumFull(e.otPay)}</td>
-                                            <td className="px-4 py-3 text-right hidden lg:table-cell"><span className={adj >= 0 ? "text-emerald-600" : "text-red-600"}>{adj >= 0 ? "+" : ""}{formatNumFull(adj)}</span></td>
-                                            <td className="px-4 py-3 text-right font-semibold text-emerald-600">{formatNumFull(e.total)}</td>
-                                            <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1"><button className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600" title="Edit/Revise"><Edit2 className="w-3.5 h-3.5" /></button><button className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 hover:text-blue-600" title="Export Slip"><FileDown className="w-3.5 h-3.5" /></button></div></td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                            <tfoot className="bg-neutral-50 border-t-2 border-neutral-200">
-                                <tr>
-                                    <td className="px-4 py-3 text-sm font-semibold text-neutral-700">Total</td>
-                                    <td className="px-4 py-3 hidden md:table-cell"></td>
-                                    <td className="px-4 py-3 text-right font-semibold text-neutral-700">{formatNumFull(totals.base)}</td>
-                                    <td className="px-4 py-3 text-right font-semibold text-blue-600 hidden md:table-cell">{formatNumFull(totals.ot)}</td>
-                                    <td className="px-4 py-3 text-right hidden lg:table-cell"><span className={totals.reimburse - totals.kasbon >= 0 ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold"}>{totals.reimburse - totals.kasbon >= 0 ? "+" : ""}{formatNumFull(totals.reimburse - totals.kasbon)}</span></td>
-                                    <td className="px-4 py-3 text-right font-bold text-emerald-700">{formatNumFull(totals.total)}</td>
-                                    <td className="px-4 py-3"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
+                <div className="space-y-4">
+                    {/* MOBILE CARDS */}
+                    <div className="lg:hidden space-y-3">
+                        {sortedPayroll.map((e) => {
+                            const adj = e.reimburse - e.kasbon;
+                            return (
+                                <div
+                                    key={e.id}
+                                    className="bg-white/50 backdrop-blur-md rounded-2xl border border-white/40 p-4 shadow-sm active:scale-[0.98] transition-all"
+                                >
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
+                                                {e.initials}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-neutral-900">{e.crewName}</div>
+                                                <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                                                    {CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none mb-1">Total Payout</div>
+                                            <CurrencyValue value={e.total} className="text-lg font-black text-emerald-600 tracking-tight" />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-y-4 gap-x-6 py-4 border-y border-black/[0.03]">
+                                        <div className="space-y-1">
+                                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Base / Days</div>
+                                            <div className="flex items-baseline gap-2">
+                                                <CurrencyValue value={e.basePay} className="text-sm font-bold text-neutral-700" />
+                                                <span className="text-[10px] font-bold text-neutral-400">({e.days}d)</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Overtime</div>
+                                            <CurrencyValue value={e.otPay} className="text-sm font-bold text-blue-600" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Adjustment</div>
+                                            <div className={clsx("text-sm font-bold", adj >= 0 ? "text-emerald-600" : "text-red-600")}>
+                                                {adj >= 0 ? "+" : ""}<CurrencyValue value={adj} />
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-auto">
+                                            <button className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-50 text-blue-600 rounded-xl text-[11px] font-bold uppercase active:scale-95 transition-all">
+                                                <FileDown className="w-3.5 h-3.5" />
+                                                Slip
+                                            </button>
+                                            <button className="p-2 bg-neutral-100 text-neutral-500 rounded-xl active:scale-95 transition-all">
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* DESKTOP TABLE */}
+                    <div className="hidden lg:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                    <tr>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
+                                        <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell">Days</th>
+                                        <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Base</th>
+                                        <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell">OT</th>
+                                        <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden lg:table-cell">Adj</th>
+                                        <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("total")}><div className="flex items-center justify-end gap-1">Total <SortIcon column="total" /></div></th>
+                                        <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-20">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                    {sortedPayroll.map((e) => {
+                                        const adj = e.reimburse - e.kasbon;
+                                        return (
+                                            <tr key={e.id} className="hover:bg-neutral-50 transition-colors">
+                                                <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{e.initials}</div><div><span className="font-medium text-neutral-900">{e.crewName}</span><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}</div></div></div></td>
+                                                <td className="px-4 py-3 text-right text-neutral-600 hidden md:table-cell">{e.days}</td>
+                                                <td className="px-4 py-3 text-right text-neutral-700">{formatNumFull(e.basePay)}</td>
+                                                <td className="px-4 py-3 text-right text-blue-600 hidden md:table-cell">{formatNumFull(e.otPay)}</td>
+                                                <td className="px-4 py-3 text-right hidden lg:table-cell"><span className={adj >= 0 ? "text-emerald-600" : "text-red-600"}>{adj >= 0 ? "+" : ""}{formatNumFull(adj)}</span></td>
+                                                <td className="px-4 py-3 text-right font-semibold text-emerald-600">{formatNumFull(e.total)}</td>
+                                                <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1"><button className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600" title="Edit/Revise"><Edit2 className="w-3.5 h-3.5" /></button><button className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 hover:text-blue-600" title="Export Slip"><FileDown className="w-3.5 h-3.5" /></button></div></td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                                <tfoot className="bg-neutral-50 border-t-2 border-neutral-200">
+                                    <tr>
+                                        <td className="px-4 py-3 text-sm font-semibold text-neutral-700">Total</td>
+                                        <td className="px-4 py-3 hidden md:table-cell"></td>
+                                        <td className="px-4 py-3 text-right font-semibold text-neutral-700">{formatNumFull(totals.base)}</td>
+                                        <td className="px-4 py-3 text-right font-semibold text-blue-600 hidden md:table-cell">{formatNumFull(totals.ot)}</td>
+                                        <td className="px-4 py-3 text-right hidden lg:table-cell"><span className={totals.reimburse - totals.kasbon >= 0 ? "text-emerald-600 font-semibold" : "text-red-600 font-semibold"}>{totals.reimburse - totals.kasbon >= 0 ? "+" : ""}{formatNumFull(totals.reimburse - totals.kasbon)}</span></td>
+                                        <td className="px-4 py-3 text-right font-bold text-emerald-700">{formatNumFull(totals.total)}</td>
+                                        <td className="px-4 py-3"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}

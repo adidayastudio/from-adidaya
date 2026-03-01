@@ -112,6 +112,29 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
     const [showFilterPopup, setShowFilterPopup] = useState(false);
     const [selectedProjects, setSelectedProjects] = useState<string[]>(getArrayParam("projects"));
 
+    // Sync from URL params
+    useEffect(() => {
+        const search = searchParams.get("search");
+        if (search !== null && search !== searchQuery) setSearchQuery(search);
+
+        const card = searchParams.get("card") as FilterCard;
+        if (card && card !== activeCard) setActiveCard(card);
+
+        const sort = searchParams.get("sort") as any;
+        if (sort && sort !== sortBy) setSortBy(sort);
+
+        const order = searchParams.get("order") as any;
+        if (order && order !== sortOrder) setSortOrder(order);
+
+        const projectsParam = searchParams.get("projects") || searchParams.get("project");
+        if (projectsParam) {
+            const projectsArray = projectsParam.split(",");
+            if (JSON.stringify(projectsArray) !== JSON.stringify(selectedProjects)) setSelectedProjects(projectsArray);
+        } else if (selectedProjects.length > 0) {
+            setSelectedProjects([]);
+        }
+    }, [searchParams]);
+
     // Sync state to URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
@@ -123,7 +146,6 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
 
         if (selectedProjects.length > 0) {
             params.set("projects", selectedProjects.join(","));
-            // Sync single param for compatibility
             params.set("project", selectedProjects[0]);
         } else {
             params.delete("projects");
@@ -437,32 +459,95 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
 
 
 
-            {/* TABLE */}
+            {/* CONTENT (TABLE & CARDS) */}
             {filteredAssignments.length > 0 && (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 border-b border-neutral-200">
-                                <tr>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon column="project" /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("date")}><div className="flex items-center gap-1">Period <SortIcon column="date" /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Status</th>
-                                    <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-20">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100">
-                                {filteredAssignments.map((a) => (
-                                    <tr key={a.id} className="hover:bg-neutral-50 transition-colors">
-                                        <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(a.crewName)}</div><div><div className="font-medium text-neutral-900">{a.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[a.crewRole]?.en || a.crewRole}</div></div></div></td>
-                                        <td className="px-4 py-3"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(a.projectCode)}</span></td>
-                                        <td className="px-4 py-3 text-neutral-600 text-xs">{formatDate(a.startDate)} → {a.endDate ? formatDate(a.endDate) : "Present"}</td>
-                                        <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", a.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-50 text-neutral-600")}>{a.status === "ACTIVE" ? "Active" : "Done"}</span></td>
-                                        <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1"><button onClick={() => openEditDrawer(a)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button><button className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 hover:text-blue-600" title="Contract"><FileText className="w-3.5 h-3.5" /></button><button onClick={() => setDeleteConfirmId(a.id)} className="p-1.5 rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-500" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
+                <div className="space-y-4">
+                    {/* MOBILE CARDS */}
+                    <div className="lg:hidden space-y-3">
+                        {filteredAssignments.map((a) => (
+                            <div
+                                key={a.id}
+                                className="bg-white/50 backdrop-blur-md rounded-2xl border border-white/40 p-4 shadow-sm active:scale-[0.98] transition-all"
+                            >
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
+                                            {getInitials(a.crewName)}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-neutral-900">{a.crewName}</div>
+                                            <div className="text-xs text-neutral-500 font-medium tracking-wide uppercase">
+                                                {CREW_ROLE_LABELS[a.crewRole]?.en || a.crewRole}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span className={clsx(
+                                        "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                        a.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-neutral-100 text-neutral-600 border border-neutral-200"
+                                    )}>
+                                        {a.status}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 py-3 border-y border-black/[0.03]">
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Project</div>
+                                        <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-neutral-700 bg-neutral-100/80 px-2 py-1 rounded-lg w-fit">
+                                            {formatProjectCode(a.projectCode)}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Period</div>
+                                        <div className="text-xs text-neutral-600 font-medium">
+                                            {formatDate(a.startDate)} → {a.endDate ? formatDate(a.endDate) : "Present"}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between mt-3 pt-1">
+                                    <div className="flex gap-1.5">
+                                        <button onClick={() => openEditDrawer(a)} className="p-2.5 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1.5 active:scale-90 transition-all">
+                                            <Edit2 className="w-3.5 h-3.5" />
+                                            <span className="text-[11px] font-bold uppercase">Edit</span>
+                                        </button>
+                                        <button className="p-2.5 rounded-full bg-neutral-100 text-neutral-600 active:scale-90 transition-all">
+                                            <FileText className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                    <button onClick={() => setDeleteConfirmId(a.id)} className="p-2.5 rounded-full text-neutral-400 hover:text-red-500 active:scale-90 transition-all">
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* DESKTOP TABLE */}
+                    <div className="hidden lg:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                    <tr>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon column="project" /></div></th>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("date")}><div className="flex items-center gap-1">Period <SortIcon column="date" /></div></th>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Status</th>
+                                        <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-20">Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                    {filteredAssignments.map((a) => (
+                                        <tr key={a.id} className="hover:bg-neutral-50 transition-colors">
+                                            <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(a.crewName)}</div><div><div className="font-medium text-neutral-900">{a.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[a.crewRole]?.en || a.crewRole}</div></div></div></td>
+                                            <td className="px-4 py-3"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(a.projectCode)}</span></td>
+                                            <td className="px-4 py-3 text-neutral-600 text-xs">{formatDate(a.startDate)} → {a.endDate ? formatDate(a.endDate) : "Present"}</td>
+                                            <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", a.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-50 text-neutral-600")}>{a.status === "ACTIVE" ? "Active" : "Done"}</span></td>
+                                            <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1"><button onClick={() => openEditDrawer(a)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button><button className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 hover:text-blue-600" title="Contract"><FileText className="w-3.5 h-3.5" /></button><button onClick={() => setDeleteConfirmId(a.id)} className="p-1.5 rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-500" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}

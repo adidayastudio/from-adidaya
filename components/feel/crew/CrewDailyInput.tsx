@@ -47,13 +47,20 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
 
     // Data state
     // Data state
-    const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
-    // Initialize from 'project' OR fallback to first of 'projects'
     const [selectedProject, setSelectedProject] = useState(() => {
         return searchParams.get("project") || searchParams.get("projects")?.split(",")[0] || "";
     });
+    const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
 
-    // Sync project to URL (both singular and plural for compatibility)
+    // Sync project FROM URL
+    useEffect(() => {
+        const project = searchParams.get("project") || searchParams.get("projects")?.split(",")[0];
+        if (project && project !== selectedProject) {
+            setSelectedProject(project);
+        }
+    }, [searchParams]);
+
+    // Sync project TO URL (both singular and plural for compatibility)
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
         if (selectedProject) {
@@ -503,84 +510,214 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                 </div>
             )}
 
-            {/* TABLE */}
+            {/* CONTENT (TABLE & CARDS) */}
             {sortedEntries.length > 0 && (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 border-b border-neutral-200">
-                                <tr>
-                                    <th className="px-3 py-3 w-8"><input type="checkbox" checked={selectedRows.size === entries.length} onChange={selectAll} className="rounded border-neutral-300" /></th>
-                                    <th className="text-left px-3 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
-                                    <th className="text-left px-3 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon column="status" /></div></th>
-                                    <th className="text-center px-3 py-3 text-xs font-semibold text-neutral-600 uppercase">Hours</th>
-                                    <th className="text-right px-3 py-3 text-xs font-semibold text-neutral-600 uppercase w-16"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100">
-                                {sortedEntries.map((entry) => {
-                                    const isOff = entry.status === "ABSENT" || entry.status === "CUTI";
-                                    const isHalf = entry.status === "HALF_DAY";
-                                    const isEditing = editingEntry === entry.id;
-                                    const maxReg = isHalf ? 4 : 8;
-                                    return (
-                                        <tr key={entry.id} className={clsx("transition-colors", selectedRows.has(entry.id) ? "bg-blue-50" : "hover:bg-neutral-50", !entry.saved && "bg-amber-50/50")}>
-                                            <td className="px-3 py-3"><input type="checkbox" checked={selectedRows.has(entry.id)} onChange={() => toggleRowSelection(entry.id)} className="rounded border-neutral-300" /></td>
-                                            <td className="px-3 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{entry.initials}</div>
-                                                    <div><div className="font-medium text-neutral-900 text-sm">{entry.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[entry.crewRole]?.en || entry.crewRole}</div></div>
+                <div className="space-y-4">
+                    {/* MOBILE CARDS */}
+                    <div className="lg:hidden space-y-3">
+                        {sortedEntries.map((entry) => {
+                            const isOff = entry.status === "ABSENT" || entry.status === "CUTI";
+                            const isHalf = entry.status === "HALF_DAY";
+                            const isEditing = editingEntry === entry.id;
+                            const maxReg = isHalf ? 4 : 8;
+
+                            return (
+                                <div
+                                    key={entry.id}
+                                    className={clsx(
+                                        "bg-white/50 backdrop-blur-md rounded-2xl border p-4 shadow-sm active:scale-[0.98] transition-all",
+                                        selectedRows.has(entry.id) ? "border-blue-300 ring-1 ring-blue-100" : "border-white/40",
+                                        !entry.saved && "bg-amber-50/40 border-amber-200/50"
+                                    )}
+                                >
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedRows.has(entry.id)}
+                                                onChange={() => toggleRowSelection(entry.id)}
+                                                className="rounded border-neutral-300 w-4 h-4"
+                                            />
+                                            <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
+                                                {entry.initials}
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-neutral-900">{entry.crewName}</div>
+                                                <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                                                    {CREW_ROLE_LABELS[entry.crewRole]?.en || entry.crewRole}
                                                 </div>
-                                            </td>
-                                            <td className="px-3 py-3">
-                                                <div className="flex gap-1 flex-wrap">
-                                                    {(["PRESENT", "HALF_DAY", "ABSENT", "CUTI"] as AttendanceStatus[]).map(s => {
-                                                        const isDisabled = futureLocked && s !== "CUTI";
-                                                        const isSelected = entry.status === s;
-                                                        return (
-                                                            <button
-                                                                key={s}
-                                                                onClick={() => !isDisabled && updateEntry(entry.id, "status", s)}
-                                                                disabled={isDisabled}
-                                                                className={clsx(
-                                                                    "px-2 py-1 rounded-full transition-colors text-[10px] font-medium",
-                                                                    isSelected
-                                                                        ? (s === "PRESENT" ? "bg-emerald-100 text-emerald-700" : s === "HALF_DAY" ? "bg-amber-100 text-amber-700" : s === "ABSENT" ? "bg-red-100 text-red-700" : "bg-purple-100 text-purple-700")
-                                                                        : (isDisabled ? "bg-neutral-50 text-neutral-300 cursor-not-allowed" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200")
-                                                                )}
-                                                            >
-                                                                {s === "PRESENT" ? "P" : s === "HALF_DAY" ? "½" : s === "ABSENT" ? "A" : "C"}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-3">
-                                                {isEditing ? (
-                                                    <div className="space-y-2">
-                                                        <HourInput label="Reg" value={entry.regularHrs} onChange={(v) => updateEntry(entry.id, "regularHrs", v)} disabled={isOff} max={maxReg} />
-                                                        <HourInput label="OT1" value={entry.ot1Hrs} onChange={(v) => updateEntry(entry.id, "ot1Hrs", v)} disabled={isOff} max={2} />
-                                                        <HourInput label="OT2" value={entry.ot2Hrs} onChange={(v) => updateEntry(entry.id, "ot2Hrs", v)} disabled={isOff} max={4} />
-                                                        <HourInput label="OT3" value={entry.ot3Hrs} onChange={(v) => updateEntry(entry.id, "ot3Hrs", v)} disabled={isOff} max={6} />
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-center">
-                                                        <div className="text-sm font-medium text-neutral-700">R:{entry.regularHrs} <span className="ml-3 text-blue-600">+{getTotalOT(entry)}OT</span></div>
+                                            </div>
+                                        </div>
+                                        {entry.saved ? (
+                                            <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 uppercase italic">
+                                                <Check className="w-3 h-3" strokeWidth={3} />
+                                                Saved
+                                            </span>
+                                        ) : (
+                                            <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 uppercase italic">
+                                                Unsaved
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="flex flex-col gap-4">
+                                        {/* Status Row */}
+                                        <div className="flex items-center justify-between py-2 border-t border-black/[0.03]">
+                                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Attendance</div>
+                                            <div className="flex gap-1.5">
+                                                {(["PRESENT", "HALF_DAY", "ABSENT", "CUTI"] as AttendanceStatus[]).map(s => {
+                                                    const isDisabled = futureLocked && s !== "CUTI";
+                                                    const isSelected = entry.status === s;
+                                                    return (
+                                                        <button
+                                                            key={s}
+                                                            onClick={() => !isDisabled && updateEntry(entry.id, "status", s)}
+                                                            disabled={isDisabled}
+                                                            className={clsx(
+                                                                "w-9 h-9 rounded-xl flex items-center justify-center transition-all text-xs font-bold ring-1",
+                                                                isSelected
+                                                                    ? (s === "PRESENT" ? "bg-emerald-500 text-white ring-emerald-600 shadow-lg shadow-emerald-500/20" : s === "HALF_DAY" ? "bg-amber-500 text-white ring-amber-600 shadow-lg shadow-amber-500/20" : s === "ABSENT" ? "bg-red-500 text-white ring-red-600 shadow-lg shadow-red-500/20" : "bg-purple-500 text-white ring-purple-600 shadow-lg shadow-purple-500/20")
+                                                                    : (isDisabled ? "bg-neutral-50 text-neutral-300 ring-neutral-100 opacity-50" : "bg-white/50 text-neutral-500 ring-neutral-100 hover:bg-white")
+                                                            )}
+                                                        >
+                                                            {s === "PRESENT" ? "P" : s === "HALF_DAY" ? "½" : s === "ABSENT" ? "A" : "C"}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Hours Row */}
+                                        <div className="py-2 border-t border-black/[0.03]">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Working Hours</div>
+                                                {!isEditing && (
+                                                    <div className="text-xs font-bold text-neutral-700 bg-neutral-100 rounded-lg px-2 py-1 flex gap-3">
+                                                        <span>R: {entry.regularHrs}</span>
+                                                        <span className="text-blue-600">OT: {getTotalOT(entry)}</span>
                                                     </div>
                                                 )}
-                                            </td>
-                                            <td className="px-3 py-3 text-right">
-                                                {isEditing ? (
-                                                    <button onClick={() => saveEntry(entry.id)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200"><Check className="w-3.5 h-3.5" /></button>
-                                                ) : (
-                                                    <button onClick={() => setEditingEntry(entry.id)} className="p-1.5 rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200"><Edit2 className="w-3.5 h-3.5" /></button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                            </div>
+
+                                            {isEditing ? (
+                                                <div className="grid grid-cols-2 gap-x-6 gap-y-3 bg-neutral-50/50 p-3 rounded-xl border border-neutral-100">
+                                                    <HourInput label="REG" value={entry.regularHrs} onChange={(v) => updateEntry(entry.id, "regularHrs", v)} disabled={isOff} max={maxReg} />
+                                                    <HourInput label="OT1" value={entry.ot1Hrs} onChange={(v) => updateEntry(entry.id, "ot1Hrs", v)} disabled={isOff} max={2} />
+                                                    <HourInput label="OT2" value={entry.ot2Hrs} onChange={(v) => updateEntry(entry.id, "ot2Hrs", v)} disabled={isOff} max={4} />
+                                                    <HourInput label="OT3" value={entry.ot3Hrs} onChange={(v) => updateEntry(entry.id, "ot3Hrs", v)} disabled={isOff} max={6} />
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setEditingEntry(entry.id)}
+                                                    className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-bold text-blue-600 bg-blue-50/50 hover:bg-blue-50 rounded-xl transition-all border border-blue-100/50"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5" />
+                                                    Adjust Hours
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {isEditing && (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => saveEntry(entry.id)}
+                                                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl text-sm font-bold active:scale-95 transition-all shadow-lg shadow-emerald-500/20"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                    Save Changes
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditingEntry(null)}
+                                                    className="px-4 py-3 bg-neutral-100 text-neutral-500 rounded-xl active:scale-95 transition-all"
+                                                >
+                                                    <X className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* DESKTOP TABLE */}
+                    <div className="hidden lg:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                    <tr>
+                                        <th className="px-3 py-3 w-8"><input type="checkbox" checked={selectedRows.size === entries.length} onChange={selectAll} className="rounded border-neutral-300" /></th>
+                                        <th className="text-left px-3 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
+                                        <th className="text-left px-3 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon column="status" /></div></th>
+                                        <th className="text-center px-3 py-3 text-xs font-semibold text-neutral-600 uppercase">Hours</th>
+                                        <th className="text-right px-3 py-3 text-xs font-semibold text-neutral-600 uppercase w-16"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                    {sortedEntries.map((entry) => {
+                                        const isOff = entry.status === "ABSENT" || entry.status === "CUTI";
+                                        const isHalf = entry.status === "HALF_DAY";
+                                        const isEditing = editingEntry === entry.id;
+                                        const maxReg = isHalf ? 4 : 8;
+                                        return (
+                                            <tr key={entry.id} className={clsx("transition-colors", selectedRows.has(entry.id) ? "bg-blue-50" : "hover:bg-neutral-50", !entry.saved && "bg-amber-50/50")}>
+                                                <td className="px-3 py-3"><input type="checkbox" checked={selectedRows.has(entry.id)} onChange={() => toggleRowSelection(entry.id)} className="rounded border-neutral-300" /></td>
+                                                <td className="px-3 py-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{entry.initials}</div>
+                                                        <div><div className="font-medium text-neutral-900 text-sm">{entry.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[entry.crewRole]?.en || entry.crewRole}</div></div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    <div className="flex gap-1 flex-wrap">
+                                                        {(["PRESENT", "HALF_DAY", "ABSENT", "CUTI"] as AttendanceStatus[]).map(s => {
+                                                            const isDisabled = futureLocked && s !== "CUTI";
+                                                            const isSelected = entry.status === s;
+                                                            return (
+                                                                <button
+                                                                    key={s}
+                                                                    onClick={() => !isDisabled && updateEntry(entry.id, "status", s)}
+                                                                    disabled={isDisabled}
+                                                                    className={clsx(
+                                                                        "px-2 py-1 rounded-full transition-colors text-[10px] font-medium",
+                                                                        isSelected
+                                                                            ? (s === "PRESENT" ? "bg-emerald-100 text-emerald-700" : s === "HALF_DAY" ? "bg-amber-100 text-amber-700" : s === "ABSENT" ? "bg-red-100 text-red-700" : "bg-purple-100 text-purple-700")
+                                                                            : (isDisabled ? "bg-neutral-50 text-neutral-300 cursor-not-allowed" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200")
+                                                                    )}
+                                                                >
+                                                                    {s === "PRESENT" ? "P" : s === "HALF_DAY" ? "½" : s === "ABSENT" ? "A" : "C"}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </td>
+                                                <td className="px-3 py-3">
+                                                    {isEditing ? (
+                                                        <div className="space-y-2">
+                                                            <HourInput label="Reg" value={entry.regularHrs} onChange={(v) => updateEntry(entry.id, "regularHrs", v)} disabled={isOff} max={maxReg} />
+                                                            <HourInput label="OT1" value={entry.ot1Hrs} onChange={(v) => updateEntry(entry.id, "ot1Hrs", v)} disabled={isOff} max={2} />
+                                                            <HourInput label="OT2" value={entry.ot2Hrs} onChange={(v) => updateEntry(entry.id, "ot2Hrs", v)} disabled={isOff} max={4} />
+                                                            <HourInput label="OT3" value={entry.ot3Hrs} onChange={(v) => updateEntry(entry.id, "ot3Hrs", v)} disabled={isOff} max={6} />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center">
+                                                            <div className="text-sm font-medium text-neutral-700">R:{entry.regularHrs} <span className="ml-3 text-blue-600">+{getTotalOT(entry)}OT</span></div>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-3 text-right">
+                                                    {isEditing ? (
+                                                        <button onClick={() => saveEntry(entry.id)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200"><Check className="w-3.5 h-3.5" /></button>
+                                                    ) : (
+                                                        <button onClick={() => setEditingEntry(entry.id)} className="p-1.5 rounded-full bg-neutral-100 text-neutral-500 hover:bg-neutral-200"><Edit2 className="w-3.5 h-3.5" /></button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}

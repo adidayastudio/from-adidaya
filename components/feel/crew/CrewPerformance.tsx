@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, XCircle, Download, ArrowUpDown, Users, Search, Loader2, Calendar } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -59,15 +60,45 @@ const formatProjectCode = (code?: string) => {
 };
 
 export function CrewPerformance({ role }: CrewPerformanceProps) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
     const [data, setData] = useState<PerformanceEntry[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
     const [loading, setLoading] = useState(false);
 
     // View State
     const [viewPeriod, setViewPeriod] = useState<ViewPeriod>("EVALUATION_30_DAYS");
-    const [selectedProject, setSelectedProject] = useState("ALL");
-    const [searchQuery, setSearchQuery] = useState("");
-    const [activeCard, setActiveCard] = useState<FilterCard>("ALL");
+    const [selectedProject, setSelectedProject] = useState(searchParams.get("project") || "ALL");
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+    const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
+
+    // Sync FROM URL
+    useEffect(() => {
+        const search = searchParams.get("search");
+        if (search !== null && search !== searchQuery) setSearchQuery(search);
+
+        const card = searchParams.get("card") as FilterCard;
+        if (card && card !== activeCard) setActiveCard(card);
+
+        const project = searchParams.get("project") || "ALL";
+        if (project !== selectedProject) setSelectedProject(project);
+
+        const period = searchParams.get("period") as ViewPeriod;
+        if (period && period !== viewPeriod) setViewPeriod(period);
+    }, [searchParams]);
+
+    // Sync TO URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+        if (searchQuery) params.set("search", searchQuery); else params.delete("search");
+        if (activeCard && activeCard !== "ALL") params.set("card", activeCard); else params.delete("card");
+        if (selectedProject !== "ALL") params.set("project", selectedProject); else params.delete("project");
+        if (viewPeriod !== "EVALUATION_30_DAYS") params.set("period", viewPeriod); else params.delete("period");
+
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [searchQuery, activeCard, selectedProject, viewPeriod]);
 
     // Sorting
     const [sortBy, setSortBy] = useState<"name" | "score" | "status">("score");
@@ -393,6 +424,7 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                 </div>
             </div>
 
+            {/* CONTENT (TABLE & CARDS) */}
             {loading ? (
                 <div className="py-20 text-center"><Loader2 className="w-8 h-8 mx-auto text-blue-500 animate-spin" /><p className="text-neutral-400 text-sm mt-2">Calculating KPIs...</p></div>
             ) : filtered.length === 0 ? (
@@ -402,67 +434,137 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                     <p className="text-sm text-neutral-400">Try adjusting filters or ensure daily logs exist for this period.</p>
                 </div>
             ) : (
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead className="bg-neutral-50 border-b border-neutral-200">
-                                <tr>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon c="name" /></div></th>
-                                    <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden sm:table-cell">Project</th>
-                                    <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell" title="Weight: 50%">Attendance</th>
-                                    <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell" title="Weight: 25%">Overtime</th>
-                                    <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell" title="Weight: 25%">Rating</th>
-                                    <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("score")}><div className="flex items-center justify-center gap-1">Total <SortIcon c="score" /></div></th>
-                                    <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center justify-center gap-1">Status <SortIcon c="status" /></div></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100">
-                                {filtered.map(e => (
-                                    <tr key={e.id} className="hover:bg-neutral-50 transition-colors">
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(e.crewName)}</div>
-                                                <div>
-                                                    <div className="font-medium text-neutral-900">{e.crewName}</div>
-                                                    <div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}</div>
-                                                </div>
+                <div className="space-y-4">
+                    {/* MOBILE CARDS */}
+                    <div className="lg:hidden space-y-3">
+                        {filtered.map((e) => (
+                            <div
+                                key={e.id}
+                                className="bg-white/50 backdrop-blur-md rounded-2xl border border-white/40 p-4 shadow-sm active:scale-[0.98] transition-all"
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
+                                            {getInitials(e.crewName)}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-neutral-900">{e.crewName}</div>
+                                            <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                                                {CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3 hidden sm:table-cell"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(e.projectCode)}</span></td>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none mb-1">Score</div>
+                                        <div className={clsx("text-2xl font-black tracking-tight", getScoreColor(e.totalScore))}>
+                                            {e.totalScore}
+                                        </div>
+                                    </div>
+                                </div>
 
-                                        {/* Attendance */}
-                                        <td className="px-4 py-3 text-center hidden md:table-cell">
-                                            <div className="flex flex-col items-center">
-                                                <span className={clsx("font-bold", getScoreColor(e.attendanceScore * 2))}>{e.attendanceScore}</span>
-                                                <span className="text-[10px] text-neutral-400">{e.daysPresent} of {e.workingDays}d</span>
-                                            </div>
-                                        </td>
+                                <div className="grid grid-cols-2 gap-y-4 gap-x-6 py-4 border-y border-black/[0.03]">
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Attendance (50%)</div>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className={clsx("text-sm font-bold", getScoreColor(e.attendanceScore * 2))}>{e.attendanceScore}</span>
+                                            <span className="text-[10px] font-bold text-neutral-400">({e.daysPresent}d / {e.workingDays}d)</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Overtime (25%)</div>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className={clsx("text-sm font-bold", getScoreColor(e.overtimeScore * 4))}>{e.overtimeScore}</span>
+                                            <span className="text-[10px] font-bold text-neutral-400">({e.daysOt}h total)</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Rating (25%)</div>
+                                        <button
+                                            onClick={() => handleRate(e.id, e.crewName)}
+                                            className="flex items-center gap-1 group"
+                                        >
+                                            <span className={clsx("text-sm font-bold", getScoreColor(e.ratingScore * 4))}>
+                                                {e.avgRating > 0 ? e.avgRating : "-"}
+                                            </span>
+                                            <svg className="w-3.5 h-3.5 text-amber-400 fill-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                                            <span className="text-[10px] text-blue-500 font-bold uppercase underline decoration-blue-200 ml-1">Rate</span>
+                                        </button>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Project / Status</div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded font-bold text-neutral-600">{formatProjectCode(e.projectCode)}</span>
+                                            {getStatusBadge(e.status)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
 
-                                        {/* Overtime */}
-                                        <td className="px-4 py-3 text-center hidden md:table-cell">
-                                            <div className="flex flex-col items-center">
-                                                <span className={clsx("font-bold", getScoreColor(e.overtimeScore * 4))}>{e.overtimeScore}</span>
-                                                <span className="text-[10px] text-neutral-400">{e.daysOt}h total</span>
-                                            </div>
-                                        </td>
-
-                                        {/* Rating */}
-                                        <td className="px-4 py-3 text-center hidden md:table-cell">
-                                            <div className="flex flex-col items-center group cursor-pointer" onClick={() => handleRate(e.id, e.crewName)}>
-                                                <span className={clsx("font-bold flex items-center gap-1 group-hover:text-blue-600 transition-colors", getScoreColor(e.ratingScore * 4))}>
-                                                    {e.avgRating > 0 ? e.avgRating : "-"}
-                                                    <svg className="w-3 h-3 text-amber-500 fill-amber-500" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
-                                                </span>
-                                                <span className="text-[10px] text-neutral-400 underline decoration-dotted group-hover:text-blue-500">{e.avgRating > 0 ? "Avg Rating" : "Rate Now"}</span>
-                                            </div>
-                                        </td>
-
-                                        <td className="px-4 py-3 text-center"><span className={clsx("text-lg font-bold", getScoreColor(e.totalScore))}>{e.totalScore}</span></td>
-                                        <td className="px-4 py-3 text-center">{getStatusBadge(e.status)}</td>
+                    {/* DESKTOP TABLE */}
+                    <div className="hidden lg:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                    <tr>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon c="name" /></div></th>
+                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden sm:table-cell">Project</th>
+                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell" title="Weight: 50%">Attendance</th>
+                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell" title="Weight: 25%">Overtime</th>
+                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell" title="Weight: 25%">Rating</th>
+                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("score")}><div className="flex items-center justify-center gap-1">Total <SortIcon c="score" /></div></th>
+                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center justify-center gap-1">Status <SortIcon c="status" /></div></th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                    {filtered.map(e => (
+                                        <tr key={e.id} className="hover:bg-neutral-50 transition-colors">
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(e.crewName)}</div>
+                                                    <div>
+                                                        <div className="font-medium text-neutral-900">{e.crewName}</div>
+                                                        <div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 hidden sm:table-cell"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(e.projectCode)}</span></td>
+
+                                            {/* Attendance */}
+                                            <td className="px-4 py-3 text-center hidden md:table-cell">
+                                                <div className="flex flex-col items-center">
+                                                    <span className={clsx("font-bold", getScoreColor(e.attendanceScore * 2))}>{e.attendanceScore}</span>
+                                                    <span className="text-[10px] text-neutral-400">{e.daysPresent} of {e.workingDays}d</span>
+                                                </div>
+                                            </td>
+
+                                            {/* Overtime */}
+                                            <td className="px-4 py-3 text-center hidden md:table-cell">
+                                                <div className="flex flex-col items-center">
+                                                    <span className={clsx("font-bold", getScoreColor(e.overtimeScore * 4))}>{e.overtimeScore}</span>
+                                                    <span className="text-[10px] text-neutral-400">{e.daysOt}h total</span>
+                                                </div>
+                                            </td>
+
+                                            {/* Rating */}
+                                            <td className="px-4 py-3 text-center hidden md:table-cell">
+                                                <div className="flex flex-col items-center group cursor-pointer" onClick={() => handleRate(e.id, e.crewName)}>
+                                                    <span className={clsx("font-bold flex items-center gap-1 group-hover:text-blue-600 transition-colors", getScoreColor(e.ratingScore * 4))}>
+                                                        {e.avgRating > 0 ? e.avgRating : "-"}
+                                                        <svg className="w-3 h-3 text-amber-500 fill-amber-500" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                                                    </span>
+                                                    <span className="text-[10px] text-neutral-400 underline decoration-dotted group-hover:text-blue-500">{e.avgRating > 0 ? "Avg Rating" : "Rate Now"}</span>
+                                                </div>
+                                            </td>
+
+                                            <td className="px-4 py-3 text-center"><span className={clsx("text-lg font-bold", getScoreColor(e.totalScore))}>{e.totalScore}</span></td>
+                                            <td className="px-4 py-3 text-center">{getStatusBadge(e.status)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}
