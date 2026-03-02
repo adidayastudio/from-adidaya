@@ -24,6 +24,11 @@ export function FinanceItemCard({
 }: FinanceItemCardProps) {
 
     const getStatusTheme = (s: string) => {
+        if (!s) return {
+            text: "text-neutral-500 dark:text-neutral-400",
+            bg: "bg-neutral-50/50 dark:bg-neutral-800/50",
+            border: "border-neutral-200/50 dark:border-neutral-700/50"
+        };
         const lower = s.toLowerCase();
         if (lower === "approved" || lower === "paid") {
             return {

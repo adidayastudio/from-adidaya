@@ -17,7 +17,8 @@ import { useRouter } from "next/navigation";
 import { useFinance } from "./FinanceContext";
 import {
     formatShort,
-    formatAmount
+    formatAmount,
+    getPrimaryStatus
 } from "./modules/utils";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
@@ -220,7 +221,7 @@ export default function FinanceOverviewClient() {
                                                 projectCode={item.project?.project_code || 'GEN'}
                                                 date={new Date(item.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                                                 amount={item.amount}
-                                                status={item.status === 'UNPAID' ? 'Pending' : 'Submitted'}
+                                                status={getPrimaryStatus(item.approval_status, item.purchase_stage, item.financial_status)}
                                                 onClick={() => router.push(`/flow/finance/purchasing?view=team&id=${item.id}`)}
                                             />
                                         ))}
@@ -238,7 +239,7 @@ export default function FinanceOverviewClient() {
                                             projectCode={p.project?.project_code || 'GEN'}
                                             date={new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                                             amount={p.amount}
-                                            status={p.status}
+                                            status={getPrimaryStatus(p.approval_status, p.purchase_stage, p.financial_status)}
                                             onClick={() => router.push(`/flow/finance/purchasing?view=personal&id=${p.id}`)}
                                         />
                                     ))}

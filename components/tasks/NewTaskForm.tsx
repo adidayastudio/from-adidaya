@@ -51,18 +51,19 @@ export default function NewTaskForm({
         onClear={() => setDeadline(undefined)}
       />
 
-      <div className="flex justify-end gap-2 pt-2">
-        <button
-          onClick={onClose}
-          className="rounded-md px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-100"
-        >
-          Cancel
-        </button>
+      <div className="px-8 pb-10 pt-4 flex flex-col gap-3 relative z-10">
         <button
           onClick={handleSubmit}
-          className="rounded-md bg-brand-red px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-red/90"
+          disabled={!title.trim()}
+          className="w-full bg-blue-500 text-white h-[64px] rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-blue-500/30 border border-white/20 disabled:opacity-50 disabled:active:scale-100"
         >
           Create Task
+        </button>
+        <button
+          onClick={onClose}
+          className="w-full bg-white/50 backdrop-blur-xl border border-black/5 h-[64px] rounded-full font-bold text-[17px] text-neutral-700 active:scale-[0.98] transition-all"
+        >
+          Cancel
         </button>
       </div>
     </div>
