@@ -22,16 +22,16 @@ export default function VibeCard() {
 
     if (loading) {
         return (
-            <div className="mx-4 my-4 h-[180px] rounded-[28px] bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
+            <div className="mx-4 mt-4 h-[180px] rounded-[32px] bg-neutral-100 dark:bg-neutral-800 animate-pulse" />
         );
     }
 
     const Icon = ICON_MAP[persona.icon] || Flame;
 
     return (
-        <Link href="/dashboard/vibe" className="block mx-4 my-4">
+        <Link href="/dashboard/vibe" className="block mx-4 mt-4">
             <div
-                className="rounded-[28px] p-6 text-white relative overflow-hidden transition-transform active:scale-[0.98] shadow-lg"
+                className="rounded-[32px] p-4 text-white relative overflow-hidden transition-transform active:scale-[0.98] shadow-lg"
                 style={{
                     background: `linear-gradient(135deg, ${persona.gradient[0]} 0%, ${persona.gradient[1]} 100%)`
                 }}

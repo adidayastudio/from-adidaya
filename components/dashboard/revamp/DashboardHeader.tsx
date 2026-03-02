@@ -64,10 +64,10 @@ export default function DashboardHeader({ onOpenNotifications }: DashboardHeader
   };
 
   const greeting = getGreeting(currentTime);
-  const firstName = profile?.name?.split(' ')[0] || "Alexando";
+  const firstName = profile?.name?.split(' ')[0] || "Team";
 
   return (
-    <div className="flex items-center justify-between pt-6 pb-2 px-4 relative z-50">
+    <div className="flex items-center justify-between pt-4 pb-2 px-4 relative z-50">
       {/* Greeting Section */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 shadow-[0_2px_10px_rgba(0,0,0,0.06)] dark:shadow-none flex items-center justify-center border border-neutral-100 dark:border-neutral-700 overflow-hidden">

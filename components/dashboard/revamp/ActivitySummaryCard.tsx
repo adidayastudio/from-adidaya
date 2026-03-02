@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { motion } from "framer-motion";
 import { Target, User, Activity, Sparkles } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -10,15 +11,44 @@ export default function ActivitySummaryCard() {
     // Mode defaults to personal here, could be passed as prop if needed.
     const { tasksPercentage, presencePercentage, pulsePercentage, insight, loading } = useActivitySummary("personal");
 
-    // Helper to calculate dash offset safely
-    const calculateOffset = (circumference: number, percent: number | "-") => {
-        if (percent === "-") return circumference; // Empty ring if no data
-        return circumference - (circumference * (percent / 100));
+    // Helper to calculate ring layers for overflow (Fitness style)
+    const RingLayers = ({ r, circ, percent, colors }: { r: number, circ: number, percent: number | "-", colors: { dim: string, base: string, mid: string } }) => {
+        const val = percent === "-" ? 0 : Number(percent);
+        const layer1 = Math.min(val, 100);
+        const layer2 = val > 100 ? Math.min(val - 100, 100) : 0;
+
+        return (
+            <>
+                {/* Background Ring */}
+                <circle cx="50" cy="50" r={r} fill="none" stroke="currentColor" strokeWidth="11" className={colors.dim} />
+
+                {/* Layer 1 (0-100%) */}
+                <motion.circle
+                    initial={{ strokeDashoffset: circ }}
+                    animate={{ strokeDashoffset: circ - (circ * (layer1 / 100)) }}
+                    transition={{ duration: 1.5, ease: "easeOut" }}
+                    cx="50" cy="50" r={r} fill="none" stroke="currentColor" strokeWidth="11"
+                    strokeDasharray={circ} strokeLinecap="round" className={colors.base}
+                />
+
+                {/* Layer 2 (100-200%) */}
+                {layer2 > 0 && (
+                    <motion.circle
+                        initial={{ strokeDashoffset: circ }}
+                        animate={{ strokeDashoffset: circ - (circ * (layer2 / 100)) }}
+                        transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
+                        cx="50" cy="50" r={r} fill="none" stroke="currentColor" strokeWidth="11.5"
+                        strokeDasharray={circ} strokeLinecap="round" className={colors.mid}
+                        style={{ filter: 'drop-shadow(0 0 3px currentColor)' }}
+                    />
+                )}
+            </>
+        );
     };
 
     return (
-        <Link href="/dashboard/activity" className="block mx-4 mt-6">
-            <div className="bg-white dark:bg-neutral-900 rounded-[32px] p-6 shadow-sm border border-neutral-100 dark:border-neutral-800 relative overflow-hidden transition-transform active:scale-[0.98]">
+        <Link href="/dashboard/activity" className="block mx-4 mt-4">
+            <div className="bg-white dark:bg-neutral-900 rounded-[32px] p-4 shadow-sm border border-neutral-100 dark:border-neutral-800 relative overflow-hidden transition-transform active:scale-[0.98]">
                 {/* Background light gradient effect */}
                 <div className="absolute top-0 right-0 w-48 h-48 bg-blue-50/50 dark:bg-blue-900/10 rounded-full blur-3xl pointer-events-none transform translate-x-1/3 -translate-y-1/3" />
 
@@ -26,7 +56,7 @@ export default function ActivitySummaryCard() {
                     Activity Summary {loading && <span className="text-xs text-neutral-400 font-normal ml-2 animate-pulse">Updating...</span>}
                 </h2>
 
-                <div className="flex items-center justify-between mb-6 relative z-10">
+                <div className="flex items-center justify-between mb-2 relative z-10">
                     {/* Left: Stats */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
@@ -66,20 +96,12 @@ export default function ActivitySummaryCard() {
                         </div>
                     </div>
 
-                    {/* Right: Mini Rings */}
+                    {/* Right: Fitness Rings */}
                     <div className="relative w-36 h-36 flex items-center justify-center -mr-2 shrink-0">
                         <svg className="w-full h-full transform -rotate-90 origin-center drop-shadow-sm" viewBox="0 0 100 100">
-                            {/* Blue Ring (Outer - Tasks) */}
-                            <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="11" className="text-blue-50 dark:text-blue-500/10" />
-                            <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="11" strokeDasharray="264" strokeDashoffset={calculateOffset(264, tasksPercentage)} strokeLinecap="round" className="text-blue-500 transition-all duration-1000 ease-out" />
-
-                            {/* Green Ring (Middle - Presence) */}
-                            <circle cx="50" cy="50" r="29" fill="none" stroke="currentColor" strokeWidth="11" className="text-emerald-50 dark:text-emerald-500/10" />
-                            <circle cx="50" cy="50" r="29" fill="none" stroke="currentColor" strokeWidth="11" strokeDasharray="182.2" strokeDashoffset={calculateOffset(182.2, presencePercentage)} strokeLinecap="round" className="text-emerald-500 transition-all duration-1000 ease-out" />
-
-                            {/* Orange Ring (Inner - Pulse) */}
-                            <circle cx="50" cy="50" r="16" fill="none" stroke="currentColor" strokeWidth="11" className="text-amber-50 dark:text-amber-500/10" />
-                            <circle cx="50" cy="50" r="16" fill="none" stroke="currentColor" strokeWidth="11" strokeDasharray="100.5" strokeDashoffset={calculateOffset(100.5, pulsePercentage)} strokeLinecap="round" className="text-amber-500 transition-all duration-1000 ease-out" />
+                            <RingLayers r={42} circ={264} percent={tasksPercentage} colors={{ dim: "text-blue-50 dark:text-blue-500/10", base: "text-blue-500", mid: "text-blue-600" }} />
+                            <RingLayers r={29} circ={182.2} percent={presencePercentage} colors={{ dim: "text-emerald-50 dark:text-emerald-500/10", base: "text-emerald-500", mid: "text-emerald-600" }} />
+                            <RingLayers r={16} circ={100.5} percent={pulsePercentage} colors={{ dim: "text-amber-50 dark:text-amber-500/10", base: "text-amber-500", mid: "text-amber-600" }} />
                         </svg>
 
                         {/* Glow effect for rings */}

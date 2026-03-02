@@ -5,48 +5,45 @@ import { CreditCard, Package, User, Clock, Users, Compass, MessageCircle, BookOp
 import clsx from "clsx";
 
 const APPS = [
-    { label: "Finance", href: "/flow/finance", icon: CreditCard, color: "from-[#ef4444] to-[#dc2626]", shadow: "shadow-red-900/20" },
-    { label: "Resources", href: "/flow/resources", icon: Package, color: "from-[#f97316] to-[#ea580c]", shadow: "shadow-orange-900/20" },
-    { label: "People", href: "/feel/people", icon: User, color: "from-[#22c55e] to-[#16a34a]", shadow: "shadow-green-900/20" },
-    { label: "Clock", href: "/feel/clock", icon: Clock, color: "from-[#38bdf8] to-[#0284c7]", shadow: "shadow-sky-900/20" },
-    { label: "Crew", href: "/feel/crew", icon: Users, color: "from-[#a855f7] to-[#9333ea]", shadow: "shadow-purple-900/20" },
-    { label: "Website", href: "/frame/website", icon: Compass, color: "from-[#14b8a6] to-[#0d9488]", shadow: "shadow-teal-900/20" },
-    { label: "Social", href: "/frame/social", icon: MessageCircle, color: "from-[#eab308] to-[#ca8a04]", shadow: "shadow-yellow-900/20" },
-    { label: "Learn", href: "/frame/learn", icon: BookOpen, color: "from-[#1e3a8a] to-[#172554]", shadow: "shadow-blue-900/20" },
+    { label: "Finance", href: "/flow/finance", icon: CreditCard, color: "from-red-500/40 to-red-500/20 dark:from-red-500/30 dark:to-neutral-900", iconColor: "text-red-500", border: "border-red-500/20 dark:border-red-500/30" },
+    { label: "Resources", href: "/flow/resources", icon: Package, color: "from-orange-500/40 to-orange-500/20 dark:from-orange-500/30 dark:to-neutral-900", iconColor: "text-orange-500", border: "border-orange-500/20 dark:border-orange-500/30" },
+    { label: "People", href: "/feel/people", icon: User, color: "from-green-500/40 to-green-500/20 dark:from-green-500/30 dark:to-neutral-900", iconColor: "text-green-500", border: "border-green-500/20 dark:border-green-500/30" },
+    { label: "Clock", href: "/feel/clock", icon: Clock, color: "from-sky-500/40 to-sky-500/20 dark:from-sky-500/30 dark:to-neutral-900", iconColor: "text-sky-500", border: "border-sky-500/20 dark:border-sky-500/30" },
+    { label: "Crew", href: "/feel/crew", icon: Users, color: "from-purple-500/40 to-purple-500/20 dark:from-purple-500/30 dark:to-neutral-900", iconColor: "text-purple-500", border: "border-purple-500/20 dark:border-purple-500/30" },
+    { label: "Website", href: "/frame/website", icon: Compass, color: "from-teal-500/40 to-teal-500/20 dark:from-teal-500/30 dark:to-neutral-900", iconColor: "text-teal-500", border: "border-teal-500/20 dark:border-teal-500/30" },
+    { label: "Social", href: "/frame/social", icon: MessageCircle, color: "from-yellow-500/40 to-yellow-500/20 dark:from-yellow-500/30 dark:to-neutral-900", iconColor: "text-yellow-500", border: "border-yellow-500/20 dark:border-yellow-500/30" },
+    { label: "Learn", href: "/frame/learn", icon: BookOpen, color: "from-blue-500/40 to-blue-500/20 dark:from-blue-500/30 dark:to-neutral-900", iconColor: "text-blue-500", border: "border-blue-500/20 dark:border-blue-500/30" },
 ];
 
 export default function WorkspaceGrid() {
     return (
-        <div className="mt-8 mb-32 relative z-10 w-full overflow-hidden">
-            <h2 className="px-6 text-[12px] font-bold text-neutral-500 uppercase tracking-widest mb-4">
+        <div className="mt-4 mb-32 relative z-10 w-full overflow-hidden px-4">
+            <h2 className="text-[12px] font-bold text-neutral-500 uppercase tracking-widest mb-4">
                 Workspace
             </h2>
 
-            {/* Horizontal Scroll Container */}
-            <div className="w-full overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-6 pt-2">
-                <div className="grid grid-rows-2 grid-flow-col gap-3 px-6 auto-cols-[calc(50vw-24px)] md:auto-cols-[140px]">
-                    {APPS.map((app) => (
-                        <Link
-                            key={app.label}
-                            href={app.href}
-                            className={clsx(
-                                "relative overflow-hidden rounded-[24px] h-[95px] p-4 flex flex-col justify-end transition-transform active:scale-[0.96] shadow-sm snap-start",
-                                "bg-gradient-to-br",
-                                app.color,
-                                app.shadow
-                            )}
-                        >
-                            <span className="text-white font-bold text-[15px] relative z-10 tracking-tight drop-shadow-sm">
-                                {app.label}
-                            </span>
+            <div className="grid grid-cols-2 gap-3 pb-6 pt-2">
+                {APPS.map((app) => (
+                    <Link
+                        key={app.label}
+                        href={app.href}
+                        className={clsx(
+                            "relative overflow-hidden rounded-[24px] h-[95px] p-4 flex flex-col justify-end transition-all active:scale-[0.96] shadow-sm border",
+                            "bg-gradient-to-br",
+                            app.color,
+                            app.border
+                        )}
+                    >
+                        <span className="text-neutral-900 dark:text-white font-bold text-[15px] relative z-10 tracking-tight">
+                            {app.label}
+                        </span>
 
-                            {/* Large faded icon at the top right */}
-                            <div className="absolute top-2 right-2 text-white/20 pointer-events-none transform scale-110">
-                                <app.icon className="w-12 h-12" strokeWidth={2.5} />
-                            </div>
-                        </Link>
-                    ))}
-                </div>
+                        {/* Large faded icon at the top right */}
+                        <div className={clsx("absolute top-2 right-2 pointer-events-none transform scale-110 opacity-40 dark:opacity-20", app.iconColor)}>
+                            <app.icon className="w-12 h-12" strokeWidth={2} />
+                        </div>
+                    </Link>
+                ))}
             </div>
         </div>
     );
