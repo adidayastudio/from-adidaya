@@ -129,7 +129,7 @@ export default function PettyCashClient() {
     return (
         <FinancePageWrapper
             breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Petty Cash" }]}
-            header={<FinanceHeader title="Petty Cash" subtitle="Manage cash pools for your projects." hideToggle />}
+            header={<FinanceHeader title="Petty Cash" subtitle="Manage cash pools for your projects." />}
         >
             {/* OVERVIEW STATS */}
             {/* OVERVIEW STATS */}

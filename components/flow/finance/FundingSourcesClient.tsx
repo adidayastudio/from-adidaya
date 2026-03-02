@@ -173,7 +173,7 @@ export default function FundingSourcesClient() {
         return (
             <FinancePageWrapper
                 breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Funding Sources" }]}
-                header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources." hideToggle />}
+                header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources." />}
             >
                 <div className="text-center py-20 bg-white rounded-xl border border-dashed border-neutral-200">
                     <Landmark className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
@@ -410,7 +410,7 @@ export default function FundingSourcesClient() {
         return (
             <FinancePageWrapper
                 breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Funding Sources" }]}
-                header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources for all projects." hideToggle />}
+                header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources for all projects." />}
             >
                 <div className="flex items-center justify-center h-64">
                     <Loader2 className="w-8 h-8 animate-spin text-red-500" />
@@ -422,7 +422,7 @@ export default function FundingSourcesClient() {
     return (
         <FinancePageWrapper
             breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Funding Sources" }]}
-            header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources for all projects." hideToggle action={addButton} />}
+            header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources for all projects." action={addButton} />}
         >
             {/* TABS - ANIMATED SWITCHER */}
             <div className="flex items-center p-1 bg-neutral-100/80 rounded-full w-fit mb-6 ml-1 border border-neutral-200/50">

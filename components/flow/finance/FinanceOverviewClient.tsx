@@ -122,7 +122,6 @@ export default function FinanceOverviewClient() {
                     <FinanceHeader
                         title="Finance Overview"
                         subtitle={`Summary of team financial activity`}
-                        hideToggle
                     />
                 </div>
 
