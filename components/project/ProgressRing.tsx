@@ -5,24 +5,33 @@ interface ProgressRingProps {
     progress: number;
     size?: number;
     strokeWidth?: number;
+    color?: string;
 }
 
-export default function ProgressRing({ progress, size = 44, strokeWidth = 3.5 }: ProgressRingProps) {
+export default function ProgressRing({ progress, size = 44, strokeWidth = 3.5, color: customColor }: ProgressRingProps) {
     const radius = (size - strokeWidth) / 2;
     const circumference = radius * 2 * Math.PI;
     const offset = circumference - (progress / 100) * circumference;
 
-    let color = "#0A84FF";
-    let bgColor = "rgba(10, 132, 255, 0.1)";
-    if (progress < 40) {
-        color = "#FF3B30";
-        bgColor = "rgba(255, 59, 48, 0.1)";
-    } else if (progress < 60) {
-        color = "#FF9500";
-        bgColor = "rgba(255, 149, 0, 0.1)";
-    } else if (progress >= 80) {
-        color = "#34C759";
-        bgColor = "rgba(52, 199, 89, 0.1)";
+    let color = customColor || "#0A84FF";
+    let bgColor = customColor ? `${customColor}1A` : "rgba(10, 132, 255, 0.1)";
+
+    if (!customColor) {
+        if (progress < 40) {
+            color = "#FF3B30";
+            bgColor = "rgba(255, 59, 48, 0.1)";
+        } else if (progress < 60) {
+            color = "#FF9500";
+            bgColor = "rgba(255, 149, 0, 0.1)";
+        } else if (progress >= 80) {
+            color = "#34C759";
+            bgColor = "rgba(52, 199, 89, 0.1)";
+        }
+    } else {
+        // If hex, try to make it transparent for bg
+        if (customColor.startsWith('#') && customColor.length === 7) {
+            bgColor = `${customColor}26`; // 15% opacity
+        }
     }
 
     return (
