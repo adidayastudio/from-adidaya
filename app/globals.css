@@ -679,6 +679,63 @@ html.hide-mobile-nav .lg\:hidden.fixed.bottom-6 {
   display: none !important;
 }
 
+/* =========================================
+   iOS SAFARI DATE INPUT OVERFLOW FIX
+   Safari uses Shadow DOM for date inputs,
+   which ignores Tailwind width utilities.
+   These global rules force containment.
+   ========================================= */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
+  /* Shrink text if it still clips */
+  font-size: 14px !important;
+}
+
+/* Target WebKit internal date-picker decoration to prevent expansion */
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden;
+  padding: 0;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden;
+  padding: 0;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+/* Ensure parent containers of date inputs clip overflow */
+div:has(> input[type="date"]),
+div:has(> input[type="datetime-local"]) {
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
 /* 🟢 FORCE SANS-SERIF ON ALL FORM ELEMENTS (ESPECIALLY SAFARI DROPDOWNS) */
 select,
 option,

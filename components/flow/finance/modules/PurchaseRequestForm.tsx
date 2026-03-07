@@ -296,7 +296,7 @@ export function PurchaseRequestForm({
                                 onChange={e => setPurchaseDate(e.target.value)}
                                 disabled={isReadOnly}
                                 className={clsx(
-                                    "w-full min-w-0 h-10 px-4 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                    "w-full max-w-full block min-w-0 h-10 px-4 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium appearance-none",
                                     isReadOnly && "bg-neutral-50 text-neutral-500"
                                 )}
                             />
@@ -309,7 +309,7 @@ export function PurchaseRequestForm({
                                 onChange={e => setTargetDate(e.target.value)}
                                 disabled={isReadOnly}
                                 className={clsx(
-                                    "w-full min-w-0 h-10 px-4 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                    "w-full max-w-full block min-w-0 h-10 px-4 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium appearance-none",
                                     isReadOnly && "bg-neutral-50 text-neutral-500"
                                 )}
                             />

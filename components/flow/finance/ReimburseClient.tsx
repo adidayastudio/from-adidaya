@@ -386,7 +386,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Payment Date</label>
-                            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full min-w-0 h-12 px-4 text-[13px] border border-white/60 dark:border-neutral-800 shadow-sm rounded-full bg-white/60 dark:bg-neutral-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium" />
+                            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full max-w-full block min-w-0 h-12 px-4 text-[13px] border border-white/60 dark:border-neutral-800 shadow-sm rounded-full bg-white/60 dark:bg-neutral-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium appearance-none" />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Proof of Transfer</label>
@@ -2231,7 +2231,7 @@ export default function ReimburseClient() {
                                 <div className="space-y-4">
                                     <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Date Range</h4>
                                     <div className="flex items-center gap-3 px-2">
-                                        <div className="flex-1 space-y-1.5 min-w-0">
+                                        <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
                                             <label className="text-[10px] font-bold text-neutral-400 uppercase pl-3 block">From</label>
                                             <input
                                                 type="date"
@@ -2240,10 +2240,10 @@ export default function ReimburseClient() {
                                                     setShowAllMonths(false);
                                                     setStartDate(new Date(e.target.value));
                                                 }}
-                                                className="w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
+                                                className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
                                             />
                                         </div>
-                                        <div className="flex-1 space-y-1.5 min-w-0">
+                                        <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
                                             <label className="text-[10px] font-bold text-neutral-400 uppercase pl-3 block">To</label>
                                             <input
                                                 type="date"
@@ -2252,7 +2252,7 @@ export default function ReimburseClient() {
                                                     setShowAllMonths(false);
                                                     setEndDate(new Date(e.target.value));
                                                 }}
-                                                className="w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
+                                                className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
                                             />
                                         </div>
                                     </div>

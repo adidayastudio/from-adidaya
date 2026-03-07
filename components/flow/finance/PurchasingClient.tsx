@@ -362,7 +362,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Payment Date</label>
-                            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full min-w-0 h-12 px-4 text-[13px] border border-white/60 dark:border-neutral-800 shadow-sm rounded-full bg-white/60 dark:bg-neutral-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium" />
+                            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full max-w-full block min-w-0 h-12 px-4 text-[13px] border border-white/60 dark:border-neutral-800 shadow-sm rounded-full bg-white/60 dark:bg-neutral-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium appearance-none" />
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Proof of Transfer</label>
@@ -2633,7 +2633,7 @@ export default function PurchasingClient() {
                                 <div className="space-y-4 px-2">
                                     <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Date Range</h4>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5 min-w-0">
+                                        <div className="space-y-1.5 min-w-0 overflow-hidden">
                                             <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider px-1">From</span>
                                             <input
                                                 type="date"
@@ -2642,10 +2642,10 @@ export default function PurchasingClient() {
                                                     setShowAllMonths(false);
                                                     setStartDate(new Date(e.target.value));
                                                 }}
-                                                className="w-full min-w-0 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10"
+                                                className="w-full max-w-full min-w-0 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10 appearance-none"
                                             />
                                         </div>
-                                        <div className="space-y-1.5 min-w-0">
+                                        <div className="space-y-1.5 min-w-0 overflow-hidden">
                                             <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider px-1">To</span>
                                             <input
                                                 type="date"
@@ -2654,7 +2654,7 @@ export default function PurchasingClient() {
                                                     setShowAllMonths(false);
                                                     setEndDate(new Date(e.target.value));
                                                 }}
-                                                className="w-full min-w-0 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10"
+                                                className="w-full max-w-full min-w-0 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10 appearance-none"
                                             />
                                         </div>
                                     </div>
