@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, Fragment } from "react";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 import { createPortal } from "react-dom";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
@@ -10,7 +12,7 @@ import {
     Eye,
     CreditCard,
     X,
-    Plus, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, Pencil, Trash2, CheckCircle2, AlertCircle, Ban, Clock, AlertTriangle,
+    Plus, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, Pencil, Trash2, CheckCircle2, AlertCircle, Ban, Clock, AlertTriangle, ArrowLeft,
     RotateCcw,
     Send,
     XCircle,
@@ -28,6 +30,8 @@ import {
     ArrowUpNarrowWide,
     ArrowDownWideNarrow,
     Briefcase,
+    Share2,
+    Image as ImageIcon,
     DollarSign
 } from "lucide-react";
 import { CATEGORY_OPTIONS } from "./modules/constants";
@@ -53,7 +57,7 @@ import { NewRequestDrawer } from "./modules/NewRequestDrawer";
 function StatusBadge({ status }: { status: any }) {
     const theme = STATUS_THEMES[status as keyof typeof STATUS_THEMES] || STATUS_THEMES.DRAFT;
     return (
-        <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", theme.bg, theme.text, theme.border)}>
+        <span className={clsx("inline-flex w-fit px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase", theme.bg, theme.text, theme.border)}>
             {formatStatus(status)}
         </span>
     );
@@ -122,7 +126,7 @@ function Pagination({
 
     return (
         <div className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border-t border-neutral-100 dark:border-neutral-800">
-            <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+            <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">
                 Showing <span className="text-neutral-900 dark:text-white">{startItem}-{endItem}</span> of <span className="text-neutral-900 dark:text-white">{totalItems}</span>
             </div>
             <div className="flex items-center gap-2">
@@ -203,7 +207,7 @@ function DeleteConfirmModal({
 
                 {item.description && (
                     <div className="bg-neutral-50 rounded-xl p-3 mb-6 border border-neutral-100">
-                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Request</div>
+                        <div className="text-[10px] font-bold text-neutral-400 mb-1">Request</div>
                         <div className="text-sm font-medium text-neutral-700 truncate">{item.description}</div>
                     </div>
                 )}
@@ -280,7 +284,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                 <div className="shrink min-h-0 overflow-y-auto px-8 pb-4 scrollbar-hide space-y-6">
                     <div className="py-2 px-1 rounded-[32px] bg-white/40 dark:bg-neutral-900/40 border border-white/60 dark:border-neutral-800 shadow-sm flex flex-col gap-1">
                         <div className="flex justify-between items-center text-xs px-4 py-2">
-                            <span className="text-neutral-500 font-bold tracking-wider uppercase">Amount to Pay</span>
+                            <span className="text-neutral-500 font-bold">Amount to Pay</span>
                             <div className="flex items-center gap-2">
                                 <div className="text-right">
                                     <div className="font-bold text-neutral-900 text-[17px]">{formatCurrency(item.amount)}</div>
@@ -296,7 +300,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                         </div>
 
                         <div className="flex justify-between items-center text-xs px-4 py-2">
-                            <span className="text-neutral-500 font-bold tracking-wider uppercase">Submitter</span>
+                            <span className="text-neutral-500 font-bold">Submitter</span>
                             <div className="flex items-center gap-2">
                                 <span className="font-bold text-neutral-900 text-[13px]">{item.submitted_by_name || "-"}</span>
                                 <div className="w-6" />
@@ -304,7 +308,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                         </div>
 
                         <div className="flex justify-between items-start text-xs px-4 py-2">
-                            <span className="text-neutral-500 font-bold tracking-wider uppercase mt-1">Beneficiary Account</span>
+                            <span className="text-neutral-500 font-bold mt-1">Beneficiary Account</span>
                             <div className="flex items-start gap-2">
                                 {(item.beneficiary_bank || item.beneficiary_number) ? (
                                     <div className="text-right flex flex-col items-end gap-1 mt-0.5">
@@ -331,7 +335,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                         <div className="p-4 rounded-3xl bg-red-50/80 backdrop-blur-sm border border-red-100 flex gap-3 animate-in fade-in">
                             <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                             <div>
-                                <h4 className="text-[11px] font-bold text-red-700 uppercase tracking-wider mb-1">Missing Requirements</h4>
+                                <h4 className="text-[11px] font-bold text-red-700 mb-1">Missing Requirements</h4>
                                 <p className="text-[11px] text-red-600 font-medium tracking-tight">
                                     Invoice and complete beneficiary details are mandatory before you can process this payment.
                                 </p>
@@ -413,7 +417,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                                         </div>
                                         <div className="flex flex-col items-center gap-1">
                                             <span className="font-bold text-[13px] text-neutral-600 group-hover:text-blue-700">Upload Images/PDFs</span>
-                                            <span className="text-[10px] uppercase font-bold tracking-wider text-red-500/80">Required</span>
+                                            <span className="text-[9px] font-bold text-red-500/80">Required</span>
                                         </div>
                                     </div>
                                 </div>
@@ -462,7 +466,7 @@ function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => 
                 <p className="text-sm text-neutral-500 mb-6 font-medium">Please confirm the approved amount.</p>
 
                 <div className="mb-6">
-                    <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Approved Amount</label>
+                    <label className="block text-xs font-bold text-neutral-500 mb-1.5">Approved Amount</label>
                     <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold">Rp</span>
                         <input
@@ -523,15 +527,81 @@ function RejectModal({
 function ViewModal({
     item,
     onClose,
-    onPreview
+    onPreview,
+    onEdit,
+    onApprove,
+    onReject,
+    onRevise,
+    onPay,
+    onDelete,
+    isTeamView,
+    userRole
 }: {
     item: PurchasingItem;
     onClose: () => void;
     onPreview: (tab: 'invoice' | 'proof') => void;
+    onEdit?: () => void;
+    onApprove?: () => void;
+    onReject?: () => void;
+    onRevise?: () => void;
+    onPay?: () => void;
+    onDelete?: () => void;
+    isTeamView?: boolean;
+    userRole?: string | null;
 }) {
     const [invoiceUrls, setInvoiceUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
     const [proofUrl, setProofUrl] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'invoice' | 'proof'>('invoice');
+    const [showDocDrawer, setShowDocDrawer] = useState(false);
+    const [docDrawerType, setDocDrawerType] = useState<'invoice' | 'proof'>('invoice');
+    const [isExporting, setIsExporting] = useState(false);
+    const contentRef = useRef<HTMLDivElement>(null);
+
+    const handleExport = async (format: "jpg" | "pdf") => {
+        if (!contentRef.current) return;
+        setIsExporting(true);
+        try {
+            // Wait a bit for any animations/renders to settle
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const element = contentRef.current;
+            const canvas = await html2canvas(element, {
+                scale: 2, // Better quality
+                useCORS: true,
+                backgroundColor: "#ffffff", // Standardize white background for export
+                windowWidth: element.scrollWidth,
+                windowHeight: element.scrollHeight,
+                onclone: (clonedDoc) => {
+                    const clonedElement = clonedDoc.getElementById("export-content");
+                    if (clonedElement) {
+                        clonedElement.style.height = "auto";
+                        clonedElement.style.overflow = "visible";
+                    }
+                }
+            });
+
+            const fileName = `Purchase_${item.project_code || "Request"}_${item.id.slice(0, 8)}.` + format;
+
+            if (format === "jpg") {
+                const link = document.createElement("a");
+                link.download = fileName;
+                link.href = canvas.toDataURL("image/jpeg", 0.9);
+                link.click();
+            } else {
+                const imgData = canvas.toDataURL("image/png");
+                const pdf = new jsPDF({
+                    orientation: "portrait",
+                    unit: "px",
+                    format: [canvas.width, canvas.height]
+                });
+                pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+                pdf.save(fileName);
+            }
+        } catch (error) {
+            console.error("Export failed:", error);
+        } finally {
+            setIsExporting(false);
+        }
+    };
 
     useEffect(() => {
         const fetchUrls = async () => {
@@ -570,7 +640,7 @@ function ViewModal({
 
     useEffect(() => {
         const hasInvoices = item.invoice_url || (item.invoices && item.invoices.length > 0);
-        if (!hasInvoices && item.payment_proof_url) setActiveTab('proof');
+        if (!hasInvoices && item.payment_proof_url) setDocDrawerType('proof');
     }, [item.invoice_url, item.invoices, item.payment_proof_url]);
 
     const displayAmount = item.amount || 0;
@@ -587,33 +657,61 @@ function ViewModal({
             />
 
             {/* Drawer Detail */}
-            <div
-                className="absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] overflow-hidden flex flex-col bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+            <motion.div
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className={clsx(
+                    "absolute z-50 bg-white/30 dark:bg-neutral-900/40 backdrop-blur-[24px] backdrop-saturate-[180%] border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-300 rounded-[56px] overflow-hidden flex flex-col",
+                    "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+                )}
             >
                 {/* Sticky Header */}
                 <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">
-                            Purchase Request Details
+                            {formatStructuredId("PO", item.project_number, item.request_number, item.project_code) || `PO-${item.id.slice(0, 8)}`}
                         </h2>
-                        <button
-                            onClick={onClose}
-                            className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-                        >
-                            <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {/* Export Actions */}
+                            <div className="flex items-center bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full h-10 px-1">
+                                <button
+                                    onClick={() => handleExport("jpg")}
+                                    disabled={isExporting}
+                                    className="px-3 h-8 rounded-full flex items-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-neutral-600 dark:text-neutral-400 disabled:opacity-50"
+                                >
+                                    <ImageIcon size={14} />
+                                    <span className="text-[11px] font-bold tracking-tight">JPG</span>
+                                </button>
+                                <div className="w-[1px] h-4 bg-black/5 dark:bg-white/10" />
+                                <button
+                                    onClick={() => handleExport("pdf")}
+                                    disabled={isExporting}
+                                    className="px-3 h-8 rounded-full flex items-center gap-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-neutral-600 dark:text-neutral-400 disabled:opacity-50"
+                                >
+                                    <FileText size={14} />
+                                    <span className="text-[11px] font-bold tracking-tight">PDF</span>
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={onClose}
+                                className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                            >
+                                <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto scrollbar-hide">
-                    <div className="px-8 pb-8 space-y-6">
+                <div className="flex-1 overflow-y-auto scrollbar-hide" id="export-content" ref={contentRef}>
+                    <div className="px-8 pb-8 space-y-6 bg-transparent">
                         {/* REVISION/REJECTION REASON */}
                         {(item.approval_status === "NEED_REVISION" || (item.approval_status === "DRAFT" && item.revision_reason)) && item.revision_reason && (
                             <div className="p-4 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-2xl flex gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
                                 <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
                                 <div>
-                                    <div className="text-xs font-bold text-orange-800 dark:text-orange-400 uppercase tracking-wider mb-1">Revision Requested</div>
+                                    <div className="text-xs font-bold text-orange-800 dark:text-orange-400 mb-1">Revision Requested</div>
                                     <p className="text-sm text-orange-700 dark:text-orange-300 font-medium leading-relaxed">{item.revision_reason}</p>
                                 </div>
                             </div>
@@ -623,7 +721,7 @@ function ViewModal({
                             <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl flex gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
                                 <Ban className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                                 <div>
-                                    <div className="text-xs font-bold text-red-800 dark:text-red-400 uppercase tracking-wider mb-1">Rejection Reason</div>
+                                    <div className="text-xs font-bold text-red-800 dark:text-red-400 mb-1">Rejection Reason</div>
                                     <p className="text-sm text-red-700 dark:text-red-300 font-medium leading-relaxed">{item.rejection_reason}</p>
                                 </div>
                             </div>
@@ -635,13 +733,120 @@ function ViewModal({
                                 <Briefcase className="w-4 h-4" strokeWidth={2} /> General Information
                             </h3>
                             <div className="space-y-4">
+                                {/* Progress Card */}
+                                <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px]">
+                                    <div className="text-[10px] font-bold text-neutral-400 mb-4">Progress</div>
+                                    {(() => {
+                                        const now = new Date();
+                                        const sameYear = (d: Date) => d.getFullYear() === now.getFullYear();
+                                        const fmt = (d: Date) => format(d, sameYear(d) ? "dd MMM" : "dd MMM yy");
+
+                                        const isApproved = ["APPROVED"].includes(item.approval_status) || item.financial_status === "PAID";
+                                        const isPaid = item.financial_status === "PAID";
+                                        const isRevision = item.approval_status === "NEED_REVISION";
+                                        const isRejected = item.approval_status === "REJECTED";
+                                        const deadlineDate = (item as any).deadline ? new Date((item as any).deadline) : null;
+                                        const isOverdue = deadlineDate && !isPaid && deadlineDate < now;
+
+                                        // Determine current step index (0-3)
+                                        let currentStep = 0; // Submitted/Draft
+                                        if (item.approval_status === "SUBMITTED") currentStep = 0;
+                                        if (isRevision) currentStep = 0; // back to step 0
+                                        if (isRejected) currentStep = 0;
+                                        if (isApproved && !isPaid) currentStep = 1;
+                                        if (isPaid) currentStep = 3;
+
+                                        const steps = [
+                                            {
+                                                label: isRevision ? "Revision" : "Submitted",
+                                                date: item.date ? fmt(new Date(item.date)) : "-",
+                                                accentColor: isRevision ? "text-orange-500" : "text-neutral-500 dark:text-neutral-300",
+                                                dotColor: isRevision ? "bg-orange-500 border-orange-500" : "bg-neutral-400 border-neutral-400",
+                                                lineActive: "bg-neutral-300 dark:bg-neutral-500",
+                                            },
+                                            {
+                                                label: isRejected ? "Rejected" : "Approved",
+                                                date: isApproved ? (item.updated_at ? fmt(new Date(item.updated_at)) : "✓") : "-",
+                                                accentColor: isRejected ? "text-red-500" : "text-blue-500",
+                                                dotColor: isRejected ? "bg-red-500 border-red-500" : "bg-blue-500 border-blue-500",
+                                                lineActive: "bg-blue-300 dark:bg-blue-500/50",
+                                            },
+                                            {
+                                                label: isOverdue ? "Overdue" : "Deadline",
+                                                date: deadlineDate ? fmt(deadlineDate) : "Anytime",
+                                                accentColor: isOverdue ? "text-red-500" : "text-orange-500 dark:text-orange-400",
+                                                dotColor: isOverdue ? "bg-red-500 border-red-500" : "bg-orange-400 border-orange-400",
+                                                lineActive: isOverdue ? "bg-red-300 dark:bg-red-500/50" : "bg-orange-200 dark:bg-orange-500/30",
+                                            },
+                                            {
+                                                label: "Paid",
+                                                date: isPaid && item.payment_date ? fmt(new Date(item.payment_date)) : "-",
+                                                accentColor: "text-emerald-500",
+                                                dotColor: "bg-emerald-500 border-emerald-500",
+                                                lineActive: "bg-emerald-300 dark:bg-emerald-500/50",
+                                            },
+                                        ];
+
+                                        // Deadline step is special: active only if deadline exists or overdue
+                                        const isDeadlineActive = !!deadlineDate && !isPaid;
+
+                                        return (
+                                            <div className="relative flex items-start w-full px-2">
+                                                {/* Continuous Line Background */}
+                                                <div className="absolute top-[7px] left-8 right-8 h-[2px] bg-neutral-100 dark:bg-neutral-800 z-0" />
+
+                                                {steps.map((step, idx) => {
+                                                    const isCompleted = idx < currentStep;
+                                                    const isCurrent = idx === currentStep;
+                                                    const isDeadlineStep = idx === 2;
+                                                    const isPaidStep = idx === 3;
+                                                    const stepActive = isDeadlineStep ? (isDeadlineActive || isCurrent) : (isCompleted || isCurrent);
+
+                                                    return (
+                                                        <div key={idx} className="flex-1 flex flex-col items-center relative z-10">
+                                                            {/* Icon/Dot */}
+                                                            <div className="bg-white dark:bg-neutral-800 rounded-full p-0.5">
+                                                                {isCompleted ? (
+                                                                    <CheckCircle2 size={12} className="text-neutral-400" />
+                                                                ) : isCurrent && isPaidStep && isPaid ? (
+                                                                    <CheckCircle2 size={12} className="text-emerald-500" />
+                                                                ) : isCurrent ? (
+                                                                    <div className={clsx(
+                                                                        "w-2.5 h-2.5 rounded-full border-2",
+                                                                        idx === 0 && isRevision ? "bg-orange-500 border-orange-500" :
+                                                                            isRejected && idx === 1 ? "bg-red-500 border-red-500" :
+                                                                                "bg-blue-500 border-blue-500"
+                                                                    )} />
+                                                                ) : isDeadlineStep && isDeadlineActive ? (
+                                                                    <div className="w-2.5 h-2.5 rounded-full border-2 bg-orange-400 border-orange-400" />
+                                                                ) : (
+                                                                    <div className="w-2.5 h-2.5 rounded-full border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800" />
+                                                                )}
+                                                            </div>
+                                                            {/* Label + Date */}
+                                                            <div className={clsx(
+                                                                "text-[10px] font-bold tracking-tight text-center mt-1 whitespace-nowrap px-1",
+                                                                isCurrent || (isDeadlineStep && isDeadlineActive) ? step.accentColor : "text-neutral-300 dark:text-neutral-600"
+                                                            )}>
+                                                                {step.label}
+                                                            </div>
+                                                            <div className={clsx(
+                                                                "text-[9px] font-medium text-center whitespace-nowrap tracking-tighter mt-0.5",
+                                                                stepActive ? "text-neutral-400 dark:text-neutral-500" : "text-neutral-200 dark:text-neutral-700"
+                                                            )}>
+                                                                {step.date}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Date</div>
-                                        <div className="text-sm font-medium text-neutral-900 dark:text-white">{format(new Date(item.date), "dd MMM yyyy")}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Project</div>
+                                        <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Project</div>
                                         <div className="text-sm font-medium text-neutral-900 dark:text-white flex items-center flex-wrap gap-1.5">
                                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 shrink-0">
                                                 {item.project_code}
@@ -649,62 +854,65 @@ function ViewModal({
                                             <span>{item.project_name}</span>
                                         </div>
                                     </div>
+                                    <div>
+                                        <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Submitter</div>
+                                        <div className="text-sm font-medium text-neutral-900 dark:text-white">{item.submitted_by_name || item.created_by_name || "-"}</div>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Category</div>
+                                        <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Category</div>
                                         <div className="text-sm font-medium text-neutral-900 dark:text-white capitalize">{formatStatus(category)}</div>
                                     </div>
                                     <div>
-                                        <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Subcategory</div>
+                                        <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Subcategory</div>
                                         <div className="text-sm font-medium text-neutral-900 dark:text-white capitalize">{item.subcategory ? formatStatus(item.subcategory) : "-"}</div>
                                     </div>
                                 </div>
 
+                                {item.vendor && (
+                                    <div className="flex items-start justify-between">
+                                        <div>
+                                            <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Vendor</div>
+                                            <div className="text-sm font-semibold text-neutral-900 dark:text-white">{item.vendor}</div>
+                                        </div>
+                                        {/* Integrated Order Stage */}
+                                        <div className="flex flex-col items-end">
+                                            <div className="text-[10px] font-bold text-neutral-400 mb-1">Goods Status</div>
+                                            <div className="flex items-center gap-1 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-full border border-neutral-200 dark:border-neutral-700">
+                                                {(["PLANNED", "INVOICED", "RECEIVED"] as PurchaseStage[]).map((s, idx) => {
+                                                    const stages: PurchaseStage[] = ["PLANNED", "INVOICED", "RECEIVED"];
+                                                    const currentIdx = stages.indexOf(item.purchase_stage || "PLANNED");
+                                                    const isActive = item.purchase_stage === s;
+                                                    const isPast = idx < currentIdx;
+                                                    const labels: Record<string, string> = { PLANNED: "P", INVOICED: "I", RECEIVED: "R" };
+                                                    return (
+                                                        <div key={s} className={clsx(
+                                                            "w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-bold transition-all",
+                                                            isActive ? "bg-red-500 text-white shadow-sm" : isPast ? "bg-emerald-500 text-white" : "text-neutral-400 dark:text-neutral-500"
+                                                        )} title={s}>
+                                                            {isPast ? <Check className="w-2.5 h-2.5" /> : labels[s]}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div>
-                                    <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Description</div>
+                                    <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Description</div>
                                     <div className="text-sm font-medium text-neutral-900 dark:text-white leading-relaxed">
                                         {item.description || (item.items && item.items.length > 0
                                             ? item.items.map((i: any) => i.name).join(', ')
                                             : "No description")}
                                     </div>
-                                    {item.vendor && <div className="text-[10px] text-neutral-400 font-medium mt-1 ml-1">Vendor: {item.vendor}</div>}
                                 </div>
                             </div>
                         </section>
 
-                        {/* SECTION: Order Progress */}
-                        <section className="space-y-4 pt-2">
-                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                <Clock className="w-4 h-4" strokeWidth={2} /> Order Progress
-                            </h3>
-                            <div className="grid grid-cols-1 gap-3">
-                                {(["PLANNED", "INVOICED", "RECEIVED"] as PurchaseStage[]).map((s) => (
-                                    <div
-                                        key={s}
-                                        className={clsx(
-                                            "relative p-4 rounded-3xl border transition-all flex items-center gap-4",
-                                            item.purchase_stage === s ? "border-red-500/40 bg-red-50/30 dark:bg-red-500/10 shadow-sm" : "border-neutral-100 dark:border-neutral-800 bg-white/40 dark:bg-neutral-800/40"
-                                        )}
-                                    >
-                                        <div className={clsx(
-                                            "w-5 h-5 rounded-full border flex items-center justify-center shrink-0",
-                                            item.purchase_stage === s ? "border-red-500 bg-red-500" : "border-neutral-300 dark:border-neutral-600"
-                                        )}>
-                                            {item.purchase_stage === s && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="text-sm font-bold text-neutral-900 dark:text-white">
-                                                {s === "PLANNED" && "Planned (Estimation)"}
-                                                {s === "INVOICED" && "Invoiced"}
-                                                {s === "RECEIVED" && "Received"}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
+                        {/* SECTION: Order Progress (compact) */}
 
                         {/* SECTION: Amount & Status */}
                         <section className="space-y-4 pt-2">
@@ -713,64 +921,46 @@ function ViewModal({
                             </h3>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Amount</div>
+                                    <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Amount</div>
                                     <div className="flex items-center gap-1">
                                         <span className="text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(item.amount)}</span>
                                         <CopyButton text={String(item.amount)} />
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Status</div>
+                                    <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Status</div>
                                     <div className="flex flex-col gap-1">
                                         <StatusBadge status={status} />
                                         {item.financial_status === "PAID" && item.purchase_stage === "INVOICED" && (
-                                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">Paid, Goods Pending</span>
+                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Paid, Goods Pending</span>
                                         )}
                                         {item.financial_status === "PAID" && item.purchase_stage === "RECEIVED" && (
-                                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">Paid & Received</span>
+                                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Paid & Received</span>
                                         )}
                                     </div>
                                 </div>
                             </div>
                         </section>
 
-                        {/* SECTION: Item Details */}
-                        {item.items && item.items.length > 0 && (
+                        {/* SECTION: Beneficiary (moved up) */}
+                        {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
                             <section className="space-y-4 pt-2">
                                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                    <Package className="w-4 h-4" strokeWidth={2} /> Item Details
+                                    <CreditCard className="w-4 h-4" strokeWidth={2} /> Beneficiary Information
                                 </h3>
-                                <div className="space-y-3">
-                                    {item.items.map((it: any, idx: number) => (
-                                        <div key={idx} className="p-5 rounded-3xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px]">
-                                            <div className="text-sm font-bold text-neutral-900 dark:text-white mb-3">{it.name}</div>
-                                            <div className="grid grid-cols-3 gap-3">
-                                                <div>
-                                                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Qty</div>
-                                                    <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300">{it.qty} <span className="text-[9px] text-neutral-400 uppercase">{it.unit}</span></div>
-                                                </div>
-                                                <div>
-                                                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Price</div>
-                                                    <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 tabular-nums">{formatCurrency(it.unit_price)}</div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Total</div>
-                                                    <div className="text-xs font-bold text-neutral-900 dark:text-white tabular-nums">{formatCurrency(it.total)}</div>
-                                                </div>
-                                            </div>
+                                <div className="p-5 rounded-3xl bg-blue-500/5 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 shadow-sm backdrop-blur-[2px] relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 p-3 opacity-[0.05] pointer-events-none group-hover:scale-110 transition-transform duration-500">
+                                        <CreditCard className="w-16 h-16 rotate-12 text-blue-500" />
+                                    </div>
+                                    <div className="flex flex-col gap-1 relative z-10">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold text-neutral-900 dark:text-white">{item.beneficiary_bank || "Unknown Bank"}</span>
+                                            <span className="text-sm font-mono font-medium text-blue-600 dark:text-blue-400 tracking-tight bg-blue-500/10 dark:bg-blue-500/20 px-2 py-0.5 rounded-lg border border-blue-500/20">
+                                                {item.beneficiary_number || "-"}
+                                            </span>
+                                            {item.beneficiary_number && <CopyButton text={item.beneficiary_number} className="text-blue-500 hover:text-blue-600" />}
                                         </div>
-                                    ))}
-                                </div>
-
-                                {/* Total Summary */}
-                                <div className="p-6 rounded-3xl bg-gradient-to-br from-red-500 to-red-600 border border-red-400 shadow-xl shadow-red-500/20 relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-                                    <div className="relative flex items-center justify-between">
-                                        <div className="flex flex-col">
-                                            <span className="text-[11px] font-bold text-red-100 uppercase tracking-[0.2em] leading-none mb-2">Total Amount</span>
-                                            <span className="text-xs text-red-100/70 font-medium">{item.items.length} items</span>
-                                        </div>
-                                        <span className="text-2xl font-black text-white tracking-tight">{formatCurrency(item.amount)}</span>
+                                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{item.beneficiary_name || "-"}</div>
                                     </div>
                                 </div>
                             </section>
@@ -781,98 +971,119 @@ function ViewModal({
                             <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl flex gap-3 animate-in fade-in slide-in-from-top-1">
                                 <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
                                 <div>
-                                    <h4 className="text-[11px] font-bold text-red-700 dark:text-red-400 uppercase tracking-wider mb-1">Action Required Before Payment</h4>
+                                    <h4 className="text-[11px] font-bold text-red-700 dark:text-red-400 mb-1">Action Required Before Payment</h4>
                                     <p className="text-xs text-red-600 dark:text-red-300 font-medium">Please upload the invoice and complete the beneficiary details by editing this request.</p>
                                 </div>
                             </div>
                         )}
 
-                        {/* SECTION: Beneficiary */}
-                        {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
+                        {/* SECTION: Item Details (table style) */}
+                        {item.items && item.items.length > 0 && (
                             <section className="space-y-4 pt-2">
                                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                    <CreditCard className="w-4 h-4" strokeWidth={2} /> Beneficiary Information
+                                    <Package className="w-4 h-4" strokeWidth={2} /> Item Details
                                 </h3>
-                                <div className="p-5 rounded-3xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-3 opacity-[0.03] pointer-events-none">
-                                        <CreditCard className="w-16 h-16 rotate-12" />
-                                    </div>
-                                    <div className="flex flex-col gap-1 relative z-10">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm font-bold text-neutral-900 dark:text-white">{item.beneficiary_bank || "Unknown Bank"}</span>
-                                            <span className="text-sm font-mono font-medium text-neutral-500 tracking-tight bg-neutral-50 dark:bg-neutral-700 px-1.5 py-0.5 rounded border border-neutral-100 dark:border-neutral-600">{item.beneficiary_number || "-"}</span>
-                                            {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
+                                <div className="rounded-3xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] overflow-x-auto scrollbar-hide">
+                                    <table className="w-full text-xs">
+                                        <thead>
+                                            <tr className="border-b border-neutral-100 dark:border-neutral-700/40">
+                                                <th className="py-2.5 px-4 text-left text-[10px] font-bold text-neutral-400">Item</th>
+                                                <th className="py-2.5 px-2 text-center text-[10px] font-bold text-neutral-400 w-[12%]">Qty</th>
+                                                <th className="py-2.5 px-2 text-right text-[10px] font-bold text-neutral-400 w-[25%]">Price</th>
+                                                <th className="py-2.5 px-4 text-right text-[10px] font-bold text-neutral-400 w-[25%]">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-50 dark:divide-neutral-700/30">
+                                            {item.items.map((it: any, idx: number) => (
+                                                <tr key={idx} className="hover:bg-white/40 dark:hover:bg-neutral-700/20 transition-colors">
+                                                    <td className="py-2.5 px-4 font-medium text-neutral-800 dark:text-neutral-200">{it.name}</td>
+                                                    <td className="py-2.5 px-2 text-center text-neutral-500 dark:text-neutral-400 tabular-nums">
+                                                        {it.qty} <span className="text-[9px]">{it.unit}</span>
+                                                    </td>
+                                                    <td className="py-2.5 px-2 text-right text-neutral-500 dark:text-neutral-400 tabular-nums">{formatCurrency(it.unit_price)}</td>
+                                                    <td className="py-2.5 px-4 text-right font-bold text-neutral-900 dark:text-white tabular-nums">{formatCurrency(it.total)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Total Summary */}
+                                <div className="p-5 rounded-3xl bg-gradient-to-br from-red-500 to-red-600 border border-red-400 shadow-xl shadow-red-500/20 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                                    <div className="relative flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-[11px] font-bold text-red-100 tracking-tight leading-none mb-1">Total Amount</span>
+                                            <span className="text-xs text-red-100/70 font-medium">{item.items.length} items</span>
                                         </div>
-                                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{item.beneficiary_name || "-"}</div>
+                                        <span className="text-2xl font-black text-white tracking-tight">{formatCurrency(item.amount)}</span>
                                     </div>
                                 </div>
                             </section>
                         )}
 
-                        {/* SECTION: Documents */}
+                        {/* SECTION: Documents (Nested Drawer Trigger) */}
                         <section className="space-y-4 pt-2">
-                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                <Upload className="w-4 h-4" strokeWidth={2} /> Documents
-                            </h3>
-
-                            <div className="flex p-1 bg-neutral-900/5 dark:bg-white/5 rounded-full mb-4">
-                                <button onClick={() => setActiveTab('invoice')} className={clsx("flex-1 py-2 text-xs font-bold rounded-full transition-all", activeTab === 'invoice' ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm" : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300")}>Invoice</button>
-                                <button onClick={() => setActiveTab('proof')} className={clsx("flex-1 py-2 text-xs font-bold rounded-full transition-all", activeTab === 'proof' ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm" : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300")}>Proof of Transfer</button>
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                    <Upload className="w-4 h-4" strokeWidth={2} /> Documents
+                                </h3>
+                                {(item.invoice_url || (item.invoices && item.invoices.length > 0) || item.payment_proof_url) && (
+                                    <button
+                                        onClick={() => {
+                                            setDocDrawerType(item.invoice_url || (item.invoices && item.invoices.length > 0) ? 'invoice' : 'proof');
+                                            setShowDocDrawer(true);
+                                        }}
+                                        className="text-[11px] font-bold text-red-600 dark:text-red-400 hover:opacity-70 transition-opacity flex items-center gap-1"
+                                    >
+                                        View All <ChevronRight size={12} />
+                                    </button>
+                                )}
                             </div>
 
-                            {activeTab === 'invoice' && (
-                                <div className="space-y-3">
-                                    {invoiceUrls.length > 0 ? (
-                                        invoiceUrls.map((inv, idx) => (
-                                            <div key={idx} className="border border-neutral-100 dark:border-neutral-700/40 rounded-3xl overflow-hidden bg-white/60 dark:bg-neutral-800/60 group relative backdrop-blur-[2px]">
-                                                <div className="p-3 border-b border-neutral-100 dark:border-neutral-700/40 flex items-center justify-between">
-                                                    <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{inv.name}</span>
-                                                    <span className="text-[10px] text-neutral-400">#{idx + 1}</span>
-                                                </div>
-                                                {inv.originalPath.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                                    <button onClick={() => onPreview('invoice')} className="w-full text-left cursor-zoom-in relative block">
-                                                        <img src={inv.url} alt={inv.name} className="w-full max-h-40 object-contain" />
-                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                            <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
-                                                        </div>
-                                                    </button>
-                                                ) : (
-                                                    <div className="p-4 flex items-center justify-between">
-                                                        <span className="text-sm text-neutral-600 dark:text-neutral-300">PDF / Document</span>
-                                                        <a href={inv.url} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 dark:bg-red-500/10 rounded-full hover:bg-red-100 transition-colors">Open File</a>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))
-                                    ) : (
-                                        <div className="p-8 text-center bg-white/40 dark:bg-neutral-800/40 rounded-3xl border border-dashed border-neutral-200 dark:border-neutral-700"><p className="text-xs text-neutral-400">No invoice attached</p></div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => { setDocDrawerType('invoice'); setShowDocDrawer(true); }}
+                                    className={clsx(
+                                        "p-4 rounded-3xl border transition-all flex flex-col gap-2 text-left relative overflow-hidden group",
+                                        (item.invoice_url || (item.invoices && item.invoices.length > 0))
+                                            ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-red-200 dark:hover:border-red-500/30"
+                                            : "bg-neutral-50/50 dark:bg-neutral-900/30 border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
                                     )}
-                                </div>
-                            )}
+                                >
+                                    <div className="flex items-center justify-between relative z-10">
+                                        <span className="text-[10px] font-bold text-neutral-400">Invoice</span>
+                                        <FileText size={14} className={clsx((item.invoice_url || (item.invoices && item.invoices.length > 0)) ? "text-red-500" : "text-neutral-300")} />
+                                    </div>
+                                    <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
+                                        {item.invoices && item.invoices.length > 0 ? `${item.invoices.length} Files` : item.invoice_url ? "1 File" : "No Invoice"}
+                                    </div>
+                                    <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
+                                        <FileText size={48} />
+                                    </div>
+                                </button>
 
-                            {activeTab === 'proof' && (
-                                <div className="space-y-3">
-                                    {item.payment_proof_url ? (
-                                        <div className="border border-neutral-100 dark:border-neutral-700/40 rounded-3xl overflow-hidden bg-white/60 dark:bg-neutral-800/60 group relative backdrop-blur-[2px]">
-                                            {item.payment_proof_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                                <button onClick={() => onPreview('proof')} className="w-full text-left cursor-zoom-in relative block">
-                                                    {proofUrl ? <img src={proofUrl} alt="Proof" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50 dark:bg-neutral-800/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
-                                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                        <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
-                                                    </div>
-                                                </button>
-                                            ) : (
-                                                <div className="p-4 flex items-center justify-between">
-                                                    <span className="text-sm text-neutral-600 dark:text-neutral-300">Attached proof</span>
-                                                    <a href={proofUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 rounded-full hover:bg-emerald-100 transition-colors">Open File</a>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="p-8 text-center bg-white/40 dark:bg-neutral-800/40 rounded-3xl border border-dashed border-neutral-200 dark:border-neutral-700"><p className="text-xs text-neutral-400">No payment proof uploaded</p></div>
+                                <button
+                                    onClick={() => { setDocDrawerType('proof'); setShowDocDrawer(true); }}
+                                    className={clsx(
+                                        "p-4 rounded-3xl border transition-all flex flex-col gap-2 text-left relative overflow-hidden group",
+                                        item.payment_proof_url
+                                            ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-emerald-200 dark:hover:border-emerald-500/30"
+                                            : "bg-neutral-50/50 dark:bg-neutral-900/30 border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
                                     )}
-                                </div>
-                            )}
+                                >
+                                    <div className="flex items-center justify-between relative z-10">
+                                        <span className="text-[10px] font-bold text-neutral-400">Payment Proof</span>
+                                        <CheckCircle2 size={14} className={clsx(item.payment_proof_url ? "text-emerald-500" : "text-neutral-300")} />
+                                    </div>
+                                    <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
+                                        {item.payment_proof_url ? "1 File" : "No Proof"}
+                                    </div>
+                                    <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
+                                        <CheckCircle2 size={48} />
+                                    </div>
+                                </button>
+                            </div>
                         </section>
 
                         {/* SECTION: Notes */}
@@ -887,21 +1098,99 @@ function ViewModal({
                     </div>
 
                     {/* Bottom Actions */}
-                    <div className="sticky bottom-0 w-full px-8 py-6 z-30 mt-auto">
-                        <button
-                            onClick={onClose}
-                            className="w-full h-[56px] bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-full font-bold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center shadow-lg"
-                        >
-                            Close
-                        </button>
+                    <div className="sticky bottom-0 w-full px-8 py-6 z-30 mt-auto bg-white/10 dark:bg-neutral-900/10 backdrop-blur-xl border-t border-black/5 dark:border-white/5 flex flex-col gap-2">
+                        {/* Context-sensitive action buttons */}
+                        {(() => {
+                            const isPaid = item.financial_status === "PAID" && item.purchase_stage === "RECEIVED";
+                            const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
+
+                            if (isPaid) {
+                                return (
+                                    <button onClick={onClose} className="w-full h-[52px] bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-full font-bold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center shadow-lg">
+                                        Close
+                                    </button>
+                                );
+                            }
+
+                            return (
+                                <>
+                                    {/* Team view: Approve/Revise/Reject for SUBMITTED */}
+                                    {isTeamView && item.approval_status === "SUBMITTED" && (
+                                        <div className="flex gap-2">
+                                            <button onClick={() => { onClose(); onApprove?.(); }} className="flex-1 h-[48px] bg-emerald-500 hover:bg-emerald-600 text-white rounded-full font-bold text-[13px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg">
+                                                <CheckCircle2 className="w-4 h-4" /> Approve
+                                            </button>
+                                            <button onClick={() => { onClose(); onRevise?.(); }} className="flex-1 h-[48px] bg-orange-500 hover:bg-orange-600 text-white rounded-full font-bold text-[13px] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                                <AlertCircle className="w-4 h-4" /> Revise
+                                            </button>
+                                            <button onClick={() => { onClose(); onReject?.(); }} className="flex-1 h-[48px] bg-rose-500 hover:bg-rose-600 text-white rounded-full font-bold text-[13px] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                                <Ban className="w-4 h-4" /> Reject
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* APPROVED & unpaid: Edit + Pay */}
+                                    {isTeamView && item.approval_status === "APPROVED" && item.financial_status !== "PAID" && (
+                                        <div className="flex gap-2">
+                                            <button onClick={() => { onClose(); onEdit?.(); }} className="flex-1 h-[48px] bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-full font-bold text-[13px] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                                <Pencil className="w-4 h-4" /> Edit
+                                            </button>
+                                            <button
+                                                onClick={() => { onClose(); onPay?.(); }}
+                                                disabled={!item.invoice_url && (!item.invoices || item.invoices.length === 0) || !item.beneficiary_bank || !item.beneficiary_number}
+                                                className={clsx(
+                                                    "flex-1 h-[48px] rounded-full font-bold text-[13px] active:scale-[0.98] transition-all flex items-center justify-center gap-2",
+                                                    (!item.invoice_url && (!item.invoices || item.invoices.length === 0) || !item.beneficiary_bank || !item.beneficiary_number)
+                                                        ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-300 dark:text-neutral-600 cursor-not-allowed"
+                                                        : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg"
+                                                )}
+                                            >
+                                                <CreditCard className="w-4 h-4" /> Pay
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* DRAFT / NEED_REVISION: Edit + Delete */}
+                                    {(["DRAFT", "NEED_REVISION"].includes(item.approval_status) || (isAdmin && ["SUBMITTED", "REJECTED"].includes(item.approval_status))) && (
+                                        <div className="flex gap-2">
+                                            {onEdit && (
+                                                <button onClick={() => { onClose(); onEdit(); }} className="flex-1 h-[48px] bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200 rounded-full font-bold text-[13px] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                                                    <Pencil className="w-4 h-4" /> Edit
+                                                </button>
+                                            )}
+                                            {onDelete && (
+                                                <button onClick={() => { onClose(); onDelete(); }} className="h-[48px] px-6 bg-red-50 dark:bg-red-500/10 text-red-600 rounded-full font-bold text-[13px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-red-200 dark:border-red-500/20">
+                                                    <Trash2 className="w-4 h-4" /> Delete
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <button onClick={onClose} className="w-full h-[48px] bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-full font-bold text-[13px] active:scale-[0.98] transition-all flex items-center justify-center">
+                                        Close
+                                    </button>
+                                </>
+                            );
+                        })()}
                     </div>
+
+                    {/* Nested Document Drawer */}
+                    <AnimatePresence mode="wait">
+                        {showDocDrawer && (
+                            <DocumentDrawer
+                                item={item}
+                                initialTab={docDrawerType}
+                                onClose={() => setShowDocDrawer(false)}
+                            />
+                        )}
+                    </AnimatePresence>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 }
 
-function InvoicePreviewModal({
+function DocumentDrawer({
     item,
     initialTab,
     onClose
@@ -911,170 +1200,190 @@ function InvoicePreviewModal({
     onClose: () => void;
 }) {
     const [activeTab, setActiveTab] = useState<'invoice' | 'proof'>(initialTab);
-    const [signedUrl, setSignedUrl] = useState<string | null>(null);
+    const [invoiceUrls, setInvoiceUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
+    const [proofUrl, setProofUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isZoomed, setIsZoomed] = useState(false);
-    const [isDownloading, setIsDownloading] = useState(false);
+    const [isDownloading, setIsDownloading] = useState<string | null>(null); // path or 'bulk'
 
     useEffect(() => {
-        let active = true;
-        const fetchUrl = async () => {
+        const fetchUrls = async () => {
             setIsLoading(true);
-            setSignedUrl(null);
+            const urls: { url: string; name: string; originalPath: string }[] = [];
 
-            const path = activeTab === 'invoice' ? item.invoice_url : item.payment_proof_url;
-
-            if (path) {
-                const url = await getFinanceFileUrl(path);
-                if (active) setSignedUrl(url);
+            // Invoices
+            if (item.invoices && item.invoices.length > 0) {
+                for (const inv of item.invoices) {
+                    const url = await getFinanceFileUrl(inv.invoice_url);
+                    if (url) urls.push({ url, name: inv.invoice_name || 'Invoice', originalPath: inv.invoice_url });
+                }
+            } else if (item.invoice_url) {
+                const url = await getFinanceFileUrl(item.invoice_url);
+                if (url) urls.push({ url, name: 'Invoice', originalPath: item.invoice_url });
             }
-            if (active) setIsLoading(false);
+            setInvoiceUrls(urls);
+
+            // Proof
+            if (item.payment_proof_url) {
+                const url = await getFinanceFileUrl(item.payment_proof_url);
+                setProofUrl(url);
+            }
+            setIsLoading(false);
         };
-        fetchUrl();
-        return () => { active = false; };
-    }, [activeTab, item]);
+        fetchUrls();
+    }, [item]);
 
-    const currentPath = activeTab === 'invoice' ? item.invoice_url : item.payment_proof_url;
-    const isImage = currentPath?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-
-    const handleDownload = async () => {
-        if (!signedUrl || !currentPath) return;
-
+    const handleDownload = async (url: string, path: string, name?: string) => {
         try {
-            setIsDownloading(true);
+            setIsDownloading(path);
+            const ext = path.split('.').pop();
+            const filename = `${name || 'document'}_${item.project_code || 'NA'}.${ext}`;
 
-            // Generate filename
-            const dateToUse = activeTab === 'proof' ? (item.payment_date || item.updated_at) : item.date;
-            const dateStr = format(new Date(dateToUse), "yyyyMMdd");
-            const ext = currentPath.split('.').pop();
-            const typeStr = activeTab === 'proof' ? "Transfer" : "Invoice";
-
-            const parts = [typeStr, item.project_code || "NA", dateStr];
-            if (item.vendor) parts.push(item.vendor);
-            parts.push(item.description);
-
-            const safeName = parts.map(p => p.replace(/[^a-zA-Z0-9\s_-]/g, "")).join("_");
-            const filename = `${safeName}.${ext}`;
-
-            const response = await fetch(signedUrl);
+            const response = await fetch(url);
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
+            const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = url;
+            link.href = downloadUrl;
             link.download = filename;
             document.body.appendChild(link);
             link.click();
-            window.URL.revokeObjectURL(url);
+            window.URL.revokeObjectURL(downloadUrl);
             document.body.removeChild(link);
         } catch (error) {
             console.error('Download failed:', error);
-            window.open(signedUrl, '_blank');
+            window.open(url, '_blank');
         } finally {
-            setIsDownloading(false);
+            setIsDownloading(null);
         }
     };
 
+    const handleBulkDownload = async () => {
+        setIsDownloading('bulk');
+        const docs = activeTab === 'invoice' ? invoiceUrls : (proofUrl ? [{ url: proofUrl, originalPath: item.payment_proof_url!, name: 'Proof' }] : []);
+        for (const doc of docs) {
+            await handleDownload(doc.url, doc.originalPath, doc.name);
+        }
+        setIsDownloading(null);
+    };
+
+    const currentDocs = activeTab === 'invoice' ? invoiceUrls : (proofUrl ? [{ url: proofUrl, originalPath: item.payment_proof_url!, name: 'Proof' }] : []);
+
     return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-neutral-900/60 backdrop-blur-md" onClick={onClose} />
-            <div className="relative w-full max-w-4xl bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 overflow-hidden animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
-                <div className="p-6 flex-shrink-0 border-b border-neutral-100">
-                    <div className="flex justify-between items-center relative">
-                        <div className="flex items-center gap-4">
-                            <h3 className="text-lg font-bold text-neutral-900">Document Preview</h3>
-                        </div>
+        <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-0 z-[60] bg-white dark:bg-neutral-900 flex flex-col shadow-2xl"
+        >
+            {/* Header */}
+            <div className="flex-none px-6 py-4 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-white/10 dark:bg-neutral-900/10 backdrop-blur-xl sticky top-0 z-20">
+                <button
+                    onClick={onClose}
+                    className="flex items-center gap-2 text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors"
+                >
+                    <ArrowLeft size={18} />
+                    <span className="text-sm font-bold">Back to Details</span>
+                </button>
 
-                        {/* Tabs */}
-                        <div className="absolute left-1/2 -translate-x-1/2 flex items-center bg-neutral-100 p-1 rounded-full">
-                            <button
-                                onClick={() => setActiveTab('invoice')}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all ${activeTab === 'invoice'
-                                    ? 'bg-white text-neutral-900 shadow-sm'
-                                    : 'text-neutral-500 hover:text-neutral-700'
-                                    }`}
-                            >
-                                Invoice
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('proof')}
-                                className={`px-4 py-1.5 text-xs font-bold rounded-full transition-all ${activeTab === 'proof'
-                                    ? 'bg-white text-neutral-900 shadow-sm'
-                                    : 'text-neutral-500 hover:text-neutral-700'
-                                    }`}
-                            >
-                                Proof of Transfer
-                            </button>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            {isImage && (
-                                <button
-                                    onClick={() => setIsZoomed(!isZoomed)}
-                                    className="px-4 py-2 bg-neutral-100 text-neutral-600 rounded-full text-xs font-bold hover:bg-neutral-200 transition-colors flex items-center gap-2"
-                                >
-                                    {isZoomed ? "Zoom Out" : "Zoom In"}
-                                </button>
-                            )}
-                            <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors">
-                                <X className="w-5 h-5 text-neutral-400" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div className={`flex-1 bg-neutral-50 relative min-h-[400px] flex ${isZoomed ? 'overflow-auto items-start justify-start p-0' : 'overflow-hidden items-center justify-center p-4'}`}>
-                    {isLoading ? (
-                        <div className="flex items-center justify-center w-full h-full">
-                            <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
-                        </div>
-                    ) : signedUrl ? (
-                        isImage ? (
-                            <img
-                                src={signedUrl}
-                                alt={activeTab === 'invoice' ? "Invoice" : "Proof"}
-                                onClick={() => setIsZoomed(!isZoomed)}
-                                className={`transition-all duration-300 bg-white shadow-sm ${isZoomed
-                                    ? 'w-auto h-auto min-w-[200%] cursor-zoom-out'
-                                    : 'max-w-full max-h-[70vh] object-contain cursor-zoom-in rounded-lg'
-                                    }`}
-                            />
-                        ) : (
-                            <div className="p-8 text-center flex flex-col items-center justify-center w-full h-full">
-                                <Package className="w-16 h-16 text-neutral-300 mx-auto mb-4" />
-                                <div className="text-neutral-600 font-medium text-lg">Document Preview</div>
-                                <div className="text-sm text-neutral-400 mt-1">{currentPath?.split('/').pop()}</div>
-                                <button
-                                    onClick={handleDownload}
-                                    className="mt-4 text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center gap-2"
-                                >
-                                    Open File Externally <ExternalLink className="w-3 h-3" />
-                                </button>
-                            </div>
-                        )
-                    ) : (
-                        <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200 opacity-75">
-                            <p className="text-sm text-neutral-400">No {activeTab === 'invoice' ? 'invoice' : 'proof'} attached</p>
-                        </div>
-                    )}
-                </div>
-
-                <div className="p-6 border-t border-neutral-100 bg-white/50 backdrop-blur-sm flex justify-between items-center">
-                    <div className="text-xs text-neutral-400">
-                        {item.project_code} • {format(new Date(activeTab === 'proof' ? (item.payment_date || item.updated_at) : item.date), "d MMM yyyy")}
-                    </div>
-                    {signedUrl && (
-                        <button
-                            onClick={handleDownload}
-                            disabled={isDownloading}
-                            className="px-6 py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-full text-sm font-bold shadow-lg shadow-red-200 flex items-center gap-2 transition-all disabled:opacity-75 disabled:cursor-not-allowed"
-                        >
-                            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" strokeWidth={2} />}
-                            {isDownloading ? "Downloading..." : "Download Original"}
-                        </button>
-                    )}
+                <div className="flex items-center bg-neutral-100 dark:bg-neutral-800 p-1 rounded-full">
+                    <button
+                        onClick={() => setActiveTab('invoice')}
+                        className={clsx(
+                            "px-4 py-1.5 text-[11px] font-bold rounded-full transition-all",
+                            activeTab === 'invoice' ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                        )}
+                    >
+                        Invoice
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('proof')}
+                        className={clsx(
+                            "px-4 py-1.5 text-[11px] font-bold rounded-full transition-all",
+                            activeTab === 'proof' ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm" : "text-neutral-500 hover:text-neutral-700"
+                        )}
+                    >
+                        Proof
+                    </button>
                 </div>
             </div>
-        </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide bg-transparent">
+                {isLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <Loader2 className="w-8 h-8 animate-spin text-red-500" />
+                        <p className="text-xs font-medium text-neutral-400">Loading documents...</p>
+                    </div>
+                ) : currentDocs.length > 0 ? (
+                    currentDocs.map((doc, idx) => (
+                        <div key={idx} className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-neutral-400">File {idx + 1}: {doc.name}</span>
+                                <button
+                                    onClick={() => handleDownload(doc.url, doc.originalPath, doc.name)}
+                                    className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full text-neutral-400 hover:text-red-500 transition-all"
+                                    title="Download this file"
+                                >
+                                    {isDownloading === doc.originalPath ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download size={16} />}
+                                </button>
+                            </div>
+                            <div className="rounded-3xl border border-neutral-100 dark:border-neutral-800 overflow-hidden bg-neutral-50 dark:bg-neutral-800/50">
+                                {doc.originalPath.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                    <img src={doc.url} alt={doc.name} className="w-full h-auto object-contain cursor-zoom-in" />
+                                ) : (
+                                    <div className="p-12 flex flex-col items-center justify-center gap-4">
+                                        <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center">
+                                            <FileText className="text-red-500" size={32} />
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-sm font-bold text-neutral-900 dark:text-white">PDF Document</p>
+                                            <p className="text-[11px] text-neutral-500">{doc.originalPath.split('/').pop()}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => window.open(doc.url, '_blank')}
+                                            className="px-6 py-2 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full text-xs font-bold hover:shadow-md transition-all flex items-center gap-2"
+                                        >
+                                            <ExternalLink size={14} /> Open Externally
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-40">
+                        <Upload size={48} className="text-neutral-300" />
+                        <p className="text-sm font-medium text-neutral-400">No {activeTab} available</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Sticky Bottom Download All */}
+            {currentDocs.length > 1 && (
+                <div className="flex-none p-6 border-t border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                    <button
+                        onClick={handleBulkDownload}
+                        disabled={!!isDownloading}
+                        className="w-full h-[52px] bg-red-600 hover:bg-red-700 text-white rounded-full font-bold text-sm shadow-xl shadow-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                        {isDownloading === 'bulk' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download size={20} />}
+                        Download All Invoices
+                    </button>
+                </div>
+            )}
+            {currentDocs.length === 1 && (
+                <div className="flex-none p-6 border-t border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                    <button
+                        onClick={() => handleDownload(currentDocs[0].url, currentDocs[0].originalPath, currentDocs[0].name)}
+                        disabled={!!isDownloading}
+                        className="w-full h-[52px] bg-red-600 hover:bg-red-700 text-white rounded-full font-bold text-sm shadow-xl shadow-red-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    >
+                        {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download size={20} />}
+                        Download {activeTab === 'invoice' ? 'Invoice' : 'Proof'}
+                    </button>
+                </div>
+            )}
+        </motion.div>
     );
 }
 
@@ -1785,7 +2094,7 @@ export default function PurchasingClient() {
                                 <ChevronRight className="w-4 h-4" />
                             </button>
                             <div className="w-[1px] h-4 bg-neutral-200 dark:bg-neutral-700 mx-1" />
-                            <div className="px-2 text-[11px] font-bold text-neutral-400 uppercase tracking-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
+                            <div className="px-2 text-[11px] font-bold text-neutral-400 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
                                 {showAllMonths ? "All Time" : (
                                     format(startDate, "MMM yyyy") === format(endDate, "MMM yyyy")
                                         ? format(startDate, "MMM yyyy")
@@ -1976,7 +2285,7 @@ export default function PurchasingClient() {
                         <thead>
                             <tr className="border-b border-neutral-100 bg-neutral-50/50 backdrop-blur-sm">
                                 <th
-                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors"
+                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
                                     onClick={() => handleSort('date')}
                                 >
                                     <div className="flex items-center gap-1 group/header">
@@ -1987,7 +2296,7 @@ export default function PurchasingClient() {
                                     </div>
                                 </th>
                                 <th
-                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors"
+                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
                                     onClick={() => handleSort('project_name')}
                                 >
                                     <div className="flex items-center gap-1 group/header">
@@ -1998,7 +2307,7 @@ export default function PurchasingClient() {
                                     </div>
                                 </th>
                                 <th
-                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors"
+                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
                                     onClick={() => handleSort('description')}
                                 >
                                     <div className="flex items-center gap-1 group/header">
@@ -2009,7 +2318,7 @@ export default function PurchasingClient() {
                                     </div>
                                 </th>
                                 <th
-                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors"
+                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
                                     onClick={() => handleSort('type')}
                                 >
                                     <div className="flex items-center gap-1 group/header">
@@ -2030,10 +2339,10 @@ export default function PurchasingClient() {
                                         ) : <ChevronDown className="w-3.5 h-3.5 opacity-0 group-hover/header:opacity-30 transition-opacity" />}
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Status</th>
+                                <th className="px-6 py-4 text-center text-[10px] font-bold text-neutral-400">Status</th>
                                 {isTeamView && (
                                     <th
-                                        className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors"
+                                        className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
                                         onClick={() => handleSort('submitted_by_name')}
                                     >
                                         <div className="flex items-center gap-1 group/header">
@@ -2044,7 +2353,7 @@ export default function PurchasingClient() {
                                         </div>
                                     </th>
                                 )}
-                                <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Actions</th>
+                                <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-neutral-50">
@@ -2124,10 +2433,10 @@ export default function PurchasingClient() {
                                                     <div className="flex items-center gap-1.5 overflow-hidden">
                                                         <span className="hover:text-neutral-600 transition-colors tracking-tight text-[10px] truncate">{cleanEntityName(item.vendor)}</span>
                                                         {item.approval_status === "APPROVED" && !item.invoice_url && (
-                                                            <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 rounded border border-red-100 flex-shrink-0 uppercase">NEED INVOICE</span>
+                                                            <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 rounded border border-red-100 flex-shrink-0">NEED INVOICE</span>
                                                         )}
                                                         {item.approval_status === "APPROVED" && (!item.beneficiary_bank || !item.beneficiary_number) && (
-                                                            <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 rounded border border-orange-100 flex-shrink-0 uppercase">NEED BENEFICIARY</span>
+                                                            <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 rounded border border-orange-100 flex-shrink-0">NEED BENEFICIARY</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -2155,7 +2464,7 @@ export default function PurchasingClient() {
                                                         item.financial_status
                                                     )} />
                                                     {item.financial_status === "PAID" && item.purchase_stage === "INVOICED" && (
-                                                        <span className="text-[8px] font-bold text-emerald-600 uppercase tracking-tight">Goods Pending</span>
+                                                        <span className="text-[8px] font-bold text-emerald-600">Goods Pending</span>
                                                     )}
                                                 </div>
                                             </td>
@@ -2165,7 +2474,7 @@ export default function PurchasingClient() {
                                                         <div className="text-[12px] font-medium text-neutral-900 tabular-nums">
                                                             {cleanEntityName(item.submitted_by_name || "N/A")}
                                                         </div>
-                                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">
+                                                        <div className="text-[10px] font-bold text-neutral-400">
                                                             {item.created_by_role}
                                                         </div>
                                                     </div>
@@ -2367,14 +2676,22 @@ export default function PurchasingClient() {
                         item={viewingItem}
                         onClose={() => setViewingItem(null)}
                         onPreview={(tab) => viewingItem && setPreviewingDocument({ item: viewingItem, initialTab: tab })}
+                        onEdit={() => { setEditingItem(viewingItem); setIsDrawerOpen(true); }}
+                        onApprove={() => setApprovingItem(viewingItem)}
+                        onReject={() => setRejectingItem(viewingItem)}
+                        onRevise={() => setRevisingItem(viewingItem)}
+                        onPay={() => setPayingItem(viewingItem)}
+                        onDelete={() => setDeletingItem(viewingItem)}
+                        isTeamView={isTeamView}
+                        userRole={userRole}
                     />
                 )
             }
 
-            {/* Invoice Preview Modal */}
+            {/* Document Drawer */}
             {
                 previewingDocument && (
-                    <InvoicePreviewModal
+                    <DocumentDrawer
                         item={previewingDocument.item}
                         initialTab={previewingDocument.initialTab}
                         onClose={() => setPreviewingDocument(null)}
