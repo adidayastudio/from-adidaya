@@ -61,7 +61,7 @@ export default function FinanceMobileHeader({
             <div className="lg:hidden fixed top-0 left-0 right-0 z-40 pt-6 pointer-events-none">
                 {/* Background Mask - Linear Blur effect (Top to Bottom) */}
                 <div className={clsx(
-                    "absolute left-0 right-0 transition-all duration-500 pointer-events-none",
+                    "absolute left-0 right-0 bg-white/80 dark:bg-neutral-900/80 transition-all duration-500 pointer-events-none",
                     scrolled ? "opacity-100" : "opacity-0"
                 )} style={{
                     top: '-200px',
