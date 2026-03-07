@@ -22,6 +22,7 @@ const PROJECT_COLUMNS = `
     budget,
     description,
     stages,
+    project_number,
     created_at,
     updated_at
 `;

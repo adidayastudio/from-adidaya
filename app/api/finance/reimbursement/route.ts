@@ -39,10 +39,12 @@ const REIMBURSEMENT_COLUMNS = `
     payment_date,
     payment_proof_url,
     source_of_fund_id,
+    priority,
     created_by,
     created_at,
     updated_at,
-    project:projects(id, project_name, project_code),
+    request_number,
+    project:projects(id, project_name, project_code, project_number),
     items:reimbursement_items(id, name, qty, unit, unit_price, total)
 `;
 
@@ -70,6 +72,9 @@ export async function GET(request: NextRequest) {
         const q = searchParams.get("q");
         const month = searchParams.get("month"); // 1-12
         const year = searchParams.get("year");   // 2026, etc.
+        const startDateParam = searchParams.get("start_date");
+        const endDateParam = searchParams.get("end_date");
+        const category = searchParams.get("category");
 
         // Build base query for data
         let query = supabase
@@ -85,21 +90,37 @@ export async function GET(request: NextRequest) {
         // Apply shared filters
         const applyFilters = (qBuilder: any, includeStatus: boolean = true) => {
             let b = qBuilder;
-            if (projectId && projectId !== "ALL") b = b.eq("project_id", projectId);
+            if (projectId && projectId !== "ALL") {
+                const projectIds = projectId.split(",");
+                if (projectIds.length > 1) {
+                    b = b.in("project_id", projectIds);
+                } else {
+                    b = b.eq("project_id", projectId);
+                }
+            }
             if (includeStatus && status && status !== "ALL") b = b.eq("status", status);
             if (myRequests) b = b.eq("created_by", user.id);
+            if (category && category !== "ALL") {
+                const categories = category.split(",");
+                if (categories.length > 1) {
+                    b = b.in("category", categories);
+                } else {
+                    b = b.eq("category", category);
+                }
+            }
 
             if (q) {
                 b = b.ilike("description", `%${q}%`);
             }
 
-            // Date filtering (skip if month is "ALL")
-            if (month && year && month !== "ALL") {
+            // Date filtering
+            if (startDateParam && endDateParam) {
+                b = b.gte("date", startDateParam).lte("date", endDateParam);
+            } else if (month && year && month !== "ALL") {
                 const yearInt = parseInt(year);
                 const monthInt = parseInt(month);
                 const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
 
-                // Use literal date parts to avoid timezone shifts from .toISOString()
                 const lastDay = new Date(yearInt, monthInt, 0).getDate();
                 const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 

@@ -11,6 +11,7 @@ import {
     CreditCard,
     X,
     Plus, Loader2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, Pencil, Trash2, CheckCircle2, AlertCircle, Ban, Clock, AlertTriangle,
+    RotateCcw,
     Send,
     XCircle,
     Package,
@@ -21,15 +22,20 @@ import {
     Check,
     User,
     Users,
-    ExternalLink
+    ExternalLink,
+    FileText,
+    FileSpreadsheet,
+    ArrowUpNarrowWide,
+    ArrowDownWideNarrow
 } from "lucide-react";
 import { CATEGORY_OPTIONS } from "./modules/constants";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
-import { format, startOfMonth, endOfMonth, isBefore } from "date-fns";
+import { format, startOfMonth, endOfMonth, isBefore, addMonths } from "date-fns";
 import { PurchasingItem, ApprovalStatus, FundingSource, PurchaseType, PurchaseStage } from "@/lib/types/finance-types";
 import { Project } from "@/types/project";
-import { formatCurrency, getPrimaryStatus, STATUS_THEMES, formatStatus, cleanEntityName } from "./modules/utils";
+import { formatCurrency, getPrimaryStatus, STATUS_THEMES, formatStatus, cleanEntityName, formatStructuredId, formatItemTitle, formatCardDate } from "./modules/utils";
+import * as XLSX from "xlsx";
 import { getFinanceFileUrl, uploadFinanceFile, uploadFinanceFileExact } from "@/lib/api/storage";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
@@ -980,12 +986,26 @@ export default function PurchasingClient() {
     const itemsPerPage = 50;
 
     // Filters
-    const [selectedProject, setSelectedProject] = useState<string>("ALL");
-    const [categoryFilter, setCategoryFilter] = useState<PurchaseType | "ALL">("ALL");
     const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+    const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
+    const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
+    const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
     const [showAllMonths, setShowAllMonths] = useState(false);
+
+    // Sorting
+    const [sortColumn, setSortColumn] = useState<'date' | 'project_name' | 'amount' | 'status' | 'description' | 'type' | 'submitted_by_name' | null>('date');
+    const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [isExporting, setIsExporting] = useState(false);
     const [globalStats, setGlobalStats] = useState<any>(null);
+
+    const handleMonthChange = (direction: "prev" | "next") => {
+        const nextMonth = addMonths(currentMonth, direction === "prev" ? -1 : 1);
+        setCurrentMonth(nextMonth);
+        setStartDate(startOfMonth(nextMonth));
+        setEndDate(endOfMonth(nextMonth));
+        setShowAllMonths(false);
+    };
 
     const isTeamView = viewMode === "team";
 
@@ -1013,10 +1033,11 @@ export default function PurchasingClient() {
                     limit: itemsPerPage,
                     offset: offset,
                     approval_status: statusFilter,
-                    project_id: selectedProject !== "ALL" ? selectedProject : undefined,
+                    project_id: selectedProjects.length > 0 ? selectedProjects : undefined,
                     q: searchTerm || undefined,
-                    month: showAllMonths ? "ALL" : currentMonth.getMonth() + 1,
-                    year: currentMonth.getFullYear(),
+                    start_date: showAllMonths ? undefined : format(startDate, "yyyy-MM-dd"),
+                    end_date: showAllMonths ? undefined : format(endDate, "yyyy-MM-dd"),
+                    type: categoryFilters.length > 0 ? categoryFilters : undefined,
                     my_requests: !isTeamView
                 }),
                 fetchTeamMembers()
@@ -1030,12 +1051,13 @@ export default function PurchasingClient() {
                 const creatorRole = profileMap.get(req.created_by)?.role || "Unknown Role";
 
                 return {
+                    ...req, // PRESERVE ALL FIELDS (including request_number, project_number, project object)
                     id: req.id,
                     request_id: req.id,
                     date: req.date,
                     project_id: req.project_id,
-                    project_code: req.project?.project_code || "N/A",
-                    project_name: req.project?.project_name || "Unknown",
+                    project_code: req.project?.project_code || req.project_code || "N/A",
+                    project_name: req.project?.project_name || req.project_name || "Unknown",
                     vendor: req.vendor || "",
                     description: req.description || (req.items?.[0]?.name || "No description"),
                     quantity: req.items?.[0]?.qty || 1,
@@ -1108,12 +1130,12 @@ export default function PurchasingClient() {
 
     useEffect(() => {
         loadData(items.length === 0); // Only show GlobalLoading if we have no items
-    }, [currentPage, statusFilter, selectedProject, searchTerm, currentMonth, showAllMonths, isTeamView]);
+    }, [currentPage, statusFilter, selectedProjects, categoryFilters, searchTerm, startDate, endDate, showAllMonths, isTeamView]);
 
     // Reset page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [statusFilter, selectedProject, searchTerm, currentMonth, showAllMonths]);
+    }, [statusFilter, selectedProjects, categoryFilters, searchTerm, startDate, endDate, showAllMonths, currentMonth]);
 
     useEffect(() => {
         const handleFabAction = (e: any) => {
@@ -1134,23 +1156,7 @@ export default function PurchasingClient() {
         }
     }, [viewMode]);
 
-    // FAB Action Listener
-    useEffect(() => {
-        const handleFabAction = (e: any) => {
-            if (e.detail?.id === 'FINANCE_NEW_PURCHASE') {
-                setEditingItem(null);
-                setIsDrawerOpen(true);
-            }
-        };
-        window.addEventListener('fab-action', handleFabAction);
-        return () => window.removeEventListener('fab-action', handleFabAction);
-    }, []);
 
-    const handleMonthChange = (direction: "prev" | "next") => {
-        const newDate = new Date(currentMonth);
-        newDate.setMonth(newDate.getMonth() + (direction === "next" ? 1 : -1));
-        setCurrentMonth(newDate);
-    };
 
     const handleExport = async () => {
         if (filteredItems.length === 0) return;
@@ -1158,15 +1164,16 @@ export default function PurchasingClient() {
 
         try {
             // 1. Prepare Meta
-            const project = projects.find(p => p.id === selectedProject);
-            const projectCode = project ? (project.projectCode || "PRG") : "ALL";
-            const projectName = project ? project.projectName : (selectedProject === "ALL" ? "All Projects" : "Selected Project");
+            const projectCount = selectedProjects.length;
+            const project = projectCount === 1 ? projects.find(p => p.id === selectedProjects[0]) : null;
+            const projectCode = project ? (project.projectCode || "PRG") : (projectCount === 0 ? "ALL" : "MULTIPLE");
+            const projectName = project ? project.projectName : (projectCount === 0 ? "All Projects" : `${projectCount} Selected Projects`);
             const documentName = isTeamView ? "Team Purchasing Report" : "My Purchasing Report";
             const generatedAt = new Date().toLocaleString("id-ID");
 
-            const startStr = format(startOfMonth(currentMonth), "dd MMM");
-            const endStr = format(endOfMonth(currentMonth), "dd MMM yyyy");
-            const periodText = `Monthly Report (${startStr} – ${endStr})`;
+            const startStr = format(startDate, "dd MMM");
+            const endStr = format(endDate, "dd MMM yyyy");
+            const periodText = `Report (${startStr} – ${endStr})`;
 
             // 2. Prepare Summary
             const totalAmount = filteredItems.reduce((acc, i) => acc + (i.amount || 0), 0);
@@ -1229,6 +1236,47 @@ export default function PurchasingClient() {
         } catch (error) {
             console.error("PDF Export Error:", error);
             alert("Failed to export PDF. Please try again.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleExportExcel = async () => {
+        if (filteredItems.length === 0) return;
+        setIsExporting(true);
+        try {
+            const projectCount = selectedProjects.length;
+            const project = projectCount === 1 ? projects.find(p => p.id === selectedProjects[0]) : null;
+            const projectCode = project ? (project.projectCode || "PRG") : (projectCount === 0 ? "ALL" : "MULTIPLE");
+            const dateSuffix = format(new Date(), "yyyyMMdd");
+            const filename = `Purchasing_${projectCode}_${dateSuffix}.xlsx`;
+
+            // Format data for Excel
+            const data = filteredItems.map(item => ({
+                "Date": format(new Date(item.date), "dd MMM yyyy"),
+                "Project Code": item.project?.project_code || "N/A",
+                "Project Name": item.project?.project_name || "Unknown",
+                "Description": item.description || "",
+                "Vendor": item.vendor || "",
+                "Amount": item.amount,
+                "Status": item.approval_status
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(data);
+
+            // Auto size columns roughly
+            const wscols = Object.keys(data[0] || {}).map(key => ({ wch: Math.max(15, key.length + 5) }));
+            ws['!cols'] = wscols;
+
+            XLSX.utils.book_append_sheet(wb, ws, "Purchasing Data");
+
+            // Write file and trigger download
+            XLSX.writeFile(wb, filename);
+
+        } catch (error) {
+            console.error("Excel Export Error:", error);
+            alert("Failed to export Excel.");
         } finally {
             setIsExporting(false);
         }
@@ -1369,37 +1417,30 @@ export default function PurchasingClient() {
     const filteredItems = useMemo(() => {
         let current = [...items];
 
-        if (sortConfig) {
+        if (sortColumn) {
             current.sort((a, b) => {
-                // Special handling for status sorting with custom order
-                if (sortConfig.key === 'approval_status') {
+                let comparison = 0;
+                if (sortColumn === 'status') {
                     const aIndex = STATUS_ORDER.indexOf(a.approval_status);
                     const bIndex = STATUS_ORDER.indexOf(b.approval_status);
-                    return sortConfig.direction === 'asc' ? aIndex - bIndex : bIndex - aIndex;
+                    comparison = aIndex - bIndex;
+                } else if (sortColumn === 'date') {
+                    comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+                } else if (sortColumn === 'project_name') {
+                    comparison = (a.project?.project_name || "").localeCompare(b.project?.project_name || "");
+                } else if (sortColumn === 'amount') {
+                    comparison = (a.amount || 0) - (b.amount || 0);
                 }
 
-                // Special handling for date sorting
-                if (sortConfig.key === 'date') {
-                    const aTime = new Date(a.date).getTime();
-                    const bTime = new Date(b.date).getTime();
-                    if (aTime !== bTime) {
-                        return sortConfig.direction === 'asc' ? aTime - bTime : bTime - aTime;
-                    }
-                    // Fallback to ID for stable sort
+                if (comparison === 0) {
                     return b.id.localeCompare(a.id);
                 }
-
-                const aValue = a[sortConfig.key];
-                const bValue = b[sortConfig.key];
-                if (aValue === undefined || bValue === undefined) return 0;
-                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-                return 0;
+                return sortDirection === 'asc' ? comparison : -comparison;
             });
         }
 
         return current;
-    }, [baseItems, statusFilter, sortConfig, STATUS_ORDER]);
+    }, [items, sortColumn, sortDirection, STATUS_ORDER]);
 
     if (isAuthLoading || isLoadingData) {
         return <GlobalLoading />;
@@ -1432,7 +1473,7 @@ export default function PurchasingClient() {
                         onClick={() => setShowFilters(true)}
                         className={clsx(
                             "w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative",
-                            (selectedProject !== "ALL" || categoryFilter !== "ALL" || showAllMonths) ? "text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-500/10" : "text-gray-700 dark:text-white"
+                            (selectedProjects.length > 0 || categoryFilters.length > 0 || !showAllMonths) ? "text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-500/10" : "text-gray-700 dark:text-white"
                         )}
                     >
                         <ListFilter className="w-5 h-5" strokeWidth={1.5} />
@@ -1499,82 +1540,89 @@ export default function PurchasingClient() {
                 {/* MOBILE TOOLBAR (Search + Filters per user request) */}
                 <div className="flex flex-col gap-2 md:hidden">
                     {/* Quick Filters Row */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-hide">
-                        {/* Month Selector */}
-                        <div className="flex items-center gap-0.5 p-1 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm shrink-0">
-                            <button
-                                onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
-                                className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
-                            >
-                                <ChevronLeft className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => setShowAllMonths(!showAllMonths)}
-                                className={clsx(
-                                    "text-[11px] font-bold min-w-[42px] text-center transition-colors px-1",
-                                    showAllMonths ? "text-red-600 dark:text-red-400" : "text-neutral-700 dark:text-neutral-300"
-                                )}
-                            >
-                                {showAllMonths ? "ALL" : format(currentMonth, "MMM-yy")}
-                            </button>
-                            <button
-                                onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
-                                className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
-                            >
-                                <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-
-                        {/* Project Dropdown */}
-                        <div className="relative shrink-0">
-                            <div className="h-9 px-3 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 shadow-sm flex items-center gap-1">
-                                <span>{selectedProject === "ALL" ? "ALL" : projects.find(p => p.id === selectedProject)?.projectCode || "ALL"}</span>
-                                <ChevronDown className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+                    <div className="flex items-start gap-1.5 w-full">
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-hide flex-1">
+                            {/* Mobile Date Summary */}
+                            <div className="flex items-center gap-0.5 p-1 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm shrink-0">
+                                <button
+                                    onClick={() => handleMonthChange("prev")}
+                                    className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                >
+                                    <ChevronLeft className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => setShowFilters(true)}
+                                    className="text-[12px] font-bold text-neutral-700 dark:text-neutral-300 tracking-tight whitespace-nowrap px-3"
+                                >
+                                    {showAllMonths ? "All Time" : (
+                                        format(startDate, "MMM-yy") === format(endDate, "MMM-yy") && startDate.getDate() === 1 && endDate.getDate() === new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate()
+                                            ? format(startDate, "MMM-yy")
+                                            : `${format(startDate, "d MMM")} - ${format(endDate, "d MMM")}`
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => handleMonthChange("next")}
+                                    className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                >
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                </button>
                             </div>
-                            <select
-                                value={selectedProject}
-                                onChange={(e) => setSelectedProject(e.target.value)}
-                                className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
-                            >
-                                <option value="ALL">All Projects</option>
-                                {projects.map(p => (
-                                    <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
-                                ))}
-                            </select>
-                        </div>
 
-                        {/* Category Dropdown */}
-                        <div className="relative shrink-0">
-                            <div className="h-9 px-3 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 shadow-sm flex items-center gap-1">
-                                <span>
-                                    {categoryFilter === "ALL"
-                                        ? "All Categories"
-                                        : CATEGORY_OPTIONS.find(c => c.value === categoryFilter)?.label || categoryFilter}
-                                </span>
-                                <ChevronDown className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+                            {/* Project Select */}
+                            <div className="relative shrink-0 flex items-center h-9 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm overflow-hidden">
+                                <select
+                                    value={selectedProjects.length === 1 ? selectedProjects[0] : (selectedProjects.length > 1 ? "MULTIPLE" : "ALL")}
+                                    onChange={(e) => {
+                                        if (e.target.value === "ALL") setSelectedProjects([]);
+                                        else if (e.target.value !== "MULTIPLE") setSelectedProjects([e.target.value]);
+                                    }}
+                                    className="h-full pl-3 pr-8 bg-transparent appearance-none text-[11px] font-bold text-neutral-700 dark:text-neutral-300 outline-none cursor-pointer tracking-tight whitespace-nowrap w-auto max-w-[130px] text-ellipsis overflow-hidden"
+                                >
+                                    <option value="ALL">All Projects</option>
+                                    {selectedProjects.length > 1 && <option value="MULTIPLE" disabled>{selectedProjects.length} Projects</option>}
+                                    {projects.map(p => (
+                                        <option key={p.id} value={p.id}>{p.projectCode || p.projectName}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
                             </div>
-                            <select
-                                value={categoryFilter}
-                                onChange={(e) => setCategoryFilter(e.target.value as any)}
-                                className="absolute inset-0 w-full h-full opacity-0 appearance-none cursor-pointer"
-                            >
-                                <option value="ALL">All Categories</option>
-                                {CATEGORY_OPTIONS.map(cat => (
-                                    <option key={cat.value} value={cat.value}>
-                                        {cat.label}
-                                    </option>
-                                ))}
-                            </select>
+
+                            {/* Category Select */}
+                            <div className="relative shrink-0 flex items-center h-9 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm overflow-hidden">
+                                <select
+                                    value={categoryFilters.length === 1 ? categoryFilters[0] : (categoryFilters.length > 1 ? "MULTIPLE" : "ALL")}
+                                    onChange={(e) => {
+                                        if (e.target.value === "ALL") setCategoryFilters([]);
+                                        else if (e.target.value !== "MULTIPLE") setCategoryFilters([e.target.value]);
+                                    }}
+                                    className="h-full pl-3 pr-8 bg-transparent appearance-none text-[11px] font-bold text-neutral-700 dark:text-neutral-300 outline-none cursor-pointer tracking-tight whitespace-nowrap w-auto max-w-[130px] text-ellipsis overflow-hidden"
+                                >
+                                    <option value="ALL">All Categories</option>
+                                    {categoryFilters.length > 1 && <option value="MULTIPLE" disabled>{categoryFilters.length} Categories</option>}
+                                    {CATEGORY_OPTIONS.map(cat => (
+                                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
+                            </div>
                         </div>
 
-                        {/* Export Icon */}
-                        <button
-                            onClick={handleExport}
-                            className="shrink-0 h-9 px-3 flex justify-center items-center gap-1.5 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 shadow-sm hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
-                        >
-                            <Download className="w-3.5 h-3.5" />
-                            <span className="text-[11px] font-bold">Export</span>
-                        </button>
+                        {/* Export Icon pinned to the right side outside overflow container */}
+                        <div className="relative group/export h-9 shrink-0 flex items-start">
+                            <button className="h-9 w-9 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 shadow-sm flex items-center justify-center hover:bg-white dark:hover:bg-neutral-700 transition-colors">
+                                <Download className="w-4 h-4" />
+                            </button>
+                            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-xl opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all flex flex-col z-50 overflow-hidden py-1">
+                                <button onClick={handleExport} className="w-full relative px-4 py-2.5 flex items-center gap-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 transition-colors group/item">
+                                    <div className="absolute inset-y-0 left-0 w-1 bg-red-500 rounded-r-full hidden group-hover/item:block" />
+                                    <FileText className="w-4 h-4 text-red-500" /> Export to PDF
+                                </button>
+                                <button onClick={handleExportExcel} className="w-full relative px-4 py-2.5 flex items-center gap-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 hover:text-emerald-600 transition-colors group/item">
+                                    <div className="absolute inset-y-0 left-0 w-1 bg-emerald-500 rounded-r-full hidden group-hover/item:block" />
+                                    <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to XLS
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1595,35 +1643,38 @@ export default function PurchasingClient() {
 
                         <div className="h-10 flex items-center gap-1 p-1 bg-white rounded-xl border border-neutral-200 shadow-sm">
                             <button
-                                onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
+                                onClick={() => handleMonthChange("prev")}
                                 className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
                             <button
-                                onClick={() => setShowAllMonths(!showAllMonths)}
-                                className={clsx(
-                                    "px-2 text-sm font-bold whitespace-nowrap min-w-[100px] text-center transition-colors hover:text-red-500",
-                                    showAllMonths ? "text-red-600" : "text-neutral-700"
-                                )}
-                            >
-                                {showAllMonths ? "All Time" : format(currentMonth, "MMM yyyy")}
-                            </button>
-                            <button
-                                onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
-                                className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
+                                onClick={() => handleMonthChange("next")}
+                                className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </button>
+                            <div className="w-[1px] h-4 bg-neutral-200 dark:bg-neutral-700 mx-1" />
+                            <div className="px-2 text-[11px] font-bold text-neutral-400 uppercase tracking-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
+                                {showAllMonths ? "All Time" : (
+                                    format(startDate, "MMM yyyy") === format(endDate, "MMM yyyy")
+                                        ? format(startDate, "MMM yyyy")
+                                        : `${format(startDate, "d MMM")} - ${format(endDate, "d MMM")}`
+                                )}
+                            </div>
                         </div>
 
                         <div className="relative group">
                             <select
-                                value={selectedProject}
-                                onChange={(e) => setSelectedProject(e.target.value)}
-                                className="appearance-none h-10 pl-3 pr-8 bg-white border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/50 transition-all cursor-pointer min-w-[100px] max-w-[140px] lg:max-w-[180px] truncate"
+                                value={selectedProjects.length === 1 ? selectedProjects[0] : (selectedProjects.length > 1 ? "MULTIPLE" : "ALL")}
+                                onChange={(e) => {
+                                    if (e.target.value === "ALL") setSelectedProjects([]);
+                                    else if (e.target.value !== "MULTIPLE") setSelectedProjects([e.target.value]);
+                                }}
+                                className="appearance-none h-10 pl-3 pr-8 bg-white border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/50 transition-all cursor-pointer w-full md:w-auto"
                             >
                                 <option value="ALL">All Projects</option>
+                                {selectedProjects.length > 1 && <option value="MULTIPLE" disabled>{selectedProjects.length} Projects Selected</option>}
                                 {projects.map(p => (
                                     <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
                                 ))}
@@ -1633,11 +1684,15 @@ export default function PurchasingClient() {
 
                         <div className="relative group">
                             <select
-                                value={categoryFilter}
-                                onChange={(e) => setCategoryFilter(e.target.value as any)}
-                                className="appearance-none h-10 pl-3 pr-8 bg-white border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/50 transition-all cursor-pointer min-w-[100px] max-w-[140px] lg:max-w-[180px] truncate"
+                                value={categoryFilters.length === 1 ? categoryFilters[0] : (categoryFilters.length > 1 ? "MULTIPLE" : "ALL")}
+                                onChange={(e) => {
+                                    if (e.target.value === "ALL") setCategoryFilters([]);
+                                    else if (e.target.value !== "MULTIPLE") setCategoryFilters([e.target.value]);
+                                }}
+                                className="appearance-none h-10 pl-3 pr-8 bg-white border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/50 transition-all cursor-pointer w-full md:w-auto"
                             >
                                 <option value="ALL">All Categories</option>
+                                {categoryFilters.length > 1 && <option value="MULTIPLE" disabled>{categoryFilters.length} Categories</option>}
                                 {CATEGORY_OPTIONS.map(cat => (
                                     <option key={cat.value} value={cat.value}>
                                         {cat.label}
@@ -1650,13 +1705,20 @@ export default function PurchasingClient() {
 
                     {/* RIGHT: Export, New */}
                     <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-shrink-0">
-                        <button
-                            onClick={handleExport}
-                            className="h-10 px-4 bg-white border border-neutral-200 text-neutral-600 rounded-xl text-sm font-bold shadow-sm hover:bg-neutral-50 hover:text-neutral-900 transition-all flex items-center gap-2"
-                        >
-                            <Download className="w-4 h-4" />
-                            <span className="hidden lg:inline">Export</span>
-                        </button>
+                        <div className="relative group/export h-10">
+                            <button className="h-10 px-4 bg-white border border-neutral-200 rounded-xl flex items-center gap-2 text-sm font-medium text-neutral-700 hover:text-neutral-900 shadow-sm hover:border-neutral-300 transition-all">
+                                <Download className="w-4 h-4" />
+                                <span className="hidden lg:inline">Export</span>
+                            </button>
+                            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-neutral-200 shadow-xl rounded-xl opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all flex flex-col z-50 overflow-hidden py-1">
+                                <button onClick={handleExport} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-left text-sm font-semibold text-neutral-700 transition-colors">
+                                    <FileText className="w-4 h-4 text-red-500" /> Export to PDF
+                                </button>
+                                <button onClick={handleExportExcel} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-left text-sm font-semibold text-neutral-700 transition-colors">
+                                    <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to XLS
+                                </button>
+                            </div>
+                        </div>
 
                         <button
                             onClick={() => {
@@ -1680,12 +1742,10 @@ export default function PurchasingClient() {
                         <h4 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
                             {searchTerm ? "No results found" :
                                 statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
-                                    isBefore(currentMonth, startOfMonth(new Date()))
-                                        ? `No purchasing in ${format(currentMonth, "MMMM yyyy")}`
-                                        : "No purchase requests yet"}
+                                    "No items found"}
                         </h4>
                         {/* Only show New Request button for current or future months */}
-                        {!searchTerm && statusFilter === "ALL" && !isBefore(currentMonth, startOfMonth(new Date())) && (
+                        {!searchTerm && statusFilter === "ALL" && (
                             <button
                                 onClick={() => setIsDrawerOpen(true)}
                                 className="mt-4 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl shadow-lg shadow-red-200/50 dark:shadow-red-900/30"
@@ -1713,49 +1773,46 @@ export default function PurchasingClient() {
                                     {isTeamView ? (
                                         <>
                                             {isAdmin && (
-                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
-                                                    <Trash2 className="w-4 h-4" />
+                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
+                                                    <Trash2 className="w-[18px] h-[18px]" />
                                                 </button>
                                             )}
                                             {isSubmitted && (
                                                 <>
-                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2 rounded-xl bg-rose-50 text-rose-500 border border-rose-100 flex-shrink-0 active:scale-95 transition-all" title="Reject">
-                                                        <Ban className="w-4 h-4" />
+                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Reject">
+                                                        <Ban className="w-[18px] h-[18px]" />
                                                     </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2 rounded-xl bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                                                        <AlertCircle className="w-3.5 h-3.5" /> Revise
+                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2.5 rounded-full bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                        <RotateCcw className="w-[18px] h-[18px]" /> Revise
                                                     </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2 rounded-xl bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
-                                                        <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
+                                                        <Check className="w-[18px] h-[18px]" /> Approve
                                                     </button>
                                                 </>
                                             )}
                                             {isApprovedNotPaid && (
                                                 <>
-                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 flex-shrink-0 active:scale-95 transition-all" title="Edit">
-                                                        <Pencil className="w-4 h-4" />
+                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 flex-shrink-0 active:scale-95 transition-all" title="Edit">
+                                                        <Pencil className="w-[18px] h-[18px]" />
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
                                                         disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
-                                                        className="flex-1 py-2 rounded-xl bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50 shadow-md shadow-emerald-200/50"
+                                                        className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all disabled:opacity-50 shadow-md shadow-blue-200/50"
                                                     >
-                                                        <CreditCard className="w-3.5 h-3.5" /> {(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) ? "Missing Data" : "Pay Now"}
+                                                        <CreditCard className="w-[18px] h-[18px]" /> {(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) ? "Missing Data" : "Pay Now"}
                                                     </button>
                                                 </>
                                             )}
                                         </>
                                     ) : (
                                         <>
-                                            <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
-                                                <Trash2 className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 flex-shrink-0 active:scale-95 transition-all">
-                                                <Eye className="w-4 h-4" />
+                                            <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
+                                                <Trash2 className="w-[18px] h-[18px]" />
                                             </button>
                                             {(isDraftOrRevise || (isSubmitted && isAdmin)) && (
-                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2 rounded-xl bg-neutral-900 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-neutral-400/50">
-                                                    <Pencil className="w-3.5 h-3.5" /> Edit
+                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2.5 rounded-full bg-neutral-900 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-neutral-400/50">
+                                                    <Pencil className="w-[18px] h-[18px]" /> Edit
                                                 </button>
                                             )}
                                         </>
@@ -1767,10 +1824,11 @@ export default function PurchasingClient() {
                         return (
                             <FinanceItemCard
                                 key={item.id}
-                                idRef={item.id.replace('req_', 'PO-24-').substring(0, 9)}
-                                title={item.description || (item.items && item.items.length > 0 ? item.items[0].name : "Purchase Item")}
-                                projectCode={item.project_code || 'GEN'}
-                                date={format(new Date(item.date), "d MMM yyyy")}
+                                idRef={formatStructuredId('PO', item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code)}
+                                title={formatItemTitle(item.items || [], item.description)}
+                                projectCode={item.project?.project_code || item.project_code || 'GEN'}
+                                date={formatCardDate(item.date)}
+                                priority={item.priority}
                                 amount={item.amount}
                                 status={statusToUse}
                                 onClick={() => setViewingItem(item)}
@@ -1871,24 +1929,20 @@ export default function PurchasingClient() {
                                                 <h4 className="text-base font-semibold text-neutral-700">
                                                     {searchTerm ? "No results found" :
                                                         statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
-                                                            isBefore(currentMonth, startOfMonth(new Date()))
-                                                                ? `No purchasing in ${format(currentMonth, "MMMM yyyy")}`
-                                                                : "No purchase requests yet"}
+                                                            "No purchase requests yet"}
                                                 </h4>
                                                 <p className="text-sm text-neutral-400 max-w-xs mx-auto">
                                                     {searchTerm ?
                                                         `We couldn't find any requests matching "${searchTerm}". Try a different search term.` :
                                                         statusFilter !== "ALL" ?
-                                                            `There are no ${statusFilter.toLowerCase()} purchase requests for ${format(currentMonth, "MMMM yyyy")}.` :
-                                                            isBefore(currentMonth, startOfMonth(new Date())) ?
-                                                                `There were no purchase requests recorded in ${format(currentMonth, "MMMM yyyy")}.` :
-                                                                isTeamView ?
-                                                                    "When team members submit purchase requests, they'll appear here for your review." :
-                                                                    "Start by creating your first purchase request. Track materials, tools, and services."}
+                                                            `There are no ${statusFilter.toLowerCase()} purchase requests found.` :
+                                                            isTeamView ?
+                                                                "When team members submit purchase requests, they'll appear here for your review." :
+                                                                "Start by creating your first purchase request. Track materials, tools, and services."}
                                                 </p>
                                             </div>
                                             {/* Only show New Request button for current or future months */}
-                                            {!searchTerm && statusFilter === "ALL" && !isBefore(currentMonth, startOfMonth(new Date())) && (
+                                            {!searchTerm && statusFilter === "ALL" && (
                                                 <button
                                                     onClick={() => setIsDrawerOpen(true)}
                                                     className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-red-200/50 transition-all flex items-center gap-2"
@@ -2340,146 +2394,231 @@ export default function PurchasingClient() {
             </AnimatePresence>
 
             {/* Filter Bottom Sheet / Modal */}
-            {showFilters && (
-                <div className="fixed md:hidden inset-0 z-[100] flex items-end justify-center">
-                    <div
-                        className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity"
-                        onClick={() => setShowFilters(false)}
-                    />
-                    <div className="relative w-full mx-2 mb-2 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[56px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border border-white/40 p-8 flex flex-col gap-8 max-h-[85dvh]">
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-2">
-                            <h3 className="text-[22px] font-bold text-neutral-900 tracking-tight">Filters</h3>
-                            <div className="flex items-center gap-3">
-                                {(selectedProject !== "ALL" || categoryFilter !== "ALL" || showAllMonths) && (
+            {
+                showFilters && (
+                    <div className="fixed md:hidden inset-0 z-[100] flex items-end justify-center">
+                        <div
+                            className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity"
+                            onClick={() => setShowFilters(false)}
+                        />
+                        <div className="relative w-full mx-2 mb-2 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border border-white/40 dark:border-neutral-800 p-6 flex flex-col gap-6 max-h-[90dvh]">
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-2">
+                                <h3 className="text-[20px] font-bold text-neutral-900 dark:text-white tracking-tight">Filters</h3>
+                                <div className="flex items-center gap-3">
+                                    {(selectedProjects.length > 0 || categoryFilters.length > 0 || !showAllMonths) && (
+                                        <button
+                                            onClick={() => {
+                                                setSelectedProjects([]);
+                                                setCategoryFilters([]);
+                                                setShowAllMonths(true);
+                                                setStartDate(startOfMonth(new Date()));
+                                                setEndDate(endOfMonth(new Date()));
+                                                setSortColumn('date');
+                                                setSortDirection('desc');
+                                            }}
+                                            className="text-[13px] font-bold text-red-500 hover:text-red-600 active:scale-95 transition-all outline-none tracking-wider"
+                                        >
+                                            Reset
+                                        </button>
+                                    )}
                                     <button
-                                        onClick={() => {
-                                            setSelectedProject("ALL");
-                                            setCategoryFilter("ALL");
-                                            setShowAllMonths(false);
-                                            setCurrentMonth(new Date());
-                                        }}
-                                        className="text-[13px] font-medium text-blue-600 hover:text-blue-700 active:scale-95 transition-all outline-none"
+                                        onClick={() => setShowFilters(false)}
+                                        className="w-8 h-8 bg-neutral-100 dark:bg-neutral-800 border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center active:scale-95 transition-transform"
                                     >
-                                        Clear Filters
+                                        <X size={18} className="text-neutral-500" strokeWidth={2} />
                                     </button>
-                                )}
-                                <button
-                                    onClick={() => setShowFilters(false)}
-                                    className="w-10 h-10 bg-white/50 backdrop-blur-xl border border-black/5 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-                                >
-                                    <X size={20} className="text-neutral-500" strokeWidth={1.5} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-8 overflow-y-auto pb-4 pr-1 scrollbar-hide">
-                            {/* Project Filter */}
-                            <div className="space-y-4">
-                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Project</h4>
-                                <div className="flex flex-wrap gap-2.5">
-                                    {[{ id: "ALL", projectCode: "ALL", projectName: "All Projects" }, ...projects].map((p) => {
-                                        const isSelected = selectedProject === p.id;
-                                        return (
-                                            <button
-                                                key={p.id}
-                                                onClick={() => setSelectedProject(p.id)}
-                                                className={clsx(
-                                                    "px-4 py-2 rounded-full text-[13px] transition-all border",
-                                                    isSelected
-                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
-                                                        : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04] hover:bg-neutral-100"
-                                                )}
-                                            >
-                                                {p.projectCode === "ALL" ? "All Projects" : `${p.projectCode} - ${p.projectName}`}
-                                            </button>
-                                        );
-                                    })}
                                 </div>
                             </div>
 
-                            {/* Category Filter */}
-                            <div className="space-y-4">
-                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Category</h4>
-                                <div className="flex flex-wrap gap-2.5">
-                                    {[{ value: "ALL", label: "All Categories" }, ...CATEGORY_OPTIONS].map((cat) => {
-                                        const isSelected = categoryFilter === cat.value;
-                                        return (
+                            <div className="flex flex-col gap-6 overflow-y-auto pb-4 pr-1 scrollbar-hide">
+                                {/* Sorting Section */}
+                                <div className="space-y-4 px-2">
+                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Sort By</h4>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { id: 'date', label: 'Date' },
+                                            { id: 'project_name', label: 'Project' },
+                                            { id: 'amount', label: 'Amount' },
+                                            { id: 'status', label: 'Status' }
+                                        ].map((col) => (
                                             <button
-                                                key={cat.value}
-                                                onClick={() => setCategoryFilter(cat.value as any)}
+                                                key={col.id}
+                                                onClick={() => setSortColumn(col.id as any)}
                                                 className={clsx(
-                                                    "px-4 py-2 rounded-full text-[13px] transition-all border",
-                                                    isSelected
-                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
-                                                        : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04] hover:bg-neutral-100"
+                                                    "px-4 py-2.5 rounded-full text-[12px] font-bold transition-all border flex items-center justify-between",
+                                                    sortColumn === col.id
+                                                        ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-900/50"
+                                                        : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
                                                 )}
                                             >
-                                                {cat.label}
+                                                {col.label}
+                                                {sortColumn === col.id && (
+                                                    <div
+                                                        role="button"
+                                                        tabIndex={0}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                                        }}
+                                                        className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer outline-none"
+                                                    >
+                                                        {sortDirection === 'asc' ? <ArrowUpNarrowWide className="w-3.5 h-3.5" /> : <ArrowDownWideNarrow className="w-3.5 h-3.5" />}
+                                                    </div>
+                                                )}
                                             </button>
-                                        );
-                                    })}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Month Filter */}
-                            <div className="space-y-4">
-                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Month</h4>
-                                <div className="flex items-center gap-2 p-1 bg-white/40 backdrop-blur-md rounded-full border border-black/[0.04] w-fit">
-                                    <button
-                                        onClick={() => { setShowAllMonths(false); handleMonthChange("prev"); }}
-                                        className="p-2 text-neutral-400 hover:text-neutral-600 transition-colors"
-                                    >
-                                        <ChevronLeft className="w-4 h-4" />
-                                    </button>
+                                {/* Project Filter */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between px-2">
+                                        <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Project</h4>
+                                        {selectedProjects.length > 0 && (
+                                            <button onClick={() => setSelectedProjects([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 px-2">
+                                        <button
+                                            onClick={() => setSelectedProjects([])}
+                                            className={clsx(
+                                                "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                                selectedProjects.length === 0
+                                                    ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
+                                                    : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                            )}
+                                        >
+                                            All
+                                        </button>
+                                        {projects.map((p) => {
+                                            const isSelected = selectedProjects.includes(p.id);
+                                            return (
+                                                <button
+                                                    key={p.id}
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setSelectedProjects(selectedProjects.filter(id => id !== p.id));
+                                                        } else {
+                                                            setSelectedProjects([...selectedProjects, p.id]);
+                                                        }
+                                                    }}
+                                                    className={clsx(
+                                                        "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                                        isSelected
+                                                            ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
+                                                            : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
+                                                    )}
+                                                >
+                                                    {p.projectCode}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Category Filter */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between px-2">
+                                        <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Category</h4>
+                                        {categoryFilters.length > 0 && (
+                                            <button onClick={() => setCategoryFilters([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
+                                        )}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 px-2">
+                                        <button
+                                            onClick={() => setCategoryFilters([])}
+                                            className={clsx(
+                                                "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                                categoryFilters.length === 0
+                                                    ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
+                                                    : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                            )}
+                                        >
+                                            All
+                                        </button>
+                                        {CATEGORY_OPTIONS.map((cat) => {
+                                            const isSelected = categoryFilters.includes(cat.value);
+                                            return (
+                                                <button
+                                                    key={cat.value}
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setCategoryFilters(categoryFilters.filter(v => v !== cat.value));
+                                                        } else {
+                                                            setCategoryFilters([...categoryFilters, cat.value]);
+                                                        }
+                                                    }}
+                                                    className={clsx(
+                                                        "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                                        isSelected
+                                                            ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
+                                                            : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
+                                                    )}
+                                                >
+                                                    {cat.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Date Range Filter */}
+                                <div className="space-y-4 px-2">
+                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Date Range</h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider px-1">From</span>
+                                            <input
+                                                type="date"
+                                                value={format(startDate, "yyyy-MM-dd")}
+                                                onChange={(e) => {
+                                                    setShowAllMonths(false);
+                                                    setStartDate(new Date(e.target.value));
+                                                }}
+                                                className="w-full bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider px-1">To</span>
+                                            <input
+                                                type="date"
+                                                value={format(endDate, "yyyy-MM-dd")}
+                                                onChange={(e) => {
+                                                    setShowAllMonths(false);
+                                                    setEndDate(new Date(e.target.value));
+                                                }}
+                                                className="w-full bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10"
+                                            />
+                                        </div>
+                                    </div>
                                     <button
                                         onClick={() => setShowAllMonths(!showAllMonths)}
                                         className={clsx(
-                                            "text-[13px] font-bold min-w-[60px] text-center transition-colors px-4 py-1.5 rounded-full border",
+                                            "w-full py-3.5 rounded-2xl text-[12px] font-bold transition-all border",
                                             showAllMonths
-                                                ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-sm"
-                                                : "bg-transparent text-neutral-700 border-transparent"
+                                                ? "bg-red-600 text-white border-red-500 shadow-md shadow-red-500/20"
+                                                : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
                                         )}
                                     >
-                                        {showAllMonths ? "ALL" : format(currentMonth, "MMM yyyy")}
-                                    </button>
-                                    <button
-                                        onClick={() => { setShowAllMonths(false); handleMonthChange("next"); }}
-                                        className="p-2 text-neutral-400 hover:text-neutral-600 transition-colors"
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
+                                        {showAllMonths ? "Showing All Time" : "Switch to All Time"}
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Export Data */}
-                            <div className="space-y-4">
-                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Actions</h4>
+                            {/* Footer Action */}
+                            <div className="pt-2">
                                 <button
-                                    onClick={() => {
-                                        setShowFilters(false);
-                                        handleExport();
-                                    }}
-                                    className="px-5 py-3 rounded-full text-[13px] transition-all border bg-white/40 backdrop-blur-md text-neutral-700 border-black/[0.04] hover:bg-neutral-100 shadow-sm flex items-center gap-2 font-bold w-fit"
+                                    onClick={() => setShowFilters(false)}
+                                    className="w-full bg-red-600 text-white py-4 rounded-full font-bold text-[16px] active:scale-[0.98] transition-all shadow-xl shadow-red-600/30 border border-red-500 ring-1 ring-inset ring-white/10"
                                 >
-                                    <Download className="w-4 h-4" />
-                                    Export to PDF
+                                    Apply Filters
                                 </button>
                             </div>
                         </div>
-
-                        {/* Footer Action */}
-                        <div className="pt-2">
-                            <button
-                                onClick={() => setShowFilters(false)}
-                                className="w-full bg-[#001F3F] backdrop-blur-xl backdrop-saturate-[1.5] text-white py-4 rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-[#001F3F]/30 mb-1 border border-white/20 ring-1 ring-inset ring-white/10"
-                            >
-                                Apply Filters
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
         </FinancePageWrapper >
     );

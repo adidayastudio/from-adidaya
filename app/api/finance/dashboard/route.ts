@@ -85,7 +85,8 @@ export async function GET(request: NextRequest) {
             staffClaims,
             myPurchaseHistory,
             myReimburseHistory,
-            pulsePurchases
+            pulsePurchases,
+            pulseReimbursements
         ] = await Promise.all([
             // Team Paid Purchasing (This Month)
             applyProjectFilter(supabase.from('purchasing_requests').select('amount').eq('financial_status', 'PAID').gte('payment_date', startOfThisMonth).lte('payment_date', endOfThisMonth)),
@@ -146,7 +147,7 @@ export async function GET(request: NextRequest) {
 
             // TEAM - Goods Received (Unpaid) - 5 most recent by date
             applyProjectFilter(supabase.from('purchasing_requests')
-                .select('id, date, vendor, description, amount, project:projects(project_name, project_code)')
+                .select('id, date, vendor, description, amount, request_number, project:projects(project_name, project_code, project_number), items:purchasing_items(name)')
                 .eq('purchase_stage', 'RECEIVED')
                 .neq('financial_status', 'PAID')
                 .order('date', { ascending: false })
@@ -154,7 +155,7 @@ export async function GET(request: NextRequest) {
 
             // TEAM - Invoices Pending - 5 most recent by date
             applyProjectFilter(supabase.from('purchasing_requests')
-                .select('id, date, vendor, description, amount, project:projects(project_name, project_code)')
+                .select('id, date, vendor, description, amount, request_number, project:projects(project_name, project_code, project_number), items:purchasing_items(name)')
                 .eq('purchase_stage', 'INVOICED')
                 .neq('financial_status', 'PAID')
                 .order('date', { ascending: false })
@@ -162,14 +163,14 @@ export async function GET(request: NextRequest) {
 
             // TEAM - Staff Claims (Reimburse Pending) - 5 most recent by date
             applyProjectFilter(supabase.from('reimbursement_requests')
-                .select('id, date, description, amount, created_by, project:projects(project_name, project_code)')
+                .select('id, date, description, amount, created_by, request_number, project:projects(project_name, project_code, project_number), items:reimbursement_items(name)')
                 .eq('status', 'PENDING')
                 .order('date', { ascending: false })
                 .limit(5)),
 
             // PERSONAL - My Purchase History (THIS MONTH) - 5 most recent by date
             supabase.from('purchasing_requests')
-                .select('id, date, vendor, description, amount, approval_status, financial_status, purchase_stage, created_at, updated_at, project_id, project:projects(project_name, project_code)')
+                .select('id, date, vendor, description, amount, approval_status, financial_status, purchase_stage, created_at, updated_at, project_id, request_number, project:projects(project_name, project_code, project_number), items:purchasing_items(name)')
                 .eq('created_by', user.id)
                 .gte('date', startOfThisMonth)
                 .lte('date', endOfThisMonth)
@@ -178,18 +179,26 @@ export async function GET(request: NextRequest) {
 
             // PERSONAL - My Reimburse History (THIS MONTH) - 5 most recent by date
             supabase.from('reimbursement_requests')
-                .select('id, date, description, amount, status, category, created_at, updated_at, project_id, project:projects(project_name, project_code)')
+                .select('id, date, description, amount, status, category, created_at, updated_at, project_id, request_number, project:projects(project_name, project_code, project_number), items:reimbursement_items(name)')
                 .eq('created_by', user.id)
                 .gte('date', startOfThisMonth)
                 .lte('date', endOfThisMonth)
                 .order('date', { ascending: false })
                 .limit(5),
 
-            // TEAM - Pulse Purchases (Last 7 Days) for Metrics
+            // TEAM - Pulse Purchases (Last 7 Days) for Metrics - TRACKED BY PAYMENT DATE
             applyProjectFilter(supabase.from('purchasing_requests')
-                .select('date, amount')
-                .gte('date', startOf7DaysAgo)
-                .lte('date', endOfThisMonth))
+                .select('payment_date, amount')
+                .eq('financial_status', 'PAID')
+                .gte('payment_date', startOf7DaysAgo)
+                .lte('payment_date', endOfThisMonth)),
+
+            // TEAM - Pulse Reimbursements (Last 7 Days) for Metrics - TRACKED BY PAYMENT DATE
+            applyProjectFilter(supabase.from('reimbursement_requests')
+                .select('payment_date, amount')
+                .eq('status', 'PAID')
+                .gte('payment_date', startOf7DaysAgo)
+                .lte('payment_date', endOfThisMonth))
         ]);
 
         // Check for errors in any of the queries
@@ -209,7 +218,9 @@ export async function GET(request: NextRequest) {
             { name: 'invoices', res: invoices },
             { name: 'staffClaims', res: staffClaims },
             { name: 'myPurchaseHistory', res: myPurchaseHistory },
-            { name: 'myReimburseHistory', res: myReimburseHistory }
+            { name: 'myReimburseHistory', res: myReimburseHistory },
+            { name: 'pulsePurchases', res: pulsePurchases },
+            { name: 'pulseReimbursements', res: pulseReimbursements }
         ];
 
         const failedQuery = queries.find(q => q.res.error);
@@ -239,28 +250,40 @@ export async function GET(request: NextRequest) {
         const reimbursePendingAmount = reimbursePending.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0;
 
         // CALCULATIONS - PULSE METRICS
+        const todayStr = now.toISOString().split('T')[0];
         const rawPulsePurchases = pulsePurchases?.data || [];
-        // Group by day
         const dailyPulse: Record<string, number> = {};
-        let total7d = 0;
-        let daysWithSpends = 0;
 
+        // Merge Purchasing Payments
         rawPulsePurchases.forEach((p: any) => {
-            const d = p.date.split('T')[0];
+            if (!p.payment_date) return;
+            const d = p.payment_date.split('T')[0];
             dailyPulse[d] = (dailyPulse[d] || 0) + (p.amount || 0);
         });
 
-        const pulseValues = Object.values(dailyPulse);
-        pulseValues.forEach(amt => {
-            if (amt > 0) {
-                total7d += amt;
-                daysWithSpends++;
-            }
+        // Merge Reimbursement Payments
+        const rawPulseReimburse = pulseReimbursements?.data || [];
+        rawPulseReimburse.forEach((p: any) => {
+            if (!p.payment_date) return;
+            const d = p.payment_date.split('T')[0];
+            dailyPulse[d] = (dailyPulse[d] || 0) + (p.amount || 0);
         });
 
-        const pulseAvgDaily = daysWithSpends > 0 ? total7d / 7 : 0;
-        const pulseMaxDaily = pulseValues.length > 0 ? Math.max(...pulseValues) : 0;
-        const pulseToday = dailyPulse[endOfThisMonth] || 0; // approximate
+        // Strict 7-day window for stability metrics
+        let total7d = 0;
+        let max7d = 0;
+        for (let i = 0; i < 7; i++) {
+            const d = new Date(now);
+            d.setDate(now.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            const amount = dailyPulse[dateStr] || 0;
+            total7d += amount;
+            if (amount > max7d) max7d = amount;
+        }
+
+        const pulseAvgDaily = total7d / 7;
+        const pulseMaxDaily = max7d;
+        const pulseToday = dailyPulse[todayStr] || 0;
 
         const stabilityIndex = pulseAvgDaily > 0 ? (pulseMaxDaily / pulseAvgDaily) : 0;
         const commitmentPressure = totalBalance > 0 ? (outstandingAmount + reimbursePendingAmount) / totalBalance : (outstandingAmount > 0 ? 1 : 0);

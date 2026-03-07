@@ -53,22 +53,34 @@ export interface PurchasingRequestPayload {
 export async function fetchPurchasingRequests(options?: {
     limit?: number;
     offset?: number;
-    project_id?: string;
+    project_id?: string | string[];
     approval_status?: string;
     my_requests?: boolean;
     q?: string;
     month?: number | "ALL";
     year?: number;
+    start_date?: string;
+    end_date?: string;
+    type?: string | string[];
 }) {
     const params = new URLSearchParams();
     if (options?.limit) params.set("limit", String(options.limit));
     if (options?.offset) params.set("offset", String(options.offset));
-    if (options?.project_id) params.set("project_id", options.project_id);
+    if (options?.project_id) {
+        const projectVal = Array.isArray(options.project_id) ? options.project_id.join(",") : options.project_id;
+        params.set("project_id", projectVal);
+    }
     if (options?.approval_status) params.set("approval_status", options.approval_status);
     if (options?.my_requests) params.set("my_requests", "true");
     if (options?.q) params.set("q", options.q);
     if (options?.month) params.set("month", String(options.month));
     if (options?.year) params.set("year", String(options.year));
+    if (options?.start_date) params.set("start_date", options.start_date);
+    if (options?.end_date) params.set("end_date", options.end_date);
+    if (options?.type) {
+        const typeVal = Array.isArray(options.type) ? options.type.join(",") : options.type;
+        params.set("type", typeVal);
+    }
 
     const url = `/api/finance/purchasing${params.toString() ? `?${params}` : ""}`;
     const { data, error } = await apiGet<{ data: any[], count: number, stats?: any }>(url);
@@ -173,22 +185,34 @@ export interface ReimburseRequestPayload {
 export async function fetchReimburseRequests(options?: {
     limit?: number;
     offset?: number;
-    project_id?: string;
+    project_id?: string | string[];
     status?: string;
     my_requests?: boolean;
     q?: string;
     month?: number | "ALL";
     year?: number;
+    start_date?: string;
+    end_date?: string;
+    category?: string | string[];
 }) {
     const params = new URLSearchParams();
     if (options?.limit) params.set("limit", String(options.limit));
     if (options?.offset) params.set("offset", String(options.offset));
-    if (options?.project_id) params.set("project_id", options.project_id);
+    if (options?.project_id) {
+        const projectVal = Array.isArray(options.project_id) ? options.project_id.join(",") : options.project_id;
+        params.set("project_id", projectVal);
+    }
     if (options?.status) params.set("status", options.status);
     if (options?.my_requests) params.set("my_requests", "true");
     if (options?.q) params.set("q", options.q);
     if (options?.month) params.set("month", String(options.month));
     if (options?.year) params.set("year", String(options.year));
+    if (options?.start_date) params.set("start_date", options.start_date);
+    if (options?.end_date) params.set("end_date", options.end_date);
+    if (options?.category) {
+        const catVal = Array.isArray(options.category) ? options.category.join(",") : options.category;
+        params.set("category", catVal);
+    }
 
     const url = `/api/finance/reimbursement${params.toString() ? `?${params}` : ""}`;
     const { data, error } = await apiGet<{ data: any[], count: number, stats?: any }>(url);

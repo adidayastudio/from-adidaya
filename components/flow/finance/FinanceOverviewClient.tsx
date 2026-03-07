@@ -18,7 +18,10 @@ import { useFinance } from "./FinanceContext";
 import {
     formatShort,
     formatAmount,
-    getPrimaryStatus
+    getPrimaryStatus,
+    formatStructuredId,
+    formatItemTitle,
+    formatCardDate
 } from "./modules/utils";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
@@ -118,7 +121,7 @@ export default function FinanceOverviewClient() {
                 </div>
 
                 {/* HEADER */}
-                <div className="px-5 lg:px-0">
+                <div className="lg:px-0">
                     <FinanceHeader
                         title="Finance Overview"
                         subtitle={`Summary of team financial activity`}
@@ -196,14 +199,14 @@ export default function FinanceOverviewClient() {
                 </div>
 
                 {/* LIST CONTENT (NO BIG CARD) */}
-                <div className="px-5 space-y-8">
+                <div className="space-y-8">
                     {/* PURCHASING SECTION */}
                     <div>
                         <button
                             onClick={() => handleNavigation('/flow/finance/purchasing', { view: viewMode })}
                             className="flex items-center gap-1.5 mb-4 group"
                         >
-                            <h2 className="text-[17px] font-bold text-neutral-900 dark:text-white tracking-tight">Recent Purchasing</h2>
+                            <h2 className="text-[19px] font-bold text-neutral-900 dark:text-white tracking-tight">Recent Purchasing</h2>
                             <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                         </button>
 
@@ -215,10 +218,11 @@ export default function FinanceOverviewClient() {
                                         .map((item: any) => (
                                             <FinanceItemCard
                                                 key={item.id}
-                                                idRef={item.id.replace('req_', 'PO-24-').substring(0, 9)}
-                                                title={item.description}
-                                                projectCode={item.project?.project_code || 'GEN'}
-                                                date={new Date(item.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                idRef={formatStructuredId('PO', item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code)}
+                                                title={formatItemTitle(item.items || [], item.description)}
+                                                projectCode={item.project?.project_code || item.project_code || 'GEN'}
+                                                date={formatCardDate(item.date)}
+                                                priority={item.priority}
                                                 amount={item.amount}
                                                 status={getPrimaryStatus(item.approval_status, item.purchase_stage, item.financial_status)}
                                                 onClick={() => router.push(`/flow/finance/purchasing?view=team&id=${item.id}`)}
@@ -233,10 +237,11 @@ export default function FinanceOverviewClient() {
                                     {data.lists.myPurchaseHistory.slice(0, 3).map((p: any) => (
                                         <FinanceItemCard
                                             key={p.id}
-                                            idRef={p.id.replace('req_', 'PO-24-').substring(0, 9)}
-                                            title={p.description || "Purchase Item"}
-                                            projectCode={p.project?.project_code || 'GEN'}
-                                            date={new Date(p.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                            idRef={formatStructuredId('PO', p.project?.project_number || p.project_number, p.request_number, p.project?.project_code || p.project_code)}
+                                            title={formatItemTitle(p.items || [], p.description || "Purchase Item")}
+                                            projectCode={p.project?.project_code || p.project_code || 'GEN'}
+                                            date={formatCardDate(p.date)}
+                                            priority={p.priority}
                                             amount={p.amount}
                                             status={getPrimaryStatus(p.approval_status, p.purchase_stage, p.financial_status)}
                                             onClick={() => router.push(`/flow/finance/purchasing?view=personal&id=${p.id}`)}
@@ -254,11 +259,53 @@ export default function FinanceOverviewClient() {
                     <div className="pb-8">
                         <button
                             onClick={() => handleNavigation('/flow/finance/reimburse', { view: viewMode })}
-                            className="flex items-center gap-1.5 mb-4 group opacity-50"
+                            className="flex items-center gap-1.5 mb-4 group"
                         >
-                            <h2 className="text-[17px] font-bold text-neutral-900 dark:text-white tracking-tight">Recent Reimbursement</h2>
+                            <h2 className="text-[19px] font-bold text-neutral-900 dark:text-white tracking-tight">Recent Reimbursement</h2>
                             <ArrowRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                         </button>
+
+                        <div className="space-y-3">
+                            {viewMode === "team" ? (
+                                <>
+                                    {data.lists.staffClaims.slice(0, 3).map((item: any) => (
+                                        <FinanceItemCard
+                                            key={item.id}
+                                            idRef={formatStructuredId('RE', item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code)}
+                                            title={formatItemTitle(item.items || [], item.description)}
+                                            projectCode={item.project?.project_code || item.project_code || 'GEN'}
+                                            date={formatCardDate(item.date)}
+                                            priority={item.priority}
+                                            amount={item.amount}
+                                            status={item.status}
+                                            onClick={() => router.push(`/flow/finance/reimburse?view=team&id=${item.id}`)}
+                                        />
+                                    ))}
+                                    {data.lists.staffClaims.length === 0 && (
+                                        <p className="text-sm text-neutral-400 dark:text-neutral-500 italic">No reimbursement requests found.</p>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    {data.lists.myReimburseHistory?.slice(0, 3).map((r: any) => (
+                                        <FinanceItemCard
+                                            key={r.id}
+                                            idRef={formatStructuredId('RE', r.project?.project_number || r.project_number, r.request_number, r.project?.project_code || r.project_code)}
+                                            title={formatItemTitle(r.items || [], r.description || "Reimbursement")}
+                                            projectCode={r.project?.project_code || r.project_code || 'GEN'}
+                                            date={formatCardDate(r.date)}
+                                            priority={r.priority}
+                                            amount={r.amount}
+                                            status={r.status}
+                                            onClick={() => router.push(`/flow/finance/reimburse?view=personal&id=${r.id}`)}
+                                        />
+                                    ))}
+                                    {data.lists.myReimburseHistory?.length === 0 && (
+                                        <p className="text-sm text-neutral-400 dark:text-neutral-500 italic">No reimbursement history found.</p>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

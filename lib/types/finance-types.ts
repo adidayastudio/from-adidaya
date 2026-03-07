@@ -4,6 +4,7 @@
 export type FinancialStatus = "NOT_PAYABLE" | "UNPAID" | "PAID";
 export type ApprovalStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED" | "NEED_REVISION";
 export type PurchaseStage = "PLANNED" | "INVOICED" | "RECEIVED";
+export type RequestPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
 export type FundingSourceType = "BANK" | "CASH" | "PETTY_CASH" | "REIMBURSE";
 
@@ -55,6 +56,7 @@ export interface PurchasingItem {
     type: PurchaseType;
     subcategory?: string;
     amount: number;
+    priority?: RequestPriority;
     approval_status: ApprovalStatus;
     purchase_stage: PurchaseStage;
     financial_status: FinancialStatus;
@@ -62,6 +64,8 @@ export interface PurchasingItem {
     source_of_fund_id?: string;
     source_of_fund_name?: string;
     payment_date?: string;
+    request_number?: number;
+    project_number?: string;
     payment_proof_url?: string;
     notes?: string;
     rejection_reason?: string;
@@ -75,6 +79,12 @@ export interface PurchasingItem {
     created_by_role?: string;
     created_at: string;
     updated_at: string;
+    project?: {
+        id: string;
+        project_code: string;
+        project_name: string;
+        project_number: string;
+    };
     items?: {
         id: string;
         name: string;
@@ -107,15 +117,19 @@ export interface ReimburseRequest {
     quantity?: string;
     amount: number;
     approved_amount?: number;
+    priority?: RequestPriority;
     status: ReimburseStatus;
     project?: {
         id: string;
         project_code: string;
         project_name: string;
+        project_number: string;
     };
     invoice_url?: string; // Receipt
     payment_proof_url?: string; // Proof of transfer
     payment_date?: string;
+    request_number?: number;
+    project_number?: string;
     source_of_fund_id?: string;
     details?: any;
     beneficiary_bank?: string;

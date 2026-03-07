@@ -25,6 +25,7 @@ interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>
   placeholder?: string;
   // searchable prop is ignored in native select implementation but kept for compatibility
   searchable?: boolean;
+  labelClassName?: string;
 }
 
 export function Select({
@@ -41,6 +42,7 @@ export function Select({
   placeholder = "Select...",
   accentColor = "red",
   searchable, // ignored
+  labelClassName,
   ...props
 }: SelectProps) {
 
@@ -68,7 +70,7 @@ export function Select({
   return (
     <div className="flex flex-col gap-1.5" >
       {label && (
-        <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+        <label className={labelClassName || "text-[11px] font-semibold text-neutral-500 uppercase tracking-wider"}>
           {label}
         </label>
       )}

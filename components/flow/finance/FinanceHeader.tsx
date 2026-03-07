@@ -14,7 +14,7 @@ export default function FinanceHeader({ title, subtitle, action, hideToggle }: F
         <div>
             {/* Mobile: Compact title only, no divider */}
             <div className="lg:hidden">
-                <h1 className="text-lg font-bold text-neutral-900 dark:text-white">{title}</h1>
+                <h1 className="text-[19px] font-bold text-neutral-900 dark:text-white tracking-tight">{title}</h1>
                 <p className="text-xs text-neutral-400 mt-0.5">{subtitle}</p>
             </div>
 

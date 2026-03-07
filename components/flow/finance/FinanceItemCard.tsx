@@ -8,6 +8,7 @@ export interface FinanceItemCardProps {
     idRef: string;
     date: string;
     status: string;
+    priority?: string;
     onClick?: () => void;
     actions?: React.ReactNode;
 }
@@ -19,6 +20,7 @@ export function FinanceItemCard({
     idRef,
     date,
     status,
+    priority,
     onClick,
     actions
 }: FinanceItemCardProps) {
@@ -60,12 +62,21 @@ export function FinanceItemCard({
 
     const theme = getStatusTheme(status);
 
+    const getPriorityClasses = (p?: string) => {
+        if (!p) return "";
+        const lower = p.toLowerCase();
+        if (lower === "urgent") return "!bg-red-50/50 dark:!bg-red-900/20 !border-red-500/30 dark:!border-red-500/30";
+        if (lower === "high") return "!bg-orange-50/50 dark:!bg-orange-900/20 !border-orange-500/30 dark:!border-orange-500/30";
+        return "";
+    };
+
     return (
         <div
             onClick={onClick}
             className={clsx(
-                "group relative bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[24px] p-5 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.08)] dark:shadow-none border border-white/60 dark:border-neutral-800 flex flex-col gap-4 transition-all duration-300",
-                onClick && "active:scale-[0.98] cursor-pointer hover:bg-white/80 dark:hover:bg-neutral-800/80 hover:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.12)] dark:hover:shadow-neutral-900/50"
+                "group relative bg-white/40 dark:bg-neutral-900/40 backdrop-blur-3xl backdrop-saturate-[1.8] rounded-[24px] p-5 shadow-[0_4px_24px_rgba(0,0,0,0.04)] dark:shadow-none border border-white/60 dark:border-neutral-800 flex flex-col gap-4 transition-all duration-300",
+                getPriorityClasses(priority),
+                onClick && "active:scale-[0.98] cursor-pointer hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:shadow-[0_12px_40px_-12px_rgba(0,0,0,0.12)] dark:hover:shadow-neutral-900/50"
             )}
         >
             {/* Rim light effect */}
@@ -95,7 +106,7 @@ export function FinanceItemCard({
             </div>
 
             {actions && (
-                <div className="flex items-center gap-2 pt-1 mt-auto border-t border-black/[0.03] dark:border-white/[0.05]">
+                <div className="flex items-center gap-2 mt-auto">
                     {actions}
                 </div>
             )}

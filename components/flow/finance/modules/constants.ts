@@ -100,6 +100,7 @@ export const UNIT_OPTIONS = [
     { value: "m3", label: "m3" },
     { value: "btg", label: "btg" },
     { value: "zak", label: "zak" },
+    { value: "kg", label: "kg" },
     { value: "hari", label: "hari" },
     { value: "bulan", label: "bulan" }
 ];

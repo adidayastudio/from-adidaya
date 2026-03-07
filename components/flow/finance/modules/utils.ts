@@ -26,8 +26,21 @@ export function formatAmount(amount: number) {
 
 // Format date nicely (Day Month Year)
 export function formatDate(dateStr: string) {
+    if (!dateStr) return "";
     const date = new Date(dateStr);
     return format(date, "dd MMM yyyy");
+}
+
+// Format card dates (hide current year)
+export function formatCardDate(dateStr: string) {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const currentYear = new Date().getFullYear();
+
+    if (date.getFullYear() === currentYear) {
+        return format(date, "d MMM");
+    }
+    return format(date, "d MMM yyyy");
 }
 
 // Convert STATUS_NAME to Status Name (Title Case)
@@ -86,4 +99,23 @@ export function cleanEntityName(name: string): string {
     ).trim();
 
     return cleanedName.replace(/\s+/g, ' ');
+}
+export function formatStructuredId(type: 'PO' | 'RE', projectNumber?: string, requestNumber?: number, projectCode?: string) {
+    if (!projectNumber && !projectCode) return '';
+    const seq = requestNumber ? String(requestNumber).padStart(5, '0') : "00000";
+
+    // Use projectNumber if available, otherwise projectCode
+    const projId = projectNumber || projectCode || '???';
+
+    // Ensure numeric project identifiers are padded to at least 3 digits
+    const proj = isNaN(Number(projId)) ? projId : String(projId).padStart(3, '0');
+
+    return `${type}-${proj}-${seq}`;
+}
+
+export function formatItemTitle(items: { name: string }[], fallback?: string): string {
+    if (!items || items.length === 0) return fallback || "No description";
+    if (items.length === 1) return items[0].name;
+    if (items.length === 2) return `${items[0].name} and ${items[1].name}`;
+    return `${items[0].name}, ${items[1].name}, + ${items.length - 2} more`;
 }

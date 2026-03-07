@@ -497,7 +497,7 @@ export interface ReimburseRequestPayload {
 }
 
 export async function createReimburseRequest(payload: ReimburseRequestPayload) {
-    const { items, created_by, ...requestData } = payload;
+    const { items, created_by, invoice_urls, existing_invoice_ids, ...requestData } = payload as any;
 
     if (!created_by) {
         throw new Error("User ID is required to create a reimburse request");
@@ -521,7 +521,7 @@ export async function createReimburseRequest(payload: ReimburseRequestPayload) {
 
     // 2. Create Items
     if (items.length > 0) {
-        const itemsData = items.map(item => ({
+        const itemsData = items.map((item: any) => ({
             reimbursement_id: request.id,
             name: item.name,
             qty: item.qty,
@@ -542,6 +542,25 @@ export async function createReimburseRequest(payload: ReimburseRequestPayload) {
         }
     }
 
+    // 3. Create Invoices if provided
+    if (invoice_urls && invoice_urls.length > 0) {
+        const invoicesData = invoice_urls.map((inv: any) => ({
+            request_id: request.id,
+            invoice_url: inv.invoice_url,
+            invoice_name: inv.invoice_name,
+            invoice_type: 'RECEIPT',
+            uploaded_by: created_by
+        }));
+
+        const { error: invoicesError } = await supabase
+            .from("reimbursement_invoices")
+            .insert(invoicesData);
+
+        if (invoicesError) {
+            console.error("Error creating reimburse invoices:", invoicesError);
+        }
+    }
+
     return request;
 }
 
@@ -551,7 +570,8 @@ export async function fetchReimburseRequests() {
         .select(`
             *,
             project:projects(project_name, project_code),
-            items:reimbursement_items(*)
+            items:reimbursement_items(*),
+            existingInvoices:reimbursement_invoices(*)
         `)
         .order("created_at", { ascending: false }) as any);
 
@@ -637,7 +657,7 @@ export async function updateReimburseStatus(id: string, updates: {
 }
 
 export async function updateReimburseRequest(id: string, payload: Partial<ReimburseRequestPayload>) {
-    const { items, ...requestData } = payload;
+    const { items, invoice_urls, existing_invoice_ids, created_by, ...requestData } = payload as any;
 
     // 1. Update Request
     const { error: reqError } = await supabase
@@ -665,7 +685,7 @@ export async function updateReimburseRequest(id: string, payload: Partial<Reimbu
 
         // Insert new
         if (items.length > 0) {
-            const itemsData = items.map(item => ({
+            const itemsData = items.map((item: any) => ({
                 reimbursement_id: id,
                 name: item.name,
                 qty: item.qty,
@@ -679,6 +699,43 @@ export async function updateReimburseRequest(id: string, payload: Partial<Reimbu
                 .insert(itemsData);
 
             if (insError) throw insError;
+        }
+    }
+
+    // 3. Update Invoices
+    if (existing_invoice_ids !== undefined || invoice_urls !== undefined) {
+        if (existing_invoice_ids && Array.isArray(existing_invoice_ids)) {
+            const validIds = existing_invoice_ids.filter((i: string) => i && i !== 'legacy');
+            if (validIds.length > 0) {
+                await supabase
+                    .from("reimbursement_invoices")
+                    .delete()
+                    .eq("request_id", id)
+                    .not("id", "in", `(${validIds.join(',')})`);
+            } else {
+                await supabase
+                    .from("reimbursement_invoices")
+                    .delete()
+                    .eq("request_id", id);
+            }
+        }
+
+        if (invoice_urls && invoice_urls.length > 0) {
+            const invoicesData = invoice_urls.map((inv: any) => ({
+                request_id: id,
+                invoice_url: inv.invoice_url,
+                invoice_name: inv.invoice_name,
+                invoice_type: 'RECEIPT',
+                uploaded_by: created_by || null
+            }));
+
+            const { error: invoicesError } = await supabase
+                .from("reimbursement_invoices")
+                .insert(invoicesData);
+
+            if (invoicesError) {
+                console.error("Error creating reimburse invoices:", invoicesError);
+            }
         }
     }
 
