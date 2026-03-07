@@ -693,15 +693,16 @@ input[type="week"] {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
   text-overflow: ellipsis;
-  /* Shrink text if it still clips */
   font-size: 14px !important;
+  line-height: 1;
 }
 
 /* Target WebKit internal date-picker decoration to prevent expansion */
@@ -714,14 +715,14 @@ input[type="date"]::-webkit-datetime-edit {
   min-width: 0 !important;
   max-width: 100% !important;
   overflow: hidden;
-  padding: 0;
+  display: flex;
+  align-items: center;
 }
 
 input[type="date"]::-webkit-datetime-edit-fields-wrapper {
   min-width: 0 !important;
   max-width: 100% !important;
   overflow: hidden;
-  padding: 0;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {

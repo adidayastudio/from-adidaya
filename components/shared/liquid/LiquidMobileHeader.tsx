@@ -63,13 +63,15 @@ export function LiquidMobileHeader({
             <div className="lg:hidden fixed top-0 left-0 right-0 z-50 pt-6 pointer-events-none">
                 {/* Background Mask - Linear Blur effect */}
                 <div className={clsx(
-                    "absolute inset-0 bg-white/60 transition-all duration-500 pointer-events-none",
+                    "absolute left-0 right-0 transition-all duration-500 pointer-events-none",
                     scrolled ? "opacity-100" : "opacity-0"
                 )} style={{
-                    maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
-                    backdropFilter: scrolled ? 'blur(16px)' : 'none',
-                    height: '80px'
+                    top: '-200px',
+                    height: '330px',
+                    backdropFilter: scrolled ? 'blur(24px) saturate(1.8)' : 'none',
+                    WebkitBackdropFilter: scrolled ? 'blur(24px) saturate(1.8)' : 'none',
+                    maskImage: 'linear-gradient(to bottom, black 0%, black 60%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 60%, transparent 100%)',
                 }} />
 
                 <div className="flex items-center justify-between px-5 pointer-events-auto relative z-10 pb-2">

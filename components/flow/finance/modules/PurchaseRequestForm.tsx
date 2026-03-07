@@ -287,7 +287,7 @@ export function PurchaseRequestForm({
                             className="rounded-full"
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 items-end">
                         <div>
                             <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider px-1 mb-1.5 ml-1">Invoice Date</label>
                             <input
@@ -302,7 +302,7 @@ export function PurchaseRequestForm({
                             />
                         </div>
                         <div>
-                            <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider px-1 mb-1.5 ml-1">Target Payment Date</label>
+                            <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider px-1 mb-1.5 ml-1">Target Date</label>
                             <input
                                 type="date"
                                 value={targetDate}
