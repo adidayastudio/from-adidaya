@@ -88,7 +88,7 @@ function RejectModal({ item, onClose, onReject }: { item: any, onClose: () => vo
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 rounded-3xl p-6 shadow-2xl overflow-hidden">
                 <h3 className="text-lg font-bold text-neutral-900 mb-2">Reject Request</h3>
                 <p className="text-sm text-neutral-500 mb-6">Please provide a reason for rejecting this request.</p>
                 <textarea
@@ -179,7 +179,7 @@ function ReviseModal({ item, onClose, onRevise }: { item: any, onClose: () => vo
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 rounded-3xl p-6 shadow-2xl overflow-hidden">
                 <h3 className="text-lg font-bold text-neutral-900 mb-2 flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-orange-500" /> Request Revision
                 </h3>
@@ -218,7 +218,7 @@ function DeleteConfirmModal({
             <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden"
+                className="relative w-full max-w-sm bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 rounded-3xl p-6 shadow-2xl overflow-hidden"
             >
                 {/* Icon */}
                 <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
@@ -270,137 +270,200 @@ function DeleteConfirmModal({
     );
 }
 
-function PayModal({ item, onClose, onPay, fundingSources, isLoadingSources }: {
+function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
     item: any,
     onClose: () => void,
-    onPay: (sourceId: string, date: string, notes: string, proofFile: File | null) => Promise<void>,
+    onPay: (sourceId: string, date: string, notes: string, proofFiles: File[]) => Promise<void>,
     fundingSources: FundingSource[],
     isLoadingSources: boolean
 }) {
     const [source, setSource] = useState("");
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [notes, setNotes] = useState("");
-    const [proofFile, setProofFile] = useState<File | null>(null);
+    const [proofFiles, setProofFiles] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleConfirm = async () => {
-        if (!source || !date) return;
+        if (!source || !date || proofFiles.length === 0) return;
         setIsSubmitting(true);
-        await onPay(source, date, notes, proofFile);
+        await onPay(source, date, notes, proofFiles);
         setIsSubmitting(false);
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl overflow-hidden">
-                <h3 className="text-lg font-bold text-neutral-900 mb-6 flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-emerald-600" />
-                    Process Payment
-                </h3>
+        <div className="fixed inset-0 z-[100] isolate">
+            <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={onClose} />
+            <motion.div initial={{ y: "100%", opacity: 0 }} animate={{ y: 0, opacity: 1 }} className={clsx("absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-300 rounded-[56px] overflow-hidden flex flex-col",
+                "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+            )}>
+                <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+                            <CreditCard className="w-5 h-5 text-blue-600" />
+                            Process Payment
+                        </h3>
+                        <button onClick={onClose} className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform">
+                            <X size={20} className="text-neutral-500" strokeWidth={1.5} />
+                        </button>
+                    </div>
+                </div>
 
-                <div className="space-y-4 mb-8">
-                    <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-100 space-y-3">
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="text-neutral-500 font-medium">Amount to Pay</span>
-                            <div className="flex items-center gap-1">
+                <div className="shrink min-h-0 overflow-y-auto px-8 pb-4 scrollbar-hide space-y-6">
+                    <div className="py-2 px-1 rounded-[32px] bg-white/40 dark:bg-neutral-900/40 border border-white/60 dark:border-neutral-800 shadow-sm flex flex-col gap-1">
+                        <div className="flex justify-between items-center text-xs px-4 py-2">
+                            <span className="text-neutral-500 font-bold tracking-wider uppercase">Amount to Pay</span>
+                            <div className="flex items-center gap-2">
                                 <div className="text-right">
-                                    <div className="font-bold text-neutral-900 text-sm">{formatCurrency(item.approved_amount || item.details?.approved_amount || item.amount)}</div>
+                                    <div className="font-bold text-neutral-900 text-[17px]">{formatCurrency(item.approved_amount || item.details?.approved_amount || item.amount)}</div>
                                     {(item.approved_amount || item.details?.approved_amount) && (item.approved_amount || item.details?.approved_amount) !== item.amount && (
                                         <div className="text-[10px] text-orange-600 line-through opacity-75">{formatCurrency(item.amount)}</div>
                                     )}
                                 </div>
-                                <CopyButton text={String(item.approved_amount || item.details?.approved_amount || item.amount)} />
+                                <div className="w-6 flex justify-center">
+                                    <CopyButton text={String(item.approved_amount || item.details?.approved_amount || item.amount)} />
+                                </div>
                             </div>
                         </div>
 
-                        <hr className="border-neutral-200/50" />
+                        <div className="px-5">
+                            <hr className="border-neutral-200/60 dark:border-neutral-800/50" />
+                        </div>
 
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="text-neutral-500 font-medium">Submitter</span>
-                            <div className="flex items-center gap-1">
-                                <span className="font-bold text-neutral-900">{item.staff_name}</span>
-                                <div className="w-6" /> {/* Spacer for alignment with copy buttons */}
+                        <div className="flex justify-between items-center text-xs px-4 py-2">
+                            <span className="text-neutral-500 font-bold tracking-wider uppercase">Submitter</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-neutral-900 text-[13px]">{item.staff_name || item.submitted_by_name || "-"}</span>
+                                <div className="w-6" />
                             </div>
                         </div>
 
-                        <div className="flex justify-between items-start text-xs">
-                            <span className="text-neutral-500 font-medium mt-0.5">Beneficiary Account</span>
-                            <div className="flex items-center gap-1">
+                        <div className="flex justify-between items-start text-xs px-4 py-2">
+                            <span className="text-neutral-500 font-bold tracking-wider uppercase mt-1">Beneficiary Account</span>
+                            <div className="flex items-start gap-2">
                                 {(item.beneficiary_bank || item.beneficiary_number) ? (
-                                    <div className="text-right">
-                                        <div className="font-bold text-neutral-900">{item.beneficiary_name || item.staff_name}</div>
-                                        <div className="text-[10px] text-neutral-500 font-mono bg-white px-1.5 py-0.5 rounded border border-neutral-200 mt-1 inline-block">
-                                            {item.beneficiary_bank} • {item.beneficiary_number}
+                                    <div className="text-right flex flex-col items-end gap-1 mt-0.5">
+                                        <div className="text-[12px] font-bold text-neutral-800 bg-white/60 px-2.5 py-1 rounded-full border border-neutral-200/50 flex items-center gap-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+                                            <span>{item.beneficiary_bank}</span>
+                                            <span className="text-neutral-400 font-normal">|</span>
+                                            <span className="font-mono">{item.beneficiary_number}</span>
+                                        </div>
+                                        <div className="text-[10px] text-neutral-500 font-medium px-1">
+                                            {item.beneficiary_name || item.staff_name}
                                         </div>
                                     </div>
                                 ) : (
-                                    <span className="italic text-neutral-400">Not specified</span>
+                                    <span className="italic text-neutral-400 mt-1">Not specified</span>
                                 )}
-                                {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
+                                <div className="w-6 mt-0.5 flex justify-center">
+                                    {item.beneficiary_number ? <CopyButton text={item.beneficiary_number} /> : null}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Funding Source</label>
-                        {isLoadingSources ? (
-                            <div className="h-10 w-full bg-neutral-100 rounded-xl animate-pulse" />
-                        ) : (
-                            <div className="relative group">
-                                <select
-                                    value={source}
-                                    onChange={(e) => setSource(e.target.value)}
-                                    className="w-full h-11 pl-4 pr-10 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-medium appearance-none cursor-pointer hover:border-emerald-500/30"
-                                >
-                                    <option value="">Select Source...</option>
-                                    {fundingSources.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} ({s.currency})</option>
-                                    ))}
-                                </select>
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 group-hover:text-emerald-600 transition-colors">
-                                    <ChevronDown className="w-4 h-4" />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Payment Date</label>
-                        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full h-11 px-3 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-medium" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Proof of Transfer (Optional)</label>
-                        <div className={clsx(
-                            "border-2 border-dashed rounded-xl p-4 text-center transition-all cursor-pointer relative group",
-                            proofFile ? "border-emerald-500/40 bg-emerald-50/50" : "border-neutral-200 hover:border-emerald-500/30 hover:bg-emerald-50/20"
-                        )}>
-                            <input type="file" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={(e) => { if (e.target.files?.[0]) setProofFile(e.target.files[0]); }} />
-                            {proofFile ? (
-                                <div className="flex items-center justify-center gap-2 text-emerald-700 text-sm font-bold animate-in fade-in zoom-in-95">
-                                    <CheckCircle2 className="w-4 h-4" /> {proofFile.name}
-                                </div>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Source of Fund</label>
+                            {isLoadingSources ? (
+                                <div className="h-12 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full animate-pulse" />
                             ) : (
-                                <div className="flex items-center justify-center gap-2 text-neutral-400 text-sm group-hover:text-emerald-600 transition-colors">
-                                    <Upload className="w-4 h-4" /> Upload Image/PDF
+                                <div className="relative group">
+                                    <select
+                                        value={source}
+                                        onChange={(e) => setSource(e.target.value)}
+                                        className="w-full h-12 pl-4 pr-10 text-[13px] border border-white/60 dark:border-neutral-800 shadow-sm rounded-full bg-white/60 dark:bg-neutral-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium appearance-none cursor-pointer hover:border-blue-500/50"
+                                    >
+                                        <option value="">Select source...</option>
+                                        {fundingSources.filter(s => !s.is_archived && s.is_active).map(s => (
+                                            <option key={s.id} value={s.id}>{s.name} ({s.currency})</option>
+                                        ))}
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 group-hover:text-blue-600 transition-colors">
+                                        <ChevronDown className="w-4 h-4" />
+                                    </div>
                                 </div>
                             )}
                         </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">Notes</label>
-                        <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional transaction notes" className="w-full h-11 px-4 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-medium placeholder:text-neutral-400" />
+                        <div>
+                            <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Payment Date</label>
+                            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full min-w-0 h-12 px-4 text-[13px] border border-white/60 dark:border-neutral-800 shadow-sm rounded-full bg-white/60 dark:bg-neutral-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Proof of Transfer</label>
+                            <div className="space-y-3">
+                                {proofFiles.length > 0 && (
+                                    <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-1">
+                                        {proofFiles.map((file, idx) => (
+                                            <div key={idx} className="flex items-center justify-between p-2.5 pl-3.5 bg-white/80 border border-white/60 shadow-sm rounded-[16px] text-xs">
+                                                <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
+                                                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                    <span className="text-neutral-700 font-medium truncate">{file.name}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); window.open(URL.createObjectURL(file), '_blank'); }}
+                                                        className="text-[10px] font-bold text-blue-600 bg-blue-50/80 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors"
+                                                    >
+                                                        View Document
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setProofFiles(prev => prev.filter((_, i) => i !== idx))}
+                                                        className="w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className={clsx(
+                                    "border-2 border-dashed rounded-[32px] p-6 text-center transition-all cursor-pointer relative group",
+                                    "border-neutral-200/80 hover:border-blue-500/40 bg-white/40 hover:bg-blue-50/40"
+                                )}>
+                                    <input type="file" multiple className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" onChange={(e) => {
+                                        if (e.target.files) {
+                                            const newFiles = Array.from(e.target.files);
+                                            setProofFiles(prev => [...prev, ...newFiles]);
+                                        }
+                                        e.target.value = '';
+                                    }} />
+                                    <div className="flex flex-col items-center justify-center gap-3 text-neutral-400 group-hover:text-blue-600 transition-colors">
+                                        <div className="w-10 h-10 bg-white shadow-sm group-hover:bg-blue-50 rounded-full flex items-center justify-center transition-colors">
+                                            <Upload className="w-4 h-4 group-hover:text-blue-600 text-neutral-500" />
+                                        </div>
+                                        <div className="flex flex-col items-center gap-1">
+                                            <span className="font-bold text-[13px] text-neutral-600 group-hover:text-blue-700">Upload Images/PDFs</span>
+                                            <span className="text-[10px] uppercase font-bold tracking-wider text-red-500/80">Required</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Notes</label>
+                            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add payment notes..." className="w-full h-12 px-5 text-[13px] border border-white/60 dark:border-neutral-800 shadow-sm rounded-full bg-white/60 dark:bg-neutral-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium placeholder:text-neutral-400" />
+                        </div>
                     </div>
                 </div>
 
-                <div className="flex gap-3 pt-2">
-                    <button onClick={onClose} disabled={isSubmitting} className="flex-1 py-3 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
-                    <button
-                        onClick={handleConfirm}
-                        disabled={!source || !date || isSubmitting}
-                        className="flex-1 py-3 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
-                    >
-                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Process Payment"}
-                    </button>
+                <div className="flex-none px-8 pt-4 pb-8 bg-transparent">
+                    <div className="flex gap-3">
+                        <button
+                            onClick={onClose}
+                            className="w-1/3 shrink-0 font-bold text-[14px] flex items-center justify-center bg-white/80 border border-neutral-200 text-neutral-600 hover:bg-neutral-50 rounded-full transition-all duration-200 shadow-[0_2px_4px_rgba(0,0,0,0.02)]"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleConfirm}
+                            disabled={!source || !date || proofFiles.length === 0 || isSubmitting}
+                            className="w-2/3 py-4 text-[15px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+                        >
+                            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "Confirm Payment"}
+                        </button>
+                    </div>
                 </div>
             </motion.div>
         </div>
@@ -413,7 +476,7 @@ function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl overflow-hidden">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 rounded-3xl p-6 shadow-2xl overflow-hidden">
                 <h3 className="text-lg font-bold text-neutral-900 mb-2 flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     Approve Request
@@ -1924,23 +1987,26 @@ export default function ReimburseClient() {
 
             {
                 payingItem && (
-                    <PayModal
+                    <PayDrawer
                         item={payingItem}
                         fundingSources={fundingSources}
                         isLoadingSources={isLoadingSources}
                         onClose={() => setPayingItem(null)}
-                        onPay={async (sourceId, date, notes, proofFile) => {
-                            let proofUrl = null;
-                            if (proofFile) {
-                                const ext = proofFile.name.split('.').pop();
-                                const path = `reimburse/transfer/${payingItem.id}_${Date.now()}.${ext}`;
-                                proofUrl = await uploadFinanceFileExact(proofFile, path);
+                        onPay={async (sourceId, date, notes, proofFiles) => {
+                            let proofUrls: string[] = [];
+                            if (proofFiles && proofFiles.length > 0) {
+                                for (const file of proofFiles) {
+                                    const ext = file.name.split('.').pop();
+                                    const path = `reimburse/transfer/${payingItem.id}_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+                                    const url = await uploadFinanceFileExact(file, path);
+                                    if (url) proofUrls.push(url);
+                                }
                             }
                             await updateReimburseStatus(payingItem.id, {
                                 status: "PAID",
                                 payment_date: date,
                                 notes,
-                                payment_proof_url: proofUrl || undefined,
+                                payment_proof_url: proofUrls.length > 0 ? proofUrls.join(',') : undefined,
                                 source_of_fund_id: sourceId
                             });
                             setPayingItem(null);
