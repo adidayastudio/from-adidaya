@@ -2633,7 +2633,7 @@ export default function PurchasingClient() {
                                 <div className="space-y-4 px-2">
                                     <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Date Range</h4>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 min-w-0">
                                             <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider px-1">From</span>
                                             <input
                                                 type="date"
@@ -2642,10 +2642,10 @@ export default function PurchasingClient() {
                                                     setShowAllMonths(false);
                                                     setStartDate(new Date(e.target.value));
                                                 }}
-                                                className="w-full bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10"
+                                                className="w-full min-w-0 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10"
                                             />
                                         </div>
-                                        <div className="space-y-1.5">
+                                        <div className="space-y-1.5 min-w-0">
                                             <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider px-1">To</span>
                                             <input
                                                 type="date"
@@ -2654,7 +2654,7 @@ export default function PurchasingClient() {
                                                     setShowAllMonths(false);
                                                     setEndDate(new Date(e.target.value));
                                                 }}
-                                                className="w-full bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10"
+                                                className="w-full min-w-0 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10"
                                             />
                                         </div>
                                     </div>

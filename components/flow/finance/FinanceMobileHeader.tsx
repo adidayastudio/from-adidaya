@@ -64,8 +64,8 @@ export default function FinanceMobileHeader({
                     "absolute inset-0 bg-white/60 dark:bg-neutral-900/60 transition-all duration-500 pointer-events-none",
                     scrolled ? "opacity-100" : "opacity-0"
                 )} style={{
-                    maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
+                    maskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 85%, transparent 100%)',
                     backdropFilter: scrolled ? 'blur(16px)' : 'none',
                     height: '80px' // Increased to cover 24px pad + 48px icons + 8px pb
                 }} />

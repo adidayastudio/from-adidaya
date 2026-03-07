@@ -330,7 +330,7 @@ export function ReimburseRequestForm({
                                 onChange={e => setReimbDate(e.target.value)}
                                 disabled={!canEdit}
                                 className={clsx(
-                                    "w-full h-10 px-4 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
+                                    "w-full min-w-0 h-10 px-4 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium",
                                     !canEdit && "bg-neutral-50 text-neutral-500"
                                 )}
                             />
