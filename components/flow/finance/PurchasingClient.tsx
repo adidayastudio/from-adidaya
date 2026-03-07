@@ -26,7 +26,9 @@ import {
     FileText,
     FileSpreadsheet,
     ArrowUpNarrowWide,
-    ArrowDownWideNarrow
+    ArrowDownWideNarrow,
+    Briefcase,
+    DollarSign
 } from "lucide-react";
 import { CATEGORY_OPTIONS } from "./modules/constants";
 import clsx from "clsx";
@@ -577,256 +579,321 @@ function ViewModal({
     const status = getPrimaryStatus(item.approval_status, item.purchase_stage, item.financial_status);
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-md" onClick={onClose} />
-            <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-xl rounded-[2rem] shadow-2xl border border-white/50 overflow-hidden animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto">
-                <div className="p-8">
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold text-neutral-900">Purchase Request Details</h3>
-                        <button onClick={onClose} className="p-2 hover:bg-neutral-100 rounded-full transition-colors">
-                            <X className="w-5 h-5 text-neutral-400" />
+        <div className="fixed inset-0 z-[100] isolate">
+            {/* BACKDROP */}
+            <div
+                className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300"
+                onClick={onClose}
+            />
+
+            {/* Drawer Detail */}
+            <div
+                className="absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] overflow-hidden flex flex-col bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+            >
+                {/* Sticky Header */}
+                <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                            Purchase Request Details
+                        </h2>
+                        <button
+                            onClick={onClose}
+                            className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                        >
+                            <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
                         </button>
                     </div>
+                </div>
 
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Date</div>
-                                <div className="text-sm font-medium text-neutral-900">{format(new Date(item.date), "dd MMM yyyy")}</div>
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Project</div>
-                                <div className="text-sm font-medium text-neutral-900 flex items-center flex-wrap">
-                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-100 text-neutral-600 mr-2 border border-neutral-200 shrink-0">
-                                        {item.project_code}
-                                    </span>
-                                    <span>{item.project_name}</span>
-                                </div>
-                            </div>
-                        </div>
-
+                {/* Scrollable Content */}
+                <div className="flex-1 overflow-y-auto scrollbar-hide">
+                    <div className="px-8 pb-8 space-y-6">
                         {/* REVISION/REJECTION REASON */}
                         {(item.approval_status === "NEED_REVISION" || (item.approval_status === "DRAFT" && item.revision_reason)) && item.revision_reason && (
-                            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 mb-6 animate-in fade-in slide-in-from-top-2">
-                                <h4 className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                    <AlertCircle className="w-3.5 h-3.5" /> Revision Requested
-                                </h4>
-                                <p className="text-sm font-medium text-orange-900">{item.revision_reason}</p>
+                            <div className="p-4 bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 rounded-2xl flex gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                                <AlertCircle className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <div className="text-xs font-bold text-orange-800 dark:text-orange-400 uppercase tracking-wider mb-1">Revision Requested</div>
+                                    <p className="text-sm text-orange-700 dark:text-orange-300 font-medium leading-relaxed">{item.revision_reason}</p>
+                                </div>
                             </div>
                         )}
 
                         {(item.approval_status === "REJECTED" || item.rejection_reason) && item.rejection_reason && (
-                            <div className="bg-red-50 p-4 rounded-xl border border-red-100 mb-6 animate-in fade-in slide-in-from-top-2">
-                                <h4 className="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                                    <Ban className="w-3.5 h-3.5" /> Rejection Reason
-                                </h4>
-                                <p className="text-sm font-medium text-red-900">{item.rejection_reason}</p>
+                            <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl flex gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
+                                <Ban className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <div className="text-xs font-bold text-red-800 dark:text-red-400 uppercase tracking-wider mb-1">Rejection Reason</div>
+                                    <p className="text-sm text-red-700 dark:text-red-300 font-medium leading-relaxed">{item.rejection_reason}</p>
+                                </div>
                             </div>
                         )}
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Category</div>
-                                <div className="text-sm font-medium text-neutral-900 capitalize">{formatStatus(category)}</div>
-                            </div>
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Subcategory</div>
-                                <div className="text-sm font-medium text-neutral-900 capitalize">{item.subcategory ? formatStatus(item.subcategory) : "-"}</div>
-                            </div>
-                        </div>
+                        {/* SECTION: General Information */}
+                        <section className="space-y-4">
+                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                <Briefcase className="w-4 h-4" strokeWidth={2} /> General Information
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Date</div>
+                                        <div className="text-sm font-medium text-neutral-900 dark:text-white">{format(new Date(item.date), "dd MMM yyyy")}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Project</div>
+                                        <div className="text-sm font-medium text-neutral-900 dark:text-white flex items-center flex-wrap gap-1.5">
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 shrink-0">
+                                                {item.project_code}
+                                            </span>
+                                            <span>{item.project_name}</span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <div>
-                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Description</div>
-                            <div className="text-sm font-medium text-neutral-900">
-                                {item.description || (item.items && item.items.length > 0
-                                    ? item.items.map((i: any) => i.name).join(', ')
-                                    : "No description")}
-                            </div>
-                            {item.vendor && <div className="text-[10px] text-neutral-400 font-medium mt-1">Vendor: {item.vendor}</div>}
-                        </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Category</div>
+                                        <div className="text-sm font-medium text-neutral-900 dark:text-white capitalize">{formatStatus(category)}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Subcategory</div>
+                                        <div className="text-sm font-medium text-neutral-900 dark:text-white capitalize">{item.subcategory ? formatStatus(item.subcategory) : "-"}</div>
+                                    </div>
+                                </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Amount</div>
-                                <div className="flex items-center gap-1">
-                                    <span className="text-lg font-bold text-neutral-900">{formatCurrency(item.amount)}</span>
-                                    <CopyButton text={String(item.amount)} />
+                                <div>
+                                    <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Description</div>
+                                    <div className="text-sm font-medium text-neutral-900 dark:text-white leading-relaxed">
+                                        {item.description || (item.items && item.items.length > 0
+                                            ? item.items.map((i: any) => i.name).join(', ')
+                                            : "No description")}
+                                    </div>
+                                    {item.vendor && <div className="text-[10px] text-neutral-400 font-medium mt-1 ml-1">Vendor: {item.vendor}</div>}
                                 </div>
                             </div>
-                            <div>
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Status</div>
-                                <div className="flex flex-col gap-1">
-                                    <StatusBadge status={status} />
-                                    {item.financial_status === "PAID" && item.purchase_stage === "INVOICED" && (
-                                        <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">Paid, Goods Pending</span>
-                                    )}
-                                    {item.financial_status === "PAID" && item.purchase_stage === "RECEIVED" && (
-                                        <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">Paid & Received</span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                        </section>
 
-                        {/* PURCHASE STAGE */}
-                        <div className="bg-neutral-50 p-3 rounded-xl border border-neutral-100 mb-2">
-                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                <Clock className="w-3.5 h-3.5" /> Purchase Stage
-                            </div>
-                            <div className="flex items-center gap-2">
+                        {/* SECTION: Order Progress */}
+                        <section className="space-y-4 pt-2">
+                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                <Clock className="w-4 h-4" strokeWidth={2} /> Order Progress
+                            </h3>
+                            <div className="grid grid-cols-1 gap-3">
                                 {(["PLANNED", "INVOICED", "RECEIVED"] as PurchaseStage[]).map((s) => (
                                     <div
                                         key={s}
                                         className={clsx(
-                                            "flex-1 py-1.5 px-2 rounded-lg text-center text-[10px] font-bold border transition-all",
-                                            item.purchase_stage === s
-                                                ? "bg-red-500 border-red-500 text-white shadow-sm"
-                                                : "bg-white border-neutral-200 text-neutral-400 opacity-50"
+                                            "relative p-4 rounded-3xl border transition-all flex items-center gap-4",
+                                            item.purchase_stage === s ? "border-red-500/40 bg-red-50/30 dark:bg-red-500/10 shadow-sm" : "border-neutral-100 dark:border-neutral-800 bg-white/40 dark:bg-neutral-800/40"
                                         )}
                                     >
-                                        {formatStatus(s)}
+                                        <div className={clsx(
+                                            "w-5 h-5 rounded-full border flex items-center justify-center shrink-0",
+                                            item.purchase_stage === s ? "border-red-500 bg-red-500" : "border-neutral-300 dark:border-neutral-600"
+                                        )}>
+                                            {item.purchase_stage === s && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="text-sm font-bold text-neutral-900 dark:text-white">
+                                                {s === "PLANNED" && "Planned (Estimation)"}
+                                                {s === "INVOICED" && "Invoiced"}
+                                                {s === "RECEIVED" && "Received"}
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
-                        </div>
+                        </section>
 
-                        {/* Items Breakdown */}
+                        {/* SECTION: Amount & Status */}
+                        <section className="space-y-4 pt-2">
+                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                <DollarSign className="w-4 h-4" strokeWidth={2} /> Amount & Status
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Amount</div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(item.amount)}</span>
+                                        <CopyButton text={String(item.amount)} />
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Status</div>
+                                    <div className="flex flex-col gap-1">
+                                        <StatusBadge status={status} />
+                                        {item.financial_status === "PAID" && item.purchase_stage === "INVOICED" && (
+                                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">Paid, Goods Pending</span>
+                                        )}
+                                        {item.financial_status === "PAID" && item.purchase_stage === "RECEIVED" && (
+                                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">Paid & Received</span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION: Item Details */}
                         {item.items && item.items.length > 0 && (
-                            <div className="space-y-1.5 pt-1">
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-1">Details Breakdown</div>
-                                <div className="border border-neutral-100 rounded-xl overflow-hidden bg-neutral-50/30">
-                                    <table className="w-full text-xs">
-                                        <thead className="bg-neutral-50 text-[10px] uppercase font-bold text-neutral-400 border-b border-neutral-50">
-                                            <tr>
-                                                <th className="py-2 px-3 text-left font-semibold">Item</th>
-                                                <th className="py-2 px-3 text-center font-semibold w-[15%]">Qty</th>
-                                                <th className="py-2 px-3 text-right font-semibold w-[20%]">Price</th>
-                                                <th className="py-2 px-3 text-right font-semibold w-[20%]">Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-neutral-50">
-                                            {item.items.map((it: any, idx: number) => (
-                                                <tr key={idx} className="bg-white hover:bg-neutral-50/50 transition-colors">
-                                                    <td className="py-2 px-3 font-medium text-neutral-800">{it.name}</td>
-                                                    <td className="py-2 px-3 text-center text-neutral-500">
-                                                        {it.qty} <span className="text-[9px] text-neutral-400 uppercase">{it.unit}</span>
-                                                    </td>
-                                                    <td className="py-2 px-3 text-right text-neutral-500 tabular-nums">{formatCurrency(it.unit_price)}</td>
-                                                    <td className="py-2 px-3 text-right font-bold text-neutral-900 tabular-nums">{formatCurrency(it.total)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                            <section className="space-y-4 pt-2">
+                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                    <Package className="w-4 h-4" strokeWidth={2} /> Item Details
+                                </h3>
+                                <div className="space-y-3">
+                                    {item.items.map((it: any, idx: number) => (
+                                        <div key={idx} className="p-5 rounded-3xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px]">
+                                            <div className="text-sm font-bold text-neutral-900 dark:text-white mb-3">{it.name}</div>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div>
+                                                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Qty</div>
+                                                    <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300">{it.qty} <span className="text-[9px] text-neutral-400 uppercase">{it.unit}</span></div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Price</div>
+                                                    <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 tabular-nums">{formatCurrency(it.unit_price)}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider mb-0.5">Total</div>
+                                                    <div className="text-xs font-bold text-neutral-900 dark:text-white tabular-nums">{formatCurrency(it.total)}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Total Summary */}
+                                <div className="p-6 rounded-3xl bg-gradient-to-br from-red-500 to-red-600 border border-red-400 shadow-xl shadow-red-500/20 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                                    <div className="relative flex items-center justify-between">
+                                        <div className="flex flex-col">
+                                            <span className="text-[11px] font-bold text-red-100 uppercase tracking-[0.2em] leading-none mb-2">Total Amount</span>
+                                            <span className="text-xs text-red-100/70 font-medium">{item.items.length} items</span>
+                                        </div>
+                                        <span className="text-2xl font-black text-white tracking-tight">{formatCurrency(item.amount)}</span>
+                                    </div>
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Missing Info Warning */}
+                        {item.approval_status === "APPROVED" && ((!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number) && (
+                            <div className="p-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-2xl flex gap-3 animate-in fade-in slide-in-from-top-1">
+                                <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                                <div>
+                                    <h4 className="text-[11px] font-bold text-red-700 dark:text-red-400 uppercase tracking-wider mb-1">Action Required Before Payment</h4>
+                                    <p className="text-xs text-red-600 dark:text-red-300 font-medium">Please upload the invoice and complete the beneficiary details by editing this request.</p>
                                 </div>
                             </div>
                         )}
-                    </div>
 
-                    {/* Missing Info Warning */}
-                    {item.approval_status === "APPROVED" && ((!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number) && (
-                        <div className="my-6 p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3 animate-in fade-in slide-in-from-top-1">
-                            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-                            <div>
-                                <h4 className="text-[11px] font-bold text-red-700 uppercase tracking-wider mb-1">Action Required Before Payment</h4>
-                                <p className="text-xs text-red-600 font-medium"> Please upload the invoice and complete the beneficiary details by editing this request. </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Beneficiary Details - Compact Card */}
-                    {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
-                        <div className="my-6 bg-white p-3.5 rounded-xl border border-dashed border-neutral-200 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.02)] relative overflow-hidden group hover:border-red-200 transition-colors">
-                            <div className="absolute top-0 right-0 p-3 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity pointer-events-none">
-                                <CreditCard className="w-16 h-16 rotate-12" />
-                            </div>
-
-                            <div className="flex items-center gap-2 mb-2.5">
-                                <div className="w-5 h-5 rounded-md bg-red-50 flex items-center justify-center">
-                                    <CreditCard className="w-2.5 h-2.5 text-red-500" />
+                        {/* SECTION: Beneficiary */}
+                        {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
+                            <section className="space-y-4 pt-2">
+                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4" strokeWidth={2} /> Beneficiary Information
+                                </h3>
+                                <div className="p-5 rounded-3xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 p-3 opacity-[0.03] pointer-events-none">
+                                        <CreditCard className="w-16 h-16 rotate-12" />
+                                    </div>
+                                    <div className="flex flex-col gap-1 relative z-10">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold text-neutral-900 dark:text-white">{item.beneficiary_bank || "Unknown Bank"}</span>
+                                            <span className="text-sm font-mono font-medium text-neutral-500 tracking-tight bg-neutral-50 dark:bg-neutral-700 px-1.5 py-0.5 rounded border border-neutral-100 dark:border-neutral-600">{item.beneficiary_number || "-"}</span>
+                                            {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
+                                        </div>
+                                        <div className="text-xs font-medium text-neutral-500 dark:text-neutral-400">{item.beneficiary_name || "-"}</div>
+                                    </div>
                                 </div>
-                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Beneficiary Account</span>
+                            </section>
+                        )}
+
+                        {/* SECTION: Documents */}
+                        <section className="space-y-4 pt-2">
+                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                <Upload className="w-4 h-4" strokeWidth={2} /> Documents
+                            </h3>
+
+                            <div className="flex p-1 bg-neutral-900/5 dark:bg-white/5 rounded-full mb-4">
+                                <button onClick={() => setActiveTab('invoice')} className={clsx("flex-1 py-2 text-xs font-bold rounded-full transition-all", activeTab === 'invoice' ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm" : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300")}>Invoice</button>
+                                <button onClick={() => setActiveTab('proof')} className={clsx("flex-1 py-2 text-xs font-bold rounded-full transition-all", activeTab === 'proof' ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm" : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300")}>Proof of Transfer</button>
                             </div>
 
-                            <div className="flex flex-col gap-0.5 relative z-10 pl-1">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm font-bold text-neutral-900">{item.beneficiary_bank || "Unknown Bank"}</span>
-                                    <span className="text-sm font-mono font-medium text-neutral-500 tracking-tight bg-neutral-50 px-1.5 py-0.5 rounded border border-neutral-100">{item.beneficiary_number || "-"}</span>
-                                    {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
-                                </div>
-                                <div className="text-xs font-medium text-neutral-500">{item.beneficiary_name || "-"}</div>
-                            </div>
-                        </div>
-                    )}
-
-                    <div>
-                        <div className="flex p-1 bg-neutral-100 rounded-xl mb-4">
-                            <button onClick={() => setActiveTab('invoice')} className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all", activeTab === 'invoice' ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}>Invoice</button>
-                            <button onClick={() => setActiveTab('proof')} className={clsx("flex-1 py-2 text-xs font-bold rounded-lg transition-all", activeTab === 'proof' ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}>Proof of Transfer</button>
-                        </div>
-
-                        {activeTab === 'invoice' && (
-                            <div className="space-y-3">
-                                {invoiceUrls.length > 0 ? (
-                                    invoiceUrls.map((inv, idx) => (
-                                        <div key={idx} className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
-                                            <div className="p-2 border-b border-neutral-100 flex items-center justify-between bg-white">
-                                                <span className="text-xs font-bold text-neutral-600">{inv.name}</span>
-                                                <span className="text-[10px] text-neutral-400">#{idx + 1}</span>
+                            {activeTab === 'invoice' && (
+                                <div className="space-y-3">
+                                    {invoiceUrls.length > 0 ? (
+                                        invoiceUrls.map((inv, idx) => (
+                                            <div key={idx} className="border border-neutral-100 dark:border-neutral-700/40 rounded-3xl overflow-hidden bg-white/60 dark:bg-neutral-800/60 group relative backdrop-blur-[2px]">
+                                                <div className="p-3 border-b border-neutral-100 dark:border-neutral-700/40 flex items-center justify-between">
+                                                    <span className="text-xs font-bold text-neutral-600 dark:text-neutral-300">{inv.name}</span>
+                                                    <span className="text-[10px] text-neutral-400">#{idx + 1}</span>
+                                                </div>
+                                                {inv.originalPath.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                                    <button onClick={() => onPreview('invoice')} className="w-full text-left cursor-zoom-in relative block">
+                                                        <img src={inv.url} alt={inv.name} className="w-full max-h-40 object-contain" />
+                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                            <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
+                                                        </div>
+                                                    </button>
+                                                ) : (
+                                                    <div className="p-4 flex items-center justify-between">
+                                                        <span className="text-sm text-neutral-600 dark:text-neutral-300">PDF / Document</span>
+                                                        <a href={inv.url} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 dark:bg-red-500/10 rounded-full hover:bg-red-100 transition-colors">Open File</a>
+                                                    </div>
+                                                )}
                                             </div>
-                                            {inv.originalPath.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                                <button onClick={() => onPreview('invoice')} className="w-full text-left cursor-zoom-in relative block">
-                                                    <img src={inv.url} alt={inv.name} className="w-full max-h-40 object-contain" />
+                                        ))
+                                    ) : (
+                                        <div className="p-8 text-center bg-white/40 dark:bg-neutral-800/40 rounded-3xl border border-dashed border-neutral-200 dark:border-neutral-700"><p className="text-xs text-neutral-400">No invoice attached</p></div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeTab === 'proof' && (
+                                <div className="space-y-3">
+                                    {item.payment_proof_url ? (
+                                        <div className="border border-neutral-100 dark:border-neutral-700/40 rounded-3xl overflow-hidden bg-white/60 dark:bg-neutral-800/60 group relative backdrop-blur-[2px]">
+                                            {item.payment_proof_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                                                <button onClick={() => onPreview('proof')} className="w-full text-left cursor-zoom-in relative block">
+                                                    {proofUrl ? <img src={proofUrl} alt="Proof" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50 dark:bg-neutral-800/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
                                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                                                         <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
                                                     </div>
                                                 </button>
                                             ) : (
                                                 <div className="p-4 flex items-center justify-between">
-                                                    <span className="text-sm text-neutral-600">PDF / Document</span>
-                                                    <a href={inv.url} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">Open File</a>
+                                                    <span className="text-sm text-neutral-600 dark:text-neutral-300">Attached proof</span>
+                                                    <a href={proofUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 rounded-full hover:bg-emerald-100 transition-colors">Open File</a>
                                                 </div>
                                             )}
                                         </div>
-                                    ))
-                                ) : (
-                                    <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200"><p className="text-xs text-neutral-400">No invoice attached</p></div>
-                                )}
-                            </div>
-                        )}
+                                    ) : (
+                                        <div className="p-8 text-center bg-white/40 dark:bg-neutral-800/40 rounded-3xl border border-dashed border-neutral-200 dark:border-neutral-700"><p className="text-xs text-neutral-400">No payment proof uploaded</p></div>
+                                    )}
+                                </div>
+                            )}
+                        </section>
 
-                        {activeTab === 'proof' && (
-                            <div className="space-y-2">
-                                {item.payment_proof_url ? (
-                                    <div className="border border-neutral-200 rounded-xl overflow-hidden bg-neutral-50 group relative">
-                                        {item.payment_proof_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                            <button onClick={() => onPreview('proof')} className="w-full text-left cursor-zoom-in relative block">
-                                                {proofUrl ? <img src={proofUrl} alt="Proof" className="w-full max-h-48 object-contain" /> : <div className="h-48 flex items-center justify-center bg-neutral-100/50"><Loader2 className="w-6 h-6 animate-spin text-neutral-400" /></div>}
-                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                    <div className="bg-white/90 rounded-full px-3 py-1 text-xs font-bold text-neutral-700 shadow-sm">Click to Zoom</div>
-                                                </div>
-                                            </button>
-                                        ) : (
-                                            <div className="p-4 flex items-center justify-between">
-                                                <span className="text-sm text-neutral-600">Attached proof</span>
-                                                <a href={proofUrl || '#'} target="_blank" rel="noopener noreferrer" className="px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">Open File</a>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="p-8 text-center bg-neutral-50 rounded-xl border border-dashed border-neutral-200"><p className="text-xs text-neutral-400">No payment proof uploaded</p></div>
-                                )}
-                            </div>
+                        {/* SECTION: Notes */}
+                        {item.notes && (
+                            <section className="space-y-4 pt-2">
+                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                    <FileText className="w-4 h-4" strokeWidth={2} /> Additional Notes
+                                </h3>
+                                <div className="text-sm text-neutral-700 dark:text-neutral-300 bg-white/60 dark:bg-neutral-800/60 p-5 rounded-3xl border border-neutral-100 dark:border-neutral-700/40 font-medium leading-relaxed">{item.notes}</div>
+                            </section>
                         )}
                     </div>
 
-                    {item.notes && (
-                        <div className="mt-6">
-                            <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Notes</div>
-                            <div className="text-sm text-neutral-700 bg-neutral-50 p-3 rounded-lg">{item.notes}</div>
-                        </div>
-                    )}
-
-                    <div className="mt-8">
-                        <button onClick={onClose} className="w-full py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-2xl text-sm font-bold transition-all">Close</button>
+                    {/* Bottom Actions */}
+                    <div className="sticky bottom-0 w-full px-8 py-6 z-30 mt-auto">
+                        <button
+                            onClick={onClose}
+                            className="w-full h-[56px] bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 rounded-full font-bold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center shadow-lg"
+                        >
+                            Close
+                        </button>
                     </div>
                 </div>
             </div>

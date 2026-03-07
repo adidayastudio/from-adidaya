@@ -59,17 +59,17 @@ export default function FinanceMobileHeader({
         <>
             {/* Fixed Floating Top Bar */}
             <div className="lg:hidden fixed top-0 left-0 right-0 z-40 pt-6 pointer-events-none">
-                {/* Background Mask - Linear Blur effect (Top to Bottom) */}
+                {/* Background Mask - Fixed on viewport, covers status bar + header buttons only */}
                 <div className={clsx(
-                    "absolute left-0 right-0 bg-white/80 dark:bg-neutral-900/80 transition-all duration-500 pointer-events-none",
+                    "fixed top-0 left-0 right-0 bg-white/80 dark:bg-neutral-900/80 transition-all duration-500 pointer-events-none",
                     scrolled ? "opacity-100" : "opacity-0"
                 )} style={{
-                    top: '-200px',
-                    height: '330px',
+                    height: '100px',
+                    zIndex: 0,
                     backdropFilter: scrolled ? 'blur(24px) saturate(1.8)' : 'none',
                     WebkitBackdropFilter: scrolled ? 'blur(24px) saturate(1.8)' : 'none',
-                    maskImage: 'linear-gradient(to bottom, black 0%, black 60%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 60%, transparent 100%)',
+                    maskImage: 'linear-gradient(to bottom, black 0%, black 20%, transparent 100%)',
+                    WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 20%, transparent 100%)',
                 }} />
 
                 <div className="flex items-center justify-between px-5 pointer-events-auto relative z-10 pb-2">
