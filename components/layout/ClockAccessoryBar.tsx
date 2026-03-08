@@ -203,7 +203,7 @@ export default function ClockAccessoryBar() {
 
                                         {/* Middle Column: Location + Info (Only when checked in) */}
                                         {isCheckedIn && (
-                                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1 border-l-2 border-neutral-300/40 dark:border-neutral-700/60 pl-3 ml-1 h-[40px]">
+                                            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1 pl-3 h-[40px]">
                                                 {/* Row 1: Location */}
                                                 {(locationCode || remoteMode) && (
                                                     mapsUrl ? (
@@ -293,11 +293,11 @@ export default function ClockAccessoryBar() {
                                                 {clockLoading ? (
                                                     <div className="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin" />
                                                 ) : isCheckedIn ? (
-                                                    <Square className="w-3.5 h-3.5 fill-current mb-[-1px]" strokeWidth={0} />
+                                                    <Square className="w-4 h-4 fill-current mb-[-1px]" strokeWidth={0} />
                                                 ) : (
                                                     <Play className="w-4 h-4 fill-current ml-0.5" strokeWidth={0} />
                                                 )}
-                                                {isCheckedIn ? "OUT" : "IN"}
+                                                {!isCheckedIn && "IN"}
                                             </motion.button>
                                         </div>
                                     </div>

@@ -381,9 +381,16 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
                         </button>
                     </div>
                 ) : !hasAnyNotification ? (
-                    <div className="flex flex-col items-center justify-center gap-3 h-64 text-sm text-neutral-400 rounded-3xl border border-dashed border-neutral-200 bg-neutral-50/50">
-                        <Inbox className="w-8 h-8 text-neutral-200" />
-                        <p className="font-medium italic">Everything is up to date.</p>
+                    <div className="flex flex-col items-center justify-center p-8 mt-4 text-center">
+                        <div className="w-16 h-16 mb-4 rounded-full bg-neutral-100 dark:bg-white/5 flex items-center justify-center border border-neutral-200/50 dark:border-white/10 shadow-sm">
+                            <span className="text-3xl">🎉</span>
+                        </div>
+                        <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-1">You're all set!</h3>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-[200px]">
+                            {section === "all"
+                                ? "You don't have any notifications right now."
+                                : `No notifications in ${section} at the moment.`}
+                        </p>
                     </div>
                 ) : (
                     <>
