@@ -14,25 +14,32 @@ export function useNotifications() {
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
     // Map helper
-    const mapNotification = (n: any): UiNotification => ({
-        id: n.id,
-        type: n.type,
-        isRead: n.is_read,
-        title: n.title,
-        description: n.description,
-        timestamp: new Date(n.created_at).toLocaleString(),
-        fullTimestamp: new Date(n.created_at),
-        source: {
-            name: n.metadata?.actor || (n.category === 'finance' ? 'Finance' : n.category === 'projects' ? 'Projects' : "System"),
-            color: n.category === 'finance' ? 'bg-green-100 text-green-700' :
-                n.category === 'projects' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600',
-        },
-        metadata: {
-            ...n.metadata,
-            category: n.category,
-            link: n.link
-        },
-    });
+    const mapNotification = (n: any): UiNotification => {
+        let link = n.link;
+        if (n.category === 'finance' && n.metadata?.requestId && link && !link.includes('requestId=')) {
+            link += `${link.includes('?') ? '&' : '?'}requestId=${n.metadata.requestId}`;
+        }
+
+        return {
+            id: n.id,
+            type: n.type,
+            isRead: n.is_read,
+            title: n.title,
+            description: n.description,
+            timestamp: new Date(n.created_at).toLocaleString(),
+            fullTimestamp: new Date(n.created_at),
+            source: {
+                name: n.metadata?.actor || (n.category === 'finance' ? 'Finance' : n.category === 'projects' ? 'Projects' : "System"),
+                color: n.category === 'finance' ? 'bg-green-100 text-green-700' :
+                    n.category === 'projects' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600',
+            },
+            metadata: {
+                ...n.metadata,
+                category: n.category,
+                link: link
+            },
+        };
+    };
 
     // 1. Auth Sync
     useEffect(() => {

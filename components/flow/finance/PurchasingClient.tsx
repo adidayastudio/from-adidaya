@@ -1925,6 +1925,8 @@ export default function PurchasingClient() {
 
     const isTeamView = viewMode === "team";
 
+    const lastHandledRequestId = useRef<string | null>(null);
+
 
 
     // Confirmation Modal State
@@ -2221,6 +2223,31 @@ export default function PurchasingClient() {
         window.addEventListener('fab-action', handleFabAction);
         return () => window.removeEventListener('fab-action', handleFabAction);
     }, [handleExport]);
+
+    // Handle requestId from notification
+    useEffect(() => {
+        const requestId = searchParams.get('requestId');
+        if (requestId && items.length > 0 && !viewingItem && !editingItem && requestId !== lastHandledRequestId.current) {
+            const item = items.find(i => i.id === requestId);
+            if (item) {
+                lastHandledRequestId.current = requestId;
+                if (isTeamView) {
+                    setViewingItem(item);
+                } else {
+                    setEditingItem(item);
+                    setIsDrawerOpen(true);
+                }
+            }
+        }
+    }, [searchParams, items, isTeamView, viewingItem, editingItem]);
+
+    const clearRequestId = () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('requestId')) {
+            params.delete('requestId');
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+        }
+    };
 
     // Custom status order for sorting (similar to ReimburseClient)
     const STATUS_ORDER = ['DRAFT', 'SUBMITTED', 'NEED_REVISION', 'APPROVED', 'PAID', 'REJECTED', 'CANCELLED'];
@@ -3167,7 +3194,7 @@ export default function PurchasingClient() {
                 viewingItem && (
                     <ViewModal
                         item={viewingItem}
-                        onClose={() => setViewingItem(null)}
+                        onClose={() => { setViewingItem(null); clearRequestId(); }}
                         onPreview={(tab) => setPreviewingDocument({ item: viewingItem, initialTab: tab })}
                         onApprove={() => setApprovingItem(viewingItem)}
                         onReject={() => setRejectingItem(viewingItem)}
@@ -3221,6 +3248,7 @@ export default function PurchasingClient() {
                 onClose={() => {
                     setIsDrawerOpen(false);
                     setEditingItem(null);
+                    clearRequestId();
                 }}
                 initialType="PURCHASE"
                 hideSwitcher={true}

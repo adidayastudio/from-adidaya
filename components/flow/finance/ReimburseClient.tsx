@@ -1849,6 +1849,8 @@ export default function ReimburseClient() {
 
     const isTeamView = viewMode === "team";
 
+    const lastHandledRequestId = useRef<string | null>(null);
+
     // States
     const [editingItem, setEditingItem] = useState<any | null>(null);
     const [approvingItem, setApprovingItem] = useState<any | null>(null);
@@ -1965,6 +1967,31 @@ export default function ReimburseClient() {
         window.addEventListener('fab-action', handleFabAction);
         return () => window.removeEventListener('fab-action', handleFabAction);
     }, []);
+
+    // Handle requestId from notification
+    useEffect(() => {
+        const requestId = searchParams.get('requestId');
+        if (requestId && items.length > 0 && !viewingItem && !editingItem && requestId !== lastHandledRequestId.current) {
+            const item = items.find(i => i.id === requestId);
+            if (item) {
+                lastHandledRequestId.current = requestId;
+                if (isTeamView) {
+                    setViewingItem(item);
+                } else {
+                    setEditingItem(item);
+                    setIsDrawerOpen(true);
+                }
+            }
+        }
+    }, [searchParams, items, isTeamView, viewingItem, editingItem]);
+
+    const clearRequestId = () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('requestId')) {
+            params.delete('requestId');
+            router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+        }
+    };
 
     // Helpers
 
@@ -2753,7 +2780,7 @@ export default function ReimburseClient() {
                 initialType="REIMBURSE"
                 hideSwitcher={true}
                 initialData={editingItem || undefined}
-                onClose={() => { setIsDrawerOpen(false); setEditingItem(null); }}
+                onClose={() => { setIsDrawerOpen(false); setEditingItem(null); clearRequestId(); }}
                 onSuccess={() => { setIsDrawerOpen(false); setEditingItem(null); loadData(); }}
                 onDelete={editingItem ? async () => {
                     try {
@@ -2851,7 +2878,7 @@ export default function ReimburseClient() {
                 viewingItem && (
                     <ViewModal
                         item={viewingItem}
-                        onClose={() => setViewingItem(null)}
+                        onClose={() => { setViewingItem(null); clearRequestId(); }}
                         onPreview={(tab) => setPreviewingDocument({ item: viewingItem, initialTab: tab })}
                         onApprove={() => setApprovingItem(viewingItem)}
                         onReject={() => setRejectingItem(viewingItem)}
