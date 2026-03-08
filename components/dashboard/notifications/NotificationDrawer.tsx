@@ -54,7 +54,7 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                                     alert("Please enable notifications in your browser.");
                                 }
                             }}
-                            className="h-[32px] px-3 rounded-full text-[11px] font-bold text-neutral-500 dark:text-neutral-300 bg-neutral-100/80 dark:bg-white/10 border border-neutral-200/50 dark:border-white/10 hover:bg-neutral-200/80 dark:hover:bg-white/20 transition-colors"
+                            className="h-[28px] px-2.5 rounded-full text-[10px] font-bold text-neutral-500 dark:text-neutral-300 bg-neutral-100/80 dark:bg-white/10 border border-neutral-200/50 dark:border-white/10 hover:bg-neutral-200/80 dark:hover:bg-white/20 transition-colors"
                         >
                             Test
                         </button>
@@ -64,7 +64,7 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                                     window.location.reload();
                                 }
                             }}
-                            className="h-[32px] px-3 rounded-full text-[11px] font-bold text-neutral-500 dark:text-neutral-300 bg-neutral-100/80 dark:bg-white/10 border border-neutral-200/50 dark:border-white/10 hover:bg-red-50 dark:hover:bg-red-500/20 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                            className="h-[28px] px-2.5 rounded-full text-[10px] font-bold text-neutral-500 dark:text-neutral-300 bg-neutral-100/80 dark:bg-white/10 border border-neutral-200/50 dark:border-white/10 hover:bg-red-50 dark:hover:bg-red-500/20 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                         >
                             Reset
                         </button>
@@ -73,7 +73,7 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                                 onClose();
                                 router.push("/dashboard/notifications");
                             }}
-                            className="h-[32px] pl-3 pr-2 flex items-center gap-1 rounded-full text-[11px] font-bold text-neutral-500 dark:text-neutral-300 bg-neutral-100/80 dark:bg-white/10 border border-neutral-200/50 dark:border-white/10 hover:bg-neutral-200/80 dark:hover:bg-white/20 transition-colors"
+                            className="h-[28px] pl-2.5 pr-2 flex items-center gap-1 rounded-full text-[10px] font-bold text-neutral-500 dark:text-neutral-300 bg-neutral-100/80 dark:bg-white/10 border border-neutral-200/50 dark:border-white/10 hover:bg-neutral-200/80 dark:hover:bg-white/20 transition-colors"
                         >
                             History
                             <ChevronRight className="w-3 h-3" />

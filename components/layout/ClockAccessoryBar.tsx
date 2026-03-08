@@ -261,7 +261,8 @@ export default function ClockAccessoryBar() {
                                                 onClick={() => setIsClockModalOpen(true)}
                                                 disabled={clockLoading}
                                                 className={clsx(
-                                                    "relative z-10 flex items-center gap-2 px-5 py-2 rounded-full text-[13px] font-black uppercase tracking-wider h-[46px] shrink-0",
+                                                    "relative z-10 flex items-center justify-center rounded-full text-[13px] font-black uppercase tracking-wider h-[46px] shrink-0 transition-all",
+                                                    isCheckedIn ? "w-[46px] aspect-square p-0 gap-0" : "w-auto px-5 gap-2",
                                                     clockLoading ? "opacity-50 cursor-not-allowed" : ""
                                                 )}
                                                 style={

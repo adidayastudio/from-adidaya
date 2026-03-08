@@ -165,9 +165,6 @@ export default function BottomSheet({ isOpen, onClose, title, children }: Bottom
                                 boxShadow: !mounted || theme !== 'dark'
                                     ? "0 -8px 40px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.8)"
                                     : "0 -8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)",
-                                border: !mounted || theme !== 'dark'
-                                    ? "1px solid rgba(255,255,255,0.4)"
-                                    : "1px solid rgba(255,255,255,0.1)",
                             }}
                         >
                             {/* Drag handle + Header */}

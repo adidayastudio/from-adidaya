@@ -40,8 +40,8 @@ export default function NotificationItem({ item }: NotificationItemProps) {
         <div className={clsx(
             "group relative p-3 rounded-2xl transition-all duration-200 touch-manipulation",
             isUnread
-                ? "bg-white shadow-sm ring-1 ring-neutral-100"
-                : "bg-neutral-50/50 hover:bg-neutral-100/50"
+                ? "bg-white dark:bg-white/10 shadow-sm ring-1 ring-neutral-100 dark:ring-white/20"
+                : "bg-neutral-50/50 dark:bg-white/5 hover:bg-neutral-100/50 dark:hover:bg-white/10 ring-1 ring-transparent dark:ring-white/5"
         )}>
             <div className="flex gap-3 items-start">
                 {/* Avatar / Icon */}
@@ -64,7 +64,7 @@ export default function NotificationItem({ item }: NotificationItemProps) {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                     {/* Main Description */}
-                    <p className={clsx("text-sm leading-snug line-clamp-2 pr-4", isUnread ? "font-semibold text-neutral-900" : "font-medium text-neutral-600")}>
+                    <p className={clsx("text-sm leading-snug line-clamp-2 pr-4", isUnread ? "font-semibold text-neutral-900 dark:text-white" : "font-medium text-neutral-600 dark:text-neutral-400")}>
                         {(() => {
                             const text = item.description || "";
                             const keywords = [
