@@ -74,6 +74,23 @@ import { GlobalLoading } from "@/components/shared/GlobalLoading";
 // -- MODALS --
 // (kept as is)
 
+// Status Badge Helper
+function StatusBadge({ status, textOnly }: { status: any, textOnly?: boolean }) {
+    const theme = STATUS_THEMES[status as keyof typeof STATUS_THEMES] || STATUS_THEMES.DRAFT;
+    if (textOnly) {
+        return (
+            <span className={clsx("text-[11px] font-bold uppercase", theme.text)}>
+                {formatStatus(status)}
+            </span>
+        );
+    }
+    return (
+        <span className={clsx("inline-flex w-fit px-2 py-0.5 rounded-full items-center justify-center leading-none text-[10px] font-bold border uppercase", theme.bg, theme.text, theme.border)}>
+            {formatStatus(status)}
+        </span>
+    );
+}
+
 // Copy Button Helper
 const CopyButton = ({ text, className }: { text: string, className?: string }) => {
     const [copied, setCopied] = useState(false);
@@ -84,7 +101,7 @@ const CopyButton = ({ text, className }: { text: string, className?: string }) =
         setTimeout(() => setCopied(false), 2000);
     };
     return (
-        <button onClick={handleCopy} className={clsx("p-1 hover:bg-neutral-100 rounded-full transition-all text-neutral-400 hover:text-neutral-600", className)} title="Copy to clipboard">
+        <button data-html2canvas-ignore="true" onClick={handleCopy} className={clsx("p-1 hover:bg-neutral-100 rounded-full transition-all text-neutral-400 hover:text-neutral-600", className)} title="Copy to clipboard">
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
         </button>
     );
@@ -535,78 +552,55 @@ function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => 
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
-function StatusBadge({ status }: { status: any }) {
-    const theme = STATUS_THEMES[status as keyof typeof STATUS_THEMES] || STATUS_THEMES.DRAFT;
-    return (
-        <span className={clsx("inline-flex w-fit px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase", theme.bg, theme.text, theme.border)}>
-            {formatStatus(status)}
-        </span>
-    );
-}
 
 // -- NESTED DRAWER: Document View --
 function DocumentDrawer({
     item,
-    initialTab = 'invoice',
+    initialTab,
     onClose
 }: {
-    item: any,
-    initialTab?: 'invoice' | 'proof',
-    onClose: () => void
+    item: any;
+    initialTab: 'invoice' | 'proof';
+    onClose: () => void;
 }) {
     const [activeTab, setActiveTab] = useState<'invoice' | 'proof'>(initialTab);
-    const [signedUrls, setSignedUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
+    const [invoiceUrls, setInvoiceUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
+    const [proofUrl, setProofUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isDownloading, setIsDownloading] = useState(false);
-
-    // Build list of all relevant files for the active tab
-    const files = useMemo(() => {
-        const list: { url: string; name: string; originalPath: string }[] = [];
-
-        if (activeTab === 'invoice') {
-            if (item.invoice_url) {
-                list.push({
-                    url: '', // Will be signed
-                    name: 'Receipt',
-                    originalPath: item.invoice_url
-                });
-            }
-        } else {
-            if (item.payment_proof_url) {
-                list.push({
-                    url: '', // Will be signed
-                    name: 'Payment Proof',
-                    originalPath: item.payment_proof_url
-                });
-            }
-        }
-        return list;
-    }, [activeTab, item]);
+    const [isDownloading, setIsDownloading] = useState<string | null>(null); // path or 'bulk'
 
     useEffect(() => {
-        let active = true;
         const fetchUrls = async () => {
             setIsLoading(true);
-            const signed = await Promise.all(
-                files.map(async (file) => {
-                    const url = await getFinanceFileUrl(file.originalPath);
-                    return { ...file, url: url || '' };
-                })
-            );
-            if (active) {
-                setSignedUrls(signed);
-                setIsLoading(false);
+            const urls: { url: string; name: string; originalPath: string }[] = [];
+
+            // Invoices/Receipts
+            if (item.invoice_url) {
+                const url = await getFinanceFileUrl(item.invoice_url);
+                if (url) urls.push({ url, name: 'Receipt', originalPath: item.invoice_url });
             }
+            setInvoiceUrls(urls);
+
+            // Proof
+            if (item.payment_proof_url) {
+                const url = await getFinanceFileUrl(item.payment_proof_url);
+                setProofUrl(url);
+            }
+            setIsLoading(false);
         };
         fetchUrls();
-        return () => { active = false; };
-    }, [files]);
+    }, [item]);
 
-    const handleDownload = async (fileUrl: string, fileName: string, path: string, index?: number, total?: number) => {
+    const handleDownload = async (url: string, path: string, name?: string, index?: number, total?: number) => {
+        const isBulk = typeof index === 'number';
         try {
+            if (!isBulk) setIsDownloading(path);
             const ext = path.split('.').pop() || 'jpg';
-            const typeStr = activeTab === 'invoice' ? 'Invoice' : 'Transfer';
 
+            // Generate Filename
+            const typeStr = activeTab === 'invoice' ? 'Receipt' : 'Transfer';
+
+            // Generate Date string
             const dateSource = activeTab === 'invoice'
                 ? (item.date || item.created_at)
                 : (item.payment_date || item.updated_at);
@@ -616,41 +610,55 @@ function DocumentDrawer({
             const dd = String(dateObj.getDate()).padStart(2, '0');
             const dateStr = `${yyyy}${mm}${dd}`;
 
+            // Generate RE string
             const reStr = formatStructuredId("RE", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `RE-${item.id.slice(0, 8)}`;
 
+            // Generate Project string
             const projectStr = item.project?.project_code || item.project_code || 'NA';
 
+            // Generate Item string
             const itemStr = item.category || 'Reimburse';
 
-            // Generate Filename
+            // Combine
             let suffix = '';
             if (typeof index === 'number' && typeof total === 'number' && total > 1) {
                 suffix = `_${index + 1}`;
             }
-            const finalName = `${dateStr}_${typeStr}_${reStr}_${projectStr}_${itemStr}${suffix}.${ext}`.replace(/[<>:"/\\|?*]+/g, '');
+            const filename = `${dateStr}_${typeStr}_${reStr}_${projectStr}_${itemStr}${suffix}.${ext}`.replace(/[<>:"/\\|?*]+/g, '');
 
-            const response = await fetch(fileUrl);
+            const response = await fetch(url);
             const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
+            const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = url;
-            link.download = finalName;
+            link.href = downloadUrl;
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
+            window.URL.revokeObjectURL(downloadUrl);
             document.body.removeChild(link);
-        } catch (e) {
-            window.open(fileUrl, '_blank');
+        } catch (error) {
+            console.error('Download failed:', error);
+            window.open(url, '_blank');
+        } finally {
+            if (!isBulk) setIsDownloading(null);
         }
     };
 
     const handleBulkDownload = async () => {
-        setIsDownloading(true);
-        for (let i = 0; i < signedUrls.length; i++) {
-            const file = signedUrls[i];
-            await handleDownload(file.url, file.name, file.originalPath, i, signedUrls.length);
+        setIsDownloading('bulk');
+        const docs = activeTab === 'invoice' ? invoiceUrls : (proofUrl ? [{ url: proofUrl, originalPath: item.payment_proof_url!, name: 'Proof' }] : []);
+        for (let i = 0; i < docs.length; i++) {
+            const doc = docs[i];
+            await handleDownload(doc.url, doc.originalPath, doc.name, i, docs.length);
+            // Add delay between downloads so browser doesn't skip any
+            if (i < docs.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 800));
+            }
         }
-        setIsDownloading(false);
+        setIsDownloading(null);
     };
+
+    const currentDocs = activeTab === 'invoice' ? invoiceUrls : (proofUrl ? [{ url: proofUrl, originalPath: item.payment_proof_url!, name: 'Proof' }] : []);
 
     const [zoom, setZoom] = useState(1);
     const toggleZoom = () => setZoom(prev => prev === 1 ? 2 : 1);
@@ -659,13 +667,13 @@ function DocumentDrawer({
         <div className="fixed inset-0 z-[250] isolate">
             <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={onClose} />
             <motion.div
-                initial={{ y: "100%", opacity: 0 }}
+                initial={{ y: '100%', opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                exit={{ y: "100%", opacity: 0 }}
-                transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                exit={{ y: '100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
                 className={clsx(
-                    "absolute z-50 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-[48px] backdrop-saturate-[200%] border border-white/60 dark:border-neutral-800 shadow-2xl flex flex-col overflow-hidden rounded-[48px]",
-                    "bottom-2 left-2 right-2 top-12 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+                    "absolute z-50 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-[48px] backdrop-saturate-[200%] border border-white/60 dark:border-neutral-800 shadow-2xl flex flex-col overflow-hidden rounded-[56px]",
+                    "bottom-2 left-2 right-2 top-20 sm:bottom-6 sm:right-6 sm:top-6 sm:left-auto sm:w-[500px]"
                 )}
             >
                 {/* Header - Reorganized (Extreme Top) */}
@@ -678,11 +686,11 @@ function DocumentDrawer({
                             <ChevronLeft size={20} className="text-neutral-600 dark:text-neutral-400" />
                         </button>
 
-                        <div className="flex p-1 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-xl border border-white/80 dark:border-neutral-700/50 rounded-full shadow-md">
+                        <div className="flex items-center bg-white/80 dark:bg-neutral-800/80 backdrop-blur-xl border border-white/80 dark:border-neutral-700/50 p-1 rounded-full shadow-md">
                             <button
                                 onClick={() => { setActiveTab('invoice'); setZoom(1); }}
                                 className={clsx(
-                                    "px-6 py-2 text-[11px] font-bold rounded-full transition-all whitespace-nowrap",
+                                    "px-6 py-2 text-[11px] font-bold rounded-full transition-all",
                                     activeTab === 'invoice' ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10" : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
                                 )}
                             >
@@ -691,7 +699,7 @@ function DocumentDrawer({
                             <button
                                 onClick={() => { setActiveTab('proof'); setZoom(1); }}
                                 className={clsx(
-                                    "px-6 py-2 text-[11px] font-bold rounded-full transition-all whitespace-nowrap",
+                                    "px-6 py-2 text-[11px] font-bold rounded-full transition-all",
                                     activeTab === 'proof' ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10" : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
                                 )}
                             >
@@ -701,33 +709,34 @@ function DocumentDrawer({
                     </div>
                 </div>
 
-                {/* Content Area */}
+                {/* Scrollable Content */}
                 <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-6 scrollbar-hide bg-transparent">
                     {isLoading ? (
-                        <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <div className="flex flex-col items-center justify-center py-20 gap-4">
                             <Loader2 className="w-8 h-8 animate-spin text-red-500" />
-                            <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Loading Documents</span>
+                            <p className="text-xs font-medium text-neutral-400">Loading documents...</p>
                         </div>
-                    ) : signedUrls.length > 0 ? (
-                        signedUrls.map((file, idx) => (
+                    ) : currentDocs.length > 0 ? (
+                        currentDocs.map((doc, idx) => (
                             <div key={idx} className="space-y-3">
                                 <div className="flex items-center justify-between px-1">
-                                    <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">{file.originalPath.split('/').pop()}</span>
+                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">{doc.originalPath.split('/').pop()}</span>
                                     <button
-                                        onClick={() => handleDownload(file.url, file.name, file.originalPath)}
-                                        className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors group"
+                                        onClick={() => handleDownload(doc.url, doc.originalPath, doc.originalPath.split('/').pop() || doc.name)}
+                                        className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full text-neutral-400 hover:text-blue-500 transition-all"
+                                        title="Download this file"
                                     >
-                                        <Download size={14} className="text-neutral-400 group-hover:text-blue-500" />
+                                        {isDownloading === doc.originalPath ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download size={14} />}
                                     </button>
                                 </div>
                                 <div className="relative rounded-[2.5rem] border border-neutral-100 dark:border-neutral-800 overflow-hidden bg-neutral-50 dark:bg-neutral-900 shadow-sm">
-                                    {file.url.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i) ? (
+                                    {doc.originalPath.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i) ? (
                                         <img
-                                            src={file.url}
-                                            alt={file.name}
+                                            src={doc.url}
+                                            alt={doc.name}
                                             onClick={toggleZoom}
                                             className={clsx(
-                                                "w-full object-contain transition-transform duration-500 cursor-zoom-in",
+                                                "w-full h-auto object-contain cursor-zoom-in transition-transform duration-500",
                                                 zoom > 1 ? "scale-150 cursor-zoom-out" : ""
                                             )}
                                             style={{ transformOrigin: 'center center' }}
@@ -739,15 +748,15 @@ function DocumentDrawer({
                                             </div>
                                             <div className="text-center px-6">
                                                 <div className="text-sm font-bold text-neutral-700 dark:text-neutral-300 mb-1">PDF Document</div>
-                                                <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest break-all">{file.originalPath.split('/').pop()}</div>
+                                                <div className="text-[10px] font-medium text-neutral-400 uppercase tracking-widest break-all">{doc.originalPath.split('/').pop()}</div>
                                             </div>
                                             <div className="w-full px-6 mt-4 flex flex-col gap-4">
                                                 <iframe
-                                                    src={`${file.url}#toolbar=0`}
+                                                    src={`${doc.url}#toolbar=0`}
                                                     className="w-full h-[400px] rounded-2xl border border-neutral-200 dark:border-neutral-700"
                                                 />
                                                 <button
-                                                    onClick={() => handleDownload(file.url, file.name, file.originalPath)}
+                                                    onClick={() => handleDownload(doc.url, doc.originalPath, doc.originalPath.split('/').pop() || doc.name)}
                                                     className="w-full py-4 bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700 rounded-full text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2"
                                                 >
                                                     <Download size={14} /> Download Full PDF
@@ -759,25 +768,35 @@ function DocumentDrawer({
                             </div>
                         ))
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-20 text-neutral-300">
-                            <div className="w-20 h-20 rounded-full border-2 border-dashed border-neutral-100 dark:border-neutral-800 flex items-center justify-center mb-4">
-                                <FileText size={32} />
-                            </div>
-                            <span className="text-xs font-bold uppercase tracking-widest">No Documents Found</span>
+                        <div className="flex flex-col items-center justify-center py-20 gap-4 opacity-40">
+                            <Upload size={48} className="text-neutral-300" />
+                            <p className="text-sm font-medium text-neutral-400">No {activeTab} available</p>
                         </div>
                     )}
                 </div>
 
-                {/* Footer */}
-                {signedUrls.length > 0 && (
+                {/* Sticky Bottom Download All */}
+                {currentDocs.length > 1 && (
                     <div className="absolute bottom-0 left-0 right-0 p-6 pt-12 pb-8 bg-gradient-to-t from-white/90 dark:from-neutral-900/90 via-white/50 dark:via-neutral-900/50 to-transparent pointer-events-none flex flex-col justify-end">
                         <button
                             onClick={handleBulkDownload}
-                            disabled={isDownloading}
-                            className="pointer-events-auto w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-neutral-300 text-white rounded-full font-bold text-sm shadow-xl shadow-blue-500/20 dark:shadow-none transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                            disabled={!!isDownloading}
+                            className="pointer-events-auto w-full h-[52px] bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm shadow-xl shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                         >
-                            {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download size={18} />}
-                            {signedUrls.length > 1 ? `Download All Files (${signedUrls.length})` : 'Download File'}
+                            {isDownloading === 'bulk' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download size={20} />}
+                            Download All {activeTab === 'invoice' ? 'Receipts' : 'Proofs'}
+                        </button>
+                    </div>
+                )}
+                {currentDocs.length === 1 && (
+                    <div className="absolute bottom-0 left-0 right-0 p-6 pt-12 pb-8 bg-gradient-to-t from-white/90 dark:from-neutral-900/90 via-white/50 dark:via-neutral-900/50 to-transparent pointer-events-none flex flex-col justify-end">
+                        <button
+                            onClick={() => handleDownload(currentDocs[0].url, currentDocs[0].originalPath, currentDocs[0].name)}
+                            disabled={!!isDownloading}
+                            className="pointer-events-auto w-full h-[52px] bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-sm shadow-xl shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                        >
+                            {isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download size={20} />}
+                            Download {activeTab === 'invoice' ? 'Invoice' : 'Proof'}
                         </button>
                     </div>
                 )}
@@ -815,48 +834,370 @@ function ViewModal({
     userRole?: string | null;
 }) {
     const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
-    const [proofUrl, setProofUrl] = useState<string | null>(null);
-    const [showDocDrawer, setShowDocDrawer] = useState(false);
-    const [docDrawerType, setDocDrawerType] = useState<'invoice' | 'proof'>('invoice');
+    const [zoom, setZoom] = useState(1);
     const [isExporting, setIsExporting] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
+
+    const pdfToImage = async (pdfUrl: string): Promise<string | null> => {
+        try {
+            // Polyfill Promise.withResolvers for environments that don't support it yet
+            if (typeof (Promise as any).withResolvers === 'undefined') {
+                (Promise as any).withResolvers = function () {
+                    let resolve, reject;
+                    const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+                    return { promise, resolve, reject };
+                };
+            }
+
+            const pdfjsLib = await import("pdfjs-dist");
+            pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs`;
+            const loadingTask = pdfjsLib.getDocument(pdfUrl);
+            const pdfDoc = await loadingTask.promise;
+            const page = await pdfDoc.getPage(1);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const canvas = document.createElement('canvas');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            const ctx = canvas.getContext('2d')!;
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            return canvas.toDataURL('image/jpeg', 0.85);
+        } catch (e) {
+            console.error('PDF to image failed:', e);
+            return null;
+        }
+    };
 
     const handleExport = async (format: "jpg" | "pdf") => {
         if (!contentRef.current) return;
         setIsExporting(true);
         try {
             await new Promise(resolve => setTimeout(resolve, 500));
+
+            // --- Generate filename ---
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const dateStr = `${yyyy}${mm}${dd}`;
+            const reStr = formatStructuredId("RE", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `RE-${item.id.slice(0, 8)}`;
+            const projectStr = item.project?.project_code || item.project_code || 'NA';
+            let itemStr = item.category || 'Reimburse';
+            const fileName = `${dateStr}_Detail_${reStr}_${projectStr}_${itemStr}.${format}`.replace(/[<>:"/\\|?*]+/g, '');
+
+            // --- Step 1: Detect theme ---
+            const isDark = document.documentElement.classList.contains('dark');
+
+            // --- Step 2: Capture the actual web UI content ---
             const element = contentRef.current;
-            const canvas = await html2canvas(element, {
+            const uiCanvas = await html2canvas(element, {
                 scale: 2,
                 useCORS: true,
-                backgroundColor: "#ffffff",
+                allowTaint: true,
+                backgroundColor: null,
                 windowWidth: element.scrollWidth,
                 windowHeight: element.scrollHeight,
                 onclone: (clonedDoc) => {
                     const clonedElement = clonedDoc.getElementById("export-content");
-                    if (clonedElement) {
-                        clonedElement.style.height = "auto";
-                        clonedElement.style.overflow = "visible";
-                    }
+                    if (!clonedElement) return;
+                    clonedElement.style.height = "auto";
+                    clonedElement.style.overflow = "visible";
+
+                    // 1. Hide copy buttons and export-related elements
+                    clonedElement.querySelectorAll('button[title="Copy to clipboard"], button[title="View All"]').forEach((el) => {
+                        (el as HTMLElement).style.display = 'none';
+                    });
+                    clonedElement.querySelectorAll('button').forEach(btn => {
+                        if (btn.textContent?.includes('View All')) (btn as HTMLElement).style.display = 'none';
+                    });
+
+                    // 2. Remove decorative blur blobs (the white circle in total bar)
+                    clonedElement.querySelectorAll('div').forEach((el) => {
+                        const hEl = el as HTMLElement;
+                        const cs = getComputedStyle(el);
+                        const isBlur = (cs.filter && cs.filter.includes('blur')) ||
+                            hEl.classList.contains('blur-xl') ||
+                            hEl.classList.contains('blur-2xl') ||
+                            hEl.classList.contains('blur-3xl');
+                        if (isBlur && cs.position === 'absolute') {
+                            hEl.style.display = 'none';
+                        }
+                    });
+
+                    // 3. Fix ALL elements with unsupported CSS
+                    const allElements = clonedElement.querySelectorAll('*') as NodeListOf<HTMLElement>;
+                    allElements.forEach((el) => {
+                        const cs = getComputedStyle(el);
+
+                        // Remove all backdrop-filter
+                        if (cs.backdropFilter && cs.backdropFilter !== 'none') {
+                            el.style.backdropFilter = 'none';
+                            (el.style as any).webkitBackdropFilter = 'none';
+                        }
+
+                        // Force badges to have proper alignment
+                        if (el.classList.contains('rounded-full')) {
+                            // Badge-like elements: ensure vertical centering for canvas
+                            el.style.display = 'inline-flex';
+                            el.style.alignItems = 'center';
+                            el.style.justifyContent = 'center';
+                            el.style.lineHeight = '1';
+                            // Small padding adjustment for badges
+                            if (el.tagName === 'SPAN') {
+                                el.style.paddingTop = '4px';
+                                el.style.paddingBottom = '4px';
+                            }
+                        }
+
+                        // Replace semi-transparent backgrounds with solid ones
+                        const bg = cs.backgroundColor;
+                        if (bg && bg.includes('rgba')) {
+                            const match = bg.match(/rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+                            if (match) {
+                                const alpha = parseFloat(match[4]);
+                                if (alpha < 1 && alpha > 0) {
+                                    // Blend with parent background
+                                    const base = isDark ? 23 : 255;
+                                    const r = Math.round(Number(match[1]) * alpha + base * (1 - alpha));
+                                    const g = Math.round(Number(match[2]) * alpha + base * (1 - alpha));
+                                    const b = Math.round(Number(match[3]) * alpha + base * (1 - alpha));
+                                    el.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+                                }
+                            }
+                        }
+
+                        // Fix borders
+                        const borderColor = cs.borderColor;
+                        if (borderColor && borderColor.includes('rgba')) {
+                            const match = borderColor.match(/rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
+                            if (match) {
+                                const alpha = parseFloat(match[4]);
+                                if (alpha < 1 && alpha > 0) {
+                                    const base = isDark ? 23 : 255;
+                                    const r = Math.round(Number(match[1]) * alpha + base * (1 - alpha));
+                                    const g = Math.round(Number(match[2]) * alpha + base * (1 - alpha));
+                                    const b = Math.round(Number(match[3]) * alpha + base * (1 - alpha));
+                                    el.style.borderColor = `rgb(${r}, ${g}, ${b})`;
+                                }
+                            }
+                        }
+
+                        // Hide box-shadows (they often render weirdly)
+                        if (cs.boxShadow && cs.boxShadow !== 'none') {
+                            el.style.boxShadow = 'none';
+                        }
+                    });
                 }
             });
 
-            const fileName = `Reimburse_${item.project?.project_code || "Request"}_${item.id.slice(0, 8)}.` + format;
+            // --- Step 2: Build document images (PDFs converted to images) ---
+            const docImages: { img: HTMLImageElement; label: string }[] = [];
 
+            // Receipt
+            if (invoiceUrl) {
+                const isImage = item.invoice_url?.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i);
+                let imgSrc = invoiceUrl;
+                if (!isImage) {
+                    const pdfImg = await pdfToImage(imgSrc);
+                    if (pdfImg) imgSrc = pdfImg;
+                }
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.src = imgSrc;
+                await new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r(); setTimeout(r, 5000); });
+                if (img.naturalWidth > 0) docImages.push({ img, label: 'Receipt' });
+            }
+
+            // Payment proof
+            // Payment proof is managed at root level in Purchasing... wait, Reimburse handles it identically! It has item.payment_proof_url. 
+            // We need to fetch it first since ReimburseClient doesn't pre-fetch payment proof url in ViewModal standard load. Wait, let me just fetch it inline.
+            if (item.payment_proof_url) {
+                const proofUrlFetch = await getFinanceFileUrl(item.payment_proof_url);
+                if (proofUrlFetch) {
+                    const isProofImage = item.payment_proof_url?.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i);
+                    let proofSrc = proofUrlFetch;
+                    if (!isProofImage) {
+                        const pdfImg = await pdfToImage(proofSrc);
+                        if (pdfImg) proofSrc = pdfImg;
+                    }
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.src = proofSrc;
+                    await new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r(); setTimeout(r, 5000); });
+                    if (img.naturalWidth > 0) docImages.push({ img, label: 'Payment Proof' });
+                }
+            }
+
+            // --- Step 3: Compose final canvas ---
+            const padding = 40;
+            const headerH = 80;
+            const docGap = 16;
+            const docLabelH = 28;
+            const canvasW = uiCanvas.width + padding * 2;
+
+            // Calculate document section height
+            let docsHeight = 0;
+            if (docImages.length > 0) {
+                docsHeight += 50; // "Documents" section title
+                // Use 2-col layout if more than 1 doc
+                const useGrid = docImages.length > 1;
+                if (useGrid) {
+                    const colW = (canvasW - padding * 2 - docGap) / 2;
+                    // Pair images into rows
+                    for (let i = 0; i < docImages.length; i += 2) {
+                        const img1 = docImages[i].img;
+                        const h1 = (img1.naturalHeight / img1.naturalWidth) * colW;
+                        let maxH = h1;
+                        if (i + 1 < docImages.length) {
+                            const img2 = docImages[i + 1].img;
+                            const h2 = (img2.naturalHeight / img2.naturalWidth) * colW;
+                            maxH = Math.max(h1, h2);
+                        }
+                        docsHeight += maxH + docLabelH + docGap;
+                    }
+                } else {
+                    const colW = canvasW - padding * 2;
+                    for (const doc of docImages) {
+                        const h = (doc.img.naturalHeight / doc.img.naturalWidth) * colW;
+                        docsHeight += h + docLabelH + docGap;
+                    }
+                }
+            }
+
+            const footerH = 40;
+            const totalH = headerH + uiCanvas.height + docsHeight + footerH + padding * 2;
+
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = canvasW;
+            finalCanvas.height = totalH;
+            const ctx = finalCanvas.getContext('2d')!;
+
+            // Background
+            ctx.fillStyle = isDark ? '#111111' : '#ffffff';
+            ctx.fillRect(0, 0, canvasW, totalH);
+
+            let y = padding;
+
+            // Draw header
+            ctx.fillStyle = isDark ? '#ffffff' : '#111111';
+            ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
+            ctx.textBaseline = 'top';
+            ctx.fillText(reStr, padding, y);
+
+            ctx.fillStyle = isDark ? '#737373' : '#6b7280';
+            ctx.font = '500 16px system-ui, -apple-system, sans-serif';
+            ctx.fillText('Reimburse Detail', padding, y + 36);
+
+            // Date on the right
+            ctx.fillStyle = isDark ? '#525252' : '#a3a3a3';
+            ctx.font = '500 14px system-ui, -apple-system, sans-serif';
+            const dateText = `${dd}/${mm}/${yyyy}  ${hh}:${min}`;
+            const dateW = ctx.measureText(dateText).width;
+            ctx.fillText(dateText, canvasW - padding - dateW, y + 6);
+
+            // Separator line
+            y += headerH - 10;
+            ctx.fillStyle = isDark ? '#333333' : '#e5e7eb';
+            ctx.fillRect(padding, y, canvasW - padding * 2, 1);
+            y += 16;
+
+            // Draw the captured UI screenshot
+            ctx.drawImage(uiCanvas, padding, y);
+            y += uiCanvas.height + 16;
+
+            // --- Draw documents ---
+            if (docImages.length > 0) {
+                // "Documents" section title
+                ctx.fillStyle = isDark ? '#ffffff' : '#111111';
+                ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
+                ctx.fillText('Documents', padding, y);
+                y += 40;
+
+                const useGrid = docImages.length > 1;
+                const contentW = canvasW - padding * 2;
+
+                if (useGrid) {
+                    const colW = (contentW - docGap) / 2;
+                    for (let i = 0; i < docImages.length; i += 2) {
+                        const drawDoc = (doc: typeof docImages[0], x: number, startY: number) => {
+                            const h = (doc.img.naturalHeight / doc.img.naturalWidth) * colW;
+
+                            // Category Label (Invoice / Payment Proof)
+                            ctx.fillStyle = isDark ? '#a3a3a3' : '#737373';
+                            ctx.font = 'bold 11px system-ui';
+                            ctx.fillText(doc.label.toUpperCase(), x, startY);
+
+                            const imgY = startY + 18;
+
+                            ctx.save();
+                            ctx.beginPath();
+                            const r = 16;
+                            ctx.roundRect(x, imgY, colW, h, r);
+                            ctx.clip();
+                            ctx.fillStyle = isDark ? '#1a1a1a' : '#f5f5f5';
+                            ctx.fillRect(x, imgY, colW, h);
+                            ctx.drawImage(doc.img, x, imgY, colW, h);
+                            ctx.restore();
+
+                            return h + 18;
+                        };
+
+                        const h1 = drawDoc(docImages[i], padding, y);
+                        let maxH = h1;
+
+                        if (i + 1 < docImages.length) {
+                            const x2 = padding + colW + docGap;
+                            const h2 = drawDoc(docImages[i + 1], x2, y);
+                            maxH = Math.max(h1, h2);
+                        }
+                        y += maxH + docGap + 10;
+                    }
+                } else {
+                    for (const doc of docImages) {
+                        const h = (doc.img.naturalHeight / doc.img.naturalWidth) * contentW;
+
+                        // Category Label
+                        ctx.fillStyle = isDark ? '#a3a3a3' : '#737373';
+                        ctx.font = 'bold 11px system-ui';
+                        ctx.fillText(doc.label.toUpperCase(), padding, y);
+
+                        const imgY = y + 18;
+
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.roundRect(padding, imgY, contentW, h, 16);
+                        ctx.clip();
+                        ctx.fillStyle = isDark ? '#1a1a1a' : '#f5f5f5';
+                        ctx.fillRect(padding, imgY, contentW, h);
+                        ctx.drawImage(doc.img, padding, imgY, contentW, h);
+                        ctx.restore();
+                        y += h + 18 + docGap + 10;
+                    }
+                }
+            }
+
+            // --- Footer ---
+            ctx.fillStyle = isDark ? '#404040' : '#a3a3a3';
+            ctx.font = '500 11px system-ui';
+            const footerText = `Adidaya · ${dd}/${mm}/${yyyy} ${hh}:${min}`;
+            const footerW = ctx.measureText(footerText).width;
+            ctx.fillText(footerText, (canvasW - footerW) / 2, totalH - padding);
+
+            // --- Step 4: Export ---
             if (format === "jpg") {
                 const link = document.createElement("a");
                 link.download = fileName;
-                link.href = canvas.toDataURL("image/jpeg", 0.9);
+                link.href = finalCanvas.toDataURL("image/jpeg", 0.85);
                 link.click();
             } else {
-                const imgData = canvas.toDataURL("image/png");
+                const imgData = finalCanvas.toDataURL("image/jpeg", 0.80);
                 const pdf = new jsPDF({
                     orientation: "portrait",
                     unit: "px",
-                    format: [canvas.width, canvas.height]
+                    format: [finalCanvas.width, finalCanvas.height]
                 });
-                pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+                pdf.addImage(imgData, "JPEG", 0, 0, finalCanvas.width, finalCanvas.height);
                 pdf.save(fileName);
             }
         } catch (error) {
@@ -872,17 +1213,12 @@ function ViewModal({
                 const url = await getFinanceFileUrl(item.invoice_url);
                 setInvoiceUrl(url);
             }
-            if (item.payment_proof_url) {
-                const url = await getFinanceFileUrl(item.payment_proof_url);
-                setProofUrl(url);
-            }
+            // payment_proof_url is handled by DocumentDrawer at root level
         };
         fetchUrls();
     }, [item.invoice_url, item.payment_proof_url]);
 
-    useEffect(() => {
-        if (!item.invoice_url && item.payment_proof_url) setDocDrawerType('proof');
-    }, [item.invoice_url, item.payment_proof_url]);
+    // Document drawer type is now managed at root level via onPreview
 
     const displayAmount = item.amount || 0;
     const notes = item.rejection_reason || item.notes || "";
@@ -904,14 +1240,17 @@ function ViewModal({
                 exit={{ y: "100%", opacity: 0 }}
                 transition={{ type: "spring", damping: 30, stiffness: 300 }}
                 className={clsx(
-                    "absolute z-50 bg-white/30 dark:bg-neutral-900/40 backdrop-blur-[24px] backdrop-saturate-[180%] border border-white/60 dark:border-neutral-800 shadow-2xl rounded-[48px] overflow-hidden flex flex-col",
+                    "absolute z-50 bg-white/30 dark:bg-neutral-900/40 backdrop-blur-[24px] backdrop-saturate-[180%] border border-white/60 dark:border-neutral-800 shadow-2xl rounded-[56px] overflow-hidden flex flex-col",
                     "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
                 )}
             >
                 {/* Sticky Header */}
                 <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                        <h2 className={clsx(
+                            "font-black text-neutral-900 dark:text-white tracking-tight",
+                            isExporting ? "text-4xl pl-2 pt-2 mb-2" : "text-2xl"
+                        )}>
                             {formatStructuredId("RE", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `RE-${item.id.slice(0, 8)}`}
                         </h2>
                         <div className="flex items-center gap-2">
@@ -980,7 +1319,7 @@ function ViewModal({
                             <div className="space-y-4">
                                 {/* Progress Card */}
                                 <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px]">
-                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-4">Progress</div>
+                                    <div className="text-[10px] font-bold text-neutral-400 mb-4">Progress</div>
                                     {(() => {
                                         const now = new Date();
                                         const sameYear = (d: Date) => d.getFullYear() === now.getFullYear();
@@ -1004,7 +1343,7 @@ function ViewModal({
                                             },
                                             {
                                                 label: "Deadline",
-                                                date: "Anytime",
+                                                date: item.target_date ? fmt(new Date(item.target_date)) : "Anytime",
                                                 accentColor: "text-orange-500 dark:text-orange-400",
                                             },
                                             {
@@ -1024,7 +1363,8 @@ function ViewModal({
                                                     const isCurrent = (isPaid && idx === 3) || (isApproved && !isPaid && idx === 1) || (!isApproved && idx === 0);
                                                     const isDeadlineStep = idx === 2;
                                                     const isPaidStep = idx === 3;
-                                                    const isDeadlineActive = false; // Reimbursements rarely have hard deadlines in this UI
+                                                    const isDeadlineActive = !!item.target_date && !isPaid;
+                                                    const stepActive = isDeadlineStep ? (isDeadlineActive || isCurrent) : (isCompleted || isCurrent);
 
                                                     return (
                                                         <div key={idx} className="flex-1 flex flex-col items-center relative z-10">
@@ -1041,6 +1381,8 @@ function ViewModal({
                                                                             isRejected && idx === 1 ? "bg-red-500 border-red-500" :
                                                                                 "bg-blue-500 border-blue-500"
                                                                     )} />
+                                                                ) : isDeadlineStep && isDeadlineActive ? (
+                                                                    <div className="w-2.5 h-2.5 rounded-full border-2 bg-orange-400 border-orange-400" />
                                                                 ) : (
                                                                     <div className="w-2.5 h-2.5 rounded-full border-2 border-neutral-300 dark:border-neutral-600 bg-white/50 dark:bg-neutral-800/50" />
                                                                 )}
@@ -1048,13 +1390,13 @@ function ViewModal({
                                                             {/* Label + Date */}
                                                             <div className={clsx(
                                                                 "text-[10px] font-bold tracking-tight text-center mt-1 whitespace-nowrap px-1",
-                                                                isCurrent || (isDeadlineStep && isDeadlineActive) ? step.accentColor : "text-neutral-400 dark:text-neutral-500"
+                                                                isCurrent || (isDeadlineStep && isDeadlineActive) ? "text-neutral-900 dark:text-white" : "text-neutral-400 dark:text-neutral-500"
                                                             )}>
                                                                 {step.label}
                                                             </div>
                                                             <div className={clsx(
                                                                 "text-[9px] font-medium text-center whitespace-nowrap tracking-tighter mt-0.5",
-                                                                (isCompleted || isCurrent) ? "text-neutral-400 dark:text-neutral-500" : "text-neutral-200 dark:text-neutral-700"
+                                                                stepActive ? "text-neutral-400 dark:text-neutral-500" : "text-neutral-200 dark:text-neutral-700"
                                                             )}>
                                                                 {step.date}
                                                             </div>
@@ -1069,29 +1411,45 @@ function ViewModal({
                                 <div className="flex flex-col gap-4">
                                     <div>
                                         <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Project</div>
-                                        <div className="text-sm font-medium text-neutral-900 dark:text-white flex items-center flex-wrap gap-1.5">
+                                        <div className="flex items-center flex-wrap gap-1.5 min-h-[22px]">
                                             {item.project ? (
                                                 <>
-                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 shrink-0">
-                                                        {item.project.project_code}
-                                                    </span>
-                                                    <span>{item.project.project_name}</span>
+                                                    {isExporting ? (
+                                                        <span className="text-sm font-bold text-neutral-600 dark:text-neutral-300">
+                                                            {item.project.project_code} • {item.project.project_name || item.project_name}
+                                                        </span>
+                                                    ) : (
+                                                        <div className="flex items-center flex-wrap gap-2">
+                                                            <div className="inline-flex items-center px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700/50 shadow-sm">
+                                                                <span className="text-xs font-bold text-neutral-900 dark:text-white whitespace-nowrap">
+                                                                    {item.project.project_code}
+                                                                </span>
+                                                            </div>
+                                                            <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400">
+                                                                {item.project.project_name || item.project_name}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </>
-                                            ) : "-"}
+                                            ) : (
+                                                <span className="text-sm font-medium text-neutral-400">-</span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Priority Level</div>
                                             <div className="text-sm font-medium text-neutral-900 dark:text-white capitalize flex items-center gap-1.5">
-                                                <div className={clsx(
-                                                    "w-2 h-2 rounded-full",
-                                                    item.priority === 'URGENT' ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" :
-                                                        item.priority === 'HIGH' ? "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" :
-                                                            item.priority === 'MEDIUM' ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" :
-                                                                "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
-                                                )} />
-                                                {formatStatus(item.priority || "LOW")}
+                                                {!isExporting && (
+                                                    <div className={clsx(
+                                                        "w-2 h-2 rounded-full",
+                                                        item.priority === 'URGENT' ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" :
+                                                            item.priority === 'HIGH' ? "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]" :
+                                                                item.priority === 'MEDIUM' ? "bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" :
+                                                                    "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                                                    )} />
+                                                )}
+                                                <span className={isExporting ? "font-bold" : ""}>{formatStatus(item.priority || "LOW")}</span>
                                             </div>
                                         </div>
                                         <div>
@@ -1106,24 +1464,23 @@ function ViewModal({
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 pt-1">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <div className="text-[11px] font-bold text-neutral-500 mb-1">Category & Sub</div>
-                                        <div className="text-xs font-bold text-neutral-900 dark:text-white flex flex-col">
-                                            <span className="capitalize">{category?.toLowerCase().replace(/_/g, " ")}</span>
-                                            <span className="text-[10px] text-neutral-400 font-medium capitalize">{item.subcategory ? item.subcategory.toLowerCase().replace(/_/g, " ") : "-"}</span>
+                                        <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Category</div>
+                                        <div className="text-sm font-medium text-neutral-900 dark:text-white capitalize truncate pr-4">
+                                            {formatStatus(category)}
                                         </div>
                                     </div>
                                     <div>
-                                        <div className="text-[11px] font-bold text-neutral-500 mb-1 text-right">Status</div>
-                                        <div className="flex justify-end">
-                                            <StatusBadge status={status} />
+                                        <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Subcategory</div>
+                                        <div className="text-sm font-medium text-neutral-900 dark:text-white capitalize truncate pr-4">
+                                            {item.subcategory ? formatStatus(item.subcategory) : "-"}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <div className="text-[11px] font-bold text-neutral-500 mb-1">Description</div>
+                                    <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Description</div>
                                     <div className="text-sm font-medium text-neutral-900 dark:text-white leading-relaxed">
                                         {item.description || "No description provided"}
                                     </div>
@@ -1131,40 +1488,55 @@ function ViewModal({
                             </div>
                         </section>
 
-                        {/* SECTION: Beneficiary - MOVED UP */}
-                        {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
-                            <section className="space-y-4">
-                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                    <CreditCard className="w-4 h-4" strokeWidth={2} /> Beneficiary & Payment
-                                </h3>
-                                <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-3 opacity-[0.03] pointer-events-none">
-                                        <CreditCard className="w-16 h-16 rotate-12" />
-                                    </div>
-                                    <div className="flex flex-col gap-2 relative z-10">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-neutral-400 leading-none mb-1">Bank Account</span>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[13px] font-bold text-neutral-900 dark:text-white">{item.beneficiary_bank || "Unknown Bank"}</span>
-                                                    <span className="text-[13px] font-mono font-bold text-blue-600 dark:text-blue-400 tracking-tight bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-100 dark:border-blue-500/20">{item.beneficiary_number || "-"}</span>
-                                                    {item.beneficiary_number && <CopyButton text={item.beneficiary_number} />}
-                                                </div>
-                                                <div className="text-xs font-bold text-neutral-500 dark:text-neutral-400 mt-1 tracking-tight">{item.beneficiary_name || "-"}</div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-[10px] font-bold text-neutral-400 mb-1">Total Amount</div>
-                                                <div className="flex items-center justify-end gap-1">
-                                                    <span className="text-lg font-black text-neutral-900 dark:text-white">{formatCurrency(item.approved_amount || item.amount)}</span>
-                                                    <CopyButton text={String(item.approved_amount || item.amount)} />
-                                                </div>
-                                                {(item.approved_amount) && item.approved_amount !== item.amount && (
-                                                    <div className="text-[10px] text-orange-600 line-through opacity-75 font-bold">
-                                                        {formatCurrency(item.amount)}
-                                                    </div>
-                                                )}
-                                            </div>
+                        {/* SECTION: Amount & Status */}
+                        <section className="space-y-4 pt-2">
+                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                <DollarSign className="w-4 h-4" strokeWidth={2} /> Amount & Status
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Amount</div>
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(item.approved_amount || item.amount)}</span>
+                                            {!isExporting && <CopyButton text={String(item.approved_amount || item.amount)} />}
                                         </div>
+                                        {(item.approved_amount) && item.approved_amount !== item.amount && (
+                                            <div className="text-[10px] text-orange-600 line-through opacity-75 font-bold">
+                                                {formatCurrency(item.amount)}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Finance Status</div>
+                                    <StatusBadge status={status} textOnly={isExporting} />
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION: Bank Account */}
+                        {(item.beneficiary_bank || item.beneficiary_number || item.beneficiary_name) && (
+                            <section className="space-y-4 pt-2">
+                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4" strokeWidth={2} /> Beneficiary Account
+                                </h3>
+                                <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px]">
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-bold text-neutral-900 dark:text-white">{item.beneficiary_bank || "Unknown Bank"}</span>
+                                            {isExporting ? (
+                                                <span className="text-[13px] font-mono font-bold text-neutral-900 dark:text-white pr-2">
+                                                    {item.beneficiary_number || "-"}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[13px] font-mono font-bold border border-blue-100 dark:border-blue-900/50">
+                                                    {item.beneficiary_number || "-"}
+                                                </span>
+                                            )}
+                                            {!isExporting && item.beneficiary_number && <CopyButton text={item.beneficiary_number} className="text-blue-500 hover:text-blue-600" data-html2canvas-ignore="true" />}
+                                        </div>
+                                        <div className="text-xs font-bold text-neutral-500 dark:text-neutral-400 tracking-tight">{item.beneficiary_name || "-"}</div>
                                     </div>
                                 </div>
                             </section>
@@ -1172,65 +1544,82 @@ function ViewModal({
 
                         {/* SECTION: Item Details - TABLE FORMAT */}
                         {item.items && item.items.length > 0 && (
-                            <section className="space-y-4">
+                            <section className="space-y-4 pt-2">
                                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                                     <Package className="w-4 h-4" strokeWidth={2} /> Item Details
                                 </h3>
-                                <div className="rounded-2xl border border-neutral-100 dark:border-neutral-800 overflow-hidden bg-white/40 dark:bg-neutral-900/40 backdrop-blur-sm">
-                                    <table className="w-full text-left border-collapse">
+                                <div className="rounded-3xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] overflow-x-auto scrollbar-hide">
+                                    <table className="w-full text-xs text-left">
                                         <thead>
-                                            <tr className="bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800">
+                                            <tr className="border-b border-neutral-100 dark:border-neutral-700/40">
                                                 <th className="py-2.5 px-4 text-[10px] font-bold text-neutral-400">Item</th>
-                                                <th className="py-2.5 px-2 text-[10px] font-bold text-neutral-400 text-center">Qty</th>
-                                                <th className="py-2.5 px-4 text-[10px] font-bold text-neutral-400 text-right">Total</th>
+                                                <th className="py-2.5 px-2 text-center text-[10px] font-bold text-neutral-400 w-[12%]">Qty</th>
+                                                <th className="py-2.5 px-2 text-right text-[10px] font-bold text-neutral-400 w-[25%]">Price</th>
+                                                <th className="py-2.5 px-4 text-right text-[10px] font-bold text-neutral-400 w-[25%]">Total</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-neutral-50 dark:divide-neutral-800/50">
+                                        <tbody className="divide-y divide-neutral-50 dark:divide-neutral-700/30">
                                             {item.items.map((it: any, idx: number) => (
-                                                <tr key={idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/30 transition-colors">
-                                                    <td className="py-3 px-4">
-                                                        <div className="text-[13px] font-bold text-neutral-900 dark:text-white leading-tight">{it.name}</div>
-                                                        <div className="text-[10px] text-neutral-400 font-medium tabular-nums">{formatCurrency(it.unit_price)} / {it.unit}</div>
+                                                <tr key={idx} className="hover:bg-white/40 dark:hover:bg-neutral-700/20 transition-colors">
+                                                    <td className="py-2.5 px-4 font-medium text-neutral-800 dark:text-neutral-200">{it.name}</td>
+                                                    <td className="py-2.5 px-2 text-center text-neutral-500 dark:text-neutral-400 tabular-nums">
+                                                        {it.qty} {it.unit && <span className="text-[9px]">{it.unit}</span>}
                                                     </td>
-                                                    <td className="py-3 px-2 text-center text-xs font-bold text-neutral-700 dark:text-neutral-300 tabular-nums">
-                                                        {it.qty}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-right">
-                                                        <div className="text-[13px] font-bold text-neutral-900 dark:text-white tabular-nums">{formatCurrency(it.total)}</div>
-                                                    </td>
+                                                    <td className="py-2.5 px-2 text-right text-neutral-500 dark:text-neutral-400 tabular-nums">{it.unit_price ? formatCurrency(it.unit_price) : "-"}</td>
+                                                    <td className="py-2.5 px-4 text-right font-bold text-neutral-900 dark:text-white tabular-nums">{formatCurrency(it.total)}</td>
                                                 </tr>
                                             ))}
-                                            <tr className="bg-neutral-50/50 dark:bg-neutral-800/20 font-bold">
-                                                <td colSpan={2} className="py-3 px-4 text-[11px] text-neutral-500 uppercase tracking-widest">Total Request</td>
-                                                <td className="py-3 px-4 text-right text-[15px] font-black text-neutral-900 dark:text-white tabular-nums">{formatCurrency(item.amount)}</td>
-                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
+
+                                {/* Total Summary */}
+                                {isExporting ? (
+                                    <div className="py-2 flex items-center justify-between border-t border-b border-neutral-100 dark:border-neutral-800 mt-2">
+                                        <div className="flex flex-col">
+                                            <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 tracking-tight leading-none mb-1">Total Amount</span>
+                                            <span className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">{item.items.length} items</span>
+                                        </div>
+                                        <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">{formatCurrency(item.amount)}</span>
+                                    </div>
+                                ) : (
+                                    <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] relative overflow-hidden group">
+                                        <div className="relative flex items-center justify-between">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider leading-none mb-1">Total Amount</span>
+                                                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{item.items.length} items</span>
+                                            </div>
+                                            <span className="text-xl font-bold text-red-600 dark:text-red-400 tracking-tight">{formatCurrency(item.amount)}</span>
+                                        </div>
+                                    </div>
+                                )}
                             </section>
                         )}
 
+                        {/* Transport Details */}
                         {/* Transport Details */}
                         {category === "TRANSPORTATION" && item.details && (item.details.origin || item.details.destination) && (
                             <section className="space-y-4 pt-2">
                                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                                     <MapPin className="w-4 h-4" strokeWidth={2} /> Trip Details
                                 </h3>
-                                <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] divide-y divide-neutral-100 dark:divide-neutral-800">
-                                    <div className="flex justify-between items-center py-2 text-xs">
-                                        <span className="text-neutral-400 font-bold uppercase tracking-wider">Origin</span>
-                                        <span className="font-bold text-neutral-900 dark:text-white">{item.details.origin || "?"}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center py-2 text-xs">
-                                        <span className="text-neutral-400 font-bold uppercase tracking-wider">Destination</span>
-                                        <span className="font-bold text-neutral-900 dark:text-white">{item.details.destination || "?"}</span>
-                                    </div>
-                                    {item.details.distance && (
-                                        <div className="flex justify-between items-center py-2 text-xs">
-                                            <span className="text-neutral-400 font-bold uppercase tracking-wider">Distance</span>
-                                            <span className="font-bold text-neutral-900 dark:text-white tabular-nums">{item.details.distance} km</span>
+                                <div className="p-4 rounded-3xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px]">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Origin</div>
+                                            <div className="text-sm font-bold text-neutral-900 dark:text-white">{item.details.origin || "-"}</div>
                                         </div>
-                                    )}
+                                        <div>
+                                            <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Destination</div>
+                                            <div className="text-sm font-bold text-neutral-900 dark:text-white">{item.details.destination || "-"}</div>
+                                        </div>
+                                        {item.details.distance && (
+                                            <div>
+                                                <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Distance</div>
+                                                <div className="text-sm font-bold text-neutral-900 dark:text-white tabular-nums">{item.details.distance} km</div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </section>
                         )}
@@ -1239,104 +1628,89 @@ function ViewModal({
                         <section className="space-y-4 pt-2">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                    <Upload className="w-4 h-4" strokeWidth={2} /> Documents
+                                    <Upload className="w-4 h-4" strokeWidth={2} /> Documents & Proofs
                                 </h3>
-                                {(item.invoice_url || item.payment_proof_url) && (
+                            </div>
+
+                            {!isExporting && (
+                                <div className="grid grid-cols-2 gap-3">
                                     <button
-                                        onClick={() => {
-                                            setDocDrawerType(item.invoice_url ? 'invoice' : 'proof');
-                                            setShowDocDrawer(true);
-                                        }}
-                                        className="text-[11px] font-bold text-red-600 dark:text-red-400 hover:opacity-70 transition-opacity flex items-center gap-1"
+                                        onClick={() => onPreview('invoice')}
+                                        className={clsx(
+                                            "p-4 rounded-3xl border transition-all flex flex-col gap-2 text-left relative overflow-hidden group",
+                                            item.invoice_url
+                                                ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-red-200 dark:hover:border-red-500/30"
+                                                : "bg-neutral-50/50 dark:bg-neutral-900/30 border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
+                                        )}
                                     >
-                                        View All <ChevronRight size={12} />
+                                        <div className="flex items-center justify-between relative z-10">
+                                            <span className="text-[10px] font-bold text-neutral-400">Receipt</span>
+                                            <FileText size={14} className={clsx(item.invoice_url ? "text-red-500" : "text-neutral-300")} />
+                                        </div>
+                                        <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
+                                            {item.invoice_url ? "1 File" : "No Receipt"}
+                                        </div>
+                                        <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
+                                            <FileText size={48} />
+                                        </div>
                                     </button>
-                                )}
-                            </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    onClick={() => { setDocDrawerType('invoice'); setShowDocDrawer(true); }}
-                                    className={clsx(
-                                        "p-4 rounded-3xl border transition-all flex flex-col gap-2 text-left relative overflow-hidden group",
-                                        item.invoice_url
-                                            ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-red-200 dark:hover:border-red-500/30"
-                                            : "bg-neutral-50/50 dark:bg-neutral-900/30 border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between relative z-10">
-                                        <span className="text-[10px] font-bold text-neutral-400">Receipt</span>
-                                        <FileText size={14} className={clsx(item.invoice_url ? "text-red-500" : "text-neutral-300")} />
-                                    </div>
-                                    <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
-                                        {item.invoice_url ? "1 File" : "No Receipt"}
-                                    </div>
-                                    <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
-                                        <FileText size={48} />
-                                    </div>
-                                </button>
-
-                                <button
-                                    onClick={() => { setDocDrawerType('proof'); setShowDocDrawer(true); }}
-                                    className={clsx(
-                                        "p-4 rounded-3xl border transition-all flex flex-col gap-2 text-left relative overflow-hidden group",
-                                        item.payment_proof_url
-                                            ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-emerald-200 dark:hover:border-emerald-500/30"
-                                            : "bg-neutral-50/50 dark:bg-neutral-900/30 border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
-                                    )}
-                                >
-                                    <div className="flex items-center justify-between relative z-10">
-                                        <span className="text-[10px] font-bold text-neutral-400">Payment Proof</span>
-                                        <CheckCircle2 size={14} className={clsx(item.payment_proof_url ? "text-emerald-500" : "text-neutral-300")} />
-                                    </div>
-                                    <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
-                                        {item.payment_proof_url ? "1 File" : "No Proof"}
-                                    </div>
-                                    <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
-                                        <CheckCircle2 size={48} />
-                                    </div>
-                                </button>
-                            </div>
-
-                            {/* Nested Document Drawer */}
-                            <AnimatePresence>
-                                {showDocDrawer && (
-                                    <DocumentDrawer
-                                        item={item}
-                                        initialTab={docDrawerType}
-                                        onClose={() => setShowDocDrawer(false)}
-                                    />
-                                )}
-                            </AnimatePresence>
+                                    <button
+                                        onClick={() => onPreview('proof')}
+                                        className={clsx(
+                                            "p-4 rounded-3xl border transition-all flex flex-col gap-2 text-left relative overflow-hidden group",
+                                            item.payment_proof_url
+                                                ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-emerald-200 dark:hover:border-emerald-500/30"
+                                                : "bg-neutral-50/50 dark:bg-neutral-900/30 border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between relative z-10">
+                                            <span className="text-[10px] font-bold text-neutral-400">Payment Proof</span>
+                                            <CheckCircle2 size={14} className={clsx(item.payment_proof_url ? "text-emerald-500" : "text-neutral-300")} />
+                                        </div>
+                                        <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
+                                            {item.payment_proof_url ? "1 File" : "No Proof"}
+                                        </div>
+                                        <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
+                                            <CheckCircle2 size={48} />
+                                        </div>
+                                    </button>
+                                </div>
+                            )}
                         </section>
 
                         {/* SECTION: Notes */}
-                        {item.notes && (
-                            <section className="space-y-4">
-                                <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                                    <FileText className="w-4 h-4" strokeWidth={2} /> Additional Notes
-                                </h3>
-                                <div className="text-[13px] text-neutral-600 dark:text-neutral-400 bg-white/60 dark:bg-neutral-800/60 p-5 rounded-3xl border border-neutral-100 dark:border-neutral-700/40 font-medium leading-relaxed italic">
-                                    "{item.notes}"
-                                </div>
-                            </section>
-                        )}
+                        <section className="space-y-4 pt-4">
+                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                                <FileText className="w-4 h-4" strokeWidth={2} /> Additional Notes
+                            </h3>
+                            <div className="text-[13px] text-neutral-700 dark:text-neutral-300 bg-white/60 dark:bg-neutral-800/60 p-5 rounded-3xl border border-neutral-100 dark:border-neutral-700/40 font-medium leading-relaxed">
+                                {item.notes ? (
+                                    <span className="italic">"{item.notes}"</span>
+                                ) : (
+                                    <span className="text-neutral-400 italic">No notes provided</span>
+                                )}
+                            </div>
+                        </section>
                     </div>
                 </div>
 
-                {/* Bottom Actions - STANDARDIZED BUTTONS */}
+                {/* Bottom Actions - STANDARDIZED */}
                 {(() => {
-                    const safeRole = userRole || "";
-                    const approverRoles = ["FINANCE", "PROJECT_MANAGER", "ADMIN", "DIRECTOR", "MANAGER"];
-                    const payerRoles = ["FINANCE", "ADMIN", "DIRECTOR", "MANAGER"];
+                    const statusVal = item.status || "PENDING";
 
-                    const canApprove = item.status === "PENDING" && isTeamView && approverRoles.includes(safeRole);
-                    const canPay = (item.status === "APPROVED" || item.status === "PAID") && isTeamView && payerRoles.includes(safeRole);
-                    const canEdit = (item.status === "DRAFT" || item.status === "NEED_REVISION") && !isTeamView;
-                    const canDelete = (item.status === "DRAFT" || item.status === "PENDING") && !isTeamView;
-                    const isPaid = item.status === "PAID";
+                    const isDraftOrRevise = statusVal === "DRAFT" || statusVal === "NEED_REVISION";
+                    const isPending = statusVal === "PENDING";
+                    const isApprovedNotPaid = statusVal === "APPROVED" && item.financial_status !== "PAID";
+                    const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
+                    const isPaid = item.financial_status === "PAID";
 
-                    const showOwnerWaiting = !canEdit && item.status === "PENDING" && !isTeamView;
+                    const canApprove = isPending && isTeamView;
+                    const canPay = isApprovedNotPaid && isTeamView;
+                    const canEdit = (isDraftOrRevise || (isPending && isAdmin)) && !isTeamView;
+                    const canDelete = isTeamView ? isAdmin : true;
+
+                    const showOwnerWaiting = !isTeamView && statusVal === "PENDING";
                     const hasActions = canApprove || (canPay && !isPaid) || canEdit || canDelete || showOwnerWaiting || isPaid;
 
                     if (!hasActions) return null;
@@ -1346,7 +1720,6 @@ function ViewModal({
                             <div className="flex flex-col gap-3">
                                 {canApprove && (
                                     <div className="flex flex-col gap-3 w-full">
-                                        {/* Row 1: Delete | Reject | Revise */}
                                         <div className="flex items-center gap-2">
                                             <button onClick={onDelete} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete">
                                                 <Trash2 size={20} />
@@ -1358,14 +1731,13 @@ function ViewModal({
                                                 <RotateCcw size={18} /> Revise
                                             </button>
                                         </div>
-                                        {/* Row 2: Approve */}
                                         <button onClick={onApprove} className="w-full h-14 text-base font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full transition-all shadow-lg shadow-emerald-200/50 flex items-center justify-center gap-2">
                                             <Check size={20} /> Approve
                                         </button>
                                     </div>
                                 )}
 
-                                {canPay && item.status !== "PAID" && (
+                                {canPay && !isPaid && (
                                     <div className="flex items-center gap-3">
                                         <button onClick={onDelete} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete">
                                             <Trash2 size={20} />
@@ -1373,22 +1745,25 @@ function ViewModal({
                                         <button onClick={onEdit} className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all" title="Edit">
                                             <Pencil size={20} />
                                         </button>
-                                        <button onClick={onPay} className="flex-1 h-14 text-base font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-lg shadow-blue-200/50 flex items-center justify-center gap-2">
+                                        <button
+                                            onClick={onPay}
+                                            disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
+                                            className="flex-1 h-14 text-base font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-lg shadow-blue-200/50 flex items-center justify-center gap-2 disabled:opacity-50"
+                                        >
                                             <CreditCard size={20} /> Pay Now
                                         </button>
                                     </div>
                                 )}
 
-                                {/* Owner Actions (Non-Team View) */}
-                                {!isTeamView && (
+                                {!isTeamView && (statusVal === "PENDING" || statusVal === "DRAFT" || statusVal === "NEED_REVISION") && (
                                     <div className="flex items-center gap-2">
                                         {canDelete && (
                                             <button onClick={onDelete} className="w-14 h-14 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete Request">
                                                 <Trash2 size={20} />
                                             </button>
                                         )}
-                                        {!canEdit && item.status === "PENDING" && (
-                                            <div className="flex-1 h-14 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/40 rounded-full border border-neutral-100 dark:border-neutral-700/50 text-xs font-bold text-neutral-400 uppercase tracking-widest">
+                                        {statusVal === "PENDING" && (
+                                            <div className="flex-1 h-14 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/40 rounded-full border border-neutral-100 dark:border-neutral-700/50 text-xs font-bold text-neutral-400 uppercase tracking-widest leading-none">
                                                 Waiting Approval
                                             </div>
                                         )}
@@ -1400,16 +1775,14 @@ function ViewModal({
                                     </div>
                                 )}
 
-                                <div className="flex items-center gap-2">
-                                    {item.status === "PAID" && (
-                                        <button
-                                            onClick={onClose}
-                                            className="flex-1 h-14 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-bold text-base active:scale-[0.98] transition-all flex items-center justify-center"
-                                        >
-                                            Close
-                                        </button>
-                                    )}
-                                </div>
+                                {isPaid && (
+                                    <button
+                                        onClick={onClose}
+                                        className="w-full h-14 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-bold text-base active:scale-[0.98] transition-all flex items-center justify-center"
+                                    >
+                                        Close
+                                    </button>
+                                )}
                             </div>
                         </div>
                     );
@@ -2161,9 +2534,26 @@ export default function ReimburseClient() {
                                                 <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-500/10 dark:bg-rose-500/10 text-rose-500 border border-rose-200/50 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Delete">
                                                     <Trash2 className="w-[18px] h-[18px]" />
                                                 </button>
-                                                {(isPending || isDraftOrRevise) && (
-                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2 rounded-xl bg-neutral-900 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-neutral-400/50">
+                                                {(isDraftOrRevise) && (
+                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
                                                         <Pencil className="w-4 h-4" /> Edit
+                                                    </button>
+                                                )}
+                                                {item.status === 'DRAFT' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setApprovingItem(item); // Using approving item modal for submission confirmation if needed, or direct update
+                                                            updateReimburseStatus(item.id, 'PENDING').then(() => fetchItems());
+                                                        }}
+                                                        className="flex-[1.5] py-2 rounded-xl bg-red-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-red-200/50"
+                                                    >
+                                                        <Send className="w-4 h-4" /> Submit
+                                                    </button>
+                                                )}
+                                                {isPending && (
+                                                    <button className="flex-1 py-2 rounded-xl bg-neutral-900 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-neutral-400/50 opacity-50 cursor-default">
+                                                        <Clock className="w-4 h-4" /> Submitted
                                                     </button>
                                                 )}
                                             </>
@@ -2463,11 +2853,27 @@ export default function ReimburseClient() {
                         item={viewingItem}
                         onClose={() => setViewingItem(null)}
                         onPreview={(tab) => setPreviewingDocument({ item: viewingItem, initialTab: tab })}
+                        onApprove={() => setApprovingItem(viewingItem)}
+                        onReject={() => setRejectingItem(viewingItem)}
+                        onRevise={() => setRevisingItem(viewingItem)}
+                        onEdit={() => { setEditingItem(viewingItem); setIsDrawerOpen(true); }}
+                        onPay={() => setPayingItem(viewingItem)}
+                        onDelete={() => setDeletingItem(viewingItem)}
+                        isTeamView={isTeamView}
+                        userRole={userRole}
                     />
                 )
             }
 
-            {/* Document preview is now handled by nested DocumentDrawer inside ViewModal */}
+            {
+                previewingDocument && (
+                    <DocumentDrawer
+                        item={previewingDocument.item}
+                        initialTab={previewingDocument.initialTab}
+                        onClose={() => setPreviewingDocument(null)}
+                    />
+                )
+            }
 
             {/* Delete Confirmation Modal */}
             {

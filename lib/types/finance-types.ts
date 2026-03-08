@@ -64,6 +64,7 @@ export interface PurchasingItem {
     source_of_fund_id?: string;
     source_of_fund_name?: string;
     payment_date?: string;
+    target_date?: string;
     request_number?: number;
     project_number?: string;
     payment_proof_url?: string;
@@ -128,6 +129,7 @@ export interface ReimburseRequest {
     invoice_url?: string; // Receipt
     payment_proof_url?: string; // Proof of transfer
     payment_date?: string;
+    target_date?: string;
     request_number?: number;
     project_number?: string;
     source_of_fund_id?: string;

@@ -143,6 +143,37 @@ export function PurchaseRequestForm({
     }, [items]);
 
     // -- VALIDATION --
+    // -- DATA RESTORATION --
+    useEffect(() => {
+        if (initialData) {
+            setProjectCode(initialData.project?.project_code || initialData.project_code || "");
+            setPurchaseDate(initialData.date?.split("T")[0] || "");
+            setTargetDate(initialData.target_date?.split("T")[0] || "");
+            setVendor(initialData.vendor || "");
+            setBankName(initialData.beneficiary_bank || "");
+            setAccountNumber(initialData.beneficiary_number || "");
+            setAccountName(initialData.beneficiary_name || "");
+            setNotes(initialData.notes || "");
+            setPriority(initialData.priority || "MEDIUM");
+            setStage(initialData.purchase_stage || "PLANNED");
+
+            // Fix: Category mapping (might be 'type' in DB)
+            setCategory(initialData.type || "");
+            setSubcategory(initialData.subcategory || "");
+
+            if (initialData.items && initialData.items.length > 0) {
+                setItems(initialData.items.map((item: any) => ({
+                    id: item.id || Math.random().toString(36).substr(2, 9),
+                    name: item.name,
+                    qty: item.qty,
+                    unit: item.unit,
+                    unitPrice: item.unit_price || item.unitPrice,
+                    total: item.total
+                })));
+            }
+        }
+    }, [initialData]);
+
     const isValid = useMemo(() => {
         if (!projectCode) return false;
         if (!category || !subcategory) return false;
@@ -194,7 +225,7 @@ export function PurchaseRequestForm({
                 beneficiary_bank: bankName,
                 beneficiary_number: accountNumber,
                 beneficiary_name: accountName,
-                target_date: targetDate,
+                target_date: targetDate || null,
                 description: items.map(i => i.name).join(', '),
                 priority,
                 type: category as any,

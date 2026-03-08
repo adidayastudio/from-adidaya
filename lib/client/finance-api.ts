@@ -41,6 +41,7 @@ export interface PurchasingRequestPayload {
     beneficiary_bank?: string;
     beneficiary_number?: string;
     beneficiary_name?: string;
+    target_date?: string | null;
     items: {
         name: string;
         qty: number;
@@ -173,6 +174,7 @@ export interface ReimburseRequestPayload {
     revision_reason?: string;
     rejection_reason?: string;
     approved_amount?: number;
+    target_date?: string | null;
     items: {
         name: string;
         qty: number;

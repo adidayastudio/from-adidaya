@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
 
             // TEAM - Goods Received (Unpaid) - 5 most recent by date
             applyProjectFilter(supabase.from('purchasing_requests')
-                .select('id, date, vendor, description, amount, request_number, project:projects(project_name, project_code, project_number), items:purchasing_items(name)')
+                .select('id, date, target_date, vendor, description, amount, request_number, project:projects(project_name, project_code, project_number), items:purchasing_items(name)')
                 .eq('purchase_stage', 'RECEIVED')
                 .neq('financial_status', 'PAID')
                 .order('date', { ascending: false })
@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
 
             // TEAM - Invoices Pending - 5 most recent by date
             applyProjectFilter(supabase.from('purchasing_requests')
-                .select('id, date, vendor, description, amount, request_number, project:projects(project_name, project_code, project_number), items:purchasing_items(name)')
+                .select('id, date, target_date, vendor, description, amount, request_number, project:projects(project_name, project_code, project_number), items:purchasing_items(name)')
                 .eq('purchase_stage', 'INVOICED')
                 .neq('financial_status', 'PAID')
                 .order('date', { ascending: false })
@@ -163,14 +163,14 @@ export async function GET(request: NextRequest) {
 
             // TEAM - Staff Claims (Reimburse Pending) - 5 most recent by date
             applyProjectFilter(supabase.from('reimbursement_requests')
-                .select('id, date, description, amount, created_by, request_number, project:projects(project_name, project_code, project_number), items:reimbursement_items(name)')
+                .select('id, date, target_date, description, amount, created_by, request_number, project:projects(project_name, project_code, project_number), items:reimbursement_items(name)')
                 .eq('status', 'PENDING')
                 .order('date', { ascending: false })
                 .limit(5)),
 
             // PERSONAL - My Purchase History (THIS MONTH) - 5 most recent by date
             supabase.from('purchasing_requests')
-                .select('id, date, vendor, description, amount, approval_status, financial_status, purchase_stage, created_at, updated_at, project_id, request_number, project:projects(project_name, project_code, project_number), items:purchasing_items(name)')
+                .select('id, date, target_date, vendor, description, amount, approval_status, financial_status, purchase_stage, created_at, updated_at, project_id, request_number, project:projects(project_name, project_code, project_number), items:purchasing_items(name)')
                 .eq('created_by', user.id)
                 .gte('date', startOfThisMonth)
                 .lte('date', endOfThisMonth)
@@ -179,7 +179,7 @@ export async function GET(request: NextRequest) {
 
             // PERSONAL - My Reimburse History (THIS MONTH) - 5 most recent by date
             supabase.from('reimbursement_requests')
-                .select('id, date, description, amount, status, category, created_at, updated_at, project_id, request_number, project:projects(project_name, project_code, project_number), items:reimbursement_items(name)')
+                .select('id, date, target_date, description, amount, status, category, created_at, updated_at, project_id, request_number, project:projects(project_name, project_code, project_number), items:reimbursement_items(name)')
                 .eq('created_by', user.id)
                 .gte('date', startOfThisMonth)
                 .lte('date', endOfThisMonth)

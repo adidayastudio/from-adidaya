@@ -50,10 +50,11 @@ export function ReimburseRequestForm({
     const [projects, setProjects] = useState<Project[]>([]);
 
     // Core Fields
-    const [reimbCategory, setReimbCategory] = useState<string>("");
-    const [reimbSubcategory, setReimbSubcategory] = useState<string>("");
+    const [reimbCategory, setReimbCategory] = useState<string>(initialData?.category || "");
+    const [reimbSubcategory, setReimbSubcategory] = useState<string>(initialData?.subcategory || "");
     const [reimbDate, setReimbDate] = useState("");
-    const [reimbDescription, setReimbDescription] = useState("");
+    const [reimbDescription, setReimbDescription] = useState(initialData?.description || "");
+    const [targetDate, setTargetDate] = useState(initialData?.target_date?.split("T")[0] || "");
     const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">(initialData?.priority || "MEDIUM");
 
     // Transport Specific
@@ -114,7 +115,12 @@ export function ReimburseRequestForm({
             console.log("Debug Load - Initial Data:", initialData);
             setProjectCode(initialData.project_code || initialData.project?.project_code || "");
             setReimbDate(initialData.date?.split("T")[0] || "");
+            setTargetDate(initialData.target_date?.split("T")[0] || "");
             setReimbDescription(initialData.description || "");
+
+            // Fix: Category/Subcategory mapping (might be 'type' in legacy or from API)
+            setReimbCategory(initialData.category || initialData.type || "");
+            setReimbSubcategory(initialData.subcategory || "");
 
             // Restore Transport Details if available
             if (initialData.details) {
@@ -130,12 +136,22 @@ export function ReimburseRequestForm({
             if (initialData.items && initialData.items.length > 0) {
                 setItems(initialData.items.map((i: any) => ({
                     id: i.id || Math.random().toString(36).substr(2, 9),
-                    name: i.name,
-                    qty: i.qty,
-                    unit: i.unit,
-                    unitPrice: i.unit_price,
-                    total: i.total
+                    name: i.name || i.description || "",
+                    qty: i.qty || i.quantity || 1,
+                    unit: i.unit || "pcs",
+                    unitPrice: i.unit_price || i.unitPrice || 0,
+                    total: i.total || i.amount || 0
                 })));
+            } else if (initialData.amount) {
+                // Fallback for single item from flattened data
+                setItems([{
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: initialData.description || "",
+                    qty: initialData.quantity || 1,
+                    unit: initialData.unit || "pcs",
+                    unitPrice: initialData.quantity > 0 ? (initialData.amount || 0) / initialData.quantity : 0,
+                    total: initialData.amount || 0
+                }]);
             }
         }
     }, [initialData]);
@@ -195,7 +211,7 @@ export function ReimburseRequestForm({
     // -- VALIDATION --
     const isValid = useMemo(() => {
         if (!projectCode) return false;
-        if (!reimbCategory || !reimbSubcategory || !reimbDescription || !reimbDate) return false;
+        if (!reimbCategory || !reimbSubcategory || !reimbDate) return false;
         if (items.some(i => !i.name || i.qty <= 0 || i.unitPrice < 0)) return false;
 
         const REQUIRE_TRIP_DETAILS = [
@@ -262,6 +278,7 @@ export function ReimburseRequestForm({
                 subcategory: reimbSubcategory,
                 priority,
                 amount: totalAmount,
+                target_date: targetDate || null,
                 status: asDraft ? "DRAFT" : "PENDING",
                 invoice_urls: uploadedUrls, // Newly uploaded
                 existing_invoice_ids: existingInvoices.map(inv => inv.id), // Keep these
@@ -322,18 +339,33 @@ export function ReimburseRequestForm({
                             disabled={!canEdit}
                             className="rounded-full"
                         />
-                        <div>
-                            <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider px-1 mb-1.5 ml-1">Invoice Date</label>
-                            <input
-                                type="date"
-                                value={reimbDate}
-                                onChange={e => setReimbDate(e.target.value)}
-                                disabled={!canEdit}
-                                className={clsx(
-                                    "w-full max-w-full block min-w-0 h-9 pl-3 pr-8 text-base md:text-sm border border-neutral-200 rounded-full bg-white text-neutral-900 focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium appearance-none cursor-pointer",
-                                    !canEdit && "opacity-60 cursor-not-allowed"
-                                )}
-                            />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider px-1 mb-1.5 ml-1">Invoice Date</label>
+                                <input
+                                    type="date"
+                                    value={reimbDate}
+                                    onChange={e => setReimbDate(e.target.value)}
+                                    disabled={!canEdit}
+                                    className={clsx(
+                                        "w-full max-w-full block min-w-0 h-9 pl-3 pr-8 text-base md:text-sm border border-neutral-200 rounded-full bg-white text-neutral-900 focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium appearance-none cursor-pointer",
+                                        !canEdit && "opacity-60 cursor-not-allowed"
+                                    )}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider px-1 mb-1.5 ml-1">Target Date</label>
+                                <input
+                                    type="date"
+                                    value={targetDate}
+                                    onChange={e => setTargetDate(e.target.value)}
+                                    disabled={!canEdit}
+                                    className={clsx(
+                                        "w-full max-w-full block min-w-0 h-9 pl-3 pr-8 text-base md:text-sm border border-neutral-200 rounded-full bg-white text-neutral-900 focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium appearance-none cursor-pointer",
+                                        !canEdit && "opacity-60 cursor-not-allowed"
+                                    )}
+                                />
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

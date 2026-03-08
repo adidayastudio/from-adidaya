@@ -43,6 +43,7 @@ const PURCHASING_COLUMNS = `
     revision_reason,
     payment_proof_url,
     priority,
+    target_date,
     request_number,
     approved_amount,
     project:projects(id, project_name, project_code, project_number),

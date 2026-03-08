@@ -44,6 +44,7 @@ const PURCHASING_COLUMNS = `
     rejection_reason,
     revision_reason,
     payment_proof_url,
+    target_date,
     approved_amount,
     project:projects(id, project_name, project_code),
     items:purchasing_items(id, name, qty, unit, unit_price, total),

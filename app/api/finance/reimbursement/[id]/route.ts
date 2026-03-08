@@ -34,6 +34,7 @@ const REIMBURSEMENT_COLUMNS = `
     payment_date,
     payment_proof_url,
     source_of_fund_id,
+    target_date,
     created_by,
     created_at,
     updated_at,

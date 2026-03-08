@@ -40,6 +40,7 @@ const REIMBURSEMENT_COLUMNS = `
     payment_proof_url,
     source_of_fund_id,
     priority,
+    target_date,
     created_by,
     created_at,
     updated_at,
