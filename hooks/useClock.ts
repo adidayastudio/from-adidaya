@@ -10,6 +10,8 @@ export function useClock() {
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [locationCode, setLocationCode] = useState<string | null>(null);
     const [remoteMode, setRemoteMode] = useState<string | null>(null);
+    const [clockInLat, setClockInLat] = useState<number | null>(null);
+    const [clockInLng, setClockInLng] = useState<number | null>(null);
     const [elapsed, setElapsed] = useState(0);
     const [loading, setLoading] = useState(true);
     const supabase = useMemo(() => createClient(), []);
@@ -30,7 +32,7 @@ export function useClock() {
             // Try new sessions table first, fallback to old records table
             let { data, error } = await supabase
                 .from("attendance_sessions")
-                .select("id, clock_in, clock_out, session_number, location_code, remote_mode")
+                .select("id, clock_in, clock_out, session_number, location_code, remote_mode, latitude, longitude")
                 .eq("user_id", profile.id)
                 .eq("date", dateStr)
                 .is("clock_out", null)
@@ -73,6 +75,8 @@ export function useClock() {
                 setStartTime(new Date(data.clock_in));
                 setLocationCode(data.location_code || null);
                 setRemoteMode(data.remote_mode || null);
+                setClockInLat(data.latitude || null);
+                setClockInLng(data.longitude || null);
             } else {
                 setIsCheckedIn(false);
                 setStartTime(null);
@@ -162,6 +166,6 @@ export function useClock() {
         return calculateTargetTime(startTime);
     }, [startTime]);
 
-    return { isCheckedIn, startTime, locationCode, remoteMode, targetTime, elapsed, toggleClock: handleClock, formatTime, status, refresh: checkActiveSession, loading };
+    return { isCheckedIn, startTime, locationCode, remoteMode, clockInLat, clockInLng, targetTime, elapsed, toggleClock: handleClock, formatTime, status, refresh: checkActiveSession, loading };
 }
 

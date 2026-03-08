@@ -23,6 +23,8 @@ export default function ClockAccessoryBar() {
         startTime,
         locationCode,
         remoteMode,
+        clockInLat,
+        clockInLng,
         targetTime,
         elapsed,
         toggleClock,
@@ -33,6 +35,22 @@ export default function ClockAccessoryBar() {
     const [isClockModalOpen, setIsClockModalOpen] = useState(false);
     const { resolvedTheme } = useTheme();
     const [mounted, setMounted] = useState(false);
+    const [showStatusTooltip, setShowStatusTooltip] = useState(false);
+
+    const statusLabel = status === "on-time" ? "You're On Time ✅"
+        : status === "intime" ? "You're In Time ⏰"
+            : status === "late" ? "You're Late ⚠️"
+                : status === "overtime" ? "You're in Overtime 🟣" : "";
+
+    const handleClockIconTap = () => {
+        if (!isCheckedIn) return;
+        setShowStatusTooltip(true);
+        setTimeout(() => setShowStatusTooltip(false), 2000);
+    };
+
+    const mapsUrl = clockInLat && clockInLng
+        ? `https://www.google.com/maps?q=${clockInLat},${clockInLng}`
+        : null;
 
     React.useEffect(() => {
         setMounted(true);
@@ -97,170 +115,187 @@ export default function ClockAccessoryBar() {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex-1 flex items-center justify-between gap-2 relative z-10 px-1">
-                                        <div className="flex items-center gap-2.5">
-                                            <motion.div
-                                                whileTap={{ scale: 0.9 }}
-                                                transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                                                className={clsx(
-                                                    "w-[44px] h-[44px] rounded-full flex items-center justify-center transition-colors shadow-sm",
-                                                    !isCheckedIn && (isDark ? "text-neutral-400" : "text-neutral-400"),
-                                                    isCheckedIn && status === "on-time" && (isDark ? "text-emerald-200" : "text-emerald-600"),
-                                                    isCheckedIn && status === "intime" && (isDark ? "text-amber-200" : "text-amber-600"),
-                                                    isCheckedIn && status === "late" && (isDark ? "text-red-200" : "text-red-600"),
-                                                    isCheckedIn && status === "overtime" && (isDark ? "text-violet-200" : "text-violet-600"),
-                                                )}
-                                                style={{
-                                                    background: isCheckedIn
-                                                        ? status === "on-time"
-                                                            ? isDark
-                                                                ? "linear-gradient(135deg, rgba(16,185,129,0.25) 0%, rgba(5,150,105,0.1) 100%)"
-                                                                : "linear-gradient(135deg, rgba(209,250,229,0.8) 0%, rgba(167,243,208,0.5) 100%)"
-                                                            : status === "intime"
-                                                                ? isDark
-                                                                    ? "linear-gradient(135deg, rgba(245,158,11,0.25) 0%, rgba(217,119,6,0.1) 100%)"
-                                                                    : "linear-gradient(135deg, rgba(254,243,199,0.8) 0%, rgba(253,230,138,0.5) 100%)"
-                                                                : status === "late"
-                                                                    ? isDark
-                                                                        ? "linear-gradient(135deg, rgba(239,68,68,0.25) 0%, rgba(220,38,38,0.1) 100%)"
-                                                                        : "linear-gradient(135deg, rgba(254,226,226,0.8) 0%, rgba(254,202,202,0.5) 100%)"
-                                                                    : status === "overtime"
-                                                                        ? isDark
-                                                                            ? "linear-gradient(135deg, rgba(139,92,246,0.25) 0%, rgba(109,40,217,0.1) 100%)"
-                                                                            : "linear-gradient(135deg, rgba(237,233,254,0.8) 0%, rgba(221,214,254,0.5) 100%)"
-                                                                        : isDark
-                                                                            ? "linear-gradient(135deg, rgba(59,130,246,0.25) 0%, rgba(37,99,235,0.1) 100%)"
-                                                                            : "linear-gradient(135deg, rgba(219,234,254,0.8) 0%, rgba(191,219,254,0.5) 100%)"
-                                                        : isDark
-                                                            ? "linear-gradient(135deg, rgba(60,60,60,0.4) 0%, rgba(40,40,40,0.2) 100%)"
-                                                            : "linear-gradient(135deg, rgba(243,244,246,0.8) 0%, rgba(229,231,235,0.4) 100%)",
-                                                    border: isCheckedIn
-                                                        ? status === "on-time"
-                                                            ? isDark ? "1px solid rgba(16,185,129,0.2)" : "1px solid rgba(110,231,183,0.5)"
-                                                            : status === "intime"
-                                                                ? isDark ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(252,211,77,0.5)"
-                                                                : status === "late"
-                                                                    ? isDark ? "1px solid rgba(239,68,68,0.2)" : "1px solid rgba(252,165,165,0.5)"
-                                                                    : status === "overtime"
-                                                                        ? isDark ? "1px solid rgba(139,92,246,0.2)" : "1px solid rgba(196,181,253,0.5)"
-                                                                        : isDark ? "1px solid rgba(59,130,246,0.2)" : "1px solid rgba(147,197,253,0.5)"
-                                                        : isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(209,213,219,0.4)",
-                                                }}
-                                            >
-                                                <Clock className="w-[18px] h-[18px]" strokeWidth={2} />
-                                            </motion.div>
-
-                                            <div>
-                                                <div className="flex items-center gap-1.5 mb-1">
-                                                    <span className={clsx(
-                                                        "text-[9px] font-bold uppercase tracking-[0.14em] leading-none",
-                                                        isCheckedIn ? (isDark ? "text-blue-400" : "text-blue-600") : "text-neutral-400 dark:text-neutral-500"
-                                                    )}>
-                                                        {isCheckedIn ? "On Duty" : "Offline"}
-                                                    </span>
-                                                    {isCheckedIn && (locationCode || remoteMode) && (
-                                                        <div className="flex items-center gap-1.5">
-                                                            <div className="w-[1px] h-2.5 bg-neutral-200 dark:bg-neutral-800" />
-                                                            <div className="flex items-center gap-1">
-                                                                <MapPin className="w-[9px] h-[9px] text-blue-500 dark:text-blue-400" />
-                                                                <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-tighter">
-                                                                    {locationCode ||
-                                                                        (remoteMode === "business_trip" ? "BST" :
-                                                                            remoteMode === "other" ? "OTH" :
-                                                                                remoteMode)}
-                                                                </span>
-                                                            </div>
-                                                        </div>
+                                    <div className="flex-1 flex flex-col gap-2 relative z-10 px-1">
+                                        {/* Row 1: Clock icon + Timer + Button */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2.5">
+                                                <motion.div
+                                                    whileTap={{ scale: 0.9 }}
+                                                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                                                    className={clsx(
+                                                        "w-[40px] h-[40px] rounded-full flex items-center justify-center transition-colors shadow-sm shrink-0 relative",
+                                                        !isCheckedIn && (isDark ? "text-neutral-400" : "text-neutral-400"),
+                                                        isCheckedIn && status === "on-time" && (isDark ? "text-emerald-200" : "text-emerald-600"),
+                                                        isCheckedIn && status === "intime" && (isDark ? "text-amber-200" : "text-amber-600"),
+                                                        isCheckedIn && status === "late" && (isDark ? "text-red-200" : "text-red-600"),
+                                                        isCheckedIn && status === "overtime" && (isDark ? "text-violet-200" : "text-violet-600"),
                                                     )}
-                                                </div>
+                                                    style={{
+                                                        background: isCheckedIn
+                                                            ? status === "on-time"
+                                                                ? isDark
+                                                                    ? "linear-gradient(135deg, rgba(16,185,129,0.25) 0%, rgba(5,150,105,0.1) 100%)"
+                                                                    : "linear-gradient(135deg, rgba(209,250,229,0.8) 0%, rgba(167,243,208,0.5) 100%)"
+                                                                : status === "intime"
+                                                                    ? isDark
+                                                                        ? "linear-gradient(135deg, rgba(245,158,11,0.25) 0%, rgba(217,119,6,0.1) 100%)"
+                                                                        : "linear-gradient(135deg, rgba(254,243,199,0.8) 0%, rgba(253,230,138,0.5) 100%)"
+                                                                    : status === "late"
+                                                                        ? isDark
+                                                                            ? "linear-gradient(135deg, rgba(239,68,68,0.25) 0%, rgba(220,38,38,0.1) 100%)"
+                                                                            : "linear-gradient(135deg, rgba(254,226,226,0.8) 0%, rgba(254,202,202,0.5) 100%)"
+                                                                        : status === "overtime"
+                                                                            ? isDark
+                                                                                ? "linear-gradient(135deg, rgba(139,92,246,0.25) 0%, rgba(109,40,217,0.1) 100%)"
+                                                                                : "linear-gradient(135deg, rgba(237,233,254,0.8) 0%, rgba(221,214,254,0.5) 100%)"
+                                                                            : isDark
+                                                                                ? "linear-gradient(135deg, rgba(59,130,246,0.25) 0%, rgba(37,99,235,0.1) 100%)"
+                                                                                : "linear-gradient(135deg, rgba(219,234,254,0.8) 0%, rgba(191,219,254,0.5) 100%)"
+                                                            : isDark
+                                                                ? "linear-gradient(135deg, rgba(60,60,60,0.4) 0%, rgba(40,40,40,0.2) 100%)"
+                                                                : "linear-gradient(135deg, rgba(243,244,246,0.8) 0%, rgba(229,231,235,0.4) 100%)",
+                                                        border: isCheckedIn
+                                                            ? status === "on-time"
+                                                                ? isDark ? "1px solid rgba(16,185,129,0.2)" : "1px solid rgba(110,231,183,0.5)"
+                                                                : status === "intime"
+                                                                    ? isDark ? "1px solid rgba(245,158,11,0.2)" : "1px solid rgba(252,211,77,0.5)"
+                                                                    : status === "late"
+                                                                        ? isDark ? "1px solid rgba(239,68,68,0.2)" : "1px solid rgba(252,165,165,0.5)"
+                                                                        : status === "overtime"
+                                                                            ? isDark ? "1px solid rgba(139,92,246,0.2)" : "1px solid rgba(196,181,253,0.5)"
+                                                                            : isDark ? "1px solid rgba(59,130,246,0.2)" : "1px solid rgba(147,197,253,0.5)"
+                                                            : isDark ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(209,213,219,0.4)",
+                                                    }}
+                                                    onClick={handleClockIconTap}
+                                                >
+                                                    <Clock className="w-[16px] h-[16px]" strokeWidth={2} />
+                                                    {/* Status Tooltip */}
+                                                    <AnimatePresence>
+                                                        {showStatusTooltip && statusLabel && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, y: 8, scale: 0.9 }}
+                                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                                exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                                                                transition={{ duration: 0.15 }}
+                                                                className="absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-lg z-50"
+                                                                style={{
+                                                                    background: isDark ? "rgba(30,30,30,0.95)" : "rgba(255,255,255,0.97)",
+                                                                    color: isDark ? "#fff" : "#111",
+                                                                    border: isDark ? "1px solid rgba(255,255,255,0.1)" : "1px solid rgba(0,0,0,0.06)",
+                                                                    backdropFilter: "blur(12px)",
+                                                                }}
+                                                            >
+                                                                {statusLabel}
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </motion.div>
+
                                                 <div
                                                     className={clsx(
-                                                        "text-[19px] font-bold tracking-tight tabular-nums leading-none transition-colors font-mono",
+                                                        "text-[22px] font-bold tracking-tight tabular-nums leading-none transition-colors font-mono",
                                                         isCheckedIn ? (isDark ? "text-white" : "text-neutral-900") : (isDark ? "text-neutral-500" : "text-neutral-300")
                                                     )}
                                                 >
                                                     {isCheckedIn ? formatTime(elapsed) : "00:00:00"}
                                                 </div>
                                             </div>
+
+                                            {/* Clock In/Out Button */}
+                                            <motion.button
+                                                whileTap={{ scale: 0.92 }}
+                                                whileHover={{ scale: 1.02 }}
+                                                transition={{
+                                                    type: "spring",
+                                                    stiffness: 500,
+                                                    damping: 18,
+                                                    mass: 0.6,
+                                                }}
+                                                onClick={() => setIsClockModalOpen(true)}
+                                                disabled={clockLoading}
+                                                className={clsx(
+                                                    "relative z-10 flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-wider h-[36px] shrink-0",
+                                                    clockLoading ? "opacity-50 cursor-not-allowed" : ""
+                                                )}
+                                                style={
+                                                    clockLoading
+                                                        ? {
+                                                            background: isDark ? "rgba(60,60,60,0.5)" : "rgba(229,231,235,0.5)",
+                                                            color: isDark ? "#6b7280" : "#9ca3af",
+                                                            border: isDark ? "1px solid rgba(255,255,255,0.02)" : "none",
+                                                        }
+                                                        : isCheckedIn
+                                                            ? {
+                                                                background:
+                                                                    "linear-gradient(180deg, #FF5E5E 0%, #FF3B30 100%)",
+                                                                color: "#ffffff",
+                                                                border: "1px solid rgba(255,100,100,0.3)",
+                                                                boxShadow:
+                                                                    "0 4px 14px rgba(255,59,48,0.3), inset 0 1px 0 rgba(255,255,255,0.25)",
+                                                            }
+                                                            : {
+                                                                background:
+                                                                    "linear-gradient(180deg, #3898FF 0%, #0A84FF 40%, #007AFF 100%)",
+                                                                color: "#ffffff",
+                                                                border: "1px solid rgba(56,152,255,0.3)",
+                                                                boxShadow:
+                                                                    "0 4px 14px rgba(10,132,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
+                                                            }
+                                                }
+                                            >
+                                                {clockLoading ? (
+                                                    <div className="w-3 h-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                                                ) : isCheckedIn ? (
+                                                    <Square className="w-2.5 h-2.5 fill-current" strokeWidth={0} />
+                                                ) : (
+                                                    <Play className="w-2.5 h-2.5 fill-current" strokeWidth={0} />
+                                                )}
+                                                {isCheckedIn ? "Out" : "Clock In"}
+                                            </motion.button>
                                         </div>
 
+                                        {/* Row 2: Small info icons — start, target, location */}
                                         {isCheckedIn && (
-                                            <div className="flex items-center gap-3 px-3 py-1.5 rounded-2xl bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/5 mx-1">
-                                                <div className="flex flex-col items-center gap-0.5">
-                                                    <div className="flex items-center gap-1 text-[8px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-tighter">
-                                                        <ArrowUpRight className="w-2.5 h-2.5" />
-                                                        <span>Start</span>
-                                                    </div>
-                                                    <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 tabular-nums">
+                                            <div className="flex items-center gap-3 pl-[50px]">
+                                                <div className="flex items-center gap-1">
+                                                    <ArrowUpRight className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+                                                    <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 tabular-nums">
                                                         {formatShortTime(startTime)}
                                                     </span>
                                                 </div>
-                                                <div className="w-[1px] h-6 bg-neutral-200 dark:bg-neutral-800" />
-                                                <div className="flex flex-col items-center gap-0.5">
-                                                    <div className="flex items-center gap-1 text-[8px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-tighter">
-                                                        <ArrowDownRight className="w-2.5 h-2.5" />
-                                                        <span>Target</span>
-                                                    </div>
-                                                    <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-300 tabular-nums">
+                                                <div className="flex items-center gap-1">
+                                                    <ArrowDownRight className="w-3 h-3 text-emerald-500 dark:text-emerald-400" />
+                                                    <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 tabular-nums">
                                                         {formatShortTime(targetTime)}
                                                     </span>
                                                 </div>
+                                                {(locationCode || remoteMode) && (
+                                                    mapsUrl ? (
+                                                        <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 active:opacity-60 transition-opacity">
+                                                            <MapPin className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+                                                            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase underline decoration-dotted underline-offset-2">
+                                                                {locationCode ||
+                                                                    (remoteMode === "business_trip" ? "BST" :
+                                                                        remoteMode === "other" ? "OTH" :
+                                                                            remoteMode)}
+                                                            </span>
+                                                        </a>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1">
+                                                            <MapPin className="w-3 h-3 text-neutral-400 dark:text-neutral-500" />
+                                                            <span className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase">
+                                                                {locationCode ||
+                                                                    (remoteMode === "business_trip" ? "BST" :
+                                                                        remoteMode === "other" ? "OTH" :
+                                                                            remoteMode)}
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                )}
                                             </div>
                                         )}
                                     </div>
                                 )}
-
-                                {/* Clock In/Out Button — translucent Apple liquid glass style */}
-                                <motion.button
-                                    whileTap={{ scale: 0.92 }}
-                                    whileHover={{ scale: 1.02 }}
-                                    transition={{
-                                        type: "spring",
-                                        stiffness: 500,
-                                        damping: 18,
-                                        mass: 0.6,
-                                    }}
-                                    onClick={() => setIsClockModalOpen(true)}
-                                    disabled={clockLoading}
-                                    className={clsx(
-                                        "relative z-10 flex items-center gap-2 px-5 py-3 rounded-full text-[11px] font-black uppercase tracking-wider h-[46px]",
-                                        clockLoading ? "opacity-50 cursor-not-allowed" : ""
-                                    )}
-                                    style={
-                                        clockLoading
-                                            ? {
-                                                background: isDark ? "rgba(60,60,60,0.5)" : "rgba(229,231,235,0.5)",
-                                                color: isDark ? "#6b7280" : "#9ca3af",
-                                                border: isDark ? "1px solid rgba(255,255,255,0.02)" : "none",
-                                            }
-                                            : isCheckedIn
-                                                ? {
-                                                    background:
-                                                        "linear-gradient(180deg, #FF5E5E 0%, #FF3B30 100%)",
-                                                    color: "#ffffff",
-                                                    border: "1px solid rgba(255,100,100,0.3)",
-                                                    boxShadow:
-                                                        "0 6px 20px rgba(255,59,48,0.3), inset 0 1px 0 rgba(255,255,255,0.25)",
-                                                }
-                                                : {
-                                                    background:
-                                                        "linear-gradient(180deg, #3898FF 0%, #0A84FF 40%, #007AFF 100%)",
-                                                    color: "#ffffff",
-                                                    border: "1px solid rgba(56,152,255,0.3)",
-                                                    boxShadow:
-                                                        "0 6px 18px rgba(10,132,255,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
-                                                }
-                                    }
-                                >
-                                    {clockLoading ? (
-                                        <div className="w-3.5 h-3.5 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                                    ) : isCheckedIn ? (
-                                        <Square className="w-3 h-3 fill-current" strokeWidth={0} />
-                                    ) : (
-                                        <Play className="w-3 h-3 fill-current" strokeWidth={0} />
-                                    )}
-                                    {isCheckedIn ? "Out" : "Clock In"}
-                                </motion.button>
                             </div>
                         </motion.div>
                     </AnimatePresence>
