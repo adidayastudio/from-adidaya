@@ -17,12 +17,12 @@ const APPS = [
 
 export default function WorkspaceGrid() {
     return (
-        <div className="mt-4 mb-32 relative z-10 w-full overflow-hidden px-4">
+        <div className="mt-4 mb-32 md:mt-0 md:mb-0 relative z-10 w-full overflow-hidden px-4 md:px-0">
             <h2 className="text-[12px] font-bold text-neutral-500 uppercase tracking-widest mb-4">
                 Workspace
             </h2>
 
-            <div className="grid grid-cols-2 gap-3 pb-6 pt-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-6 md:pb-0 pt-2 md:pt-0">
                 {APPS.map((app) => (
                     <Link
                         key={app.label}

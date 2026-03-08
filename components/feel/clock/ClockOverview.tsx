@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from "react";
 import { format, differenceInMinutes, isSaturday, isSunday, startOfMonth, eachDayOfInterval, endOfMonth, isSameDay } from "date-fns";
 import { formatMinutes } from "@/lib/clock-data-logic";
 import clsx from "clsx";
-import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, Briefcase, CheckCircle, List, Grid as GridIcon, XCircle, LogOut, CloudSun, CalendarDays, Key, Plane, ClipboardList, AlertTriangle, UserCheck, UserX } from "lucide-react";
+import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, Briefcase, CheckCircle, List, Grid as GridIcon, XCircle, LogOut, CloudSun, CalendarDays, Key, Plane, ClipboardList, AlertTriangle, UserCheck, UserX, ArrowUpRight, ArrowDownRight, MapPin } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
@@ -23,11 +24,24 @@ interface ClockOverviewProps {
     onClockAction?: () => void;
     joinDate?: string;
     viewMode?: "personal" | "team";
+    locationCode?: string | null;
+    remoteMode?: string | null;
 }
 
 // Mock Team Data removed in favor of real database records
 
-export function ClockOverview({ userName, role, isCheckedIn = false, startTime = null, elapsed = 0, onClockAction, joinDate, viewMode = "personal" }: ClockOverviewProps) {
+export function ClockOverview({
+    userName,
+    role,
+    isCheckedIn = false,
+    startTime = null,
+    locationCode,
+    remoteMode,
+    elapsed = 0,
+    onClockAction,
+    joinDate,
+    viewMode = "personal"
+}: ClockOverviewProps) {
     const { profile } = useUserProfile();
     const isManager = canViewTeamData(role || profile?.role);
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -312,21 +326,104 @@ export function ClockOverview({ userName, role, isCheckedIn = false, startTime =
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* CLOCK ACTION CARD - HIDDEN ON MOBILE */}
-                        <div className="hidden lg:flex bg-white rounded-2xl border border-neutral-200 p-10 shadow-sm flex-col items-center justify-center text-center space-y-8 min-h-[400px]">
+                        <div className="hidden lg:flex bg-white rounded-[2.5rem] border border-neutral-200/60 p-10 shadow-[0_20px_50px_rgba(0,0,0,0.04)] flex-col items-center justify-center text-center space-y-8 min-h-[420px] relative overflow-hidden group transition-all duration-500 hover:shadow-[0_30px_70px_rgba(0,0,0,0.08)] hover:border-neutral-300/80">
+                            {/* Premium Glass Orbs */}
+                            <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-400/5 rounded-full blur-3xl group-hover:bg-blue-400/10 transition-colors duration-1000" />
+                            <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-emerald-400/5 rounded-full blur-3xl group-hover:bg-emerald-400/10 transition-colors duration-1000" />
+
                             <div className="relative">
-                                <div className={clsx("w-40 h-40 rounded-full flex items-center justify-center transition-all duration-300", isCheckedIn ? "bg-green-50 text-green-600 ring-8 ring-green-50/50" : "bg-neutral-50 text-neutral-400 ring-8 ring-neutral-50/50")}>
-                                    <Clock className="w-16 h-16" />
+                                <motion.div
+                                    whileHover={{ scale: 1.02 }}
+                                    className={clsx(
+                                        "w-44 h-44 rounded-[3.5rem] flex items-center justify-center transition-all duration-700 relative z-10",
+                                        isCheckedIn
+                                            ? "bg-gradient-to-br from-emerald-50/80 to-teal-50/50 text-emerald-600 ring-1 ring-emerald-200/50 shadow-[0_15px_40px_rgba(16,185,129,0.12)]"
+                                            : "bg-gradient-to-br from-neutral-50 to-neutral-100/50 text-neutral-400 ring-1 ring-neutral-200 shadow-sm"
+                                    )}
+                                >
+                                    <Clock className={clsx("w-20 h-20 transition-all duration-700", isCheckedIn ? "scale-110" : "scale-100")} strokeWidth={1.5} />
+
+                                    {isCheckedIn && (
+                                        <motion.div
+                                            initial={{ scale: 0, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-[0_4px_12px_rgba(16,185,129,0.4)] border-2 border-white z-20 flex items-center gap-1.5"
+                                        >
+                                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                            ON DUTY
+                                        </motion.div>
+                                    )}
+                                </motion.div>
+                            </div>
+
+                            <div className="space-y-3 relative z-10">
+                                <div className="flex flex-col items-center">
+                                    <div className={clsx(
+                                        "text-6xl font-black tracking-tighter tabular-nums leading-none transition-all duration-700 font-mono",
+                                        isCheckedIn ? "text-neutral-900" : "text-neutral-300"
+                                    )}>
+                                        {isCheckedIn ? formatTime(elapsed) : "00:00:00"}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-4">
+                                        <div className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] leading-none mb-0.5">
+                                            {isCheckedIn ? "Total Session Duration" : "Session not started"}
+                                        </div>
+                                        {isCheckedIn && (locationCode || remoteMode) && (
+                                            <>
+                                                <div className="w-[1px] h-3 bg-neutral-200" />
+                                                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-100 shadow-sm">
+                                                    <MapPin className="w-3 h-3 text-blue-500" />
+                                                    <span className="text-[10px] font-black text-blue-600 uppercase">
+                                                        {locationCode ||
+                                                            (remoteMode === "business_trip" ? "BST" :
+                                                                remoteMode === "other" ? "OTH" :
+                                                                    remoteMode)}
+                                                    </span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
-                                {isCheckedIn && <span className="absolute bottom-0 right-0 bg-green-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-sm animate-pulse border-2 border-white">LIVE</span>}
                             </div>
-                            <div className="space-y-2">
-                                <div className="text-5xl font-bold tracking-tighter text-neutral-900 tabular-nums">{isCheckedIn ? formatTime(elapsed) : "00:00:00"}</div>
-                                <div className="text-sm font-medium text-neutral-500">{isCheckedIn ? "Running time" : "Ready to start"}</div>
+
+                            <div className="flex items-center gap-8 w-full px-6 py-6 rounded-3xl bg-neutral-50/50 border border-neutral-100/50 relative z-10">
+                                <div className="flex-1 flex flex-col items-center gap-1.5 group/stat">
+                                    <div className="flex items-center gap-2 text-[10px] font-black text-neutral-400 uppercase tracking-widest group-hover/stat:text-blue-500 transition-colors">
+                                        <ArrowUpRight className="w-3.5 h-3.5" />
+                                        <span>Started</span>
+                                    </div>
+                                    <span className="text-lg font-black text-neutral-800 tabular-nums">
+                                        {startTime ? formatHour(startTime) : "--:--"}
+                                    </span>
+                                </div>
+                                <div className="w-[1px] h-10 bg-neutral-200/60" />
+                                <div className="flex-1 flex flex-col items-center gap-1.5 group/stat">
+                                    <div className="flex items-center gap-2 text-[10px] font-black text-neutral-400 uppercase tracking-widest group-hover/stat:text-rose-500 transition-colors">
+                                        <ArrowDownRight className="w-3.5 h-3.5" />
+                                        <span>Target</span>
+                                    </div>
+                                    <span className="text-lg font-black text-neutral-800 tabular-nums">
+                                        {startTime ? formatTargetTime(startTime) : "--:--"}
+                                    </span>
+                                </div>
                             </div>
-                            <Button onClick={onClockAction} className={clsx("w-56 h-14 rounded-full text-lg font-bold shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1", isCheckedIn ? "bg-red-500 hover:bg-red-600 border-red-500 text-white" : "bg-action-primary hover:bg-action-primary-hover border-action-primary text-white")} icon={isCheckedIn ? <Square className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current" />}>
-                                {isCheckedIn ? "Clock Out" : "Clock In"}
-                            </Button>
-                            {isCheckedIn && startTime && <div className="text-xs text-neutral-400 font-medium">Started at {formatHour(startTime)}</div>}
+
+                            <div className="relative z-10 w-full pt-2">
+                                <motion.button
+                                    whileTap={{ scale: 0.96 }}
+                                    whileHover={{ scale: 1.02 }}
+                                    onClick={onClockAction}
+                                    className={clsx(
+                                        "w-full h-16 rounded-[2rem] text-lg font-black flex items-center justify-center gap-3 transition-all duration-500 shadow-[0_15px_30px_-5px_rgba(0,0,0,0.1)]",
+                                        isCheckedIn
+                                            ? "bg-gradient-to-b from-rose-500 to-rose-600 text-white hover:shadow-rose-500/25 ring-4 ring-rose-50"
+                                            : "bg-gradient-to-b from-blue-500 to-blue-600 text-white hover:shadow-blue-500/25 ring-4 ring-blue-50"
+                                    )}
+                                >
+                                    {isCheckedIn ? <Square className="w-5 h-5 fill-current" strokeWidth={0} /> : <Play className="w-5 h-5 fill-current" strokeWidth={0} />}
+                                    {isCheckedIn ? "Clock Out" : "Clock In Now"}
+                                </motion.button>
+                            </div>
                         </div>
 
                         {/* TODAY'S OVERVIEW */}

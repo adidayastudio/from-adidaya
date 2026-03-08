@@ -38,7 +38,7 @@ function ClockPageContent() {
 
   const { profile, loading } = useUserProfile();
 
-  const { isCheckedIn, elapsed, toggleClock, startTime } = useClock();
+  const { isCheckedIn, elapsed, toggleClock, startTime, locationCode, remoteMode } = useClock();
 
   // Fetch attendance data for calculating overtime start time
   const { attendance } = useClockData(profile?.id, false);
@@ -321,6 +321,8 @@ function ClockPageContent() {
               // Pass Clock State
               isCheckedIn={isCheckedIn}
               startTime={startTime}
+              locationCode={locationCode}
+              remoteMode={remoteMode}
               elapsed={elapsed}
               onClockAction={() => setIsClockModalOpen(true)}
               viewMode={viewMode}

@@ -29,9 +29,9 @@ export default function VibeCard() {
     const Icon = ICON_MAP[persona.icon] || Flame;
 
     return (
-        <Link href="/dashboard/vibe" className="block mx-4 mt-4">
+        <Link href="/dashboard/vibe" className="block mx-4 mt-4 md:mx-0 md:mt-0">
             <div
-                className="rounded-[32px] p-4 text-white relative overflow-hidden transition-transform active:scale-[0.98] shadow-lg"
+                className="rounded-[32px] p-4 md:p-5 text-white relative overflow-hidden transition-transform active:scale-[0.98] shadow-lg h-full"
                 style={{
                     background: `linear-gradient(135deg, ${persona.gradient[0]} 0%, ${persona.gradient[1]} 100%)`
                 }}

@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import useUserProfile from "./useUserProfile";
 import { createClient } from "@/utils/supabase/client";
 import * as clockApi from "@/lib/api/clock";
-import { isOvertime as isOvertimeCheck } from "@/lib/work-hours-utils";
+import { isOvertime as isOvertimeCheck, calculateTargetTime } from "@/lib/work-hours-utils";
 
 export function useClock() {
     const { profile } = useUserProfile();
     const [isCheckedIn, setIsCheckedIn] = useState(false);
     const [startTime, setStartTime] = useState<Date | null>(null);
+    const [locationCode, setLocationCode] = useState<string | null>(null);
+    const [remoteMode, setRemoteMode] = useState<string | null>(null);
     const [elapsed, setElapsed] = useState(0);
     const [loading, setLoading] = useState(true);
     const supabase = useMemo(() => createClient(), []);
@@ -28,7 +30,7 @@ export function useClock() {
             // Try new sessions table first, fallback to old records table
             let { data, error } = await supabase
                 .from("attendance_sessions")
-                .select("id, clock_in, clock_out, session_number")
+                .select("id, clock_in, clock_out, session_number, location_code, remote_mode")
                 .eq("user_id", profile.id)
                 .eq("date", dateStr)
                 .is("clock_out", null)
@@ -46,9 +48,13 @@ export function useClock() {
                 if (fallback.data && fallback.data.clock_in && !fallback.data.clock_out) {
                     setIsCheckedIn(true);
                     setStartTime(new Date(fallback.data.clock_in));
+                    setLocationCode((fallback.data as any).check_in_location_code || null);
+                    setRemoteMode((fallback.data as any).check_in_remote_mode || null);
                 } else {
                     setIsCheckedIn(false);
                     setStartTime(null);
+                    setLocationCode(null);
+                    setRemoteMode(null);
                 }
                 return;
             }
@@ -65,9 +71,13 @@ export function useClock() {
             if (data && data.clock_in) {
                 setIsCheckedIn(true);
                 setStartTime(new Date(data.clock_in));
+                setLocationCode(data.location_code || null);
+                setRemoteMode(data.remote_mode || null);
             } else {
                 setIsCheckedIn(false);
                 setStartTime(null);
+                setLocationCode(null);
+                setRemoteMode(null);
             }
         } catch (error: any) {
             // Silence AbortErrors here as well
@@ -147,6 +157,11 @@ export function useClock() {
 
     const status = getStatus();
 
-    return { isCheckedIn, startTime, elapsed, toggleClock: handleClock, formatTime, status, refresh: checkActiveSession, loading };
+    const targetTime = useMemo(() => {
+        if (!startTime) return null;
+        return calculateTargetTime(startTime);
+    }, [startTime]);
+
+    return { isCheckedIn, startTime, locationCode, remoteMode, targetTime, elapsed, toggleClock: handleClock, formatTime, status, refresh: checkActiveSession, loading };
 }
 

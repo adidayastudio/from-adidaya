@@ -47,8 +47,8 @@ export default function ActivitySummaryCard() {
     };
 
     return (
-        <Link href="/dashboard/activity" className="block mx-4 mt-4">
-            <div className="bg-white dark:bg-neutral-900 rounded-[32px] p-4 shadow-sm border border-neutral-100 dark:border-neutral-800 relative overflow-hidden transition-transform active:scale-[0.98]">
+        <Link href="/dashboard/activity" className="block mx-4 mt-4 md:mx-0 md:mt-0">
+            <div className="bg-white dark:bg-neutral-900 rounded-[32px] p-4 md:p-5 shadow-sm border border-neutral-100 dark:border-neutral-800 relative overflow-hidden transition-transform active:scale-[0.98] h-full">
                 {/* Background light gradient effect */}
                 <div className="absolute top-0 right-0 w-48 h-48 bg-blue-50/50 dark:bg-blue-900/10 rounded-full blur-3xl pointer-events-none transform translate-x-1/3 -translate-y-1/3" />
 

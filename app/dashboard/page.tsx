@@ -236,28 +236,31 @@ export default function DashboardPage() {
               <WorkspaceGrid />
             </div>
 
-            {/* DESKTOP APP GRID (WITH THEMED BACKGROUNDS) */}
-            <div className="hidden md:grid grid-cols-6 lg:grid-cols-8 gap-x-4 gap-y-8 mb-8">
-              {isMounted && APPS.map((app) => (
-                <Link href={app.href} key={app.label} className="flex flex-col items-center gap-2 group">
-                  <div className={clsx(
-                    "flex items-center justify-center w-[56px] h-[56px] border rounded-[18px] shadow-sm transition-all duration-300",
-                    "group-hover:scale-105 group-hover:-translate-y-1 group-hover:shadow-md",
-                    app.bg
-                  )}>
-                    <app.icon className={clsx("w-6 h-6", app.color)} strokeWidth={1.5} />
-                  </div>
-                  <span className="text-[10px] font-medium text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors text-center w-full truncate px-1">
-                    {app.label}
-                  </span>
-                </Link>
-              ))}
-            </div>
+            {/* DESKTOP DASHBOARD */}
+            <div className="hidden md:block space-y-8">
+              {/* Desktop Greeting */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
+                    {phase.greeting}, {profile?.name?.split(' ')[0] || "Team"}
+                  </h1>
+                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                    {phase.message}
+                  </p>
+                </div>
+                <div className={clsx("w-10 h-10 rounded-2xl flex items-center justify-center", phase.bg, phase.border, "border")}>
+                  <PhaseIcon className={clsx("w-5 h-5", phase.color)} strokeWidth={2} />
+                </div>
+              </div>
 
+              {/* Activity Summary + Vibe Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ActivitySummaryCard />
+                <VibeCard />
+              </div>
 
-
-            <div className="hidden md:block">
-              <DashboardOverview />
+              {/* Workspace Grid (replaces old icon grid) */}
+              <WorkspaceGrid />
             </div>
           </div>
         </div>
