@@ -89,7 +89,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     try {
         const { id } = await params;
         const body = await request.json();
-        const { items, ...requestData } = body;
+        const { items, invoice_urls, existing_invoice_ids, ...requestData } = body;
+
+        // Map frontend's invoice_urls array back to a single invoice_url string
+        if (invoice_urls && invoice_urls.length > 0) {
+            requestData.invoice_url = invoice_urls[0].invoice_url;
+        }
 
         const supabase = await createServerSupabase();
 
