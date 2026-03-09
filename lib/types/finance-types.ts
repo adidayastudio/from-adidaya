@@ -56,6 +56,7 @@ export interface PurchasingItem {
     type: PurchaseType;
     subcategory?: string;
     amount: number;
+    approved_amount?: number;
     priority?: RequestPriority;
     approval_status: ApprovalStatus;
     purchase_stage: PurchaseStage;
@@ -75,6 +76,7 @@ export interface PurchasingItem {
     beneficiary_number?: string;
     beneficiary_name?: string;
     submitted_by_name?: string;
+    approved_by_name?: string;
     created_by?: string;
     created_by_name?: string;
     created_by_role?: string;
@@ -118,6 +120,7 @@ export interface ReimburseRequest {
     quantity?: string;
     amount: number;
     approved_amount?: number;
+    approved_by_name?: string;
     priority?: RequestPriority;
     status: ReimburseStatus;
     project?: {

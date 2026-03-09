@@ -45,6 +45,7 @@ const REIMBURSEMENT_COLUMNS = `
     created_at,
     updated_at,
     request_number,
+    approved_by_name,
     project:projects(id, project_name, project_code, project_number),
     items:reimbursement_items(id, name, qty, unit, unit_price, total)
 `;

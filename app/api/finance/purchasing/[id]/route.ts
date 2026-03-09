@@ -46,6 +46,7 @@ const PURCHASING_COLUMNS = `
     payment_proof_url,
     target_date,
     approved_amount,
+    approved_by_name,
     project:projects(id, project_name, project_code),
     items:purchasing_items(id, name, qty, unit, unit_price, total),
     invoices:purchasing_invoices(id, invoice_url, invoice_name, invoice_type, notes, created_at)

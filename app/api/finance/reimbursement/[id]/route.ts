@@ -36,6 +36,7 @@ const REIMBURSEMENT_COLUMNS = `
     source_of_fund_id,
     target_date,
     created_by,
+    approved_by_name,
     created_at,
     updated_at,
     project:projects(id, project_name, project_code),

@@ -13,6 +13,7 @@ interface FinanceContextType {
     isLoading: boolean;
     userRole: string | undefined;
     userId: string | undefined;
+    profile: any;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -82,7 +83,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                 canAccessTeam,
                 isLoading: loading,
                 userRole: profile?.role,
-                userId: profile?.id
+                userId: profile?.id,
+                profile
             }}
         >
             {children}

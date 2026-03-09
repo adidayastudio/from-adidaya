@@ -157,6 +157,40 @@ export async function deletePurchasingRequest(id: string) {
 // REIMBURSEMENT
 // =============================================
 
+export interface UpdatePurchasingPayload {
+    approval_status?: string;
+    purchase_stage?: string;
+    financial_status?: string;
+    source_of_fund_id?: string;
+    payment_date?: string;
+    invoice_url?: string;
+    approved_amount?: number;
+    approved_by_name?: string;
+    notes?: string;
+    rejection_reason?: string;
+    revision_reason?: string;
+    payment_proof_url?: string;
+    beneficiary_bank?: string;
+    beneficiary_number?: string;
+    beneficiary_name?: string;
+}
+
+export interface UpdateReimbursePayload {
+    status?: string;
+    payment_date?: string;
+    invoice_url?: string;
+    approved_amount?: number;
+    approved_by_name?: string;
+    notes?: string;
+    revision_reason?: string;
+    rejection_reason?: string;
+    payment_proof_url?: string;
+    source_of_fund_id?: string;
+    beneficiary_bank?: string;
+    beneficiary_number?: string;
+    beneficiary_name?: string;
+}
+
 export interface ReimburseRequestPayload {
     project_id: string;
     category: string;

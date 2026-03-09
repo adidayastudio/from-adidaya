@@ -1,29 +1,69 @@
 import React from "react";
 import clsx from "clsx";
+import { formatCardDate } from "./modules/utils";
 
 export interface FinanceItemCardProps {
-    title: string;
-    amount: string | number;
-    projectCode: string;
-    idRef: string;
-    date: string;
-    status: string;
+    item?: any;
+    title?: string;
+    amount?: string | number;
+    projectCode?: string;
+    idRef?: string;
+    date?: string;
+    status?: string;
     priority?: string;
     onClick?: () => void;
+    onActionClick?: (e: React.MouseEvent, action: string) => void;
     actions?: React.ReactNode;
 }
 
 export function FinanceItemCard({
-    title,
-    amount,
-    projectCode,
-    idRef,
-    date,
-    status,
-    priority,
+    item,
+    title: propTitle,
+    amount: propAmount,
+    projectCode: propProjectCode,
+    idRef: propIdRef,
+    date: propDate,
+    status: propStatus,
+    priority: propPriority,
     onClick,
-    actions
+    onActionClick,
+    actions: propActions
 }: FinanceItemCardProps) {
+    // Helper to format currency
+    const formatCurrency = (val: number) => {
+        return new Intl.NumberFormat('id-ID', {
+            style: 'currency',
+            currency: 'IDR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(val).replace('Rp', 'Rp ');
+    };
+
+    // Helper to format ID
+    const formatStructuredId = (prefix: string, projectNum: number | string | undefined, requestNum: number | string | undefined, projectCode: string | undefined) => {
+        const pNum = projectNum ? String(projectNum).padStart(3, '0') : '000';
+        const rNum = requestNum ? String(requestNum).padStart(3, '0') : '000';
+        const pCode = projectCode || 'GEN';
+        return `${prefix}-${pNum}-${rNum}-${pCode}`;
+    };
+
+    // Derived values from item or props
+    const title = propTitle || (item?.items && item.items.length > 0 ? item.items[0].name : item?.description) || "Untitled Request";
+    const amount = propAmount !== undefined ? propAmount : (item?.approved_amount || item?.amount || 0);
+    const displayAmount = typeof amount === 'number' ? formatCurrency(amount) : amount;
+
+    const projectCode = propProjectCode || item?.project?.project_code || item?.project_code || 'GEN';
+
+    const idRef = propIdRef || (item ? formatStructuredId(
+        item.request_number !== undefined && item.project_id ? (item.vendor ? 'PO' : 'RE') : 'ID',
+        item.project?.project_number || item.project_number,
+        item.request_number,
+        item.project?.project_code || item.project_code
+    ) : '');
+
+    const date = propDate || (item?.date || item?.created_at ? formatCardDate(item.date || item.created_at) : '');
+    const status = propStatus || item?.status || item?.approval_status || '';
+    const priority = propPriority || item?.priority || '';
 
     const getStatusTheme = (s: string) => {
         if (!s) return {
@@ -97,7 +137,7 @@ export function FinanceItemCard({
 
                 <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
                     <span className="text-[17px] font-bold text-neutral-900 dark:text-white tracking-tight tabular-nums">
-                        {typeof amount === 'number' ? `Rp ${amount.toLocaleString('id-ID')}` : amount}
+                        {displayAmount}
                     </span>
                     <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide border uppercase", theme.text, theme.bg, theme.border)}>
                         {status}
@@ -105,9 +145,9 @@ export function FinanceItemCard({
                 </div>
             </div>
 
-            {actions && (
+            {propActions && (
                 <div className="flex items-center gap-2 mt-auto">
-                    {actions}
+                    {propActions}
                 </div>
             )}
         </div>

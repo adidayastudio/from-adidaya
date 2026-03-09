@@ -51,7 +51,8 @@ import {
     Share2,
     Image as ImageIcon,
     DollarSign,
-    ArrowLeft
+    ArrowLeft,
+    Undo2
 } from "lucide-react";
 import clsx from "clsx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -224,7 +225,77 @@ function ReviseModal({ item, onClose, onRevise }: { item: any, onClose: () => vo
     );
 }
 
-// Delete Confirmation Modal - Premium Design
+// Revert to Draft Confirmation Modal
+function RevertConfirmModal({
+    item,
+    onClose,
+    onConfirm,
+    isReverting
+}: {
+    item: { description?: string },
+    onClose: () => void,
+    onConfirm: () => void,
+    isReverting?: boolean
+}) {
+    return (
+        <div className="fixed inset-0 z-[201] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative w-full max-w-sm bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 rounded-3xl p-6 shadow-2xl overflow-hidden"
+            >
+                {/* Icon */}
+                <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4">
+                    <RotateCcw className="w-7 h-7 text-[#f97316]" />
+                </div>
+
+                <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2 text-center">
+                    Revert to Draft?
+                </h3>
+                <p className="text-sm text-neutral-500 mb-6 text-center font-medium leading-relaxed">
+                    This request will be returned to your <span className="text-neutral-900 dark:text-white font-bold">Drafts</span> for editing. You will need to submit it again for approval.
+                </p>
+
+                {item.description && (
+                    <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-3 mb-6 border border-neutral-100 dark:border-neutral-700">
+                        <div className="text-[10px] font-bold text-neutral-400 mb-1">Request</div>
+                        <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300 truncate">{item.description}</div>
+                    </div>
+                )}
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={isReverting}
+                        className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all disabled:opacity-50"
+                    >
+                        Keep Submitted
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isReverting}
+                        className="flex-1 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {isReverting ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Reverting...
+                            </>
+                        ) : (
+                            <>
+                                <RotateCcw className="w-4 h-4" />
+                                Revert
+                            </>
+                        )}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+// Delete Confirmation Modal
 function DeleteConfirmModal({
     item,
     onClose,
@@ -289,6 +360,47 @@ function DeleteConfirmModal({
                         )}
                     </button>
                 </div>
+            </motion.div>
+        </div>
+    );
+}
+
+// Success Popup Modal
+function SuccessModal({
+    title,
+    message,
+    onClose
+}: {
+    title: string,
+    message: string,
+    onClose: () => void
+}) {
+    useEffect(() => {
+        const timer = setTimeout(onClose, 3000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] w-[calc(100%-32px)] max-w-md">
+            <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/40 dark:border-neutral-800/40 rounded-[32px] p-4 pr-12 shadow-[0_8px_32px_rgba(0,0,0,0.12)] relative overflow-hidden flex items-center gap-4"
+            >
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white leading-tight">{title}</h3>
+                    <p className="text-[12px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">{message}</p>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
+                    <X size={18} className="text-neutral-400" />
+                </button>
             </motion.div>
         </div>
     );
@@ -494,18 +606,18 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
     );
 }
 
-function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => void, onApprove: (amount: number) => void }) {
+function ApproveModal({ item, onClose, onApprove, approverName }: { item: any, onClose: () => void, onApprove: (amount: number, approver: string) => void, approverName: string }) {
     const [amountStr, setAmountStr] = useState(item.amount.toString());
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 rounded-3xl p-6 shadow-2xl overflow-hidden">
-                <h3 className="text-lg font-bold text-neutral-900 mb-2 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2 flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     Approve Request
                 </h3>
-                <p className="text-sm text-neutral-500 mb-6">Confirm the approved amount for this reimbursement.</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6 font-medium">Please confirm the approved amount.</p>
 
                 <div className="mb-6">
                     {item.category === "TRANSPORTATION" && item.details?.transportEstCost && (
@@ -517,7 +629,7 @@ function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => 
                             <div className="text-sm font-bold text-blue-700">{formatCurrency(item.details.transportEstCost)}</div>
                         </div>
                     )}
-                    <label className="block text-xs font-bold text-neutral-500 mb-1.5">Approved Amount</label>
+                    <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5">Approved Amount</label>
                     <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold">Rp</span>
                         <input
@@ -525,7 +637,7 @@ function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => 
                             autoFocus
                             value={amountStr}
                             onChange={(e) => setAmountStr(e.target.value)}
-                            className="w-full h-12 pl-10 pr-4 text-lg border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 font-bold text-neutral-900"
+                            className="w-full h-12 pl-10 pr-4 text-lg border border-neutral-200 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-bold text-neutral-900 dark:text-white"
                         />
                     </div>
                     {parseFloat(amountStr) !== item.amount && (
@@ -536,17 +648,17 @@ function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => 
                 </div>
 
                 <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
+                    <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-all">Cancel</button>
                     <button
-                        onClick={() => onApprove(parseFloat(amountStr) || 0)}
-                        className="flex-1 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all disabled:opacity-50"
+                        onClick={() => onApprove(parseFloat(amountStr), approverName)}
+                        className="flex-1 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-lg shadow-emerald-200 dark:shadow-none"
                     >
                         Approve
                     </button>
                 </div>
             </motion.div>
         </div>
-    )
+    );
 }
 
 // ----------------------------------------------------------------------------
@@ -813,30 +925,47 @@ function ViewModal({
     onClose,
     onPreview,
     onEdit,
-    onApprove,
+    onDelete,
     onReject,
     onRevise,
+    onApprove,
     onPay,
-    onDelete,
+    onRefresh,
     isTeamView,
-    userRole
+    userRole,
+    isDeleted,
+    setRevertingItem,
+    loadData,
+    setShowSuccess
 }: {
     item: any;
     onClose: () => void;
     onPreview: (tab: 'invoice' | 'proof') => void;
-    onEdit?: () => void;
-    onApprove?: () => void;
-    onReject?: () => void;
-    onRevise?: () => void;
-    onPay?: () => void;
-    onDelete?: () => void;
-    isTeamView?: boolean;
-    userRole?: string | null;
+    onEdit: () => void;
+    onDelete: () => void;
+    onReject: () => void;
+    onRevise: () => void;
+    onApprove: () => void;
+    onPay: () => void;
+    onRefresh: () => void;
+    isTeamView: boolean;
+    userRole: string | null;
+    isDeleted: boolean;
+    setRevertingItem: (item: any) => void;
+    loadData: () => void;
+    setShowSuccess: (success: { title: string, message: string } | null) => void;
 }) {
     const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
     const [zoom, setZoom] = useState(1);
     const [isExporting, setIsExporting] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
+
+    const isSubmitted = item.status === 'PENDING' || item.status === 'NEED_REVISION';
+    const isApproved = item.status === 'APPROVED';
+    const isPaid = item.status === 'PAID';
+    const isRejected = item.status === 'REJECTED';
+    const isDraft = item.status === 'DRAFT';
+    const canEdit = (isDraft || item.status === 'NEED_REVISION') && !isTeamView;
 
     const pdfToImage = async (pdfUrl: string): Promise<string | null> => {
         try {
@@ -995,18 +1124,21 @@ function ViewModal({
             const docImages: { img: HTMLImageElement; label: string }[] = [];
 
             // Receipt
-            if (invoiceUrl) {
-                const isImage = item.invoice_url?.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i);
-                let imgSrc = invoiceUrl;
-                if (!isImage) {
-                    const pdfImg = await pdfToImage(imgSrc);
-                    if (pdfImg) imgSrc = pdfImg;
+            if (item.invoice_url) {
+                const url = await getFinanceFileUrl(item.invoice_url);
+                if (url) {
+                    const isImage = item.invoice_url?.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i);
+                    let imgSrc = url;
+                    if (!isImage) {
+                        const pdfImg = await pdfToImage(imgSrc);
+                        if (pdfImg) imgSrc = pdfImg;
+                    }
+                    const img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.src = imgSrc;
+                    await new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r(); setTimeout(r, 5000); });
+                    if (img.naturalWidth > 0) docImages.push({ img, label: 'Receipt' });
                 }
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.src = imgSrc;
-                await new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r(); setTimeout(r, 5000); });
-                if (img.naturalWidth > 0) docImages.push({ img, label: 'Receipt' });
             }
 
             // Payment proof
@@ -1244,13 +1376,10 @@ function ViewModal({
                     "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
                 )}
             >
-                {/* Sticky Header */}
-                <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                {/* Header - Reorganized (Extreme Top) */}
+                <div className="flex-none pt-8 pb-4 px-6 flex flex-col bg-transparent sticky top-0 z-20">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className={clsx(
-                            "font-black text-neutral-900 dark:text-white tracking-tight",
-                            isExporting ? "text-4xl pl-2 pt-2 mb-2" : "text-2xl"
-                        )}>
+                        <h2 className="font-black text-neutral-900 dark:text-white tracking-tight text-2xl">
                             {formatStructuredId("RE", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `RE-${item.id.slice(0, 8)}`}
                         </h2>
                         <div className="flex items-center gap-2">
@@ -1502,8 +1631,13 @@ function ViewModal({
                                             {!isExporting && <CopyButton text={String(item.approved_amount || item.amount)} />}
                                         </div>
                                         {(item.approved_amount) && item.approved_amount !== item.amount && (
-                                            <div className="text-[10px] text-orange-600 line-through opacity-75 font-bold">
-                                                {formatCurrency(item.amount)}
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="text-[10px] text-orange-600 line-through opacity-75 font-bold">
+                                                    {formatCurrency(item.amount)}
+                                                </div>
+                                                <div className="text-[10px] text-orange-500 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-md w-fit mt-1">
+                                                    Amount manually overridden by {item.approved_by_name || "Admin"}
+                                                </div>
                                             </div>
                                         )}
                                     </div>
@@ -1574,24 +1708,26 @@ function ViewModal({
                                 </div>
 
                                 {/* Total Summary */}
-                                {isExporting ? (
-                                    <div className="py-2 flex items-center justify-between border-t border-b border-neutral-100 dark:border-neutral-800 mt-2">
-                                        <div className="flex flex-col">
-                                            <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 tracking-tight leading-none mb-1">Total Amount</span>
-                                            <span className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">{item.items.length} items</span>
-                                        </div>
-                                        <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">{formatCurrency(item.amount)}</span>
-                                    </div>
-                                ) : (
-                                    <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] relative overflow-hidden group">
-                                        <div className="relative flex items-center justify-between">
+                                {!(item.approved_amount && item.approved_amount !== item.amount) && (
+                                    isExporting ? (
+                                        <div className="py-2 flex items-center justify-between border-t border-b border-neutral-100 dark:border-neutral-800 mt-2">
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider leading-none mb-1">Total Amount</span>
-                                                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{item.items.length} items</span>
+                                                <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 tracking-tight leading-none mb-1">Total Amount</span>
+                                                <span className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">{item.items.length} items</span>
                                             </div>
-                                            <span className="text-xl font-bold text-red-600 dark:text-red-400 tracking-tight">{formatCurrency(item.amount)}</span>
+                                            <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">{formatCurrency(item.amount)}</span>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] relative overflow-hidden group">
+                                            <div className="relative flex items-center justify-between">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider leading-none mb-1">Total Amount</span>
+                                                    <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{item.items.length} items</span>
+                                                </div>
+                                                <span className="text-xl font-bold text-red-600 dark:text-red-400 tracking-tight">{formatCurrency(item.amount)}</span>
+                                            </div>
+                                        </div>
+                                    )
                                 )}
                             </section>
                         )}
@@ -1696,106 +1832,164 @@ function ViewModal({
                 </div>
 
                 {/* Bottom Actions - STANDARDIZED */}
-                {(() => {
-                    const statusVal = item.status || "PENDING";
-
-                    const isDraftOrRevise = statusVal === "DRAFT" || statusVal === "NEED_REVISION";
-                    const isPending = statusVal === "PENDING";
-                    const isApprovedNotPaid = statusVal === "APPROVED" && item.financial_status !== "PAID";
-                    const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
-                    const isPaid = item.financial_status === "PAID";
-
-                    const canApprove = isPending && isTeamView;
-                    const canPay = isApprovedNotPaid && isTeamView;
-                    const canEdit = (isDraftOrRevise || (isPending && isAdmin)) && !isTeamView;
-                    const canDelete = isTeamView ? isAdmin : true;
-
-                    const showOwnerWaiting = !isTeamView && statusVal === "PENDING";
-                    const hasActions = canApprove || (canPay && !isPaid) || canEdit || canDelete || showOwnerWaiting || isPaid;
-
-                    if (!hasActions) return null;
-
-                    return (
+                {
+                    isDeleted ? (
                         <div className="flex-none px-8 py-6 sticky bottom-0 z-40">
                             <div className="flex flex-col gap-3">
-                                {canApprove && (
-                                    <div className="flex flex-col gap-3 w-full">
-                                        <div className="flex items-center gap-2">
+                                <div className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                                    <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center shrink-0">
+                                        <Trash2 className="w-5 h-5 text-rose-500" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-bold text-rose-700 dark:text-rose-400">This item has been deleted</p>
+                                        <p className="text-xs text-rose-500 dark:text-rose-400/70 mt-0.5">This request has been permanently removed.</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={onClose}
+                                    className="w-full h-14 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-bold text-base active:scale-[0.98] transition-all flex items-center justify-center"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    ) : (() => {
+                        const statusVal = item.status || "PENDING";
+
+                        const isDraftOrRevise = statusVal === "DRAFT" || statusVal === "NEED_REVISION";
+                        const isPending = statusVal === "PENDING";
+                        const isApprovedNotPaid = statusVal === "APPROVED" && item.financial_status !== "PAID";
+                        const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
+                        const isPaid = item.financial_status === "PAID";
+
+                        const canApprove = isPending && isTeamView;
+                        const canPay = isApprovedNotPaid && isTeamView;
+                        const canEdit = (isDraftOrRevise || isPending) && !isTeamView;
+                        const canDelete = isTeamView ? isAdmin : true; // Owner can always delete their own draft/pending/revision requests
+
+                        const showOwnerWaiting = !isTeamView && statusVal === "PENDING";
+                        const hasActions = canApprove || (canPay && !isPaid) || canDelete || showOwnerWaiting || isPaid;
+
+                        if (!hasActions) return null;
+
+                        return (
+                            <div className="flex-none px-8 py-6 sticky bottom-0 z-40">
+                                <div className="flex flex-col gap-3">
+                                    {canApprove && (
+                                        <div className="flex flex-col gap-3 w-full">
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={onDelete} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete">
+                                                    <Trash2 size={20} />
+                                                </button>
+                                                <button onClick={onReject} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Reject">
+                                                    <Ban size={20} />
+                                                </button>
+                                                <button onClick={onRevise} className="flex-1 h-12 flex items-center justify-center gap-2 rounded-full bg-orange-50 dark:bg-orange-500/10 text-orange-600 border border-orange-200 dark:border-orange-500/20 active:scale-95 transition-all font-bold text-sm">
+                                                    <RotateCcw size={18} /> Revise
+                                                </button>
+                                            </div>
+                                            <button onClick={onApprove} className="w-full h-14 text-base font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full transition-all shadow-lg shadow-emerald-200/50 flex items-center justify-center gap-2">
+                                                <Check size={20} /> Approve
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {canPay && !isPaid && (
+                                        <div className="flex items-center gap-3">
                                             <button onClick={onDelete} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete">
                                                 <Trash2 size={20} />
                                             </button>
-                                            <button onClick={onReject} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Reject">
-                                                <Ban size={20} />
+                                            <button onClick={onEdit} className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all" title="Edit">
+                                                <Pencil size={20} />
                                             </button>
-                                            <button onClick={onRevise} className="flex-1 h-12 flex items-center justify-center gap-2 rounded-full bg-orange-50 dark:bg-orange-500/10 text-orange-600 border border-orange-200 dark:border-orange-500/20 active:scale-95 transition-all font-bold text-sm">
-                                                <RotateCcw size={18} /> Revise
+                                            <button
+                                                onClick={onPay}
+                                                disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
+                                                className="flex-1 h-14 text-base font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-lg shadow-blue-200/50 flex items-center justify-center gap-2 disabled:opacity-50"
+                                            >
+                                                <CreditCard className="w-[18px] h-[18px]" /> Pay Now
                                             </button>
                                         </div>
-                                        <button onClick={onApprove} className="w-full h-14 text-base font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-full transition-all shadow-lg shadow-emerald-200/50 flex items-center justify-center gap-2">
-                                            <Check size={20} /> Approve
-                                        </button>
-                                    </div>
-                                )}
+                                    )}
 
-                                {canPay && !isPaid && (
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={onDelete} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete">
-                                            <Trash2 size={20} />
-                                        </button>
-                                        <button onClick={onEdit} className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all" title="Edit">
-                                            <Pencil size={20} />
-                                        </button>
-                                        <button
-                                            onClick={onPay}
-                                            disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
-                                            className="flex-1 h-14 text-base font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-lg shadow-blue-200/50 flex items-center justify-center gap-2 disabled:opacity-50"
-                                        >
-                                            <CreditCard size={20} /> Pay Now
-                                        </button>
-                                    </div>
-                                )}
-
-                                {!isTeamView && (statusVal === "PENDING" || statusVal === "DRAFT" || statusVal === "NEED_REVISION") && (
-                                    <div className="flex items-center gap-2">
-                                        {canDelete && (
-                                            <button onClick={onDelete} className="w-14 h-14 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete Request">
-                                                <Trash2 size={20} />
+                                    {showOwnerWaiting && (
+                                        <div className="flex items-center gap-2">
+                                            {canDelete && (
+                                                <button onClick={onDelete} className="w-[52px] h-[52px] flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete Request">
+                                                    <Trash2 size={20} />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => setRevertingItem?.(item)}
+                                                className="h-[52px] px-6 rounded-full bg-transparent text-rose-500 border border-rose-500/20 font-bold text-sm active:scale-95 transition-all flex items-center gap-2 shrink-0"
+                                                title="Cancel Submission"
+                                            >
+                                                <Undo2 size={16} /> Cancel
                                             </button>
-                                        )}
-                                        {statusVal === "PENDING" && (
-                                            <div className="flex-1 h-14 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/40 rounded-full border border-neutral-100 dark:border-neutral-700/50 text-xs font-bold text-neutral-400 uppercase tracking-widest leading-none">
-                                                Waiting Approval
+                                            <div className="flex-1 h-[52px] flex items-center justify-center bg-transparent rounded-full border border-neutral-200/50 dark:border-white/10 text-sm font-bold text-neutral-400 dark:text-neutral-500 gap-2 px-4 whitespace-nowrap">
+                                                <Clock size={16} /> Waiting
                                             </div>
-                                        )}
-                                        {canEdit && (
-                                            <button onClick={onEdit} className="flex-1 h-14 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-2">
-                                                <Pencil size={18} /> Edit Request
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
+                                            {canEdit && (
+                                                <button onClick={onEdit} className="h-[52px] px-6 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0">
+                                                    <Pencil size={18} /> Edit
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
 
-                                {isPaid && (
-                                    <button
-                                        onClick={onClose}
-                                        className="w-full h-14 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-bold text-base active:scale-[0.98] transition-all flex items-center justify-center"
-                                    >
-                                        Close
-                                    </button>
-                                )}
+                                    {isDraftOrRevise && !isTeamView && (
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={onDelete} className="w-14 h-14 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all shrink-0" title="Delete">
+                                                <Trash2 size={24} />
+                                            </button>
+                                            <button
+                                                onClick={onEdit}
+                                                className="flex-1 h-14 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-bold text-sm border border-neutral-200 dark:border-neutral-700 flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                                            >
+                                                <Pencil size={20} />
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    updateReimburseStatus(item.id, { status: 'PENDING' }).then(() => {
+                                                        onClose();
+                                                        loadData();
+                                                        setShowSuccess({
+                                                            title: "Request Submitted",
+                                                            message: "Your request has been successfully submitted."
+                                                        });
+                                                    });
+                                                }}
+                                                className="flex-[1.5] h-14 bg-red-600 text-white rounded-full font-bold text-sm shadow-xl shadow-red-200/50 flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                                            >
+                                                <Send size={20} />
+                                                Submit
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {isPaid && (
+                                        <button
+                                            onClick={onClose}
+                                            className="w-full h-14 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-bold text-base active:scale-[0.98] transition-all flex items-center justify-center"
+                                        >
+                                            Close
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    );
-                })()}
-            </motion.div>
-        </div>
+                        );
+                    })()
+                }
+            </motion.div >
+        </div >
     );
 }
 
 // -- MAIN CLIENT --
 
 export default function ReimburseClient() {
-    const { viewMode, setViewMode, canAccessTeam, userId, userRole, isLoading: isAuthLoading } = useFinance();
+    const { viewMode, setViewMode, canAccessTeam, userRole, profile, isLoading: isAuthLoading, userId } = useFinance();
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -1852,14 +2046,18 @@ export default function ReimburseClient() {
     const lastHandledRequestId = useRef<string | null>(null);
 
     // States
-    const [editingItem, setEditingItem] = useState<any | null>(null);
-    const [approvingItem, setApprovingItem] = useState<any | null>(null);
-    const [revisingItem, setRevisingItem] = useState<any | null>(null);
-    const [rejectingItem, setRejectingItem] = useState<any | null>(null);
-    const [payingItem, setPayingItem] = useState<any | null>(null);
-    const [viewingItem, setViewingItem] = useState<any | null>(null);
-    const [deletingItem, setDeletingItem] = useState<any | null>(null);
+    const [viewingItem, setViewingItem] = useState<ReimburseRequest | null>(null);
+    const [editingItem, setEditingItem] = useState<ReimburseRequest | null>(null);
+    const [deletingItem, setDeletingItem] = useState<ReimburseRequest | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [revertingItem, setRevertingItem] = useState<ReimburseRequest | null>(null);
+    const [isReverting, setIsReverting] = useState(false);
+    const [approvingItem, setApprovingItem] = useState<ReimburseRequest | null>(null);
+    const [revisingItem, setRevisingItem] = useState<ReimburseRequest | null>(null);
+    const [rejectingItem, setRejectingItem] = useState<ReimburseRequest | null>(null);
+    const [payingItem, setPayingItem] = useState<ReimburseRequest | null>(null);
+    const [showSuccess, setShowSuccess] = useState<{ title: string, message: string } | null>(null);
+    const [isViewingDeleted, setIsViewingDeleted] = useState(false);
     const [previewingDocument, setPreviewingDocument] = useState<{ item: any, initialTab: 'invoice' | 'proof' } | null>(null);
 
     // Sorting
@@ -1975,12 +2173,7 @@ export default function ReimburseClient() {
             const item = items.find(i => i.id === requestId);
             if (item) {
                 lastHandledRequestId.current = requestId;
-                if (isTeamView) {
-                    setViewingItem(item);
-                } else {
-                    setEditingItem(item);
-                    setIsDrawerOpen(true);
-                }
+                setViewingItem(item); // Always open ViewModal first
             }
         }
     }, [searchParams, items, isTeamView, viewingItem, editingItem]);
@@ -2521,92 +2714,89 @@ export default function ReimburseClient() {
                             )}
                         </div>
                     ) : (
-                        filteredItems.map((item) => {
-                            const renderMobileActions = () => {
-                                const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
-                                const isPending = item.status === "PENDING";
-                                const isApprovedNotPaid = item.status === "APPROVED" && item.financial_status !== "PAID";
-                                const isDraftOrRevise = item.status === "DRAFT" || item.status === "NEED_REVISION";
+                        (filteredItems.map((item) => {
+                            const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
+                            const isPending = item.status === "PENDING";
+                            const isApprovedNotPaid = item.status === "APPROVED" && item.financial_status !== "PAID";
+                            const isDraftOrRevise = item.status === "DRAFT" || item.status === "NEED_REVISION";
 
-                                return (
-                                    <div className="flex items-center gap-1.5 w-full justify-end">
-                                        {isTeamView ? (
-                                            <>
-                                                {isAdmin && (
-                                                    <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
-                                                        <Trash2 className="w-[18px] h-[18px]" />
-                                                    </button>
-                                                )}
-                                                {isPending && (
-                                                    <>
-                                                        <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Reject">
-                                                            <Ban className="w-[18px] h-[18px]" />
-                                                        </button>
-                                                        <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2.5 rounded-full bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                                                            <RotateCcw className="w-[18px] h-[18px]" /> Revise
-                                                        </button>
-                                                        <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
-                                                            <Check className="w-[18px] h-[18px]" /> Approve
-                                                        </button>
-                                                    </>
-                                                )}
-                                                {isApprovedNotPaid && (
-                                                    <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50">
-                                                        <CreditCard className="w-[18px] h-[18px]" /> Pay Now
-                                                    </button>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-500/10 dark:bg-rose-500/10 text-rose-500 border border-rose-200/50 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Delete">
+                            const renderMobileActions = () => (
+                                <div className="flex items-center gap-1.5 w-full justify-end">
+                                    {isTeamView ? (
+                                        <>
+                                            {isAdmin && (
+                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
                                                     <Trash2 className="w-[18px] h-[18px]" />
                                                 </button>
-                                                {(isDraftOrRevise) && (
-                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                                                        <Pencil className="w-4 h-4" /> Edit
+                                            )}
+                                            {isPending && (
+                                                <>
+                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Reject">
+                                                        <Ban className="w-[18px] h-[18px]" />
                                                     </button>
-                                                )}
-                                                {item.status === 'DRAFT' && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setApprovingItem(item); // Using approving item modal for submission confirmation if needed, or direct update
-                                                            updateReimburseStatus(item.id, 'PENDING').then(() => fetchItems());
-                                                        }}
-                                                        className="flex-[1.5] py-2 rounded-xl bg-red-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-red-200/50"
-                                                    >
-                                                        <Send className="w-4 h-4" /> Submit
+                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2.5 rounded-full bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                        <RotateCcw className="w-[18px] h-[18px]" /> Revise
                                                     </button>
-                                                )}
-                                                {isPending && (
-                                                    <button className="flex-1 py-2 rounded-xl bg-neutral-900 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-neutral-400/50 opacity-50 cursor-default">
-                                                        <Clock className="w-4 h-4" /> Submitted
+                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
+                                                        <Check className="w-[18px] h-[18px]" /> Approve
                                                     </button>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-                                );
-                            };
+                                                </>
+                                            )}
+                                            {isApprovedNotPaid && (
+                                                <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50">
+                                                    <CreditCard className="w-[18px] h-[18px]" /> Pay Now
+                                                </button>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-500/10 dark:bg-rose-500/10 text-rose-500 border border-rose-200/50 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Delete">
+                                                <Trash2 className="w-[18px] h-[18px]" />
+                                            </button>
+                                            {(isDraftOrRevise) && (
+                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                    <Pencil className="w-4 h-4" /> Edit
+                                                </button>
+                                            )}
+                                            {item.status === 'DRAFT' && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        updateReimburseStatus(item.id, { status: 'PENDING' }).then(() => {
+                                                            loadData();
+                                                            setShowSuccess({
+                                                                title: "Request Submitted",
+                                                                message: "Your request has been successfully submitted."
+                                                            });
+                                                        });
+                                                    }}
+                                                    className="flex-[1.5] py-2 rounded-xl bg-red-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-red-200/50"
+                                                >
+                                                    <Send className="w-4 h-4" /> Submit
+                                                </button>
+                                            )}
+                                            {isPending && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setRevertingItem(item); }}
+                                                    className="flex-1 py-2 rounded-xl bg-rose-500/10 text-rose-500 border border-rose-200/50 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                                                >
+                                                    <Undo2 className="w-4 h-4" /> Cancel
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            );
 
                             return (
                                 <FinanceItemCard
                                     key={item.id}
-                                    idRef={formatStructuredId('RE', item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code)}
-                                    title={formatItemTitle(item.items || [], item.description)}
-                                    projectCode={item.project?.project_code || item.project_code || 'GEN'}
-                                    date={formatCardDate(item.date)}
-                                    priority={item.priority}
-                                    amount={item.amount}
-                                    status={item.status}
-                                    onClick={() => {
-                                        if (isTeamView) setViewingItem(item);
-                                        else { setEditingItem(item); setIsDrawerOpen(true); }
-                                    }}
+                                    item={item}
+                                    onClick={() => setViewingItem(item)}
                                     actions={item.status !== 'PAID' ? renderMobileActions() : undefined}
                                 />
                             );
-                        })
+                        }))
                     )
                 }
             </div >
@@ -2658,15 +2848,8 @@ export default function ReimburseClient() {
                                 filteredItems.map(item => (
                                     <tr
                                         key={item.id}
-                                        className="group hover:bg-white/60 hover:shadow-sm transition-all cursor-pointer"
-                                        onClick={() => {
-                                            if (isTeamView) {
-                                                setViewingItem(item);
-                                            } else {
-                                                setEditingItem(item);
-                                                setIsDrawerOpen(true);
-                                            }
-                                        }}
+                                        onClick={() => setViewingItem(item)}
+                                        className="border-b border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20 cursor-pointer group"
                                     >
                                         <td className="px-6 py-4 text-xs font-medium text-neutral-500 tabular-nums">{format(new Date(item.date), "dd MMM yyyy")}</td>
                                         <td className="px-6 py-4">
@@ -2781,7 +2964,15 @@ export default function ReimburseClient() {
                 hideSwitcher={true}
                 initialData={editingItem || undefined}
                 onClose={() => { setIsDrawerOpen(false); setEditingItem(null); clearRequestId(); }}
-                onSuccess={() => { setIsDrawerOpen(false); setEditingItem(null); loadData(); }}
+                onSuccess={() => {
+                    setIsDrawerOpen(false);
+                    setEditingItem(null);
+                    loadData();
+                    setShowSuccess({
+                        title: "Request Saved",
+                        message: "Your changes have been successfully saved and submitted."
+                    });
+                }}
                 onDelete={editingItem ? async () => {
                     try {
                         await deleteReimburseRequest(editingItem.id);
@@ -2799,16 +2990,28 @@ export default function ReimburseClient() {
                 approvingItem && (
                     <ApproveModal
                         item={approvingItem}
+                        approverName={profile?.username || "Admin"}
                         onClose={() => setApprovingItem(null)}
-                        onApprove={async (amount) => {
+                        onApprove={async (amount, approver) => {
                             try {
-                                const res = await updateReimburseStatus(approvingItem.id, { status: "APPROVED", approved_amount: amount });
-                                if (!res && res !== undefined) throw new Error("Update returned false/null");
-                                setApprovingItem(null);
-                                loadData();
+                                const success = await updateReimburseStatus(approvingItem.id, {
+                                    status: "APPROVED",
+                                    approved_amount: amount,
+                                    approved_by_name: approver
+                                } as any);
+                                if (success) {
+                                    // Update drawer in real-time
+                                    if (viewingItem && viewingItem.id === approvingItem.id) {
+                                        setViewingItem({ ...viewingItem, status: 'APPROVED', approved_amount: amount, approved_by_name: approver });
+                                    }
+                                    setApprovingItem(null);
+                                    loadData();
+                                } else {
+                                    alert("Failed to approve request.");
+                                }
                             } catch (error) {
-                                console.error("Error approving reimburse request:", error);
-                                alert(`Error approving request: ${error}`);
+                                console.error("Error approving request:", error);
+                                alert(`Error: ${error}`);
                             }
                         }}
                     />
@@ -2822,6 +3025,10 @@ export default function ReimburseClient() {
                         onClose={() => setRejectingItem(null)}
                         onReject={async (reason) => {
                             await updateReimburseStatus(rejectingItem.id, { status: "REJECTED", rejection_reason: reason });
+                            // Update drawer in real-time
+                            if (viewingItem && viewingItem.id === rejectingItem.id) {
+                                setViewingItem({ ...viewingItem, status: 'REJECTED', rejection_reason: reason });
+                            }
                             setRejectingItem(null);
                             loadData();
                         }}
@@ -2836,6 +3043,10 @@ export default function ReimburseClient() {
                         onClose={() => setRevisingItem(null)}
                         onRevise={async (reason) => {
                             await updateReimburseStatus(revisingItem.id, { status: "NEED_REVISION", revision_reason: reason });
+                            // Update drawer in real-time
+                            if (viewingItem && viewingItem.id === revisingItem.id) {
+                                setViewingItem({ ...viewingItem, status: 'NEED_REVISION', revision_reason: reason });
+                            }
                             setRevisingItem(null);
                             loadData();
                         }}
@@ -2868,6 +3079,10 @@ export default function ReimburseClient() {
                                 source_of_fund_id: sourceId
                             });
                             setPayingItem(null);
+                            // Update drawer in real-time
+                            if (viewingItem && viewingItem.id === payingItem.id) {
+                                setViewingItem({ ...viewingItem, payment_date: date, status: 'PAID' } as any);
+                            }
                             loadData();
                         }}
                     />
@@ -2878,16 +3093,25 @@ export default function ReimburseClient() {
                 viewingItem && (
                     <ViewModal
                         item={viewingItem}
-                        onClose={() => { setViewingItem(null); clearRequestId(); }}
+                        onClose={() => { setViewingItem(null); setIsViewingDeleted(false); clearRequestId(); }}
                         onPreview={(tab) => setPreviewingDocument({ item: viewingItem, initialTab: tab })}
+                        onEdit={() => {
+                            setEditingItem(viewingItem);
+                            setIsDrawerOpen(true);
+                            setViewingItem(null); // Close ViewModal when opening Edit Drawer
+                        }}
                         onApprove={() => setApprovingItem(viewingItem)}
                         onReject={() => setRejectingItem(viewingItem)}
                         onRevise={() => setRevisingItem(viewingItem)}
-                        onEdit={() => { setEditingItem(viewingItem); setIsDrawerOpen(true); }}
                         onPay={() => setPayingItem(viewingItem)}
                         onDelete={() => setDeletingItem(viewingItem)}
+                        onRefresh={() => loadData()}
                         isTeamView={isTeamView}
                         userRole={userRole}
+                        isDeleted={isViewingDeleted}
+                        setRevertingItem={setRevertingItem}
+                        loadData={loadData}
+                        setShowSuccess={setShowSuccess}
                     />
                 )
             }
@@ -2903,250 +3127,290 @@ export default function ReimburseClient() {
             }
 
             {/* Delete Confirmation Modal */}
-            {
-                deletingItem && (
-                    <DeleteConfirmModal
-                        item={deletingItem}
-                        onClose={() => setDeletingItem(null)}
+            {/* NEW DRAWER: Document View (nested inside main drawer or anywhere high z-index) */}
+            <AnimatePresence>
+                {revertingItem && (
+                    <RevertConfirmModal
+                        item={revertingItem}
+                        onClose={() => setRevertingItem(null)}
+                        isReverting={isReverting}
                         onConfirm={async () => {
-                            setIsDeleting(true);
+                            setIsReverting(true);
                             try {
-                                await deleteReimburseRequest(deletingItem.id);
-                                loadData();
-                            } catch (error) {
-                                console.error("Failed to delete:", error);
+                                const success = await updateReimburseStatus(revertingItem.id, { status: "DRAFT" });
+                                if (success) {
+                                    setRevertingItem(null);
+                                    loadData();
+                                    if (viewingItem && viewingItem.id === revertingItem.id) {
+                                        setViewingItem({ ...viewingItem, status: "DRAFT" });
+                                    }
+                                    setShowSuccess({
+                                        title: "Request Reverted",
+                                        message: "The request has been returned to draft status."
+                                    });
+                                }
                             } finally {
-                                setIsDeleting(false);
-                                setDeletingItem(null);
+                                setIsReverting(false);
                             }
                         }}
-                        isDeleting={isDeleting}
                     />
-                )
-            }
-            {
-                showFilters && (
-                    <div className="fixed md:hidden inset-0 z-[100] flex items-end justify-center">
-                        <div
-                            className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity"
-                            onClick={() => setShowFilters(false)}
-                        />
-                        <div className="relative w-full mx-2 mb-2 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border border-white/40 dark:border-neutral-800 p-6 flex flex-col gap-6 max-h-[90dvh]">
-                            {/* Header */}
-                            <div className="flex items-center justify-between px-2">
-                                <h3 className="text-[20px] font-bold text-neutral-900 dark:text-white tracking-tight">Filters</h3>
-                                <div className="flex items-center gap-3">
-                                    {(selectedProjects.length > 0 || categoryFilters.length > 0 || !showAllMonths) && (
-                                        <button
-                                            onClick={() => {
-                                                setSelectedProjects([]);
-                                                setCategoryFilters([]);
-                                                setShowAllMonths(true);
-                                                setStartDate(startOfMonth(new Date()));
-                                                setEndDate(endOfMonth(new Date()));
-                                                setSortColumn('date');
-                                                setSortDirection('desc');
-                                            }}
-                                            className="text-[13px] font-bold text-red-500 hover:text-red-600 active:scale-95 transition-all outline-none tracking-wider"
-                                        >
-                                            Reset
-                                        </button>
-                                    )}
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showSuccess && (
+                    <SuccessModal
+                        title={showSuccess.title}
+                        message={showSuccess.message}
+                        onClose={() => setShowSuccess(null)}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* DELETE MODAL */}
+            {deletingItem && (
+                <DeleteConfirmModal
+                    item={deletingItem}
+                    onClose={() => setDeletingItem(null)}
+                    onConfirm={async () => {
+                        setIsDeleting(true);
+                        try {
+                            await deleteReimburseRequest(deletingItem.id);
+                            loadData();
+                            // If deleting from inside the drawer, show deleted state
+                            if (viewingItem && viewingItem.id === deletingItem.id) {
+                                setIsViewingDeleted(true);
+                            }
+                        } catch (error) {
+                            console.error("Failed to delete:", error);
+                        } finally {
+                            setIsDeleting(false);
+                            setDeletingItem(null);
+                        }
+                    }}
+                    isDeleting={isDeleting}
+                />
+            )}
+            {showFilters && (
+                <div className="fixed md:hidden inset-0 z-[100] flex items-end justify-center">
+                    <div
+                        className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity"
+                        onClick={() => setShowFilters(false)}
+                    />
+                    <div className="relative w-full mx-2 mb-2 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border border-white/40 dark:border-neutral-800 p-6 flex flex-col gap-6 max-h-[90dvh]">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="text-[20px] font-bold text-neutral-900 dark:text-white tracking-tight">Filters</h3>
+                            <div className="flex items-center gap-3">
+                                {(selectedProjects.length > 0 || categoryFilters.length > 0 || !showAllMonths) && (
                                     <button
-                                        onClick={() => setShowFilters(false)}
-                                        className="w-8 h-8 bg-neutral-100 dark:bg-neutral-800 border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                        onClick={() => {
+                                            setSelectedProjects([]);
+                                            setCategoryFilters([]);
+                                            setShowAllMonths(true);
+                                            setStartDate(startOfMonth(new Date()));
+                                            setEndDate(endOfMonth(new Date()));
+                                            setSortColumn('date');
+                                            setSortDirection('desc');
+                                        }}
+                                        className="text-[13px] font-bold text-red-500 hover:text-red-600 active:scale-95 transition-all outline-none tracking-wider"
                                     >
-                                        <X size={18} className="text-neutral-500" strokeWidth={2} />
+                                        Reset
                                     </button>
+                                )}
+                                <button
+                                    onClick={() => setShowFilters(false)}
+                                    className="w-8 h-8 bg-neutral-100 dark:bg-neutral-800 border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <X size={18} className="text-neutral-500" strokeWidth={2} />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-6 overflow-y-auto pb-4 pr-1 scrollbar-hide">
+                            {/* Sorting Section */}
+                            <div className="space-y-4 px-2">
+                                <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Sort By</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { id: 'date', label: 'Date' },
+                                        { id: 'project_name', label: 'Project' },
+                                        { id: 'amount', label: 'Amount' },
+                                        { id: 'status', label: 'Status' }
+                                    ].map((col) => (
+                                        <button
+                                            key={col.id}
+                                            onClick={() => setSortColumn(col.id as any)}
+                                            className={clsx(
+                                                "px-4 py-2.5 rounded-full text-[12px] font-bold transition-all border flex items-center justify-between",
+                                                sortColumn === col.id
+                                                    ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-900/50"
+                                                    : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
+                                            )}
+                                        >
+                                            {col.label}
+                                            {sortColumn === col.id && (
+                                                <div
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                                    }}
+                                                    className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer outline-none"
+                                                >
+                                                    {sortDirection === 'asc' ? <ArrowUpNarrowWide className="w-3.5 h-3.5" /> : <ArrowDownWideNarrow className="w-3.5 h-3.5" />}
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-6 overflow-y-auto pb-4 pr-1 scrollbar-hide">
-                                {/* Sorting Section */}
-                                <div className="space-y-4 px-2">
-                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Sort By</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            { id: 'date', label: 'Date' },
-                                            { id: 'project_name', label: 'Project' },
-                                            { id: 'amount', label: 'Amount' },
-                                            { id: 'status', label: 'Status' }
-                                        ].map((col) => (
+                            {/* Project Filter */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-2">
+                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Project</h4>
+                                    {selectedProjects.length > 0 && (
+                                        <button onClick={() => setSelectedProjects([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-2 px-2">
+                                    <button
+                                        onClick={() => setSelectedProjects([])}
+                                        className={clsx(
+                                            "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                            selectedProjects.length === 0
+                                                ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
+                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                        )}
+                                    >
+                                        All
+                                    </button>
+                                    {projects.map((p) => {
+                                        const isSelected = selectedProjects.includes(p.id);
+                                        return (
                                             <button
-                                                key={col.id}
-                                                onClick={() => setSortColumn(col.id as any)}
+                                                key={p.id}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        setSelectedProjects(selectedProjects.filter(id => id !== p.id));
+                                                    } else {
+                                                        setSelectedProjects([...selectedProjects, p.id]);
+                                                    }
+                                                }}
                                                 className={clsx(
-                                                    "px-4 py-2.5 rounded-full text-[12px] font-bold transition-all border flex items-center justify-between",
-                                                    sortColumn === col.id
-                                                        ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-900/50"
-                                                        : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
+                                                    "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                                    isSelected
+                                                        ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
+                                                        : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
                                                 )}
                                             >
-                                                {col.label}
-                                                {sortColumn === col.id && (
-                                                    <div
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                        }}
-                                                        className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer outline-none"
-                                                    >
-                                                        {sortDirection === 'asc' ? <ArrowUpNarrowWide className="w-3.5 h-3.5" /> : <ArrowDownWideNarrow className="w-3.5 h-3.5" />}
-                                                    </div>
-                                                )}
+                                                {p.projectCode}
                                             </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Project Filter */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between px-2">
-                                        <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Project</h4>
-                                        {selectedProjects.length > 0 && (
-                                            <button onClick={() => setSelectedProjects([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 px-2">
-                                        <button
-                                            onClick={() => setSelectedProjects([])}
-                                            className={clsx(
-                                                "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
-                                                selectedProjects.length === 0
-                                                    ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
-                                                    : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                                            )}
-                                        >
-                                            All
-                                        </button>
-                                        {projects.map((p) => {
-                                            const isSelected = selectedProjects.includes(p.id);
-                                            return (
-                                                <button
-                                                    key={p.id}
-                                                    onClick={() => {
-                                                        if (isSelected) {
-                                                            setSelectedProjects(selectedProjects.filter(id => id !== p.id));
-                                                        } else {
-                                                            setSelectedProjects([...selectedProjects, p.id]);
-                                                        }
-                                                    }}
-                                                    className={clsx(
-                                                        "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
-                                                        isSelected
-                                                            ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
-                                                            : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
-                                                    )}
-                                                >
-                                                    {p.projectCode}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Category Filter */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between px-2">
-                                        <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Category</h4>
-                                        {categoryFilters.length > 0 && (
-                                            <button onClick={() => setCategoryFilters([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 px-2">
-                                        <button
-                                            onClick={() => setCategoryFilters([])}
-                                            className={clsx(
-                                                "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
-                                                categoryFilters.length === 0
-                                                    ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
-                                                    : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                                            )}
-                                        >
-                                            All
-                                        </button>
-                                        {REIMBURSE_CATEGORY_OPTIONS.map((cat) => {
-                                            const isSelected = categoryFilters.includes(cat.value);
-                                            return (
-                                                <button
-                                                    key={cat.value}
-                                                    onClick={() => {
-                                                        if (isSelected) {
-                                                            setCategoryFilters(categoryFilters.filter(id => id !== cat.value));
-                                                        } else {
-                                                            setCategoryFilters([...categoryFilters, cat.value]);
-                                                        }
-                                                    }}
-                                                    className={clsx(
-                                                        "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
-                                                        isSelected
-                                                            ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
-                                                            : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
-                                                    )}
-                                                >
-                                                    {cat.label}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Date Range Filter */}
-                                <div className="space-y-4">
-                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Date Range</h4>
-                                    <div className="flex items-center gap-3 px-2">
-                                        <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
-                                            <label className="text-[10px] font-bold text-neutral-400 uppercase pl-3 block">From</label>
-                                            <input
-                                                type="date"
-                                                value={format(startDate, "yyyy-MM-dd")}
-                                                onChange={(e) => {
-                                                    setShowAllMonths(false);
-                                                    setStartDate(new Date(e.target.value));
-                                                }}
-                                                className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
-                                            />
-                                        </div>
-                                        <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
-                                            <label className="text-[10px] font-bold text-neutral-400 uppercase pl-3 block">To</label>
-                                            <input
-                                                type="date"
-                                                value={format(endDate, "yyyy-MM-dd")}
-                                                onChange={(e) => {
-                                                    setShowAllMonths(false);
-                                                    setEndDate(new Date(e.target.value));
-                                                }}
-                                                className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
-                                            />
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowAllMonths(!showAllMonths)}
-                                        className={clsx(
-                                            "w-full py-3.5 rounded-2xl text-[12px] font-bold transition-all border",
-                                            showAllMonths
-                                                ? "bg-red-600 text-white border-red-500 shadow-md shadow-red-500/20"
-                                                : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
-                                        )}
-                                    >
-                                        {showAllMonths ? "Custom Range Mode" : "Show All Time"}
-                                    </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            <button
-                                onClick={() => setShowFilters(false)}
-                                className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-full font-bold text-[16px] transition-colors shadow-lg shadow-red-500/20 active:scale-[0.98] mt-auto shrink-0"
-                            >
-                                Apply Filters
-                            </button>
-                        </div>
-                    </div>
-                )
-            }
-        </FinancePageWrapper >
+                            {/* Category Filter */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-2">
+                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Category</h4>
+                                    {categoryFilters.length > 0 && (
+                                        <button onClick={() => setCategoryFilters([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-2 px-2">
+                                    <button
+                                        onClick={() => setCategoryFilters([])}
+                                        className={clsx(
+                                            "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                            categoryFilters.length === 0
+                                                ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
+                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                        )}
+                                    >
+                                        All
+                                    </button>
+                                    {REIMBURSE_CATEGORY_OPTIONS.map((cat) => {
+                                        const isSelected = categoryFilters.includes(cat.value);
+                                        return (
+                                            <button
+                                                key={cat.value}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        setCategoryFilters(categoryFilters.filter(id => id !== cat.value));
+                                                    } else {
+                                                        setCategoryFilters([...categoryFilters, cat.value]);
+                                                    }
+                                                }}
+                                                className={clsx(
+                                                    "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                                    isSelected
+                                                        ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
+                                                        : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
+                                                )}
+                                            >
+                                                {cat.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
 
+                            {/* Date Range Filter */}
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Date Range</h4>
+                                <div className="flex items-center gap-3 px-2">
+                                    <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
+                                        <label className="text-[10px] font-bold text-neutral-400 uppercase pl-3 block">From</label>
+                                        <input
+                                            type="date"
+                                            value={format(startDate, "yyyy-MM-dd")}
+                                            onChange={(e) => {
+                                                setShowAllMonths(false);
+                                                setStartDate(new Date(e.target.value));
+                                            }}
+                                            className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
+                                        />
+                                    </div>
+                                    <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
+                                        <label className="text-[10px] font-bold text-neutral-400 uppercase pl-3 block">To</label>
+                                        <input
+                                            type="date"
+                                            value={format(endDate, "yyyy-MM-dd")}
+                                            onChange={(e) => {
+                                                setShowAllMonths(false);
+                                                setEndDate(new Date(e.target.value));
+                                            }}
+                                            className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowAllMonths(!showAllMonths)}
+                                    className={clsx(
+                                        "w-full py-3.5 rounded-2xl text-[12px] font-bold transition-all border",
+                                        showAllMonths
+                                            ? "bg-red-600 text-white border-red-500 shadow-md shadow-red-500/20"
+                                            : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
+                                    )}
+                                >
+                                    {showAllMonths ? "Custom Range Mode" : "Show All Time"}
+                                </button>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setShowFilters(false)}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-full font-bold text-[16px] transition-colors shadow-lg shadow-red-500/20 active:scale-[0.98] mt-auto shrink-0"
+                        >
+                            Apply Filters
+                        </button>
+                    </div>
+                </div>
+            )}
+        </FinancePageWrapper>
     );
 }

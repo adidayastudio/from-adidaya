@@ -33,7 +33,8 @@ import {
     Briefcase,
     Share2,
     Image as ImageIcon,
-    DollarSign
+    DollarSign,
+    Undo2
 } from "lucide-react";
 import { CATEGORY_OPTIONS } from "./modules/constants";
 import clsx from "clsx";
@@ -242,6 +243,110 @@ function DeleteConfirmModal({
                             <>
                                 <Trash2 className="w-4 h-4" />
                                 Delete
+                            </>
+                        )}
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+function SuccessModal({ title, message, onClose }: { title: string, message: string, onClose: () => void }) {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onClose();
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[300] w-[calc(100%-32px)] max-w-md">
+            <motion.div
+                initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-white/40 dark:border-neutral-800/40 rounded-[32px] p-4 pr-12 shadow-[0_8px_32px_rgba(0,0,0,0.12)] relative overflow-hidden flex items-center gap-4"
+            >
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white leading-tight">{title}</h3>
+                    <p className="text-[12px] font-medium text-neutral-500 dark:text-neutral-400 mt-0.5">{message}</p>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                >
+                    <X size={18} className="text-neutral-400" />
+                </button>
+            </motion.div>
+        </div>
+    );
+}
+
+// Revert to Draft Confirmation Modal
+function RevertConfirmModal({
+    item,
+    onClose,
+    onConfirm,
+    isReverting
+}: {
+    item: { description?: string },
+    onClose: () => void,
+    onConfirm: () => void,
+    isReverting?: boolean
+}) {
+    return (
+        <div className="fixed inset-0 z-[201] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="relative w-full max-w-sm bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 rounded-3xl p-6 shadow-2xl overflow-hidden"
+            >
+                {/* Icon */}
+                <div className="w-14 h-14 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4">
+                    <RotateCcw className="w-7 h-7 text-[#f97316]" />
+                </div>
+
+                <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2 text-center">
+                    Revert to Draft?
+                </h3>
+                <p className="text-sm text-neutral-500 mb-6 text-center font-medium leading-relaxed">
+                    This request will be returned to your <span className="text-neutral-900 dark:text-white font-bold">Drafts</span> for editing. You will need to submit it again for approval.
+                </p>
+
+                {item.description && (
+                    <div className="bg-neutral-50 dark:bg-neutral-800 rounded-xl p-3 mb-6 border border-neutral-100 dark:border-neutral-700">
+                        <div className="text-[10px] font-bold text-neutral-400 mb-1">Request</div>
+                        <div className="text-sm font-medium text-neutral-700 dark:text-neutral-300 truncate">{item.description}</div>
+                    </div>
+                )}
+
+                <div className="flex gap-3">
+                    <button
+                        onClick={onClose}
+                        disabled={isReverting}
+                        className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all disabled:opacity-50"
+                    >
+                        Keep Submitted
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isReverting}
+                        className="flex-1 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                        {isReverting ? (
+                            <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Reverting...
+                            </>
+                        ) : (
+                            <>
+                                <RotateCcw className="w-4 h-4" />
+                                Revert
                             </>
                         )}
                     </button>
@@ -460,21 +565,21 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
     );
 }
 
-function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => void, onApprove: (amount: number) => void }) {
+function ApproveModal({ item, onClose, onApprove, approverName }: { item: any, onClose: () => void, onApprove: (amount: number, approver: string) => void, approverName: string }) {
     const [amountStr, setAmountStr] = useState(item.amount.toString());
 
     return (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="relative w-full max-w-sm bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 rounded-3xl p-6 shadow-2xl overflow-hidden">
-                <h3 className="text-lg font-bold text-neutral-900 mb-2 flex items-center gap-2">
+                <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2 flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                     Approve Request
                 </h3>
-                <p className="text-sm text-neutral-500 mb-6 font-medium">Please confirm the approved amount.</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-6 font-medium">Please confirm the approved amount.</p>
 
                 <div className="mb-6">
-                    <label className="block text-xs font-bold text-neutral-500 mb-1.5">Approved Amount</label>
+                    <label className="block text-xs font-bold text-neutral-500 dark:text-neutral-400 mb-1.5">Approved Amount</label>
                     <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold">Rp</span>
                         <input
@@ -482,14 +587,14 @@ function ApproveModal({ item, onClose, onApprove }: { item: any, onClose: () => 
                             autoFocus
                             value={amountStr}
                             onChange={(e) => setAmountStr(e.target.value)}
-                            className="w-full h-12 pl-10 pr-4 text-lg border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-bold text-neutral-900"
+                            className="w-full h-12 pl-10 pr-4 text-lg border border-neutral-200 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/30 transition-all font-bold text-neutral-900 dark:text-white"
                         />
                     </div>
                 </div>
 
                 <div className="flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
-                    <button onClick={() => onApprove(parseFloat(amountStr))} className="flex-1 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-lg shadow-emerald-200">Approve</button>
+                    <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded-xl transition-all">Cancel</button>
+                    <button onClick={() => onApprove(parseFloat(amountStr), approverName)} className="flex-1 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-all shadow-lg shadow-emerald-200 dark:shadow-none">Approve</button>
                 </div>
             </motion.div>
         </div>
@@ -544,7 +649,11 @@ function ViewModal({
     onDelete,
     onRefresh,
     isTeamView,
-    userRole
+    userRole,
+    isDeleted,
+    setRevertingItem,
+    loadData,
+    setShowSuccess
 }: {
     item: PurchasingItem;
     onClose: () => void;
@@ -556,12 +665,17 @@ function ViewModal({
     onPay?: () => void;
     onDelete?: () => void;
     onRefresh?: () => void;
+    setRevertingItem?: (item: any) => void;
     isTeamView?: boolean;
     userRole?: string | null;
+    isDeleted?: boolean;
+    loadData: () => void;
+    setShowSuccess: (success: { title: string, message: string } | null) => void;
 }) {
     const [invoiceUrls, setInvoiceUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
     const [proofUrl, setProofUrl] = useState<string | null>(null);
     const [isExporting, setIsExporting] = useState(false);
+    const [docDrawerType, setDocDrawerType] = useState<'invoice' | 'proof'>('invoice');
     const contentRef = useRef<HTMLDivElement>(null);
 
     // Helper: convert a PDF URL to an image data URL using pdfjs-dist
@@ -1008,10 +1122,7 @@ function ViewModal({
                 {/* Sticky Header */}
                 <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
                     <div className="flex items-center justify-between mb-4">
-                        <h2 className={clsx(
-                            "font-black text-neutral-900 dark:text-white tracking-tight",
-                            isExporting ? "text-4xl pl-2 pt-2 mb-2" : "text-2xl"
-                        )}>
+                        <h2 className="font-black text-neutral-900 dark:text-white tracking-tight text-2xl">
                             {formatStructuredId("PO", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `PO-${item.id.slice(0, 8)}`}
                         </h2>
                         <div className="flex items-center gap-2">
@@ -1286,9 +1397,21 @@ function ViewModal({
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Amount</div>
-                                    <div className="flex items-center gap-1">
-                                        <span className="text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(item.amount)}</span>
-                                        {!isExporting && <CopyButton text={String(item.amount)} />}
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(item.approved_amount || item.amount)}</span>
+                                            {!isExporting && <CopyButton text={String(item.approved_amount || item.amount)} />}
+                                        </div>
+                                        {item.approved_amount && item.approved_amount !== item.amount && (
+                                            <div className="flex flex-col gap-0.5">
+                                                <div className="text-[10px] text-orange-600 line-through opacity-75 font-bold">
+                                                    {formatCurrency(item.amount)}
+                                                </div>
+                                                <div className="text-[10px] text-orange-500 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-md w-fit mt-1">
+                                                    Amount manually overridden by {item.approved_by_name || "Admin"}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div>
@@ -1408,24 +1531,27 @@ function ViewModal({
                                 </div>
 
                                 {/* Total Summary */}
-                                {isExporting ? (
-                                    <div className="py-2 flex items-center justify-between border-t border-b border-neutral-100 dark:border-neutral-800 mt-2">
-                                        <div className="flex flex-col">
-                                            <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 tracking-tight leading-none mb-1">Total Amount</span>
-                                            <span className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">{item.items.length} items</span>
-                                        </div>
-                                        <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">{formatCurrency(item.amount)}</span>
-                                    </div>
-                                ) : (
-                                    <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] relative overflow-hidden group">
-                                        <div className="relative flex items-center justify-between">
+                                {/* Total Summary */}
+                                {!(item.approved_amount && item.approved_amount !== item.amount) && (
+                                    isExporting ? (
+                                        <div className="py-2 flex items-center justify-between border-t border-b border-neutral-100 dark:border-neutral-800 mt-2">
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider leading-none mb-1">Total Amount</span>
-                                                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{item.items.length} items</span>
+                                                <span className="text-[11px] font-bold text-neutral-600 dark:text-neutral-400 tracking-tight leading-none mb-1">Total Amount</span>
+                                                <span className="text-xs text-neutral-400 dark:text-neutral-500 font-medium">{item.items?.length || 0} items</span>
                                             </div>
-                                            <span className="text-xl font-bold text-red-600 dark:text-red-400 tracking-tight">{formatCurrency(item.amount)}</span>
+                                            <span className="text-xl font-black text-neutral-900 dark:text-white tracking-tight">{formatCurrency(item.amount)}</span>
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div className="p-4 rounded-2xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm backdrop-blur-[2px] relative overflow-hidden group">
+                                            <div className="relative flex items-center justify-between">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider leading-none mb-1">Total Amount</span>
+                                                    <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{item.items?.length || 0} items</span>
+                                                </div>
+                                                <span className="text-xl font-bold text-red-600 dark:text-red-400 tracking-tight">{formatCurrency(item.amount)}</span>
+                                            </div>
+                                        </div>
+                                    )
                                 )}
                             </section>
                         )}
@@ -1502,7 +1628,27 @@ function ViewModal({
                 </div>
 
                 {/* Bottom Actions - STANDARDIZED */}
-                {(() => {
+                {isDeleted ? (
+                    <div className="flex-none px-8 py-6 sticky bottom-0 z-40">
+                        <div className="flex flex-col gap-3">
+                            <div className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+                                <div className="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center shrink-0">
+                                    <Trash2 className="w-5 h-5 text-rose-500" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-rose-700 dark:text-rose-400">This item has been deleted</p>
+                                    <p className="text-xs text-rose-500 dark:text-rose-400/70 mt-0.5">This request has been permanently removed.</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={onClose}
+                                className="w-full h-14 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-bold text-base active:scale-[0.98] transition-all flex items-center justify-center"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                ) : (() => {
                     const currentApprovalStatus = item.approval_status;
                     const statusVal = currentApprovalStatus || "SUBMITTED";
 
@@ -1549,8 +1695,8 @@ function ViewModal({
                                         <button onClick={onDelete} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete">
                                             <Trash2 size={20} />
                                         </button>
-                                        <button onClick={onEdit} className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all" title="Edit">
-                                            <Pencil size={20} />
+                                        <button onClick={onEdit} className="h-[52px] px-6 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0" title="Edit">
+                                            <Pencil size={20} /> Edit
                                         </button>
                                         <button
                                             onClick={onPay}
@@ -1562,21 +1708,58 @@ function ViewModal({
                                     </div>
                                 )}
 
-                                {!isTeamView && (statusVal === "SUBMITTED" || statusVal === "DRAFT" || statusVal === "NEED_REVISION") && (
+                                {statusVal === "DRAFT" && !isTeamView && (
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={onDelete} className="w-[52px] h-[52px] flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all shrink-0" title="Delete">
+                                            <Trash2 size={20} />
+                                        </button>
+                                        <button
+                                            onClick={onEdit}
+                                            className="flex-1 h-[52px] bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-bold text-sm border border-neutral-200 dark:border-neutral-700 flex items-center justify-center gap-2 active:scale-95 transition-all shrink-0"
+                                        >
+                                            <Pencil size={18} /> Edit
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                updatePurchasingStatus(item.id, { approval_status: 'SUBMITTED' }).then(() => {
+                                                    onClose();
+                                                    loadData();
+                                                    setShowSuccess({
+                                                        title: "Request Submitted",
+                                                        message: "Your request has been successfully submitted."
+                                                    });
+                                                });
+                                            }}
+                                            className="flex-[1.5] h-[52px] bg-red-600 text-white rounded-full font-bold text-sm shadow-xl shadow-red-200/50 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                        >
+                                            <Send size={18} /> Submit
+                                        </button>
+                                    </div>
+                                )}
+                                {(statusVal === "SUBMITTED" || statusVal === "NEED_REVISION") && !isTeamView && (
                                     <div className="flex items-center gap-2">
                                         {canDelete && (
-                                            <button onClick={onDelete} className="w-14 h-14 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete Request">
+                                            <button onClick={onDelete} className="w-[52px] h-[52px] flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all shrink-0" title="Delete Request">
                                                 <Trash2 size={20} />
                                             </button>
                                         )}
                                         {statusVal === "SUBMITTED" && (
-                                            <div className="flex-1 h-14 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800/40 rounded-full border border-neutral-100 dark:border-neutral-700/50 text-xs font-bold text-neutral-400 uppercase tracking-widest leading-none">
-                                                Waiting Approval
+                                            <div className="flex items-center gap-2 flex-1">
+                                                <button
+                                                    onClick={() => setRevertingItem?.(item)}
+                                                    className="h-[52px] px-6 rounded-full bg-transparent text-rose-500 border border-rose-500/20 font-bold text-sm active:scale-95 transition-all flex items-center gap-2 shrink-0"
+                                                    title="Cancel Submission"
+                                                >
+                                                    <Undo2 size={16} /> Cancel
+                                                </button>
+                                                <div className="flex-1 h-[52px] flex items-center justify-center bg-transparent rounded-full border border-neutral-200/50 dark:border-white/10 text-sm font-bold text-neutral-400 dark:text-neutral-500 gap-2 px-4 whitespace-nowrap">
+                                                    <Clock size={16} /> Waiting
+                                                </div>
                                             </div>
                                         )}
                                         {canEdit && (
-                                            <button onClick={onEdit} className="flex-1 h-14 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-2">
-                                                <Pencil size={18} /> Edit Request
+                                            <button onClick={onEdit} className="h-[52px] px-6 rounded-full bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0">
+                                                <Pencil size={18} /> Edit
                                             </button>
                                         )}
                                     </div>
@@ -1865,7 +2048,7 @@ function DocumentDrawer({
 }
 
 export default function PurchasingClient() {
-    const { viewMode, setViewMode, canAccessTeam, userId, isLoading: isAuthLoading, userRole } = useFinance();
+    const { viewMode, setViewMode, canAccessTeam, userRole, profile, isLoading: isAuthLoading } = useFinance();
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
@@ -2206,7 +2389,11 @@ export default function PurchasingClient() {
     const [revisingItem, setRevisingItem] = useState<PurchasingItem | null>(null);
     const [viewingItem, setViewingItem] = useState<PurchasingItem | null>(null);
     const [deletingItem, setDeletingItem] = useState<PurchasingItem | null>(null);
+    const [revertingItem, setRevertingItem] = useState<PurchasingItem | null>(null);
+    const [isReverting, setIsReverting] = useState(false);
+    const [showSuccess, setShowSuccess] = useState<{ title: string, message: string } | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isViewingDeleted, setIsViewingDeleted] = useState(false);
     const [sortConfig, setSortConfig] = useState<{ key: keyof PurchasingItem; direction: 'asc' | 'desc' } | null>(
         { key: 'date', direction: 'desc' }
     );
@@ -2762,7 +2949,8 @@ export default function PurchasingClient() {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        updatePurchasingStatus(item.id, 'SUBMITTED').then(() => fetchItems());
+                                                        // Fixed: removed fetchItems and changed to object payload
+                                                        updatePurchasingStatus(item.id, { approval_status: 'SUBMITTED' }).then(() => loadData());
                                                     }}
                                                     className="flex-[1.5] py-2.5 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-red-200/50"
                                                 >
@@ -2770,8 +2958,11 @@ export default function PurchasingClient() {
                                                 </button>
                                             )}
                                             {isSubmitted && (
-                                                <button className="flex-1 py-2.5 rounded-full bg-neutral-900 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-neutral-400/50 opacity-50 cursor-default">
-                                                    <Clock className="w-[18px] h-[18px]" /> Submitted
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setRevertingItem(item); }}
+                                                    className="flex-1 py-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                                                >
+                                                    <Undo2 className="w-[18px] h-[18px]" /> Cancel
                                                 </button>
                                             )}
                                         </>
@@ -2783,12 +2974,7 @@ export default function PurchasingClient() {
                         return (
                             <FinanceItemCard
                                 key={item.id}
-                                idRef={formatStructuredId('PO', item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code)}
-                                title={formatItemTitle(item.items || [], item.description)}
-                                projectCode={item.project?.project_code || item.project_code || 'GEN'}
-                                date={formatCardDate(item.date)}
-                                priority={item.priority}
-                                amount={item.amount}
+                                item={item}
                                 status={statusToUse}
                                 onClick={() => setViewingItem(item)}
                                 actions={statusToUse !== 'Paid' ? renderMobileActions() : undefined}
@@ -3144,6 +3330,10 @@ export default function PurchasingClient() {
                                 });
 
                                 if (success) {
+                                    // Update drawer in real-time
+                                    if (viewingItem && viewingItem.id === (payingItem.request_id || payingItem.id)) {
+                                        setViewingItem({ ...viewingItem, financial_status: 'PAID', payment_date: date });
+                                    }
                                     loadData();
                                     setPayingItem(null);
                                 } else {
@@ -3175,6 +3365,10 @@ export default function PurchasingClient() {
                                 });
 
                                 if (success) {
+                                    // Update drawer in real-time
+                                    if (viewingItem && viewingItem.id === rejectingItem.id) {
+                                        setViewingItem({ ...viewingItem, approval_status: 'REJECTED', rejection_reason: reason });
+                                    }
                                     loadData();
                                     setRejectingItem(null);
                                 } else {
@@ -3194,7 +3388,7 @@ export default function PurchasingClient() {
                 viewingItem && (
                     <ViewModal
                         item={viewingItem}
-                        onClose={() => { setViewingItem(null); clearRequestId(); }}
+                        onClose={() => { setViewingItem(null); setIsViewingDeleted(false); clearRequestId(); }}
                         onPreview={(tab) => setPreviewingDocument({ item: viewingItem, initialTab: tab })}
                         onApprove={() => setApprovingItem(viewingItem)}
                         onReject={() => setRejectingItem(viewingItem)}
@@ -3205,6 +3399,10 @@ export default function PurchasingClient() {
                         onRefresh={() => loadData()}
                         isTeamView={isTeamView}
                         userRole={userRole}
+                        isDeleted={isViewingDeleted}
+                        setRevertingItem={setRevertingItem}
+                        loadData={loadData}
+                        setShowSuccess={setShowSuccess}
                     />
                 )
             }
@@ -3231,6 +3429,10 @@ export default function PurchasingClient() {
                             try {
                                 await deletePurchasingRequest(deletingItem.id);
                                 loadData();
+                                // If deleting from inside the drawer, show deleted state
+                                if (viewingItem && viewingItem.id === deletingItem.id) {
+                                    setIsViewingDeleted(true);
+                                }
                             } catch (error) {
                                 console.error("Failed to delete:", error);
                             } finally {
@@ -3283,6 +3485,10 @@ export default function PurchasingClient() {
                                     approval_status: 'NEED_REVISION',
                                     revision_reason: reason
                                 });
+                                // Update drawer in real-time
+                                if (viewingItem && viewingItem.id === revisingItem.id) {
+                                    setViewingItem({ ...viewingItem, approval_status: 'NEED_REVISION', revision_reason: reason });
+                                }
                                 setRevisingItem(null);
                                 loadData();
                             } catch (error) {
@@ -3298,15 +3504,21 @@ export default function PurchasingClient() {
                 approvingItem && (
                     <ApproveModal
                         item={approvingItem}
+                        approverName={profile?.username || "Admin"}
                         onClose={() => setApprovingItem(null)}
-                        onApprove={async (amount) => {
+                        onApprove={async (amount, approver) => {
                             try {
                                 const requestId = approvingItem.request_id || approvingItem.id;
                                 const success = await updatePurchasingStatus(requestId, {
                                     approval_status: "APPROVED",
-                                    approved_amount: amount // Use approved_amount instead of amount
-                                });
+                                    approved_amount: amount,
+                                    approved_by_name: approver
+                                } as any);
                                 if (success) {
+                                    // Update drawer in real-time
+                                    if (viewingItem && viewingItem.id === approvingItem.id) {
+                                        setViewingItem({ ...viewingItem, approval_status: 'APPROVED', approved_amount: amount, approved_by_name: approver });
+                                    }
                                     setApprovingItem(null);
                                     loadData();
                                 } else {
@@ -3320,6 +3532,53 @@ export default function PurchasingClient() {
                     />
                 )
             }
+
+            <AnimatePresence>
+                {revertingItem && (
+                    <RevertConfirmModal
+                        item={revertingItem}
+                        onClose={() => setRevertingItem(null)}
+                        isReverting={isReverting}
+                        onConfirm={async () => {
+                            try {
+                                setIsReverting(true);
+                                const success = await updatePurchasingStatus(revertingItem.id, {
+                                    approval_status: 'DRAFT'
+                                });
+                                if (success) {
+                                    // Update drawer in real-time
+                                    if (viewingItem && viewingItem.id === revertingItem.id) {
+                                        setViewingItem({ ...viewingItem, approval_status: 'DRAFT' });
+                                    }
+                                    setRevertingItem(null);
+                                    loadData();
+                                    setShowSuccess({
+                                        title: "Request Reverted",
+                                        message: "The request has been returned to draft status."
+                                    });
+                                } else {
+                                    alert("Failed to revert request to draft.");
+                                }
+                            } catch (error) {
+                                console.error("Error reverting status:", error);
+                                alert("Failed to revert status.");
+                            } finally {
+                                setIsReverting(false);
+                            }
+                        }}
+                    />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {showSuccess && (
+                    <SuccessModal
+                        title={showSuccess.title}
+                        message={showSuccess.message}
+                        onClose={() => setShowSuccess(null)}
+                    />
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {confirmModal.open && (
