@@ -2754,7 +2754,19 @@ export default function ReimburseClient() {
                                                 <Trash2 className="w-[18px] h-[18px]" />
                                             </button>
                                             {(isDraftOrRevise) && (
-                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                <button onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const editPayload: any = { ...item };
+                                                    if (item.invoice_url) {
+                                                        editPayload.existingInvoices = [{
+                                                            id: "existing_receipt",
+                                                            invoice_url: item.invoice_url,
+                                                            invoice_name: "Receipt Document"
+                                                        }];
+                                                    }
+                                                    setEditingItem(editPayload);
+                                                    setIsDrawerOpen(true);
+                                                }} className="flex-1 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
                                                     <Pencil className="w-4 h-4" /> Edit
                                                 </button>
                                             )}
@@ -2932,7 +2944,19 @@ export default function ReimburseClient() {
                                                 {(!isTeamView || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (["DRAFT", "NEED_REVISION", "PENDING", "REJECTED"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
                                                     <>
                                                         {(!isTeamView && (["DRAFT", "NEED_REVISION", "PENDING"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || ""))) && (
-                                                            <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-full"><Pencil className="w-4 h-4" /></button>
+                                                            <button onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const editPayload: any = { ...item };
+                                                                if (item.invoice_url) {
+                                                                    editPayload.existingInvoices = [{
+                                                                        id: "existing_receipt",
+                                                                        invoice_url: item.invoice_url,
+                                                                        invoice_name: "Receipt Document"
+                                                                    }];
+                                                                }
+                                                                setEditingItem(editPayload);
+                                                                setIsDrawerOpen(true);
+                                                            }} className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-full"><Pencil className="w-4 h-4" /></button>
                                                         )}
                                                         <button onClick={(e) => {
                                                             e.stopPropagation();
@@ -3096,7 +3120,16 @@ export default function ReimburseClient() {
                         onClose={() => { setViewingItem(null); setIsViewingDeleted(false); clearRequestId(); }}
                         onPreview={(tab) => setPreviewingDocument({ item: viewingItem, initialTab: tab })}
                         onEdit={() => {
-                            setEditingItem(viewingItem);
+                            const editPayload: any = { ...viewingItem };
+                            if (viewingItem.invoice_url) {
+                                // Map the string to the expected array format for the form
+                                editPayload.existingInvoices = [{
+                                    id: "existing_receipt", // dummy ID
+                                    invoice_url: viewingItem.invoice_url,
+                                    invoice_name: "Receipt Document"
+                                }];
+                            }
+                            setEditingItem(editPayload);
                             setIsDrawerOpen(true);
                             setViewingItem(null); // Close ViewModal when opening Edit Drawer
                         }}
@@ -3107,7 +3140,7 @@ export default function ReimburseClient() {
                         onDelete={() => setDeletingItem(viewingItem)}
                         onRefresh={() => loadData()}
                         isTeamView={isTeamView}
-                        userRole={userRole}
+                        userRole={userRole || null}
                         isDeleted={isViewingDeleted}
                         setRevertingItem={setRevertingItem}
                         loadData={loadData}
