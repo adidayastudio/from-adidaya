@@ -47,7 +47,8 @@ const REIMBURSEMENT_COLUMNS = `
     request_number,
     approved_by_name,
     project:projects(id, project_name, project_code, project_number),
-    items:reimbursement_items(id, name, qty, unit, unit_price, total)
+    items:reimbursement_items(id, name, qty, unit, unit_price, total),
+    existingInvoices:reimbursement_invoices(id, invoice_url, invoice_name, invoice_type, notes, created_at)
 `;
 
 /**
@@ -194,10 +195,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
         const { items, invoice_urls, existing_invoice_ids, ...requestData } = body;
 
-        // Map frontend's invoice_urls array back to a single invoice_url string
-        if (invoice_urls && invoice_urls.length > 0) {
-            requestData.invoice_url = invoice_urls[0].invoice_url;
-        }
+
 
         // Validate required fields
         if (!requestData.project_id || !requestData.description || !requestData.amount) {
@@ -239,6 +237,25 @@ export async function POST(request: NextRequest) {
 
             if (itemsError) {
                 console.error("Error creating reimbursement items:", itemsError);
+            }
+        }
+
+        // 3. Create invoices if provided
+        if (invoice_urls && invoice_urls.length > 0) {
+            const invoicesData = invoice_urls.map((inv: any) => ({
+                request_id: reimburseRequest.id,
+                invoice_url: inv.invoice_url,
+                invoice_name: inv.invoice_name,
+                invoice_type: 'RECEIPT',
+                uploaded_by: user.id
+            }));
+
+            const { error: invoicesError } = await supabase
+                .from("reimbursement_invoices")
+                .insert(invoicesData);
+
+            if (invoicesError) {
+                console.error("Error creating reimbursement invoices:", invoicesError);
             }
         }
 

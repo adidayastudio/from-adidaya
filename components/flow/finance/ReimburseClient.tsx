@@ -677,7 +677,7 @@ function DocumentDrawer({
 }) {
     const [activeTab, setActiveTab] = useState<'invoice' | 'proof'>(initialTab);
     const [invoiceUrls, setInvoiceUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
-    const [proofUrl, setProofUrl] = useState<string | null>(null);
+    const [proofUrls, setProofUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState<string | null>(null); // path or 'bulk'
 
@@ -686,17 +686,30 @@ function DocumentDrawer({
             setIsLoading(true);
             const urls: { url: string; name: string; originalPath: string }[] = [];
 
-            // Invoices/Receipts
-            if (item.invoice_url) {
+            // Invoices/Receipts - use existingInvoices from Supabase join
+            if (item.existingInvoices && item.existingInvoices.length > 0) {
+                const iUrls: { url: string; name: string; originalPath: string }[] = [];
+                for (let i = 0; i < item.existingInvoices.length; i++) {
+                    const inv = item.existingInvoices[i];
+                    const url = await getFinanceFileUrl(inv.invoice_url);
+                    if (url) iUrls.push({ url, name: inv.invoice_name || `Receipt ${i + 1}`, originalPath: inv.invoice_url });
+                }
+                setInvoiceUrls(iUrls);
+            } else if (item.invoice_url) {
+                // Fallback for legacy single invoice_url
                 const url = await getFinanceFileUrl(item.invoice_url);
-                if (url) urls.push({ url, name: 'Receipt', originalPath: item.invoice_url });
+                if (url) setInvoiceUrls([{ url, name: 'Receipt', originalPath: item.invoice_url }]);
             }
-            setInvoiceUrls(urls);
 
             // Proof
             if (item.payment_proof_url) {
-                const url = await getFinanceFileUrl(item.payment_proof_url);
-                setProofUrl(url);
+                const paths = item.payment_proof_url.split(',');
+                const pUrls: { url: string; name: string; originalPath: string }[] = [];
+                for (let i = 0; i < paths.length; i++) {
+                    const url = await getFinanceFileUrl(paths[i].trim());
+                    if (url) pUrls.push({ url, name: `Transfer Proof ${i + 1}`, originalPath: paths[i].trim() });
+                }
+                setProofUrls(pUrls);
             }
             setIsLoading(false);
         };
@@ -723,7 +736,7 @@ function DocumentDrawer({
             const dateStr = `${yyyy}${mm}${dd}`;
 
             // Generate RE string
-            const reStr = formatStructuredId("RE", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `RE-${item.id.slice(0, 8)}`;
+            const reStr = formatStructuredId("RE", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `RE - ${item.id.slice(0, 8)}`;
 
             // Generate Project string
             const projectStr = item.project?.project_code || item.project_code || 'NA';
@@ -734,9 +747,9 @@ function DocumentDrawer({
             // Combine
             let suffix = '';
             if (typeof index === 'number' && typeof total === 'number' && total > 1) {
-                suffix = `_${index + 1}`;
+                suffix = `_${index + 1} `;
             }
-            const filename = `${dateStr}_${typeStr}_${reStr}_${projectStr}_${itemStr}${suffix}.${ext}`.replace(/[<>:"/\\|?*]+/g, '');
+            const filename = `${dateStr}_${typeStr}_${reStr}_${projectStr}_${itemStr}${suffix}.${ext} `.replace(/[<>:"/\\|?*]+/g, '');
 
             const response = await fetch(url);
             const blob = await response.blob();
@@ -758,7 +771,7 @@ function DocumentDrawer({
 
     const handleBulkDownload = async () => {
         setIsDownloading('bulk');
-        const docs = activeTab === 'invoice' ? invoiceUrls : (proofUrl ? [{ url: proofUrl, originalPath: item.payment_proof_url!, name: 'Proof' }] : []);
+        const docs = activeTab === 'invoice' ? invoiceUrls : proofUrls;
         for (let i = 0; i < docs.length; i++) {
             const doc = docs[i];
             await handleDownload(doc.url, doc.originalPath, doc.name, i, docs.length);
@@ -770,7 +783,7 @@ function DocumentDrawer({
         setIsDownloading(null);
     };
 
-    const currentDocs = activeTab === 'invoice' ? invoiceUrls : (proofUrl ? [{ url: proofUrl, originalPath: item.payment_proof_url!, name: 'Proof' }] : []);
+    const currentDocs = activeTab === 'invoice' ? invoiceUrls : proofUrls;
 
     const [zoom, setZoom] = useState(1);
     const toggleZoom = () => setZoom(prev => prev === 1 ? 2 : 1);
@@ -864,7 +877,7 @@ function DocumentDrawer({
                                             </div>
                                             <div className="w-full px-6 mt-4 flex flex-col gap-4">
                                                 <iframe
-                                                    src={`${doc.url}#toolbar=0`}
+                                                    src={`${doc.url} #toolbar = 0`}
                                                     className="w-full h-[400px] rounded-2xl border border-neutral-200 dark:border-neutral-700"
                                                 />
                                                 <button
@@ -1774,17 +1787,17 @@ function ViewModal({
                                         onClick={() => onPreview('invoice')}
                                         className={clsx(
                                             "p-4 rounded-3xl border transition-all flex flex-col gap-2 text-left relative overflow-hidden group",
-                                            item.invoice_url
+                                            item.existingInvoices?.length > 0
                                                 ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-red-200 dark:hover:border-red-500/30"
                                                 : "bg-neutral-50/50 dark:bg-neutral-900/30 border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
                                         )}
                                     >
                                         <div className="flex items-center justify-between relative z-10">
                                             <span className="text-[10px] font-bold text-neutral-400">Receipt</span>
-                                            <FileText size={14} className={clsx(item.invoice_url ? "text-red-500" : "text-neutral-300")} />
+                                            <FileText size={14} className={clsx(item.existingInvoices?.length > 0 ? "text-red-500" : "text-neutral-300")} />
                                         </div>
                                         <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
-                                            {item.invoice_url ? "1 File" : "No Receipt"}
+                                            {item.existingInvoices?.length > 0 ? `${item.existingInvoices.length} File${item.existingInvoices.length > 1 ? 's' : ''}` : "No Receipt"}
                                         </div>
                                         <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
                                             <FileText size={48} />
@@ -1805,7 +1818,7 @@ function ViewModal({
                                             <CheckCircle2 size={14} className={clsx(item.payment_proof_url ? "text-emerald-500" : "text-neutral-300")} />
                                         </div>
                                         <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
-                                            {item.payment_proof_url ? "1 File" : "No Proof"}
+                                            {item.payment_proof_url ? `${item.payment_proof_url.split(',').length} File${item.payment_proof_url.split(',').length > 1 ? 's' : ''}` : "No Proof"}
                                         </div>
                                         <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
                                             <CheckCircle2 size={48} />
@@ -2757,13 +2770,7 @@ export default function ReimburseClient() {
                                                 <button onClick={(e) => {
                                                     e.stopPropagation();
                                                     const editPayload: any = { ...item };
-                                                    if (item.invoice_url) {
-                                                        editPayload.existingInvoices = [{
-                                                            id: "existing_receipt",
-                                                            invoice_url: item.invoice_url,
-                                                            invoice_name: "Receipt Document"
-                                                        }];
-                                                    }
+                                                    // existingInvoices comes from API join
                                                     setEditingItem(editPayload);
                                                     setIsDrawerOpen(true);
                                                 }} className="flex-1 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
@@ -2947,13 +2954,7 @@ export default function ReimburseClient() {
                                                             <button onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 const editPayload: any = { ...item };
-                                                                if (item.invoice_url) {
-                                                                    editPayload.existingInvoices = [{
-                                                                        id: "existing_receipt",
-                                                                        invoice_url: item.invoice_url,
-                                                                        invoice_name: "Receipt Document"
-                                                                    }];
-                                                                }
+                                                                // existingInvoices comes from API join
                                                                 setEditingItem(editPayload);
                                                                 setIsDrawerOpen(true);
                                                             }} className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-full"><Pencil className="w-4 h-4" /></button>
@@ -3121,14 +3122,7 @@ export default function ReimburseClient() {
                         onPreview={(tab) => setPreviewingDocument({ item: viewingItem, initialTab: tab })}
                         onEdit={() => {
                             const editPayload: any = { ...viewingItem };
-                            if (viewingItem.invoice_url) {
-                                // Map the string to the expected array format for the form
-                                editPayload.existingInvoices = [{
-                                    id: "existing_receipt", // dummy ID
-                                    invoice_url: viewingItem.invoice_url,
-                                    invoice_name: "Receipt Document"
-                                }];
-                            }
+                            // existingInvoices comes directly from API join
                             setEditingItem(editPayload);
                             setIsDrawerOpen(true);
                             setViewingItem(null); // Close ViewModal when opening Edit Drawer

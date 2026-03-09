@@ -40,7 +40,8 @@ const REIMBURSEMENT_COLUMNS = `
     created_at,
     updated_at,
     project:projects(id, project_name, project_code),
-    items:reimbursement_items(id, name, qty, unit, unit_price, total)
+    items:reimbursement_items(id, name, qty, unit, unit_price, total),
+    existingInvoices:reimbursement_invoices(id, invoice_url, invoice_name, invoice_type, notes, created_at)
 `;
 
 interface RouteParams {
@@ -91,10 +92,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         const body = await request.json();
         const { items, invoice_urls, existing_invoice_ids, ...requestData } = body;
 
-        // Map frontend's invoice_urls array back to a single invoice_url string
-        if (invoice_urls && invoice_urls.length > 0) {
-            requestData.invoice_url = invoice_urls[0].invoice_url;
-        }
+
 
         const supabase = await createServerSupabase();
 
@@ -132,6 +130,37 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                 await supabase
                     .from("reimbursement_items")
                     .insert(itemsData);
+            }
+        }
+
+        // 3. Update invoices - remove ones not in existing_invoice_ids, add new ones
+        if (existing_invoice_ids !== undefined || invoice_urls !== undefined) {
+            // Delete invoices not in the existing IDs list (user removed them)
+            if (existing_invoice_ids && Array.isArray(existing_invoice_ids)) {
+                await supabase
+                    .from("reimbursement_invoices")
+                    .delete()
+                    .eq("request_id", id)
+                    .not("id", "in", `(${existing_invoice_ids.filter((i: string) => i !== 'legacy').join(',')})`);
+            }
+
+            // Insert new invoices
+            if (invoice_urls && invoice_urls.length > 0) {
+                const invoicesData = invoice_urls.map((inv: any) => ({
+                    request_id: id,
+                    invoice_url: inv.invoice_url,
+                    invoice_name: inv.invoice_name,
+                    invoice_type: 'RECEIPT',
+                    uploaded_by: user.id
+                }));
+
+                const { error: invoicesError } = await supabase
+                    .from("reimbursement_invoices")
+                    .insert(invoicesData);
+
+                if (invoicesError) {
+                    console.error("Error creating reimbursement invoices:", invoicesError);
+                }
             }
         }
 

@@ -243,12 +243,20 @@ export function ReimburseRequestForm({
             if (!selectedProject) throw new Error("Invalid project selected");
 
             // 1. Upload new files
-            const uploadedUrls = await Promise.all(
-                invoiceFiles.map(async (file) => {
-                    const url = await uploadFinanceFile(file, "reimburse");
-                    return { invoice_url: url, invoice_name: file.name };
-                })
-            );
+            const uploadedInvoiceFiles = [];
+            for (const file of invoiceFiles) {
+                const url = await uploadFinanceFile(file, "invoices");
+                if (!url) {
+                    throw new Error(`Failed to upload ${file.name}. It may be too large or there is a network issue.`);
+                }
+                uploadedInvoiceFiles.push({ url, name: file.name });
+            }
+
+            const allInvoiceUrls = [
+                ...existingInvoices.map(inv => inv.invoice_url),
+                ...uploadedInvoiceFiles.map(i => i.url)
+            ];
+            const primaryInvoiceUrl = allInvoiceUrls[0] || null;
 
             if (!userId) throw new Error("User not authenticated");
 
@@ -280,8 +288,12 @@ export function ReimburseRequestForm({
                 amount: totalAmount,
                 target_date: targetDate || null,
                 status: asDraft ? "DRAFT" : "PENDING",
-                invoice_urls: uploadedUrls, // Newly uploaded
-                existing_invoice_ids: existingInvoices.map(inv => inv.id), // Keep these
+                invoice_url: primaryInvoiceUrl || undefined,
+                invoice_urls: uploadedInvoiceFiles.map((item) => ({
+                    invoice_url: item.url,
+                    invoice_name: item.name
+                })),
+                existing_invoice_ids: existingInvoices.map(inv => inv.id),
                 created_by: userId,
                 details: details,
                 items: items.map(i => ({
@@ -316,7 +328,7 @@ export function ReimburseRequestForm({
             onClose();
         } catch (error) {
             console.error("Error saving reimburse request:", error);
-            alert("Failed to save request.");
+            alert(error instanceof Error ? error.message : "Failed to save request.");
             setIsSubmitting(false);
         }
     };
