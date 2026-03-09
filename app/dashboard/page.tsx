@@ -225,7 +225,7 @@ export default function DashboardPage() {
       <Breadcrumb items={[{ label: "Dashboard" }]} className="hidden md:flex" />
 
       <PageWrapper sidebar={<DashboardSidebar />}>
-        <div className="h-full overflow-y-auto scrollbar-hide md:mx-0 -mx-4">
+        <div className="md:mx-0 -mx-4">
           <div className="w-full pb-32 md:px-0 px-4">
 
             {/* NEW REVAMPED DASHBOARD (MOBILE) */}
