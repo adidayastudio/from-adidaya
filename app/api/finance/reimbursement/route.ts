@@ -100,7 +100,13 @@ export async function GET(request: NextRequest) {
                     b = b.eq("project_id", projectId);
                 }
             }
-            if (includeStatus && status && status !== "ALL") b = b.eq("status", status);
+            if (includeStatus && status && status !== "ALL") {
+                if (status === "PENDING") {
+                    b = b.in("status", ["PENDING", "NEED_REVISION"]);
+                } else {
+                    b = b.eq("status", status);
+                }
+            }
             if (myRequests) b = b.eq("created_by", user.id);
             if (category && category !== "ALL") {
                 const categories = category.split(",");
