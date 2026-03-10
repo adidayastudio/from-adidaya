@@ -44,10 +44,13 @@ const PURCHASING_COLUMNS = `
     rejection_reason,
     revision_reason,
     payment_proof_url,
+    priority,
     target_date,
+    request_number,
+    project_number,
     approved_amount,
     approved_by_name,
-    project:projects(id, project_name, project_code),
+    project:projects(id, project_name, project_code, project_number),
     items:purchasing_items(id, name, qty, unit, unit_price, total),
     invoices:purchasing_invoices(id, invoice_url, invoice_name, invoice_type, notes, created_at)
 `;

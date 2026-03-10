@@ -48,7 +48,7 @@ import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
 import { FinanceItemCard } from "./FinanceItemCard";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { fetchPurchasingRequests, fetchFundingSources, updatePurchasingStatus, deletePurchasingRequest } from "@/lib/client/finance-api";
+import { fetchPurchasingRequests, fetchFundingSources, updatePurchasingStatus, deletePurchasingRequest, fetchPurchasingRequestById } from "@/lib/client/finance-api";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { fetchTeamMembers } from "@/lib/api/clock_team";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
@@ -1847,13 +1847,13 @@ export default function PurchasingClient() {
                 const creatorRole = profileMap.get(req.created_by)?.role || "Unknown Role";
 
                 return {
-                    ...req, // PRESERVE ALL FIELDS (including request_number, project_number, project object)
-                    id: req.id,
-                    request_id: req.id,
-                    date: req.date,
-                    project_id: req.project_id,
+                    ...req,
                     project_code: req.project?.project_code || req.project_code || "N/A",
                     project_name: req.project?.project_name || req.project_name || "Unknown",
+                    project_number: req.project?.project_number || req.project_number,
+                    request_number: req.request_number,
+                    priority: req.priority,
+                    target_date: req.target_date,
                     vendor: req.vendor || "",
                     description: req.description || (req.items?.[0]?.name || "No description"),
                     quantity: req.items?.[0]?.qty || 1,
@@ -2106,12 +2106,18 @@ export default function PurchasingClient() {
         return () => window.removeEventListener('fab-action', handleFabAction);
     }, [handleExport]);
 
-    // Handle requestId from notification
+    // Handle requestId from notification (or Overview)
     useEffect(() => {
         const requestId = searchParams.get('requestId');
-        if (requestId && items.length > 0 && !viewingItem && !editingItem && requestId !== lastHandledRequestId.current) {
-            const item = items.find(i => i.id === requestId);
-            if (item) {
+
+        // Reset handled ID only when it's gone from URL
+        if (!requestId) {
+            lastHandledRequestId.current = null;
+            return;
+        }
+
+        if (requestId && !viewingItem && !editingItem && requestId !== lastHandledRequestId.current) {
+            const openDrawer = (item: PurchasingItem) => {
                 lastHandledRequestId.current = requestId;
                 if (isTeamView) {
                     setViewingItem(item);
@@ -2119,11 +2125,60 @@ export default function PurchasingClient() {
                     setEditingItem(item);
                     setIsDrawerOpen(true);
                 }
+            };
+
+            const existingItem = items.find(i => i.id === requestId);
+            if (existingItem) {
+                openDrawer(existingItem);
+            } else {
+                // If not in current list (maybe because of month filter), fetch explicitly
+                fetchPurchasingRequestById(requestId).then(async (req) => {
+                    if (req) {
+                        // Format it like we do in loadData
+                        const profiles = await fetchTeamMembers();
+                        const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                        const creatorName = profileMap.get(req.created_by)?.username || "Unknown";
+                        const creatorRole = profileMap.get(req.created_by)?.role || "Unknown Role";
+
+                        const formatted: PurchasingItem = {
+                            ...req,
+                            id: req.id,
+                            request_id: req.id,
+                            project_code: req.project?.project_code || req.project_code || "N/A",
+                            project_name: req.project?.project_name || req.project_name || "Unknown",
+                            project_number: req.project?.project_number || req.project_number,
+                            request_number: req.request_number,
+                            priority: req.priority,
+                            target_date: req.target_date,
+                            created_by_name: creatorName,
+                            created_by_role: creatorRole,
+                            submitted_by_name: creatorName,
+                            items: req.items?.map((it: any) => ({
+                                id: it.id,
+                                name: it.name,
+                                qty: it.qty,
+                                unit: it.unit,
+                                unit_price: it.unitPrice || it.unit_price,
+                                total: it.total
+                            })) || [],
+                            invoices: req.invoices?.map((inv: any) => ({
+                                id: inv.id,
+                                invoice_url: inv.invoice_url,
+                                invoice_name: inv.invoice_name,
+                                invoice_type: inv.invoice_type,
+                                notes: inv.notes,
+                                created_at: inv.created_at
+                            })) || []
+                        };
+                        openDrawer(formatted);
+                    }
+                });
             }
         }
     }, [searchParams, items, isTeamView, viewingItem, editingItem]);
 
     const clearRequestId = () => {
+        // lastHandledRequestId.current = null; // Removing this to prevent race condition loop
         const params = new URLSearchParams(window.location.search);
         if (params.has('requestId')) {
             params.delete('requestId');

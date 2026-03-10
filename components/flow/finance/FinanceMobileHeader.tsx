@@ -16,6 +16,7 @@ import {
     Landmark,
     FileBarChart,
     User,
+    TrendingUp,
 } from "lucide-react";
 import { useFinance } from "./FinanceContext";
 
@@ -41,12 +42,25 @@ export default function FinanceMobileHeader({
     const router = useRouter();
     const { viewMode, setViewMode, canAccessTeam } = useFinance();
     const [scrolled, setScrolled] = useState(false);
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    // Auto-scroll active tab into view
+    useEffect(() => {
+        const activeTab = scrollContainerRef.current?.querySelector('[data-active="true"]');
+        if (activeTab) {
+            activeTab.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+                inline: 'center'
+            });
+        }
+    }, [pathname]);
 
     const isActive = (href: string) => {
         if (href === "/flow/finance") {
@@ -138,7 +152,10 @@ export default function FinanceMobileHeader({
                 ? "fixed top-[80px] left-5 right-5 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-black/[0.04] dark:border-white/[0.05] p-[2px] rounded-[24px] shadow-[0_8px_32px_-12px_rgba(0,0,0,0.1)] dark:shadow-none"
                 : "relative bg-transparent pb-4 mt-2"
                 }`}>
-                <div className={`flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${scrolled ? 'px-0' : 'px-5'}`}>
+                <div
+                    ref={scrollContainerRef}
+                    className={`flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] ${scrolled ? 'px-0' : 'px-5'}`}
+                >
                     {FINANCE_TABS.map((tab) => {
                         const active = isActive(tab.href);
                         const Icon = tab.icon;
@@ -146,6 +163,7 @@ export default function FinanceMobileHeader({
                             <Link
                                 key={tab.id}
                                 href={tab.href}
+                                data-active={active}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all flex-shrink-0 ${active
                                     ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.05] font-bold"
                                     : "bg-transparent text-neutral-500 dark:text-neutral-400 font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800"

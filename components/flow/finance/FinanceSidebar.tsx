@@ -40,9 +40,11 @@ export default function FinanceSidebar() {
   const visibleItems = NAV_ITEMS.filter(item => !item.teamOnly || canAccessTeam);
 
   const isActive = (path: string) => {
-    // For overview (root) path, only exact match
+    // Exact match for root finance path
     if (path === "/flow/finance") return pathname === "/flow/finance";
-    // For other paths, use startsWith
+    // For beta overview, also exact match or startsWith
+    if (path === "/flow/finance/overview-beta") return pathname === "/flow/finance/overview-beta";
+    // For other modules (purchasing, reimburse, etc), use startsWith
     return pathname.startsWith(path);
   };
 

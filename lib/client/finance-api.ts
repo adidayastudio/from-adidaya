@@ -51,6 +51,15 @@ export interface PurchasingRequestPayload {
     }[];
 }
 
+export async function fetchPurchasingRequestById(id: string) {
+    const { data, error } = await apiGet<any>(`/api/finance/purchasing/${id}`);
+    if (error) {
+        console.error("Error fetching purchasing request:", error);
+        return null;
+    }
+    return data;
+}
+
 export async function fetchPurchasingRequests(options?: {
     limit?: number;
     offset?: number;
@@ -216,6 +225,15 @@ export interface ReimburseRequestPayload {
         unitPrice: number;
         total: number;
     }[];
+}
+
+export async function fetchReimburseRequestById(id: string) {
+    const { data, error } = await apiGet<any>(`/api/finance/reimbursement/${id}`);
+    if (error) {
+        console.error("Error fetching reimbursement request:", error);
+        return null;
+    }
+    return data;
 }
 
 export async function fetchReimburseRequests(options?: {

@@ -63,7 +63,7 @@ import { REIMBURSE_CATEGORY_OPTIONS } from "./modules/constants";
 import { FinanceItemCard } from "./FinanceItemCard";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { fetchReimburseRequests, updateReimburseStatus, deleteReimburseRequest, fetchFundingSources } from "@/lib/client/finance-api";
+import { fetchReimburseRequests, updateReimburseStatus, deleteReimburseRequest, fetchFundingSources, fetchReimburseRequestById } from "@/lib/client/finance-api";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { fetchTeamMembers } from "@/lib/api/clock_team";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
@@ -1826,6 +1826,12 @@ export default function ReimburseClient() {
                 const creator = profileMap.get(req.created_by);
                 return {
                     ...req,
+                    project_name: req.project?.project_name || req.project_name || "General",
+                    project_code: req.project?.project_code || req.project_code || "GEN",
+                    project_number: req.project?.project_number || req.project_number,
+                    request_number: req.request_number,
+                    priority: req.priority,
+                    target_date: req.target_date,
                     staff_name: creator?.username || "Unknown",
                     staff_role: creator?.role || "Unknown Role"
                 };
@@ -1880,19 +1886,66 @@ export default function ReimburseClient() {
         return () => window.removeEventListener('fab-action', handleFabAction);
     }, []);
 
-    // Handle requestId from notification
+    // Handle requestId from notification (or Overview)
     useEffect(() => {
         const requestId = searchParams.get('requestId');
-        if (requestId && items.length > 0 && !viewingItem && !editingItem && requestId !== lastHandledRequestId.current) {
-            const item = items.find(i => i.id === requestId);
-            if (item) {
+
+        // Reset handled ID only when it's gone from URL
+        if (!requestId) {
+            lastHandledRequestId.current = null;
+            return;
+        }
+
+        if (requestId && !viewingItem && !editingItem && requestId !== lastHandledRequestId.current) {
+            const openDrawer = (item: ReimburseRequest) => {
                 lastHandledRequestId.current = requestId;
-                setViewingItem(item); // Always open ViewModal first
+                if (isTeamView) {
+                    setViewingItem(item);
+                } else {
+                    setEditingItem(item);
+                    setIsDrawerOpen(true);
+                }
+            };
+
+            const existingItem = items.find(i => i.id === requestId);
+            if (existingItem) {
+                openDrawer(existingItem);
+            } else {
+                // If not in current list, fetch explicitly
+                fetchReimburseRequestById(requestId).then(async (req) => {
+                    if (req) {
+                        const profiles = await fetchTeamMembers();
+                        const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                        const creatorName = profileMap.get(req.created_by)?.username || "Unknown";
+
+                        const formatted: ReimburseRequest = {
+                            ...req,
+                            project_name: req.project?.project_name || req.project_name || "General",
+                            project_code: req.project?.project_code || req.project_code || "GEN",
+                            project_number: req.project?.project_number || req.project_number,
+                            request_number: req.request_number,
+                            priority: req.priority,
+                            target_date: req.target_date,
+                            staff_name: creatorName,
+                            items: req.items?.map((it: any) => ({
+                                id: it.id,
+                                name: it.name,
+                                qty: it.qty,
+                                unit: it.unit,
+                                unit_price: it.unitPrice || it.unit_price,
+                                total: it.total
+                            })) || [],
+                            existingInvoices: req.existingInvoices || []
+                        };
+                        openDrawer(formatted);
+                    }
+                });
             }
         }
     }, [searchParams, items, isTeamView, viewingItem, editingItem]);
 
     const clearRequestId = () => {
+        lastHandledRequestId.current = null;
         const params = new URLSearchParams(window.location.search);
         if (params.has('requestId')) {
             params.delete('requestId');

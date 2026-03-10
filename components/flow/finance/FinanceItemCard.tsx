@@ -1,6 +1,6 @@
 import React from "react";
 import clsx from "clsx";
-import { formatCardDate } from "./modules/utils";
+import { formatCardDate, formatStructuredId } from "./modules/utils";
 
 export interface FinanceItemCardProps {
     item?: any;
@@ -39,13 +39,6 @@ export function FinanceItemCard({
         }).format(val).replace('Rp', 'Rp ');
     };
 
-    // Helper to format ID
-    const formatStructuredId = (prefix: string, projectNum: number | string | undefined, requestNum: number | string | undefined, projectCode: string | undefined) => {
-        const pNum = projectNum ? String(projectNum).padStart(3, '0') : '000';
-        const rNum = requestNum ? String(requestNum).padStart(3, '0') : '000';
-        const pCode = projectCode || 'GEN';
-        return `${prefix}-${pNum}-${rNum}-${pCode}`;
-    };
 
     // Derived values from item or props
     const title = propTitle || (item?.items && item.items.length > 0 ? item.items[0].name : item?.description) || "Untitled Request";
@@ -55,7 +48,7 @@ export function FinanceItemCard({
     const projectCode = propProjectCode || item?.project?.project_code || item?.project_code || 'GEN';
 
     const idRef = propIdRef || (item ? formatStructuredId(
-        item.request_number !== undefined && item.project_id ? (item.vendor ? 'PO' : 'RE') : 'ID',
+        (item.vendor || item.purchase_stage || item.approval_status === 'DRAFT' && !item.category) ? 'PO' : 'RE',
         item.project?.project_number || item.project_number,
         item.request_number,
         item.project?.project_code || item.project_code
@@ -139,9 +132,11 @@ export function FinanceItemCard({
                     <span className="text-[17px] font-bold text-neutral-900 dark:text-white tracking-tight tabular-nums">
                         {displayAmount}
                     </span>
-                    <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide border uppercase", theme.text, theme.bg, theme.border)}>
-                        {status}
-                    </span>
+                    {status && (
+                        <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide border uppercase", theme.text, theme.bg, theme.border)}>
+                            {status}
+                        </span>
+                    )}
                 </div>
             </div>
 
