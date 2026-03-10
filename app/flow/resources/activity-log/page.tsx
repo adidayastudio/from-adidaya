@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { History as HistoryIcon, ArrowRight } from "lucide-react";
 import clsx from "clsx";
