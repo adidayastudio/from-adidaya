@@ -1,176 +1,160 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Package, Wrench, Building2, AlertTriangle, ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
-import Link from "next/link";
+import { Package, Wrench, Truck, Handshake, RefreshCw, Sparkles } from "lucide-react";
+import { FinanceSummaryCard, FinanceSummaryCardsRow } from "@/components/flow/finance/FinanceSummaryCard";
+import { createClient } from "@/utils/supabase/client";
+import { triggerResourceMerge, triggerResourceSync } from "@/lib/api/resources-client";
+import { toast } from "sonner";
 import clsx from "clsx";
-import { LiquidSummaryCard } from "@/components/shared/liquid/LiquidSummaryCard";
 
-// Mock Data for Overview
-const MOCK_STATS = [
-    {
-        label: "Total Materials",
-        value: "2,450",
-        unit: "Items",
-        trend: "+12%",
-        trendUp: true,
-        icon: Package,
-        color: "blue",
-    },
-    {
-        label: "Tools In Use",
-        value: "14",
-        unit: "Active",
-        trend: "+2",
-        trendUp: true,
-        icon: Wrench,
-        color: "orange",
-    },
-    {
-        label: "Active Assets",
-        value: "8",
-        unit: "Heavy Equip",
-        trend: "0%",
-        trendUp: true,
-        icon: Building2,
-        color: "purple",
-    },
-];
+const supabase = createClient();
 
-const LOW_STOCK_ALERTS = [
-    { item: "Semen Holcim 50kg", project: "Rumah Pak Budi", remaining: 5, unit: "Sack" },
-    { item: "Pasir Beton", project: "Villa Puncak", remaining: 2, unit: "m3" },
-];
-
-const RECENT_ACTIVITY = [
-    { time: "10:30 AM", user: "Budi S.", action: "Received", item: "Semen Holcim (100)", location: "Gudang Utama" },
-    { time: "09:15 AM", user: "Agus A.", action: "Moved", item: "Bor Listrik", location: "Villa Puncak" },
-    { time: "Yesterday", user: "System", action: "Consumed", item: "Cat Dulux", location: "Renovasi Kantor" },
-];
-
-
+interface CategoryStats {
+    category: string;
+    total: number;
+    withStock: number;
+    outOfStock: number;
+}
 
 export default function ResourcesOverviewPage() {
-    // FAB Action Listener
+    const [stats, setStats] = useState<CategoryStats[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isMerging, setIsMerging] = useState(false);
+
+    const loadStats = async (signal?: AbortSignal) => {
+        setIsLoading(true);
+        try {
+            const categories = ['material', 'tool', 'asset', 'service'];
+            const results = await Promise.all(
+                categories.map(async (cat) => {
+                    const { count } = await supabase
+                        .from('pricing_resources')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('category', cat);
+                    return { category: cat, total: count || 0, withStock: 0, outOfStock: 0 };
+                })
+            );
+            if (!signal?.aborted) setStats(results);
+        } catch (e: any) {
+            if (e?.name === 'AbortError') return;
+            console.error("Failed to load overview stats:", e);
+        } finally {
+            if (!signal?.aborted) setIsLoading(false);
+        }
+    };
+
+    const handleSync = async (isHistorical: boolean = false) => {
+        const today = new Date().toISOString().split('T')[0];
+        const startDate = isHistorical ? undefined : today;
+
+        const promise = triggerResourceSync(startDate);
+        toast.promise(promise, {
+            loading: isHistorical ? 'Processing historical data...' : 'Auto-syncing today\'s data...',
+            success: (res: any) => {
+                loadStats();
+                return `Sync completed: ${res.processed || 0} items`;
+            },
+            error: 'Sync failed'
+        });
+    };
+
+    const handleMerge = async () => {
+        setIsMerging(true);
+        const promise = triggerResourceMerge();
+        toast.promise(promise, {
+            loading: 'AI is analyzing and merging duplicates...',
+            success: (res: any) => {
+                loadStats();
+                return `Successfully merged ${res.mergedCount} items!`;
+            },
+            error: 'Failed to merge duplicates'
+        });
+        try {
+            await promise;
+        } finally {
+            setIsMerging(false);
+        }
+    };
+
     useEffect(() => {
-        const handleFabAction = (e: any) => {
-            if (e.detail?.id === 'RESOURCE_NEW') {
-                alert("New Resource action triggered via FAB");
-            }
+        const controller = new AbortController();
+        loadStats(controller.signal);
+
+        // Listen for actions from ResourcesPageWrapper toolbar
+        const handleAction = (e: any) => {
+            if (e.detail?.type === 'historical-sync') handleSync(true);
+            if (e.detail?.type === 'ai-cleanup') handleMerge();
         };
-        window.addEventListener('fab-action', handleFabAction);
-        return () => window.removeEventListener('fab-action', handleFabAction);
+        window.addEventListener('resource-action', handleAction);
+
+        return () => {
+            controller.abort();
+            window.removeEventListener('resource-action', handleAction);
+        };
     }, []);
 
+    if (isLoading) {
+        return <div className="py-12 text-center text-neutral-400 font-medium animate-pulse">Loading overview...</div>;
+    }
+
+    const getStats = (cat: string) => stats.find(s => s.category === cat) || { total: 0, withStock: 0, outOfStock: 0 };
+
+    const materialStats = getStats('material');
+    const toolStats = getStats('tool');
+    const assetStats = getStats('asset');
+    const serviceStats = getStats('service');
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            {/* HEADER */}
-            <div>
-                <h1 className="text-2xl font-bold text-neutral-900">Resources Overview</h1>
-                <p className="text-sm text-neutral-500 mt-1">Dashboard of physical inventory, tools, and asset movements.</p>
-            </div>
-
-            {/* STATS GRID */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {MOCK_STATS.map((stat, i) => (
-                    <LiquidSummaryCard
-                        key={i}
-                        label={stat.label}
-                        value={stat.value}
-                        subtext={stat.unit}
-                        icon={<stat.icon className={`w-5 h-5 text-${stat.color}-600`} />}
-                        iconBg={`bg-${stat.color}-100`}
-                    />
-                ))}
-            </div>
-
-            {/* MAIN CONTENT GRID */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* LEFT COLUMN (2/3) */}
-                <div className="lg:col-span-2 space-y-6">
-
-                    {/* LOW STOCK ALERTS */}
-                    <div className="bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-neutral-100 rounded-[20px] p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-semibold text-neutral-900 flex items-center gap-2">
-                                <AlertTriangle className="w-5 h-5 text-orange-500" />
-                                Low Stock Alerts
-                            </h3>
-                            <Link href="/flow/resources/materials" className="text-sm font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1">
-                                View All <ArrowRight className="w-4 h-4" />
-                            </Link>
-                        </div>
-                        <div className="space-y-3">
-                            {LOW_STOCK_ALERTS.map((alert, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-orange-50/50 border border-orange-100 rounded-xl">
-                                    <div>
-                                        <div className="font-medium text-neutral-900">{alert.item}</div>
-                                        <div className="text-xs text-neutral-500">{alert.project}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="font-bold text-orange-700">{alert.remaining} {alert.unit}</div>
-                                        <div className="text-xs text-orange-600 font-medium">Remaining</div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* QUICK LINKS */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <Link href="/flow/resources/tools" className="group p-5 bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-2xl hover:border-blue-300 transition-all">
-                            <div className="mb-3 p-2 bg-blue-100 text-blue-600 rounded-lg w-fit group-hover:scale-110 transition-transform">
-                                <Wrench className="w-5 h-5" />
-                            </div>
-                            <div className="font-semibold text-neutral-900">Manage Tools</div>
-                            <div className="text-sm text-neutral-500 mt-1">Check availability and condition</div>
-                        </Link>
-                        <Link href="/flow/resources/assets" className="group p-5 bg-gradient-to-br from-purple-50 to-white border border-purple-100 rounded-2xl hover:border-purple-300 transition-all">
-                            <div className="mb-3 p-2 bg-purple-100 text-purple-600 rounded-lg w-fit group-hover:scale-110 transition-transform">
-                                <Building2 className="w-5 h-5" />
-                            </div>
-                            <div className="font-semibold text-neutral-900">Track Assets</div>
-                            <div className="text-sm text-neutral-500 mt-1">Monitor high-value equipment</div>
-                        </Link>
-                    </div>
-
-                </div>
-
-                {/* RIGHT COLUMN (1/3) */}
+        <div className="flex flex-col gap-6 animate-in fade-in duration-500">
+            <div className="flex items-center justify-between">
                 <div>
-                    {/* RECENT ACTIVITY (Mini) */}
-                    <div className="bg-white shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-neutral-100 rounded-[20px] p-6 h-full">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-semibold text-neutral-900">Recent Activity</h3>
-                            <Link href="/flow/resources/activity-log" className="text-sm font-medium text-neutral-500 hover:text-neutral-900">
-                                See Log
-                            </Link>
-                        </div>
-                        <div className="space-y-6">
-                            {RECENT_ACTIVITY.map((act, i) => (
-                                <div key={i} className="relative pl-6 pb-6 last:pb-0 border-l border-neutral-200 last:border-0">
-                                    <div className="absolute top-0 -left-1.5 w-3 h-3 rounded-full bg-neutral-200 border-2 border-white" />
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-xs font-medium text-neutral-400">{act.time}</span>
-                                        <span className="text-sm font-medium text-neutral-900">
-                                            <span className={clsx(
-                                                "font-bold",
-                                                act.action === "Received" ? "text-green-600" :
-                                                    act.action === "Used" ? "text-blue-600" :
-                                                        act.action === "Damaged" ? "text-red-600" : "text-neutral-900"
-                                            )}>{act.action}</span> {act.item}
-                                        </span>
-                                        <span className="text-xs text-neutral-500">
-                                            at {act.location} by {act.user}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Resources Overview</h1>
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">Catalog summary across all resource categories.</p>
                 </div>
+                {isMerging && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 rounded-full text-[12px] font-bold animate-pulse">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        AI Cleaning...
+                    </div>
+                )}
+            </div>
 
+            <div className="-mx-5 lg:mx-0">
+                <FinanceSummaryCardsRow>
+                    <FinanceSummaryCard
+                        icon={<Package className="w-5 h-5 text-blue-600" />}
+                        iconBg="bg-blue-100"
+                        label="Materials"
+                        value={materialStats.total}
+                        subtext="Standard Items"
+                        activeColor="ring-blue-500"
+                    />
+                    <FinanceSummaryCard
+                        icon={<Wrench className="w-5 h-5 text-orange-600" />}
+                        iconBg="bg-orange-100"
+                        label="Tools"
+                        value={toolStats.total}
+                        subtext="Ready for Use"
+                        activeColor="ring-orange-500"
+                    />
+                    <FinanceSummaryCard
+                        icon={<Truck className="w-5 h-5 text-purple-600" />}
+                        iconBg="bg-purple-100"
+                        label="Assets"
+                        value={assetStats.total}
+                        subtext="Fleet & Equipment"
+                        activeColor="ring-purple-500"
+                    />
+                    <FinanceSummaryCard
+                        icon={<Handshake className="w-5 h-5 text-emerald-600" />}
+                        iconBg="bg-emerald-100"
+                        label="Services"
+                        value={serviceStats.total}
+                        subtext="Active Subcontractors"
+                        activeColor="ring-emerald-500"
+                    />
+                </FinanceSummaryCardsRow>
             </div>
         </div>
     );

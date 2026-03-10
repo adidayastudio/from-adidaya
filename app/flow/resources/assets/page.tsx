@@ -1,123 +1,124 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Filter, Building2, Tag } from "lucide-react";
-import { ResourceStatusBadge } from "@/components/flow/resources/ResourceStatusBadge";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ResourceLayout } from "@/components/flow/resources/ResourceLayout";
+import { ResourceCard } from "@/components/flow/resources/ResourceCard";
+import { fetchCatalogResources, fetchCatalogSubcategories, fetchCatalogGroups, CatalogResource } from "@/lib/api/resources-client";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
-import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
-
-// Mock Data
-const MOCK_ASSETS = [
-    {
-        id: "AST-001",
-        projectCode: "VLL-02-01",
-        resourceCode: "AS-001",
-        name: "Excavator Komatsu PC200",
-        location: "Proyek Villa Puncak",
-        status: "ACTIVE",
-    },
-    {
-        id: "AST-002",
-        projectCode: "WH-00-01",
-        resourceCode: "AS-002",
-        name: "Dump Truck Hino 500",
-        location: "Gudang Utama",
-        status: "MAINTENANCE",
-    },
-    {
-        id: "AST-003",
-        projectCode: "PL-01-01",
-        resourceCode: "AS-003",
-        name: "Mobile Crane 25T",
-        location: "Pool Kendaraan",
-        status: "INACTIVE",
-    },
-    {
-        id: "AST-004",
-        projectCode: "RVK-03-01",
-        resourceCode: "AS-004",
-        name: "Concrete Mixer Truck",
-        location: "Renovasi Kantor",
-        status: "ACTIVE",
-    },
-];
+const PAGE_SIZE = 50;
 
 export default function AssetsPage() {
-    const [searchQuery, setSearchQuery] = useState("");
+    const [items, setItems] = useState<CatalogResource[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // FAB Action Listener
+    const searchParams = useSearchParams();
+    const urlQuery = searchParams.get("q") || "";
+
+    const [searchQuery, setSearchQuery] = useState(urlQuery);
+    const [subcategoryFilter, setSubcategoryFilter] = useState("ALL");
+    const [groupFilter, setGroupFilter] = useState("ALL");
+    const [page, setPage] = useState(1);
+
+    const [subcategories, setSubcategories] = useState<string[]>([]);
+    const [groups, setGroups] = useState<string[]>([]);
+
+    const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+
     useEffect(() => {
-        const handleFabAction = (e: any) => {
-            if (e.detail?.id === 'RESOURCE_NEW_ASSET') {
-                alert("New Asset action triggered via FAB");
-            }
-        };
-        window.addEventListener('fab-action', handleFabAction);
-        return () => window.removeEventListener('fab-action', handleFabAction);
+        fetchCatalogSubcategories("asset").then(setSubcategories);
     }, []);
 
-    const filteredAssets = MOCK_ASSETS.filter((item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.location.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    useEffect(() => {
+        fetchCatalogGroups("asset", subcategoryFilter !== "ALL" ? subcategoryFilter : undefined).then(setGroups);
+    }, [subcategoryFilter]);
+
+    const loadData = useCallback(async (signal?: AbortSignal) => {
+        setIsLoading(true);
+        try {
+            const result = await fetchCatalogResources("asset", {
+                search: searchQuery || undefined,
+                subcategory: subcategoryFilter,
+                group_name: groupFilter,
+                limit: PAGE_SIZE,
+                offset: (page - 1) * PAGE_SIZE,
+                signal
+            });
+            if (!signal?.aborted) {
+                setItems(result.data);
+                setTotalCount(result.count);
+            }
+        } catch (error: any) {
+            if (error?.name === 'AbortError') return;
+            console.error("Failed to load assets:", error);
+            toast.error("Failed to load assets");
+        } finally {
+            if (!signal?.aborted) setIsLoading(false);
+        }
+    }, [searchQuery, subcategoryFilter, groupFilter, page]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        loadData(controller.signal);
+        return () => controller.abort();
+    }, [loadData]);
+
+    // Sync search query from URL
+    useEffect(() => {
+        setSearchQuery(urlQuery);
+        setPage(1);
+    }, [urlQuery]);
+
+    const handleSubcategoryChange = (sub: string) => {
+        setSubcategoryFilter(sub);
+        setGroupFilter("ALL");
+        setPage(1);
+    };
+
+    const handleGroupChange = (group: string) => {
+        setGroupFilter(group);
+        setPage(1);
+    };
+
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            {/* HEADER */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-neutral-900">Assets</h1>
-                    <p className="text-sm text-neutral-500 mt-1">Track high-value assets and their operational status.</p>
+        <ResourceLayout
+            title="Assets"
+            description="High-value fixed assets, vehicles, and heavy project machinery."
+            stats={{
+                total: totalCount,
+                catalogItems: items.length,
+                subcategories: subcategories.length,
+                groups: groups.length
+            }}
+            subcategories={subcategories}
+            groups={groups}
+            selectedSubcategory={subcategoryFilter}
+            selectedGroup={groupFilter}
+            onSearch={() => { }}
+            onSubcategoryChange={handleSubcategoryChange}
+            onGroupChange={handleGroupChange}
+            currentCategory="asset"
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+        >
+            {isLoading ? (
+                <div className="py-20 text-center text-neutral-400 font-medium">Loading assets...</div>
+            ) : items.length > 0 ? (
+                <div className="flex flex-col gap-3">
+                    {items.map(item => (
+                        <ResourceCard key={item.id} item={item} />
+                    ))}
                 </div>
-            </div>
-
-            <div className="border-b border-neutral-200" />
-
-            {/* CONTROLS */}
-            <div className="flex items-center gap-3">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                    <input
-                        type="text"
-                        placeholder="Search asset, code, or location..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all"
-                    />
+            ) : (
+                <div className="py-20 text-center text-neutral-400 bg-white/50 border border-dashed border-neutral-200 rounded-[32px]">
+                    No assets found matching criteria.
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-200 text-sm font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
-                    <Filter className="w-4 h-4" /> Filter
-                </button>
-            </div>
-
-            {/* LISTING */}
-            <div className="space-y-3">
-                {filteredAssets.length > 0 ? (
-                    filteredAssets.map((item) => (
-                        <LiquidItemCard
-                            key={item.id}
-                            leftAvatar={
-                                <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100/50">
-                                    <Building2 className="w-5 h-5" />
-                                </div>
-                            }
-                            title={item.name}
-                            subtitle={item.location}
-                            badges={[
-                                <span key="id" className="text-[10px] text-neutral-400 font-mono tracking-widest bg-neutral-100 px-1.5 py-0.5 rounded">
-                                    {item.projectCode} • {item.resourceCode}
-                                </span>
-                            ]}
-                            rightBottom={<ResourceStatusBadge status={item.status} />}
-                        />
-                    ))
-                ) : (
-                    <div className="py-12 text-center text-neutral-500 bg-white rounded-[20px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
-                        No assets found.
-                    </div>
-                )}
-            </div>
-        </div>
+            )}
+        </ResourceLayout>
     );
 }

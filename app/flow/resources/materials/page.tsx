@@ -1,154 +1,256 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Filter, Warehouse } from "lucide-react";
-import { ResourceStatusBadge } from "@/components/flow/resources/ResourceStatusBadge";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { ResourceLayout } from "@/components/flow/resources/ResourceLayout";
+import { ResourceCard } from "@/components/flow/resources/ResourceCard";
+import { ResourceDetailDrawer } from "@/components/flow/resources/ResourceDetailDrawer";
+import { fetchCatalogResources, fetchCatalogSubcategories, fetchCatalogGroups, CatalogResource } from "@/lib/api/resources-client";
+import { useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 
-import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
+const PAGE_SIZE = 50;
 
-// Mock Data
-const MOCK_MATERIALS = [
+// Expanded & Varied Dummy Data with Photo Placeholders
+const DUMMY_MATERIALS: any[] = [
     {
-        id: "MAT-001",
-        projectCode: "STR-01-01",
-        resourceCode: "MT-001",
-        project: "Rumah Pak Budi",
-        material: "Semen Holcim 50kg",
-        in: 100,
-        used: 20,
-        remaining: 80,
-        status: "IN_USE",
+        id: "dummy-1",
+        name: "bata ringan - 10 cm",
+        category: "material",
+        subcategory: "arsitektur",
+        group_name: "dinding",
+        unit: "m3",
+        price_default: 0,
+        description: "Standard 10cm lightweight brick",
+        metadata: { variant_index: 1 }
     },
     {
-        id: "MAT-002",
-        projectCode: "VLL-02-01",
-        resourceCode: "MT-002",
-        project: "Villa Puncak",
-        material: "Pasir Beton (m3)",
-        in: 50,
-        used: 50,
-        remaining: 0,
-        status: "CONSUMED",
+        id: "dummy-2",
+        name: "bata ringan - 7.5 cm",
+        category: "material",
+        subcategory: "arsitektur",
+        group_name: "dinding",
+        unit: "m3",
+        price_default: 0,
+        description: "Standard 7.5cm lightweight brick",
+        metadata: { variant_index: 2 }
     },
     {
-        id: "MAT-003",
-        projectCode: "RVK-03-01",
-        resourceCode: "MT-003",
-        project: "Renovasi Kantor",
-        material: "Cat Dulux White 25kg",
-        in: 10,
-        used: 0,
-        remaining: 10,
-        status: "RECEIVED",
+        id: "dummy-3",
+        name: "semen portland - 40kg",
+        category: "material",
+        subcategory: "struktur",
+        group_name: "beton",
+        unit: "sak",
+        price_default: 0,
+        description: "Portland Cement",
+        metadata: { variant_index: 1 }
     },
     {
-        id: "MAT-004",
-        projectCode: "STR-01-01",
-        resourceCode: "MT-004",
-        project: "Rumah Pak Budi",
-        material: "Besi Beton 10mm",
-        in: 200,
-        used: 150,
-        remaining: 50,
-        status: "IN_USE",
+        id: "dummy-4",
+        name: "besi beton polos - 10mm",
+        category: "material",
+        subcategory: "struktur",
+        group_name: "besi",
+        unit: "btg",
+        price_default: 0,
+        description: "Reinforcement bar 10mm",
+        metadata: { variant_index: 1 }
     },
     {
-        id: "MAT-005",
-        projectCode: "WH-00-01",
-        resourceCode: "MT-005",
-        project: "Gudang Utama",
-        material: "Kabel NYM 2x1.5",
-        in: 500,
-        used: 0,
-        remaining: 500,
-        status: "RECEIVED",
-    },
+        id: "dummy-5",
+        name: "pasir pasang",
+        category: "material",
+        subcategory: "arsitektur",
+        group_name: "dinding",
+        unit: "m3",
+        price_default: 0,
+        description: "Masonry sand",
+        metadata: { variant_index: 1 }
+    }
 ];
 
-export default function MaterialsPage() {
-    const [searchQuery, setSearchQuery] = useState("");
+// Mock Stock with photos placeholder
+const MOCK_STOCK: Record<string, any[]> = {
+    "dummy-1": [
+        { project: "JPF", quantity: 10, unit: "m3", photo: "https://images.unsplash.com/photo-1590069261209-f8e9b8642343?q=80&w=200&auto=format&fit=crop" },
+        { project: "PRG", quantity: 7.5, unit: "m3" },
+        { project: "AD-038", quantity: 15, unit: "m3", photo: "https://images.unsplash.com/photo-1585314062340-f1a5a7c9328d?q=80&w=200&auto=format&fit=crop" }
+    ],
+    "dummy-2": [
+        { project: "JPF", quantity: 5, unit: "m3" },
+        { project: "STUDIO", quantity: 2, unit: "m3" }
+    ],
+    "dummy-3": [
+        { project: "PRG", quantity: 120, unit: "sak", photo: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=200&auto=format&fit=crop" },
+        { project: "JPF", quantity: 45, unit: "sak" }
+    ]
+};
 
-    // FAB Action Listener
+export default function MaterialsPage() {
+    const [items, setItems] = useState<CatalogResource[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const searchParams = useSearchParams();
+    const urlQuery = searchParams.get("q") || "";
+
+    // Filters
+    const [searchQuery, setSearchQuery] = useState(urlQuery);
+    const [subcategoryFilter, setSubcategoryFilter] = useState("ALL");
+    const [groupFilter, setGroupFilter] = useState("ALL");
+    const [page, setPage] = useState(1);
+
+    // Detail Drawer State
+    const [selectedItem, setSelectedItem] = useState<any | null>(null);
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    // Filter options from DB
+    const [subcategories, setSubcategories] = useState<string[]>([]);
+    const [groups, setGroups] = useState<string[]>([]);
+
+    const searchTimeout = useRef<NodeJS.Timeout | null>(null);
+
+    // Load filter options
     useEffect(() => {
-        const handleFabAction = (e: any) => {
-            if (e.detail?.id === 'RESOURCE_NEW_MAT') {
-                alert("New Material action triggered via FAB");
-            }
-        };
-        window.addEventListener('fab-action', handleFabAction);
-        return () => window.removeEventListener('fab-action', handleFabAction);
+        fetchCatalogSubcategories("material").then(setSubcategories);
     }, []);
 
-    const filteredMaterials = MOCK_MATERIALS.filter((item) =>
-        item.material.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.project.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    useEffect(() => {
+        fetchCatalogGroups("material", subcategoryFilter !== "ALL" ? subcategoryFilter : undefined).then(setGroups);
+    }, [subcategoryFilter]);
+
+    // Load data
+    const loadData = useCallback(async (signal?: AbortSignal) => {
+        setIsLoading(true);
+        try {
+            // Include 0 stock items if searching or filtering
+            const isActiveFilter = searchQuery !== "" || subcategoryFilter !== "ALL" || groupFilter !== "ALL";
+
+            const result = await fetchCatalogResources("material", {
+                search: searchQuery || undefined,
+                subcategory: subcategoryFilter,
+                group_name: groupFilter,
+                limit: PAGE_SIZE,
+                offset: (page - 1) * PAGE_SIZE,
+                signal
+            });
+
+            if (!signal?.aborted) {
+                let finalItems = result.data as any[];
+
+                // Handle Dummy Data Search & Filter
+                const dummyMatches = DUMMY_MATERIALS.filter(d => {
+                    const matchSearch = !searchQuery || [
+                        d.name,
+                        d.subcategory,
+                        d.group_name,
+                        // Code is generated dynamically for card, but we check if search matches general patterns
+                    ].some(v => v?.toLowerCase().includes(searchQuery.toLowerCase()));
+
+                    const matchSub = subcategoryFilter === "ALL" || d.subcategory?.toLowerCase() === subcategoryFilter.toLowerCase();
+                    const matchGroup = groupFilter === "ALL" || d.group_name?.toLowerCase() === groupFilter.toLowerCase();
+
+                    return matchSearch && matchSub && matchGroup;
+                });
+
+                if (isActiveFilter || page > 1) {
+                    finalItems = [...dummyMatches, ...result.data];
+                    setTotalCount(result.count + dummyMatches.length);
+                } else {
+                    // Default view (no filters): Show only items with recorded stock (Dummy items)
+                    finalItems = DUMMY_MATERIALS;
+                    setTotalCount(DUMMY_MATERIALS.length);
+                }
+
+                setItems(finalItems);
+            }
+        } catch (error: any) {
+            if (error?.name === 'AbortError') return;
+            console.error("Failed to load materials:", error);
+            toast.error("Failed to load materials");
+        } finally {
+            if (!signal?.aborted) setIsLoading(false);
+        }
+    }, [searchQuery, subcategoryFilter, groupFilter, page]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        loadData(controller.signal);
+        return () => controller.abort();
+    }, [loadData]);
+
+    // Sync search query from URL
+    useEffect(() => {
+        setSearchQuery(urlQuery);
+        setPage(1);
+    }, [urlQuery]);
+
+    const handleSubcategoryChange = (sub: string) => {
+        setSubcategoryFilter(sub);
+        setGroupFilter("ALL");
+        setPage(1);
+    };
+
+    const handleGroupChange = (group: string) => {
+        setGroupFilter(group);
+        setPage(1);
+    };
+
+    const openDetail = (item: any) => {
+        setSelectedItem(item);
+        setIsDrawerOpen(true);
+    };
+
+    const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-500">
-            {/* HEADER */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-neutral-900">Materials</h1>
-                    <p className="text-sm text-neutral-500 mt-1">Track material usage and stock levels per project.</p>
-                </div>
-            </div>
-
-            <div className="border-b border-neutral-200" />
-
-            {/* CONTROLS */}
-            <div className="flex items-center gap-3">
-                <div className="relative flex-1 max-w-sm">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                    <input
-                        type="text"
-                        placeholder="Search material or project..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all"
-                    />
-                </div>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-xl border border-neutral-200 text-sm font-medium text-neutral-600 hover:bg-neutral-50 transition-colors">
-                    <Filter className="w-4 h-4" /> Filter
-                </button>
-            </div>
-
-            {/* LISTING */}
-            <div className="space-y-3">
-                {filteredMaterials.length > 0 ? (
-                    filteredMaterials.map((item) => (
-                        <LiquidItemCard
+        <ResourceLayout
+            title="Materials"
+            description="Manage your project materials, stock adjustments, and transfers."
+            stats={{
+                total: totalCount,
+                catalogItems: items.length,
+                subcategories: subcategories.length,
+                groups: groups.length
+            }}
+            subcategories={subcategories}
+            groups={groups}
+            selectedSubcategory={subcategoryFilter}
+            selectedGroup={groupFilter}
+            onSearch={() => { }}
+            onSubcategoryChange={handleSubcategoryChange}
+            onGroupChange={handleGroupChange}
+            currentCategory="material"
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+        >
+            {isLoading ? (
+                <div className="py-20 text-center text-neutral-400 font-medium">Loading materials...</div>
+            ) : items.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                    {items.map(item => (
+                        <ResourceCard
                             key={item.id}
-                            leftAvatar={
-                                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100/50">
-                                    <Warehouse className="w-5 h-5" />
-                                </div>
-                            }
-                            title={item.material}
-                            subtitle={item.project}
-                            badges={[
-                                <span key="code" className="text-[10px] text-neutral-400 font-mono tracking-widest bg-neutral-100 px-1.5 py-0.5 rounded">
-                                    {item.projectCode} • {item.resourceCode}
-                                </span>,
-                                <span key="stats" className="text-[10px] text-neutral-500 font-medium">
-                                    In: {item.in} | Used: {item.used}
-                                </span>
-                            ]}
-                            rightTop={
-                                <div className="text-right">
-                                    <div className="font-bold text-neutral-900 text-sm leading-none">{item.remaining}</div>
-                                    <div className="text-[10px] text-neutral-400 mt-1">Remaining</div>
-                                </div>
-                            }
-                            rightBottom={<ResourceStatusBadge status={item.status} />}
+                            item={item}
+                            projectStock={MOCK_STOCK[item.id] || []}
+                            onOpenDetail={() => openDetail(item)}
                         />
-                    ))
-                ) : (
-                    <div className="py-12 text-center text-neutral-500 bg-white rounded-[20px] border border-neutral-100 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
-                        No materials found.
-                    </div>
-                )}
-            </div>
-        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="py-20 text-center text-neutral-400 bg-white/50 dark:bg-neutral-900/50 border border-dashed border-neutral-200 dark:border-neutral-800 rounded-[32px]">
+                    No materials found matching criteria.
+                </div>
+            )}
+
+            {/* Global Detail Drawer */}
+            <ResourceDetailDrawer
+                isOpen={isDrawerOpen}
+                onClose={() => setIsDrawerOpen(false)}
+                resource={selectedItem}
+                projectStock={selectedItem ? (MOCK_STOCK[selectedItem.id] || []) : []}
+            />
+        </ResourceLayout>
     );
 }

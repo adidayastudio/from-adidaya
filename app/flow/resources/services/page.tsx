@@ -9,7 +9,7 @@ import { toast } from "sonner";
 
 const PAGE_SIZE = 50;
 
-export default function ToolsPage() {
+export default function ServicesPage() {
     const [items, setItems] = useState<CatalogResource[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
@@ -28,17 +28,17 @@ export default function ToolsPage() {
     const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        fetchCatalogSubcategories("tool").then(setSubcategories);
+        fetchCatalogSubcategories("service").then(setSubcategories);
     }, []);
 
     useEffect(() => {
-        fetchCatalogGroups("tool", subcategoryFilter !== "ALL" ? subcategoryFilter : undefined).then(setGroups);
+        fetchCatalogGroups("service", subcategoryFilter !== "ALL" ? subcategoryFilter : undefined).then(setGroups);
     }, [subcategoryFilter]);
 
     const loadData = useCallback(async (signal?: AbortSignal) => {
         setIsLoading(true);
         try {
-            const result = await fetchCatalogResources("tool", {
+            const result = await fetchCatalogResources("service", {
                 search: searchQuery || undefined,
                 subcategory: subcategoryFilter,
                 group_name: groupFilter,
@@ -52,8 +52,8 @@ export default function ToolsPage() {
             }
         } catch (error: any) {
             if (error?.name === 'AbortError') return;
-            console.error("Failed to load tools:", error);
-            toast.error("Failed to load tools");
+            console.error("Failed to load services:", error);
+            toast.error("Failed to load services");
         } finally {
             if (!signal?.aborted) setIsLoading(false);
         }
@@ -86,8 +86,8 @@ export default function ToolsPage() {
 
     return (
         <ResourceLayout
-            title="Tools"
-            description="Manage and track your operational equipment and workshop machinery."
+            title="Services"
+            description="Outsourced labor, consultant services, and expert sub-contracting."
             stats={{
                 total: totalCount,
                 catalogItems: items.length,
@@ -101,13 +101,13 @@ export default function ToolsPage() {
             onSearch={() => { }}
             onSubcategoryChange={handleSubcategoryChange}
             onGroupChange={handleGroupChange}
-            currentCategory="tool"
+            currentCategory="service"
             page={page}
             totalPages={totalPages}
             onPageChange={setPage}
         >
             {isLoading ? (
-                <div className="py-20 text-center text-neutral-400 font-medium">Loading tools...</div>
+                <div className="py-20 text-center text-neutral-400 font-medium">Loading services...</div>
             ) : items.length > 0 ? (
                 <div className="flex flex-col gap-3">
                     {items.map(item => (
@@ -116,7 +116,7 @@ export default function ToolsPage() {
                 </div>
             ) : (
                 <div className="py-20 text-center text-neutral-400 bg-white/50 border border-dashed border-neutral-200 rounded-[32px]">
-                    No tools found matching criteria.
+                    No services found matching criteria.
                 </div>
             )}
         </ResourceLayout>

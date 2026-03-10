@@ -289,7 +289,9 @@ export async function createPurchasingRequest(payload: PurchasingRequestPayload)
             qty: item.qty,
             unit: item.unit,
             unit_price: item.unitPrice,
-            total: item.total
+            total: item.total,
+            subcategory: item.subcategory,
+            group_name: item.group_name
         }));
 
         const result = await (supabase
@@ -368,7 +370,9 @@ export async function updatePurchasingRequest(id: string, payload: Partial<Purch
                 qty: item.qty,
                 unit: item.unit,
                 unit_price: item.unitPrice,
-                total: item.total
+                total: item.total,
+                subcategory: item.subcategory,
+                group_name: item.group_name
             }));
 
             const result = await (supabase
@@ -527,7 +531,9 @@ export async function createReimburseRequest(payload: ReimburseRequestPayload) {
             qty: item.qty,
             unit: item.unit,
             unit_price: item.unitPrice,
-            total: item.total
+            total: item.total,
+            subcategory: item.subcategory,
+            group_name: item.group_name
         }));
 
         const { error: itemsError } = await supabase
@@ -784,8 +790,8 @@ export async function fetchFinanceDashboardData(userId: string) {
         .gte('payment_date', startOfMonth)
         .lte('payment_date', endOfMonth);
 
-    const totalPaidPurchasing = paidPurchases?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
-    const totalPaidReimburse = paidReimburse?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+    const totalPaidPurchasing = paidPurchases?.reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0) || 0;
+    const totalPaidReimburse = paidReimburse?.reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0) || 0;
     const totalPaidThisMonth = totalPaidPurchasing + totalPaidReimburse;
 
     // Outstanding Bills (Purchasing: Unpaid but Invoiced/Received)
@@ -806,7 +812,7 @@ export async function fetchFinanceDashboardData(userId: string) {
         .from('funding_sources')
         .select('balance')
         .eq('type', 'PETTY_CASH');
-    const pettyCashBalance = pettyCash?.reduce((sum, item) => sum + (item.balance || 0), 0) || 0;
+    const pettyCashBalance = pettyCash?.reduce((sum: number, item: any) => sum + (item.balance || 0), 0) || 0;
 
     // 2. PERSONAL SUMMARY
     // My Purchases (This Month)
@@ -860,7 +866,7 @@ export async function fetchFinanceDashboardData(userId: string) {
         .eq('status', 'PAID')
         .gte('payment_date', startOfMonth)
         .lte('payment_date', endOfMonth);
-    const paidToMe = myPaidReimburse?.reduce((sum, item) => sum + (item.amount || 0), 0) || 0;
+    const paidToMe = myPaidReimburse?.reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0) || 0;
 
     // 3. ATTENTION ITEMS (TEAM VIEW) / LISTS
     // Goods Received (Unpaid/Need Payment)
@@ -921,8 +927,8 @@ export async function fetchFinanceDashboardData(userId: string) {
 
     // Fetch profiles manually to avoid join errors
     const userIds = new Set<string>();
-    recentPurchases?.forEach(p => { if (p.created_by) userIds.add(p.created_by); });
-    recentReimburse?.forEach(r => { if (r.created_by) userIds.add(r.created_by); });
+    recentPurchases?.forEach((p: any) => { if (p.created_by) userIds.add(p.created_by); });
+    recentReimburse?.forEach((r: any) => { if (r.created_by) userIds.add(r.created_by); });
 
     // If we have userIds, fetch profiles
     let profileMap = new Map<string, string>();
@@ -932,7 +938,7 @@ export async function fetchFinanceDashboardData(userId: string) {
             .select('id, username, full_name')
             .in('id', Array.from(userIds));
         if (profiles) {
-            profiles.forEach(p => {
+            profiles.forEach((p: any) => {
                 // Use full_name if available, otherwise username
                 profileMap.set(p.id, p.full_name || p.username || 'Unknown User');
             });
@@ -941,17 +947,17 @@ export async function fetchFinanceDashboardData(userId: string) {
 
     // Merge and sort
     const allActivity = [
-        ...(recentPurchases || []).map(p => ({
+        ...(recentPurchases || []).map((p: any) => ({
             ...p,
             type: 'PURCHASE',
             created_by_name: profileMap.get(p.created_by) || p.created_by_name || 'Unknown User'
         })),
-        ...(recentReimburse || []).map(r => ({
+        ...(recentReimburse || []).map((r: any) => ({
             ...r,
             type: 'REIMBURSE',
             staff_name: profileMap.get(r.created_by) || r.staff_name || 'Unknown Staff'
         }))
-    ].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    ].sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
         .slice(0, 10);
 
     return {

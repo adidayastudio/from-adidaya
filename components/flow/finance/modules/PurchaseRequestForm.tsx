@@ -10,6 +10,7 @@ import { uploadFinanceFile } from "@/lib/api/storage";
 import { useFinance } from "../FinanceContext";
 import { CreditCard, Save, Trash2 } from "lucide-react";
 import { SearchableAccountSelect } from "./SearchableAccountSelect";
+import { ResourceSearchInput } from "./ResourceSearchInput";
 
 interface LineItem {
     id: string;
@@ -18,6 +19,8 @@ interface LineItem {
     unit: string;
     unitPrice: number;
     total: number;
+    subcategory?: string;
+    group_name?: string;
 }
 
 export function PurchaseRequestForm({
@@ -58,29 +61,27 @@ export function PurchaseRequestForm({
     // If initialData.items exists and has items, use those. Otherwise fallback to legacy single-item format.
     const [items, setItems] = useState<LineItem[]>(() => {
         if (!initialData) {
-            // New request - start with empty item
             return [{ id: Math.random().toString(36).substr(2, 9), name: "", qty: 1, unit: "pcs", unitPrice: 0, total: 0 }];
         }
-
-        // Check if we have the items array (multi-item support)
         if (initialData.items && Array.isArray(initialData.items) && initialData.items.length > 0) {
             return initialData.items.map((item: any) => ({
                 id: item.id || Math.random().toString(36).substr(2, 9),
-                name: item.name || "",
-                qty: item.qty || 1,
+                name: item.name,
+                qty: item.qty,
                 unit: item.unit || "pcs",
-                unitPrice: item.unit_price || item.unitPrice || 0,
-                total: item.total || (item.qty || 1) * (item.unit_price || item.unitPrice || 0)
+                unitPrice: item.unit_price,
+                total: item.total,
+                subcategory: item.subcategory,
+                group_name: item.group_name
             }));
         }
-
-        // Legacy fallback: single item from flattened data
+        // Legacy single item fallback
         return [{
-            id: initialData.id || Math.random().toString(36).substr(2, 9),
+            id: Math.random().toString(36).substr(2, 9),
             name: initialData.description || "",
             qty: initialData.quantity || 1,
             unit: initialData.unit || "pcs",
-            unitPrice: initialData.quantity > 0 ? (initialData.amount || 0) / initialData.quantity : 0,
+            unitPrice: (initialData.amount || 0) / (initialData.quantity || 1),
             total: initialData.amount || 0
         }];
     });
@@ -95,11 +96,15 @@ export function PurchaseRequestForm({
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     // Allow editing even if APPROVED, so they can add missing invoice/beneficiary info
-    const isReadOnly = initialData && ["PAID", "REJECTED", "CANCELLED"].includes(initialData.approval_status);
+    const isReadOnly = initialData?.approval_status === "PAID";
 
     // Load Projects & Accounts
     useEffect(() => {
-        fetchAllProjects().then(setProjects);
+        const loadProjects = async () => {
+            const data = await fetchAllProjects();
+            setProjects(data);
+        };
+        loadProjects();
         fetchBeneficiaryAccounts().then(accounts => {
             console.log("[DEBUG] PurchaseRequestForm - Loaded accounts:", accounts);
             setSavedAccounts(accounts);
@@ -451,16 +456,20 @@ export function PurchaseRequestForm({
                                 className="relative p-6 rounded-[2.5rem] bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-700/40 shadow-sm transition-all duration-300 space-y-5 group backdrop-blur-[2px]"
                             >
                                 <div className="flex items-start justify-between gap-4">
-                                    <div className="flex-1">
-                                        <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Item Name</label>
-                                        <input
-                                            type="text"
-                                            value={item.name}
-                                            onChange={e => updateItem(item.id, { name: e.target.value })}
-                                            placeholder="e.g. Semen Tiga Roda"
-                                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium placeholder:text-[11px]"
-                                        />
-                                    </div>
+                                    <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Item Name</label>
+                                    <ResourceSearchInput
+                                        value={item.name}
+                                        category={category || "material"}
+                                        onSelect={(selected) => updateItem(item.id, {
+                                            name: selected.name,
+                                            unit: selected.unit || item.unit,
+                                            unitPrice: selected.price || item.unitPrice,
+                                            subcategory: selected.subcategory,
+                                            group_name: selected.group_name
+                                        })}
+                                        placeholder="e.g. Semen Tiga Roda"
+                                        disabled={isReadOnly}
+                                    />
                                     {items.length > 1 && (
                                         <button
                                             onClick={() => removeItem(item.id)}

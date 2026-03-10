@@ -1,0 +1,418 @@
+{
+    "_description": "Mapping Finance categories/subcategories → Resource tracking. 'track_in_resources' = true means items in this category should be synced to pricing_resources and tracked in inventory.",
+    "PURCHASING": {
+        "MATERIAL": {
+            "track_in_resources": true,
+            "resource_category": "material",
+            "subcategories": {
+                "STRUCTURAL": {
+                    "resource_subcategory": "struktur",
+                    "description": "Material Struktur (beton, besi, pasir, dll)"
+                },
+                "ARCHITECTURAL": {
+                    "resource_subcategory": "arsitektur",
+                    "description": "Material Arsitektur (batu alam, keramik, dll)"
+                },
+                "FINISHING": {
+                    "resource_subcategory": "finishing",
+                    "description": "Material Finishing (cat, plamir, dll)"
+                },
+                "ROOFING_CLADDING": {
+                    "resource_subcategory": "atap",
+                    "description": "Material Atap & Penutup (genteng, spandek, dll)"
+                },
+                "MEP": {
+                    "resource_subcategory": "mep",
+                    "description": "Material MEP (pipa, kabel, fitting, dll)"
+                },
+                "INTERIOR": {
+                    "resource_subcategory": "interior",
+                    "description": "Material Interior (plywood, gypsum, dll)"
+                },
+                "LANDSCAPE": {
+                    "resource_subcategory": "lanskap",
+                    "description": "Material Lanskap (grass block, tanaman, dll)"
+                },
+                "INFRASTRUCTURE": {
+                    "resource_subcategory": "infrastruktur",
+                    "description": "Material Infrastruktur / Sipil"
+                },
+                "SPECIAL_CUSTOM": {
+                    "resource_subcategory": "khusus",
+                    "description": "Material Khusus / Custom"
+                }
+            }
+        },
+        "TOOLS_EQUIPMENT": {
+            "track_in_resources": true,
+            "resource_category": "tools_equipment",
+            "subcategories": {
+                "HAND_TOOLS": {
+                    "resource_subcategory": "alat_manual",
+                    "description": "Alat Kerja Manual (palu, obeng, dll)"
+                },
+                "POWER_TOOLS": {
+                    "resource_subcategory": "alat_listrik",
+                    "description": "Alat Kerja Listrik (bor, gerinda, dll)"
+                },
+                "HEAVY_EQUIPMENT": {
+                    "resource_subcategory": "alat_berat",
+                    "description": "Alat Berat (excavator, crane, dll)"
+                },
+                "PROJECT_EQUIPMENT": {
+                    "resource_subcategory": "peralatan_proyek",
+                    "description": "Peralatan Proyek (scaffolding, bekisting, dll)"
+                },
+                "SAFETY_EQUIPMENT": {
+                    "resource_subcategory": "keselamatan",
+                    "description": "Peralatan Keselamatan (helm, sarung tangan, dll)"
+                },
+                "OFFICE_EQUIPMENT": {
+                    "resource_subcategory": "peralatan_kantor",
+                    "description": "Peralatan Kantor"
+                },
+                "IT_EQUIPMENT": {
+                    "resource_subcategory": "it_elektronik",
+                    "description": "Peralatan IT & Elektronik"
+                }
+            }
+        },
+        "SERVICES": {
+            "track_in_resources": false,
+            "note": "Jasa tidak di-track sebagai inventaris fisik, hanya tercatat di finance sebagai expense.",
+            "subcategories": {
+                "CONSTRUCTION": {
+                    "description": "Jasa Konstruksi"
+                },
+                "SUBCONTRACTOR": {
+                    "description": "Jasa Subkontraktor"
+                },
+                "PROFESSIONAL": {
+                    "description": "Jasa Profesional / Konsultan"
+                },
+                "FABRICATION": {
+                    "description": "Jasa Fabrikasi"
+                },
+                "TRANSPORT_LOGISTICS": {
+                    "description": "Jasa Transportasi & Logistik"
+                },
+                "MAINTENANCE": {
+                    "description": "Jasa Perawatan & Perbaikan"
+                },
+                "CLEANING_SECURITY": {
+                    "description": "Jasa Cleaning & Security"
+                },
+                "OTHER_SERVICES": {
+                    "description": "Jasa Lainnya"
+                }
+            }
+        },
+        "PROJECT_OPERATIONS": {
+            "track_in_resources": false,
+            "note": "Operasional proyek = expense, bukan inventaris.",
+            "subcategories": {
+                "SITE_OPS": {
+                    "description": "Operasional Lapangan"
+                },
+                "PROJECT_UTILITIES": {
+                    "description": "Utilitas Proyek (listrik, air)"
+                },
+                "CONSUMPTION_ACCOMMODATION": {
+                    "description": "Konsumsi & Akomodasi"
+                },
+                "PROJECT_TRANSPORT": {
+                    "description": "Transportasi Proyek"
+                },
+                "HSE": {
+                    "description": "Kesehatan & Keselamatan Kerja"
+                },
+                "PROJECT_ADMIN": {
+                    "description": "Administrasi Proyek"
+                },
+                "RENTAL_FACILITIES": {
+                    "description": "Sewa & Fasilitas Proyek"
+                }
+            }
+        },
+        "OFFICE_OPERATIONS": {
+            "track_in_resources": false,
+            "note": "Operasional kantor = expense.",
+            "subcategories": {
+                "OFFICE_OPS": {
+                    "description": "Operasional Kantor"
+                },
+                "OFFICE_UTILITIES": {
+                    "description": "Utilitas Kantor"
+                },
+                "HR": {
+                    "description": "Sumber Daya Manusia"
+                },
+                "IT_SOFTWARE": {
+                    "description": "IT & Perangkat Lunak"
+                },
+                "MARKETING": {
+                    "description": "Pemasaran & Branding"
+                },
+                "GENERAL_ADMIN": {
+                    "description": "Administrasi Umum"
+                }
+            }
+        },
+        "ASSETS_INVENTORY": {
+            "track_in_resources": true,
+            "resource_category": "asset",
+            "subcategories": {
+                "PROJECT_ASSETS": {
+                    "resource_subcategory": "aset_proyek",
+                    "description": "Aset Proyek (mesin, kendaraan proyek)"
+                },
+                "OFFICE_ASSETS": {
+                    "resource_subcategory": "aset_kantor",
+                    "description": "Aset Kantor (komputer, furniture)"
+                },
+                "PROJECT_INVENTORY": {
+                    "resource_subcategory": "inventaris_proyek",
+                    "description": "Inventaris Proyek"
+                },
+                "OFFICE_INVENTORY": {
+                    "resource_subcategory": "inventaris_kantor",
+                    "description": "Inventaris Kantor"
+                }
+            }
+        },
+        "FINANCIAL_LEGAL": {
+            "track_in_resources": false,
+            "note": "Pajak, legal, banking = murni expense.",
+            "subcategories": {
+                "TAXES": {
+                    "description": "Pajak"
+                },
+                "LICENSING_LEGAL": {
+                    "description": "Perizinan & Legal"
+                },
+                "BANKING_FEES": {
+                    "description": "Perbankan & Biaya Transaksi"
+                },
+                "INSURANCE": {
+                    "description": "Asuransi"
+                },
+                "PENALTIES": {
+                    "description": "Denda & Penalti"
+                }
+            }
+        },
+        "SPECIAL": {
+            "track_in_resources": false,
+            "note": "Pembelian khusus/darurat, tidak di-track.",
+            "subcategories": {
+                "TRIAL_SAMPLES": {
+                    "description": "Trial & Sampel"
+                },
+                "EMERGENCY": {
+                    "description": "Pembelian Darurat"
+                },
+                "CONTINGENCY": {
+                    "description": "Kontinjensi / Cadangan"
+                },
+                "NON_PROJECT": {
+                    "description": "Non-Proyek / Umum"
+                }
+            }
+        }
+    },
+    "REIMBURSEMENT": {
+        "TRANSPORTATION": {
+            "track_in_resources": false,
+            "note": "Transportasi = expense, bukan inventaris.",
+            "subcategories": {
+                "MOTOR_PERSONAL": {
+                    "description": "Motor Pribadi"
+                },
+                "CAR_PERSONAL": {
+                    "description": "Mobil Pribadi"
+                },
+                "FUEL": {
+                    "description": "BBM"
+                },
+                "PARKING": {
+                    "description": "Parkir"
+                },
+                "TOLL": {
+                    "description": "Tol"
+                },
+                "MOTOR_ONLINE": {
+                    "description": "Ojol Motor"
+                },
+                "CAR_ONLINE": {
+                    "description": "Ojol Mobil"
+                },
+                "PUBLIC_TRANSPORT": {
+                    "description": "Transportasi Umum"
+                },
+                "TAXI": {
+                    "description": "Taksi"
+                },
+                "RENTAL": {
+                    "description": "Sewa Kendaraan"
+                },
+                "COURIER": {
+                    "description": "Kurir & Pengiriman"
+                },
+                "LOGISTICS": {
+                    "description": "Logistik Proyek"
+                }
+            }
+        },
+        "CONSUMPTION": {
+            "track_in_resources": false,
+            "note": "Konsumsi = expense.",
+            "subcategories": {
+                "MEALS_DAILY": {
+                    "description": "Makan Harian"
+                },
+                "MEALS_SITE": {
+                    "description": "Konsumsi Lapangan"
+                },
+                "MEALS_CLIENT": {
+                    "description": "Jamuan Klien"
+                },
+                "SNACKS": {
+                    "description": "Snack & Minuman"
+                }
+            }
+        },
+        "ACCOMMODATION": {
+            "track_in_resources": false,
+            "note": "Akomodasi = expense.",
+            "subcategories": {
+                "HOTEL": {
+                    "description": "Hotel"
+                },
+                "GUESTHOUSE": {
+                    "description": "Penginapan / Homestay"
+                },
+                "LODGING_TEMP": {
+                    "description": "Akomodasi Sementara"
+                }
+            }
+        },
+        "PURCHASE_PROJECT": {
+            "track_in_resources": true,
+            "note": "Pembelian proyek via reimburse → masuk resources.",
+            "subcategories": {
+                "MATERIAL": {
+                    "resource_category": "material",
+                    "resource_subcategory": "umum",
+                    "description": "Material Proyek"
+                },
+                "TOOLS": {
+                    "resource_category": "tools_equipment",
+                    "resource_subcategory": "umum",
+                    "description": "Alat & Peralatan Proyek"
+                },
+                "SUPPLIES_SMALL": {
+                    "resource_category": "material",
+                    "resource_subcategory": "umum",
+                    "description": "Perlengkapan Proyek Kecil"
+                }
+            }
+        },
+        "OPERATIONS_PROJECT": {
+            "track_in_resources": false,
+            "note": "Operasional proyek = expense.",
+            "subcategories": {
+                "SITE_OPS": {
+                    "description": "Operasional Lapangan"
+                },
+                "UTILITIES": {
+                    "description": "Utilitas Proyek"
+                },
+                "ADMIN_PROJECT": {
+                    "description": "Administrasi Proyek"
+                }
+            }
+        },
+        "SUPPORT_OFFICE": {
+            "track_in_resources": false,
+            "note": "Support kantor = expense.",
+            "subcategories": {
+                "STATIONERY": {
+                    "description": "ATK & Perlengkapan Kerja"
+                },
+                "PRINTING": {
+                    "description": "Print & Fotokopi"
+                },
+                "ACCESSORIES": {
+                    "description": "Aksesori Kerja"
+                }
+            }
+        },
+        "COMMUNICATION": {
+            "track_in_resources": false,
+            "note": "Komunikasi = expense.",
+            "subcategories": {
+                "DATA_PACKAGE": {
+                    "description": "Paket Data"
+                },
+                "PHONE_CREDIT": {
+                    "description": "Pulsa"
+                },
+                "COMM_COST": {
+                    "description": "Biaya Komunikasi Kerja"
+                }
+            }
+        },
+        "HEALTH_SAFETY": {
+            "track_in_resources": true,
+            "note": "Safety gear = inventaris, medical = expense.",
+            "subcategories": {
+                "MEDICAL": {
+                    "track_in_resources": false,
+                    "description": "Biaya Kesehatan"
+                },
+                "SAFETY_GEAR": {
+                    "track_in_resources": true,
+                    "resource_category": "tools_equipment",
+                    "resource_subcategory": "keselamatan",
+                    "description": "Perlengkapan Keselamatan"
+                }
+            }
+        },
+        "TRAVEL_DUTY": {
+            "track_in_resources": false,
+            "note": "Perjalanan dinas = expense.",
+            "subcategories": {
+                "PER_DIEM": {
+                    "description": "Uang Harian"
+                },
+                "TRAVEL_PREP": {
+                    "description": "Persiapan Perjalanan"
+                }
+            }
+        },
+        "EMERGENCY": {
+            "track_in_resources": false,
+            "note": "Darurat = expense.",
+            "subcategories": {
+                "EMERGENCY_COST": {
+                    "description": "Biaya Darurat"
+                },
+                "UNPLANNED_COST": {
+                    "description": "Biaya Kerja Tak Terduga"
+                }
+            }
+        },
+        "OTHER": {
+            "track_in_resources": false,
+            "note": "Lain-lain = expense.",
+            "subcategories": {
+                "MISC": {
+                    "description": "Lain-lain"
+                },
+                "NON_PROJECT": {
+                    "description": "Non-Proyek"
+                }
+            }
+        }
+    }
+}

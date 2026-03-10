@@ -1,8 +1,7 @@
-"use client";
-
-import { useState } from "react";
-import { Search, History, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { History as HistoryIcon, ArrowRight } from "lucide-react";
 import clsx from "clsx";
+import { useSearchParams } from "next/navigation";
 
 import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
 
@@ -72,7 +71,13 @@ function EventBadge({ event }: { event: string }) {
 }
 
 export default function ActivityLogPage() {
-    const [searchQuery, setSearchQuery] = useState("");
+    const searchParams = useSearchParams();
+    const urlQuery = searchParams.get("q") || "";
+    const [searchQuery, setSearchQuery] = useState(urlQuery);
+
+    useEffect(() => {
+        setSearchQuery(urlQuery);
+    }, [urlQuery]);
 
     const filteredLogs = MOCK_LOGS.filter((item) =>
         item.resource.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -92,17 +97,6 @@ export default function ActivityLogPage() {
 
             <div className="border-b border-neutral-200" />
 
-            {/* SEARCH */}
-            <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <input
-                    type="text"
-                    placeholder="Search logs..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 rounded-xl border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-100 focus:border-red-400 transition-all"
-                />
-            </div>
 
             {/* LISTING */}
             <div className="space-y-3">
@@ -112,7 +106,7 @@ export default function ActivityLogPage() {
                             key={item.id}
                             leftAvatar={
                                 <div className="w-10 h-10 rounded-full bg-neutral-100 text-neutral-500 flex items-center justify-center border border-neutral-200/50">
-                                    <History className="w-5 h-5" />
+                                    <HistoryIcon className="w-5 h-5" />
                                 </div>
                             }
                             title={item.resource}

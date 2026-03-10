@@ -17,6 +17,7 @@ import { uploadFinanceFile, getFinanceFileUrl } from "@/lib/api/storage";
 import { useFinance } from "../FinanceContext";
 import { FileText, Send, Trash2, Clock, Briefcase, FileSignature, ReceiptText, CreditCard, Save } from "lucide-react";
 import { SearchableAccountSelect } from "./SearchableAccountSelect";
+import { ResourceSearchInput } from "./ResourceSearchInput";
 
 // Standard Mileage Rates (can be adjusted)
 const MILEAGE_RATES: Record<string, number> = {
@@ -31,6 +32,8 @@ interface LineItem {
     unit: string;
     unitPrice: number;
     total: number;
+    subcategory?: string;
+    group_name?: string;
 }
 
 export function ReimburseRequestForm({
@@ -140,7 +143,9 @@ export function ReimburseRequestForm({
                     qty: i.qty || i.quantity || 1,
                     unit: i.unit || "pcs",
                     unitPrice: i.unit_price || i.unitPrice || 0,
-                    total: i.total || i.amount || 0
+                    total: i.total || i.amount || 0,
+                    subcategory: i.subcategory,
+                    group_name: i.group_name
                 })));
             } else if (initialData.amount) {
                 // Fallback for single item from flattened data
@@ -520,12 +525,18 @@ export function ReimburseRequestForm({
                                 <div className="flex items-start justify-between gap-4">
                                     <div className="flex-1">
                                         <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Item Name</label>
-                                        <input
-                                            type="text"
+                                        <ResourceSearchInput
                                             value={item.name}
-                                            onChange={e => updateItem(item.id, { name: e.target.value })}
+                                            category={reimbCategory === "PURCHASE_PROJECT" ? "material" : "material"}
+                                            onSelect={(selected) => updateItem(item.id, {
+                                                name: selected.name,
+                                                unit: selected.unit || item.unit,
+                                                unitPrice: selected.price || item.unitPrice,
+                                                subcategory: selected.subcategory,
+                                                group_name: selected.group_name
+                                            })}
                                             placeholder="e.g. Lunch at Site"
-                                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium placeholder:text-[11px]"
+                                            disabled={!canEdit}
                                         />
                                     </div>
                                     {items.length > 1 && (

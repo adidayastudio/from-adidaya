@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, Fragment } from "react";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+import { generateExport, ExportAttachment, ExportMetadata } from "@/lib/export/export-utils";
 // dynamic import used for pdfjs instead of top level import
 import { createPortal } from "react-dom";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
@@ -678,36 +677,6 @@ function ViewModal({
     const [docDrawerType, setDocDrawerType] = useState<'invoice' | 'proof'>('invoice');
     const contentRef = useRef<HTMLDivElement>(null);
 
-    // Helper: convert a PDF URL to an image data URL using pdfjs-dist
-    const pdfToImage = async (pdfUrl: string): Promise<string | null> => {
-        try {
-            // Polyfill Promise.withResolvers for environments that don't support it yet
-            if (typeof (Promise as any).withResolvers === 'undefined') {
-                (Promise as any).withResolvers = function () {
-                    let resolve, reject;
-                    const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
-                    return { promise, resolve, reject };
-                };
-            }
-
-            const pdfjsLib = await import("pdfjs-dist");
-            pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs`;
-            const loadingTask = pdfjsLib.getDocument(pdfUrl);
-            const pdfDoc = await loadingTask.promise;
-            const page = await pdfDoc.getPage(1);
-            const viewport = page.getViewport({ scale: 1.5 });
-            const canvas = document.createElement('canvas');
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            const ctx = canvas.getContext('2d')!;
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            return canvas.toDataURL('image/jpeg', 0.85);
-        } catch (e) {
-            console.error('PDF to image failed:', e);
-            return null;
-        }
-    };
-
     const handleExport = async (format: "jpg" | "pdf") => {
         if (!contentRef.current) return;
         setIsExporting(true);
@@ -722,331 +691,57 @@ function ViewModal({
             const hh = String(now.getHours()).padStart(2, '0');
             const min = String(now.getMinutes()).padStart(2, '0');
             const dateStr = `${yyyy}${mm}${dd}`;
-            const poStr = formatStructuredId("PO", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `PO-${item.id.slice(0, 8)}`;
+            const poId = formatStructuredId("PO", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `PO-${item.id.slice(0, 8)}`;
             const projectStr = item.project?.project_code || item.project_code || 'NA';
             const itemsList = item.items || [];
             let itemStr = 'Item';
             if (itemsList.length > 0) {
                 if (itemsList.length <= 2) {
-                    itemStr = itemsList.map((i: any) => i.name).join(' and ');
+                    itemStr = itemsList.map((i: { name: string }) => i.name).join(' and ');
                 } else {
                     itemStr = `${itemsList[0].name} and ${itemsList.length - 1} more`;
                 }
             }
-            const fileName = `${dateStr}_Detail_${poStr}_${projectStr}_${itemStr}.${format}`.replace(/[<>:"/\\|?*]+/g, '');
+            const fileName = `${dateStr}_Detail_${poId}_${projectStr}_${itemStr}.${format}`.replace(/[<>:"/\\|?*]+/g, '');
 
-            // --- Step 1: Detect theme ---
-            const isDark = document.documentElement.classList.contains('dark');
-
-            // --- Step 2: Capture the actual web UI content ---
-            const element = contentRef.current;
-            const uiCanvas = await html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: null,
-                windowWidth: element.scrollWidth,
-                windowHeight: element.scrollHeight,
-                onclone: (clonedDoc) => {
-                    const clonedElement = clonedDoc.getElementById("export-content");
-                    if (!clonedElement) return;
-                    clonedElement.style.height = "auto";
-                    clonedElement.style.overflow = "visible";
-
-                    // 1. Hide copy buttons and export-related elements
-                    clonedElement.querySelectorAll('button[title="Copy to clipboard"], button[title="View All"]').forEach((el) => {
-                        (el as HTMLElement).style.display = 'none';
-                    });
-                    clonedElement.querySelectorAll('button').forEach(btn => {
-                        if (btn.textContent?.includes('View All')) (btn as HTMLElement).style.display = 'none';
-                    });
-
-                    // 2. Remove decorative blur blobs (the white circle in total bar)
-                    clonedElement.querySelectorAll('div').forEach((el) => {
-                        const hEl = el as HTMLElement;
-                        const cs = getComputedStyle(el);
-                        const isBlur = (cs.filter && cs.filter.includes('blur')) ||
-                            hEl.classList.contains('blur-xl') ||
-                            hEl.classList.contains('blur-2xl') ||
-                            hEl.classList.contains('blur-3xl');
-                        if (isBlur && cs.position === 'absolute') {
-                            hEl.style.display = 'none';
-                        }
-                    });
-
-                    // 3. Fix ALL elements with unsupported CSS
-                    const allElements = clonedElement.querySelectorAll('*') as NodeListOf<HTMLElement>;
-                    allElements.forEach((el) => {
-                        const cs = getComputedStyle(el);
-
-                        // Remove all backdrop-filter
-                        if (cs.backdropFilter && cs.backdropFilter !== 'none') {
-                            el.style.backdropFilter = 'none';
-                            (el.style as any).webkitBackdropFilter = 'none';
-                        }
-
-                        // Force badges to have proper alignment
-                        if (el.classList.contains('rounded-full')) {
-                            // Badge-like elements: ensure vertical centering for canvas
-                            el.style.display = 'inline-flex';
-                            el.style.alignItems = 'center';
-                            el.style.justifyContent = 'center';
-                            el.style.lineHeight = '1';
-                            // Small padding adjustment for badges
-                            if (el.tagName === 'SPAN') {
-                                el.style.paddingTop = '4px';
-                                el.style.paddingBottom = '4px';
-                            }
-                        }
-
-                        // Replace semi-transparent backgrounds with solid ones
-                        const bg = cs.backgroundColor;
-                        if (bg && bg.includes('rgba')) {
-                            const match = bg.match(/rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
-                            if (match) {
-                                const alpha = parseFloat(match[4]);
-                                if (alpha < 1 && alpha > 0) {
-                                    // Blend with parent background
-                                    const base = isDark ? 23 : 255;
-                                    const r = Math.round(Number(match[1]) * alpha + base * (1 - alpha));
-                                    const g = Math.round(Number(match[2]) * alpha + base * (1 - alpha));
-                                    const b = Math.round(Number(match[3]) * alpha + base * (1 - alpha));
-                                    el.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
-                                }
-                            }
-                        }
-
-                        // Fix borders
-                        const borderColor = cs.borderColor;
-                        if (borderColor && borderColor.includes('rgba')) {
-                            const match = borderColor.match(/rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/);
-                            if (match) {
-                                const alpha = parseFloat(match[4]);
-                                if (alpha < 1 && alpha > 0) {
-                                    const base = isDark ? 23 : 255;
-                                    const r = Math.round(Number(match[1]) * alpha + base * (1 - alpha));
-                                    const g = Math.round(Number(match[2]) * alpha + base * (1 - alpha));
-                                    const b = Math.round(Number(match[3]) * alpha + base * (1 - alpha));
-                                    el.style.borderColor = `rgb(${r}, ${g}, ${b})`;
-                                }
-                            }
-                        }
-
-                        // Hide box-shadows (they often render weirdly)
-                        if (cs.boxShadow && cs.boxShadow !== 'none') {
-                            el.style.boxShadow = 'none';
-                        }
-                    });
-                }
-            });
-
-            // --- Step 2: Build document images (PDFs converted to images) ---
-            const docImages: { img: HTMLImageElement; label: string }[] = [];
+            // --- Prepare Attachments ---
+            const attachments: ExportAttachment[] = [];
             // Invoices
             for (const inv of invoiceUrls) {
-                const isImage = inv.originalPath.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i);
-                let imgSrc = inv.url;
-                if (!isImage) {
-                    const pdfImg = await pdfToImage(inv.url);
-                    if (pdfImg) imgSrc = pdfImg;
-                    else continue;
-                }
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.src = imgSrc;
-                await new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r(); setTimeout(r, 5000); });
-                if (img.naturalWidth > 0) docImages.push({ img, label: inv.name || 'Invoice' });
+                attachments.push({
+                    url: inv.url,
+                    name: inv.name,
+                    originalPath: inv.originalPath,
+                    label: 'Invoice'
+                });
             }
             // Payment proof
             if (proofUrl) {
-                const isProofImage = item.payment_proof_url?.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i);
-                let proofSrc = proofUrl;
-                if (!isProofImage) {
-                    const pdfImg = await pdfToImage(proofUrl);
-                    if (pdfImg) proofSrc = pdfImg;
-                }
-                const img = new Image();
-                img.crossOrigin = "anonymous";
-                img.src = proofSrc;
-                await new Promise<void>(r => { img.onload = () => r(); img.onerror = () => r(); setTimeout(r, 5000); });
-                if (img.naturalWidth > 0) docImages.push({ img, label: 'Payment Proof' });
-            }
-
-            // --- Step 3: Compose final canvas ---
-            const padding = 40;
-            const headerH = 80;
-            const docGap = 16;
-            const docLabelH = 28;
-            const canvasW = uiCanvas.width + padding * 2;
-
-            // Calculate document section height
-            let docsHeight = 0;
-            if (docImages.length > 0) {
-                docsHeight += 50; // "Documents" section title
-                // Use 2-col layout if more than 1 doc
-                const useGrid = docImages.length > 1;
-                if (useGrid) {
-                    const colW = (canvasW - padding * 2 - docGap) / 2;
-                    // Pair images into rows
-                    for (let i = 0; i < docImages.length; i += 2) {
-                        const img1 = docImages[i].img;
-                        const h1 = (img1.naturalHeight / img1.naturalWidth) * colW;
-                        let maxH = h1;
-                        if (i + 1 < docImages.length) {
-                            const img2 = docImages[i + 1].img;
-                            const h2 = (img2.naturalHeight / img2.naturalWidth) * colW;
-                            maxH = Math.max(h1, h2);
-                        }
-                        docsHeight += maxH + docLabelH + docGap;
-                    }
-                } else {
-                    const colW = canvasW - padding * 2;
-                    for (const doc of docImages) {
-                        const h = (doc.img.naturalHeight / doc.img.naturalWidth) * colW;
-                        docsHeight += h + docLabelH + docGap;
-                    }
-                }
-            }
-
-            const footerH = 40;
-            const totalH = headerH + uiCanvas.height + docsHeight + footerH + padding * 2;
-
-            const finalCanvas = document.createElement('canvas');
-            finalCanvas.width = canvasW;
-            finalCanvas.height = totalH;
-            const ctx = finalCanvas.getContext('2d')!;
-
-            // Background
-            ctx.fillStyle = isDark ? '#111111' : '#ffffff';
-            ctx.fillRect(0, 0, canvasW, totalH);
-
-            let y = padding;
-
-            // Draw header
-            ctx.fillStyle = isDark ? '#ffffff' : '#111111';
-            ctx.font = 'bold 28px system-ui, -apple-system, sans-serif';
-            ctx.textBaseline = 'top';
-            ctx.fillText(poStr, padding, y);
-
-            ctx.fillStyle = isDark ? '#737373' : '#6b7280';
-            ctx.font = '500 16px system-ui, -apple-system, sans-serif';
-            ctx.fillText('Purchase Order Detail', padding, y + 36);
-
-            // Date on the right
-            ctx.fillStyle = isDark ? '#525252' : '#a3a3a3';
-            ctx.font = '500 14px system-ui, -apple-system, sans-serif';
-            const dateText = `${dd}/${mm}/${yyyy}  ${hh}:${min}`;
-            const dateW = ctx.measureText(dateText).width;
-            ctx.fillText(dateText, canvasW - padding - dateW, y + 6);
-
-            // Separator line
-            y += headerH - 10;
-            ctx.fillStyle = isDark ? '#333333' : '#e5e7eb';
-            ctx.fillRect(padding, y, canvasW - padding * 2, 1);
-            y += 16;
-
-            // Draw the captured UI screenshot
-            ctx.drawImage(uiCanvas, padding, y);
-            y += uiCanvas.height + 16;
-
-            // --- Draw documents ---
-            if (docImages.length > 0) {
-                // "Documents" section title
-                ctx.fillStyle = isDark ? '#ffffff' : '#111111';
-                ctx.font = 'bold 20px system-ui, -apple-system, sans-serif';
-                ctx.fillText('Documents', padding, y);
-                y += 40;
-
-                const useGrid = docImages.length > 1;
-                const contentW = canvasW - padding * 2;
-
-                if (useGrid) {
-                    const colW = (contentW - docGap) / 2;
-                    for (let i = 0; i < docImages.length; i += 2) {
-                        const drawDoc = (doc: typeof docImages[0], x: number, startY: number) => {
-                            const h = (doc.img.naturalHeight / doc.img.naturalWidth) * colW;
-
-                            // Category Label (Invoice / Payment Proof)
-                            ctx.fillStyle = isDark ? '#a3a3a3' : '#737373';
-                            ctx.font = 'bold 11px system-ui';
-                            ctx.fillText(doc.label.toUpperCase(), x, startY);
-
-                            const imgY = startY + 18;
-
-                            ctx.save();
-                            ctx.beginPath();
-                            const r = 16;
-                            ctx.roundRect(x, imgY, colW, h, r);
-                            ctx.clip();
-                            ctx.fillStyle = isDark ? '#1a1a1a' : '#f5f5f5';
-                            ctx.fillRect(x, imgY, colW, h);
-                            ctx.drawImage(doc.img, x, imgY, colW, h);
-                            ctx.restore();
-
-                            return h + 18;
-                        };
-
-                        const h1 = drawDoc(docImages[i], padding, y);
-                        let maxH = h1;
-
-                        if (i + 1 < docImages.length) {
-                            const x2 = padding + colW + docGap;
-                            const h2 = drawDoc(docImages[i + 1], x2, y);
-                            maxH = Math.max(h1, h2);
-                        }
-                        y += maxH + docGap + 10;
-                    }
-                } else {
-                    for (const doc of docImages) {
-                        const h = (doc.img.naturalHeight / doc.img.naturalWidth) * contentW;
-
-                        // Category Label
-                        ctx.fillStyle = isDark ? '#a3a3a3' : '#737373';
-                        ctx.font = 'bold 11px system-ui';
-                        ctx.fillText(doc.label.toUpperCase(), padding, y);
-
-                        const imgY = y + 18;
-
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.roundRect(padding, imgY, contentW, h, 16);
-                        ctx.clip();
-                        ctx.fillStyle = isDark ? '#1a1a1a' : '#f5f5f5';
-                        ctx.fillRect(padding, imgY, contentW, h);
-                        ctx.drawImage(doc.img, padding, imgY, contentW, h);
-                        ctx.restore();
-                        y += h + 18 + docGap + 10;
-                    }
-                }
-            }
-
-            // --- Footer ---
-            ctx.fillStyle = isDark ? '#404040' : '#a3a3a3';
-            ctx.font = '500 11px system-ui';
-            const footerText = `Adidaya · ${dd}/${mm}/${yyyy} ${hh}:${min}`;
-            const footerW = ctx.measureText(footerText).width;
-            ctx.fillText(footerText, (canvasW - footerW) / 2, totalH - padding);
-
-            // --- Step 4: Export ---
-            if (format === "jpg") {
-                const link = document.createElement("a");
-                link.download = fileName;
-                link.href = finalCanvas.toDataURL("image/jpeg", 0.85);
-                link.click();
-            } else {
-                const imgData = finalCanvas.toDataURL("image/jpeg", 0.80);
-                const pdf = new jsPDF({
-                    orientation: "portrait",
-                    unit: "px",
-                    format: [finalCanvas.width, finalCanvas.height]
+                attachments.push({
+                    url: proofUrl,
+                    name: 'Payment Proof',
+                    originalPath: item.payment_proof_url || '',
+                    label: 'Payment Proof'
                 });
-                pdf.addImage(imgData, "JPEG", 0, 0, finalCanvas.width, finalCanvas.height);
-                pdf.save(fileName);
             }
+
+            const metadata: ExportMetadata = {
+                title: poId,
+                subtitle: 'Purchase Order Detail',
+                date: `${dd}/${mm}/${yyyy}  ${hh}:${min}`,
+                isDark: document.documentElement.classList.contains('dark')
+            };
+
+            await generateExport(
+                contentRef.current,
+                fileName,
+                format,
+                attachments,
+                metadata,
+                (isExporting) => setIsExporting(isExporting)
+            );
         } catch (error) {
             console.error("Export failed:", error);
-        } finally {
-            setIsExporting(false);
         }
     };
 

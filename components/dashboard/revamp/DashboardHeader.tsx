@@ -97,7 +97,7 @@ export default function DashboardHeader({ onOpenNotifications }: DashboardHeader
 
         {/* Actions Section */}
         <div className="flex items-center relative" ref={meMenuRef}>
-          <div className="flex items-center gap-1 bg-white dark:bg-neutral-800/80 backdrop-blur-md rounded-full px-1.5 py-1.5 shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-none border border-neutral-100 dark:border-neutral-800">
+          <div className="flex items-center gap-1 bg-white/50 dark:bg-neutral-800/80 backdrop-blur-2xl rounded-full px-1.5 py-1.5 shadow-[0_2px_16px_rgba(0,0,0,0.08)] dark:shadow-none border border-white/60 dark:border-neutral-800">
             {/* Notification Bell */}
             <motion.button
               whileTap={{ scale: 0.92 }}
