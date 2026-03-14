@@ -10,11 +10,26 @@ import { Plus, ChevronRight, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import NewProjectDrawer from "@/components/project/NewProjectDrawer";
 
+import PageWrapper from "@/components/layout/PageWrapper";
+import TabSidebar, { TabItem } from "@/components/sidebar/TabSidebar";
+import { Folder, Flame, Activity, Clock, Server, CheckSquare, Archive } from "lucide-react";
+import { motion } from "framer-motion";
+
+const PROJECT_TABS = [
+    { id: "all", label: "All Projects", icon: <Folder size={16} /> },
+    { id: "focused", label: "Focused", icon: <Flame size={16} /> },
+    { id: "active", label: "Active", icon: <Activity size={16} /> },
+    { id: "recent", label: "Recent", icon: <Clock size={16} /> },
+    { id: "completed", label: "Completed", icon: <CheckSquare size={16} /> },
+    { id: "archived", label: "Archived", icon: <Archive size={16} /> },
+];
+
 export default function ProjectPage() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [loading, setLoading] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState("active");
     const router = useRouter();
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -24,7 +39,6 @@ export default function ProjectPage() {
     useEffect(() => {
         async function load() {
             const data = await fetchAllProjects();
-            // Sort to ensure consistent order, or simply use as is since it orders by project_number
             setProjects(data);
             setLoading(false);
         }
@@ -33,30 +47,44 @@ export default function ProjectPage() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[#F6F6F6] dark:bg-[#121212] pb-[100px]">
+            <div className="flex flex-col items-center justify-center min-h-screen bg-transparent pb-[100px]">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neutral-900 dark:border-white"></div>
             </div>
         );
     }
 
+    // Advanced filtering based on tabs
+    const filteredProjects = projects.filter(p => {
+        if (activeTab === "all") return true;
+        if (activeTab === "focused") return p.meta?.isFavorite === true || (p.meta?.progress || 0) > 0 && (p.meta?.progress || 0) < 40 || p.status === "at-risk";
+        if (activeTab === "active") return p.status === "active";
+        if (activeTab === "completed") return p.status === "completed";
+        if (activeTab === "archived") return p.status === "archived";
+        if (activeTab === "recent") {
+            // mock: created in last 7 days or recently modified
+            return new Date(p.updatedAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000;
+        }
+        return true;
+    });
+
     // Tier 1: Favorites
-    const favorites = projects.filter(p => p.meta?.isFavorite === true);
+    const favorites = filteredProjects.filter(p => p.meta?.isFavorite === true);
 
     // Tier 2: Recently Accessed (Top 5 updated, excluding favs)
-    const recentlyAccessed = [...projects]
+    const recentlyAccessed = [...filteredProjects]
         .filter(p => !favorites.some(f => f.id === p.id))
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
         .slice(0, 5);
 
     // Tier 3: Risky (Progress 1-39% or status at-risk/delayed) - excluding favs and recently accessed
-    const risky = projects.filter(p =>
+    const risky = filteredProjects.filter(p =>
         !favorites.some(f => f.id === p.id) &&
         !recentlyAccessed.some(r => r.id === p.id) &&
         ((p.meta?.progress || 0) > 0 && (p.meta?.progress || 0) < 40 || p.status === "at-risk" || p.status === "delayed")
     ).sort((a, b) => (a.meta?.progress || 0) - (b.meta?.progress || 0)); // Most risky first
 
     // Tier 4: Recently Added (Top 5 created, excluding previous)
-    const recentlyAdded = projects.filter(p =>
+    const recentlyAdded = filteredProjects.filter(p =>
         !favorites.some(f => f.id === p.id) &&
         !recentlyAccessed.some(r => r.id === p.id) &&
         !risky.some(ri => ri.id === p.id) &&
@@ -65,14 +93,14 @@ export default function ProjectPage() {
         .slice(0, 5);
 
     // Tier 5: Others
-    const others = projects.filter(p =>
+    const others = filteredProjects.filter(p =>
         !favorites.some(f => f.id === p.id) &&
         !recentlyAccessed.some(r => r.id === p.id) &&
         !risky.some(ri => ri.id === p.id) &&
         !recentlyAdded.some(ra => ra.id === p.id)
     );
 
-    // Combine into full prioritized list
+    // Combine into full prioritized list (still using tiers for ordering within tabs)
     const prioritizedList = [
         ...favorites,
         ...recentlyAccessed,
@@ -81,145 +109,185 @@ export default function ProjectPage() {
         ...others
     ];
 
-    // Main Section Splits
-    const focusedProjects = prioritizedList.slice(0, 5);
+    // Main Section Splits (only show focused section prominently if in "all" or "focused" tab)
+    const showFocusedSection = activeTab === "all" || activeTab === "focused";
+    const focusedCount = showFocusedSection ? 5 : 0;
+    
+    const focusedProjects = prioritizedList.slice(0, focusedCount);
 
-    // Active Projects: Max 10 items not in Focused
+    // Active Projects: Max items not in Focused
     const activeProjects = prioritizedList
         .filter(p => !focusedProjects.find(fp => fp.id === p.id))
-        .slice(0, 10);
+        .slice(0, activeTab === "all" ? 10 : undefined); // Paginate "all" slightly, show all in specific tabs
 
     const scrollableActiveProjects = activeProjects;
 
     return (
-        <div
-            className="h-[100dvh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-[#F6F6F6] dark:bg-[#000000] pb-24 relative"
-            onScroll={handleScroll}
-        >
-            {/* Extended Blur Mask for Mobile top area - Matched to Finance Benchmark */}
-            <div
-                className={clsx(
-                    "fixed left-0 right-0 z-40 pointer-events-none transition-opacity duration-300",
-                    isScrolled ? "opacity-100" : "opacity-0"
-                )}
-                style={{
-                    top: '0px',
-                    height: '80px',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-                    WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-                }}
-            >
-                <div className="absolute inset-0 bg-white/60 dark:bg-neutral-900/60 transition-all duration-500" />
-            </div>
-
-            {/* Header - Matched to Finance Benchmark */}
-            <div
-                className={clsx(
-                    "sticky top-0 z-50 transition-all duration-300 px-5 flex flex-col",
-                    isScrolled ? "h-[80px] pt-6" : "pt-8"
-                )}
-            >
-                {/* Glassy Background */}
-                {isScrolled && (
-                    <div
-                        className="absolute inset-0 z-[-1] bg-white/60 dark:bg-neutral-900/60 backdrop-blur-2xl"
-                        style={{
-                            maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-                            WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-                        }}
+        <div className="bg-transparent p-0 transition-colors">
+            <PageWrapper
+                sidebar={
+                    <TabSidebar
+                        items={PROJECT_TABS}
+                        activeTabId={activeTab}
+                        onTabChange={setActiveTab}
                     />
-                )}
-
-                {/* Top Header Row - Keep z-index high */}
-                <div className={clsx(
-                    "flex items-center transition-all duration-300 relative z-[51]",
-                    isScrolled ? "mb-1" : "mb-2"
-                )}>
-                    <h1
-                        className={clsx(
-                            "font-bold text-neutral-900 dark:text-white tracking-tight leading-none transition-all duration-300 ease-in-out origin-left",
-                            isScrolled
-                                ? "text-[18px] absolute left-1/2 -translate-x-1/2"
-                                : "text-[32px] relative"
-                        )}
-                    >
-                        Projects
-                    </h1>
-
-                    <div className="flex-1" />
-
-                    <div className={clsx(
-                        "flex items-center gap-1 p-1 rounded-full shadow-sm border border-black/[0.03] dark:border-white/[0.05] transition-all duration-300 z-[52]",
-                        isScrolled ? "bg-white/30 dark:bg-neutral-800/30 backdrop-blur-md scale-90" : "bg-white dark:bg-neutral-900"
-                    )}>
-                        <button
-                            onClick={() => setIsDrawerOpen(true)}
-                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all shrink-0"
-                        >
-                            <Plus size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                        </button>
-                        <button
-                            onClick={() => router.push("/flow/projects/settings")}
-                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all shrink-0"
-                        >
-                            <Settings size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="space-y-10 mt-1">
-                {/* Focused Projects */}
-                <section>
-                    <h2 className="px-5 text-[20px] font-bold text-neutral-900 dark:text-white mb-3 tracking-tight">
-                        Focused Projects
-                    </h2>
-                    <div className="flex overflow-x-auto px-5 gap-4 pb-4 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                        {focusedProjects.map((p) => (
-                            <div key={p.id} className="snap-center">
-                                <ProjectCard
-                                    project={p}
-                                    onClick={() => router.push(`/project/${p.id}`)}
-                                />
+                }
+                isTransparent
+                header={
+                    <div className="hidden lg:block mb-0">
+                        <div className="flex items-center justify-between gap-4 pt-0">
+                            <div>
+                                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+                                    {PROJECT_TABS.find(t => t.id === activeTab)?.label || "Projects"}
+                                </h1>
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                                    Manage and track all ongoing project developments and milestones.
+                                </p>
                             </div>
-                        ))}
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setIsDrawerOpen(true)}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all"
+                                >
+                                    <Plus size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                                </button>
+                                <button
+                                    onClick={() => router.push("/flow/projects/settings")}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all"
+                                >
+                                    <Settings size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="border-b border-neutral-200 dark:border-neutral-800 mt-5 hidden lg:block" />
                     </div>
-                </section>
+                }
+            >
+                <div 
+                    className="h-full space-y-10 animate-in fade-in duration-500"
+                    onScroll={handleScroll}
+                >
+                    {/* Mobile Header - Only visible on small screens */}
+                    <div className="lg:hidden">
+                        <div className="flex items-center justify-between mb-6">
+                            <h1 className="text-[32px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                                Projects
+                            </h1>
+                            <div className="flex items-center gap-1 p-1 rounded-full bg-white dark:bg-neutral-900 shadow-sm border border-black/[0.03] dark:border-white/[0.05]">
+                                <button
+                                    onClick={() => setIsDrawerOpen(true)}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all"
+                                >
+                                    <Plus size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                                </button>
+                                <button
+                                    onClick={() => router.push("/flow/projects/settings")}
+                                    className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all"
+                                >
+                                    <Settings size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                                </button>
+                            </div>
+                        </div>
 
-                {/* Active Projects */}
-                <section className="px-5">
-                    <div
-                        className="flex items-center gap-1 mb-5 cursor-pointer active:opacity-70 transition-opacity"
-                        onClick={() => router.push('/project/all')}
-                    >
-                        <h2 className="text-[20px] font-bold text-neutral-900 dark:text-white tracking-tight">
-                            Active Projects
-                        </h2>
-                        <ChevronRight size={22} className="text-neutral-400 dark:text-neutral-500 mt-0.5" />
+                        {/* Mobile Tabs */}
+                        <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 mb-6">
+                            {PROJECT_TABS.map((tab) => {
+                                const isActive = activeTab === tab.id;
+
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={clsx(
+                                            "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors flex-shrink-0",
+                                            isActive
+                                                ? "text-neutral-900 dark:text-white font-semibold"
+                                                : "text-neutral-500 font-medium hover:text-neutral-700"
+                                        )}
+                                    >
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="activeTabBadgeProjects"
+                                                className="absolute inset-0 rounded-full bg-white dark:bg-neutral-800 shadow-sm border border-black/[0.04] dark:border-white/[0.04]"
+                                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                            />
+                                        )}
+                                        <div className="relative z-10 flex items-center gap-2">
+                                            <span className={isActive ? "text-neutral-900 dark:text-white" : "opacity-60"}>{tab.icon}</span>
+                                            <span className="text-[14px]">{tab.label}</span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    <div className="flex flex-col gap-0.5">
-                        {scrollableActiveProjects.map((p) => (
-                            <CompactProjectCard
-                                key={p.id}
-                                project={p}
-                                onClick={() => router.push(`/project/${p.id.replace('-copy1', '').replace('-copy2', '')}`)}
-                            />
-                        ))}
-                    </div>
-                </section>
-            </div>
+                    {prioritizedList.length > 0 ? (
+                        <>
+                            {/* Focused Projects */}
+                            {showFocusedSection && focusedProjects.length > 0 && (
+                                <section>
+                                    <h2 className="text-[20px] font-bold text-neutral-900 dark:text-white mb-3 tracking-tight">
+                                        Focused Projects
+                                    </h2>
+                                    <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory hide-scrollbar">
+                                        {focusedProjects.map((p) => (
+                                            <div key={p.id} className="snap-center">
+                                                <ProjectCard
+                                                    project={p}
+                                                    onClick={() => router.push(`/project/${p.id}`)}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* Active Projects */}
+                            {scrollableActiveProjects.length > 0 && (
+                                <section>
+                                    <div
+                                        className="flex items-center gap-1 mb-5 cursor-pointer active:opacity-70 transition-opacity"
+                                        onClick={() => activeTab === "all" && router.push('/project/all')}
+                                    >
+                                        <h2 className="text-[20px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                                            {showFocusedSection ? "Other Active Projects" : "Projects"}
+                                        </h2>
+                                        {activeTab === "all" && <ChevronRight size={22} className="text-neutral-400 dark:text-neutral-500 mt-0.5" />}
+                                    </div>
+
+                                    <div className="flex flex-col gap-0.5">
+                                        {scrollableActiveProjects.map((p) => (
+                                            <CompactProjectCard
+                                                key={p.id}
+                                                project={p}
+                                                onClick={() => router.push(`/project/${p.id.replace('-copy1', '').replace('-copy2', '')}`)}
+                                            />
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+                        </>
+                    ) : (
+                        <div className="h-[40vh] flex flex-col items-center justify-center text-center">
+                            <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-6">
+                                <Folder className="w-8 h-8 text-neutral-400 opacity-80" />
+                            </div>
+                            <h2 className="text-[18px] font-bold text-neutral-900 dark:text-white mb-2">No projects found</h2>
+                            <p className="text-[14px] font-medium text-neutral-500 dark:text-neutral-400 max-w-[240px] leading-relaxed opacity-80">
+                                There are no projects matching your current filter criteria.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </PageWrapper>
 
             <NewProjectDrawer
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
                 existingProjects={projects}
                 onSubmit={async (newProjectData) => {
-                    // 1. Determine Workspace ID (Ideally get from current context/session)
-                    const workspaceId = projects[0]?.workspaceId || "806461f9-906d-4767-9275-f850e50f37f3"; // Fallback to a known valid one if possible
-
+                    const workspaceId = projects[0]?.workspaceId || "806461f9-906d-4767-9275-f850e50f37f3";
                     try {
                         const created = await createProject(workspaceId, {
                             projectName: newProjectData.projectName,
@@ -230,13 +298,9 @@ export default function ProjectPage() {
                             meta: newProjectData.meta,
                             startDate: newProjectData.startDate,
                         });
-
                         if (created) {
                             setProjects(prev => [created, ...prev]);
                             setIsDrawerOpen(false);
-                        } else {
-                            console.error("Failed to create project in Supabase");
-                            // Optionally show a toast/error here
                         }
                     } catch (err) {
                         console.error("Error creating project:", err);

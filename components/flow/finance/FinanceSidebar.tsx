@@ -49,9 +49,9 @@ export default function FinanceSidebar() {
   };
 
   return (
-    <aside className="w-full h-full hidden lg:flex flex-col justify-between pb-6">
-      <div className="space-y-6 pt-2">
-        <div className="space-y-1">
+    <div className="w-full hidden lg:flex flex-col">
+      <div className="space-y-0 pt-0">
+        <div className="space-y-0.5">
           {visibleItems.map((item) => {
             const active = isActive(item.path);
             return (
@@ -59,21 +59,19 @@ export default function FinanceSidebar() {
                 key={item.path}
                 href={item.path}
                 className={clsx(
-                  "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
+                  "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                   active
-                    ? "text-red-600 bg-red-50"
-                    : "text-neutral-600 hover:bg-neutral-50"
+                    ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                    : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                 )}
               >
-                <span className={clsx("transition-colors", active ? "text-red-600" : "text-neutral-400")}>
-                  <item.icon className="w-4 h-4" />
-                </span>
-                <span>{item.label}</span>
+                <item.icon className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
         </div>
       </div>
-    </aside>
+    </div>
   );
 }

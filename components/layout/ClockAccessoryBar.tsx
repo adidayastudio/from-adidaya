@@ -69,7 +69,7 @@ export default function ClockAccessoryBar() {
             {/* Static outer — mirrors MobileBottomBarV2 positioning exactly */}
             {isDashboard && (
                 <div
-                    className="lg:hidden fixed bottom-[96px] left-1/2 -translate-x-1/2 z-40 w-full px-4 max-w-lg"
+                    className="lg:hidden fixed bottom-[96px] md:bottom-8 left-1/2 -translate-x-1/2 z-[60] w-full px-4 max-w-lg"
                     style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
                 >
                     <AnimatePresence>

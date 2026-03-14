@@ -15,12 +15,13 @@ import { AccountSettings } from "@/components/system/settings/content/AccountSet
 import { TeamSettings } from "@/components/system/settings/content/TeamSettings";
 import { RolesSettings } from "@/components/system/settings/content/RolesSettings";
 import { SecuritySettings } from "@/components/system/settings/content/SecuritySettings";
+import SettingsPageHeader from "@/components/system/settings/SettingsPageHeader";
 
 // Hook to detect mobile
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 1024);
+    const check = () => setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -74,30 +75,54 @@ export default function SystemSettingsPage() {
     );
   }
 
-  // DESKTOP: Standard View
-  if (!isMobile) {
-    return (
-      <div className="min-h-screen bg-neutral-50 p-6 relative">
-        <div className="flex items-center justify-between mb-0">
-          <Breadcrumb
-            items={[
-              { label: "System" },
-              { label: "Settings" },
-              { label: view ? view.charAt(0).toUpperCase() + view.slice(1) : "Overview" }
-            ]}
-          />
-        </div>
-
-        <PageWrapper sidebar={
-          <SettingsSidebar activeView={view || "general"} onViewChange={setView} />
-        }>
-          <div className="h-full">
-            {renderContent()}
-          </div>
-        </PageWrapper>
-      </div>
-    );
-  }
+    // DESKTOP: Standard View
+    if (!isMobile) {
+        return (
+            <div className="hidden md:block bg-transparent p-0 transition-colors">
+                <PageWrapper sidebar={
+                    <SettingsSidebar activeView={view || "general"} onViewChange={setView} />
+                } isTransparent>
+                    <div className="space-y-8 w-full animate-in fade-in duration-500">
+                        {/* Inline Tabs for iPad (Hidden on Desktop) */}
+                        <div className="lg:hidden flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 mb-2">
+                            {NAV_ITEMS.map((item) => {
+                                const isActive = (view || "general") === item.id;
+                                const Icon = item.icon || Settings;
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => setView(item.id)}
+                                        className={clsx(
+                                            "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors flex-shrink-0",
+                                            isActive
+                                                ? "text-neutral-900 dark:text-white font-semibold"
+                                                : "text-neutral-500 font-medium hover:text-neutral-700"
+                                        )}
+                                    >
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="activeTabBadgeSettings"
+                                                className="absolute inset-0 rounded-full bg-white dark:bg-neutral-800 shadow-sm border border-black/[0.04] dark:border-white/[0.04]"
+                                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                            />
+                                        )}
+                                        <div className="relative z-10 flex items-center gap-2">
+                                            <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-neutral-900 dark:text-white" : "opacity-60"} />
+                                            <span className="text-[13px]">{item.label}</span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <SettingsPageHeader view={view || "general"} />
+                        <div className="h-full">
+                            {renderContent()}
+                        </div>
+                    </div>
+                </PageWrapper>
+            </div>
+        );
+    }
 
   // MOBILE DETAIL VIEW (With Sticky Glass Header)
   return (

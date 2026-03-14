@@ -106,13 +106,13 @@ export default function WebsiteSidebar({ activeView, onViewChange }: Props) {
                     <button
                         onClick={() => toggleSection(item.label)}
                         className={clsx(
-                            "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center justify-between",
+                            "w-full text-left rounded-lg px-3 py-1.5 text-[12px] font-medium transition-all flex items-center justify-between",
                             "text-neutral-500 hover:text-neutral-800"
                         )}
                     >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2.5">
                             {item.icon && <item.icon className="w-4 h-4" />}
-                            <span>{item.label}</span>
+                            <span className="truncate">{item.label}</span>
                         </div>
                         {isExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                     </button>
@@ -131,22 +131,20 @@ export default function WebsiteSidebar({ activeView, onViewChange }: Props) {
                 key={item.id}
                 onClick={() => item.id && onViewChange(item.id)}
                 className={clsx(
-                    "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center justify-between",
+                    "w-full text-left rounded-lg px-3 py-1.5 text-[12px] transition-all flex items-center justify-between",
                     isActive
-                        ? "text-blue-600 bg-blue-50/50"
-                        : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+                        ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                        : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                 )}
             >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                     {item.icon && (
-                        <span className={clsx("transition-colors", isActive ? "text-blue-600" : "text-neutral-400")}>
-                            <item.icon className="w-4 h-4" />
-                        </span>
+                        <item.icon className={clsx("w-4 h-4 shrink-0 transition-colors", isActive ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
                     )}
-                    <span>{item.label}</span>
+                    <span className="truncate">{item.label}</span>
                 </div>
                 {item.count !== undefined && (
-                    <span className={clsx("text-xs px-1.5 rounded", isActive ? "text-blue-600/80" : "text-neutral-400")}>
+                    <span className={clsx("text-[10px] px-1.5 rounded", isActive ? "text-neutral-900/80 dark:text-white/80" : "text-neutral-400")}>
                         {item.count}
                     </span>
                 )}
@@ -157,9 +155,9 @@ export default function WebsiteSidebar({ activeView, onViewChange }: Props) {
     return (
         <>
             {/* DESKTOP SIDEBAR */}
-            <div className="space-y-6 hidden lg:block">
-                <div className="space-y-1">
-                    <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-1 mb-2">Content Manager</div>
+            <div className="space-y-4 hidden lg:block overflow-y-auto max-h-full scrollbar-hide">
+                <div className="space-y-0.5">
+                    <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest px-3 mb-2 leading-none">Content Manager</div>
                     {NAV_STRUCTURE.map(item => renderItem(item))}
                 </div>
             </div>

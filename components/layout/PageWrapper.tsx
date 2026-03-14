@@ -2,10 +2,11 @@ import React from "react";
 import clsx from "clsx";
 
 type PageWrapperProps = {
-  sidebar: React.ReactNode;
+  sidebar?: React.ReactNode;
   header?: React.ReactNode;
   children: React.ReactNode;
   isTransparent?: boolean;
+  fullWidth?: boolean;
 };
 
 export default function PageWrapper({
@@ -13,34 +14,32 @@ export default function PageWrapper({
   header,
   children,
   isTransparent = false,
+  fullWidth = false,
 }: PageWrapperProps) {
   return (
-    <div className="md:mt-2 flex gap-4">
+    <div className="md:mt-0 flex gap-4">
       {/* SUB SIDE BAR - Desktop only */}
-      <aside className="hidden lg:block w-[240px] shrink-0">
-        <div className="sticky top-6">
-          <div className="bg-white rounded-3xl p-4 shadow-sm">
-            {sidebar}
+      {sidebar && (
+        <aside className="hidden lg:block w-[240px] shrink-0">
+          <div className="sticky top-0">
+            <div className="bg-white/20 dark:bg-neutral-800/20 backdrop-blur-md rounded-2xl p-4 border border-white/40 dark:border-neutral-700/30 shadow-sm">
+              {sidebar}
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
 
       {/* MAIN CONTENT CONTAINER */}
       <main className="flex-1 min-w-0">
-        {header && <div className="mb-6">{header}</div>}
+        {header && <div className="mb-0 lg:mb-6">{header}</div>}
         <div className={clsx(
-          "px-4 md:p-4 h-full pb-24 md:pb-4",
-          !isTransparent && "md:bg-white md:rounded-3xl md:shadow-sm",
+          "px-0 h-full pb-32 md:pb-4",
+          !isTransparent && "lg:bg-white lg:rounded-3xl lg:shadow-sm",
           !header && "mt-0"
         )}>
           {children}
         </div>
       </main>
-
-      {/* Mobile Sidebar Elements - Rendered outside hidden container */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40">
-        {sidebar}
-      </div>
     </div>
   );
 }

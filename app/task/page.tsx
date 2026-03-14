@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import clsx from "clsx";
 import {
   List,
   History,
@@ -384,6 +385,9 @@ const flattenWBS = (items: WBSItem[], level: number = 0): any[] => {
   return result;
 };
 
+import PageWrapper from "@/components/layout/PageWrapper";
+import TabSidebar, { TabItem } from "@/components/sidebar/TabSidebar";
+
 export default function TaskPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -540,153 +544,139 @@ export default function TaskPage() {
   });
 
   return (
-    <div
-      className="h-[100dvh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] bg-[#f8f9fa] pb-24 relative"
-      onScroll={handleScroll}
-    >
-      {/* HEADER SECTION - STICKY WITH GLASS EFFECT WHEN SCROLLED */}
-      <div
-        className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled
-          ? "bg-[#f8f9fa]/70 backdrop-blur-xl border-b border-black/[0.05] pt-6 pb-2"
-          : "bg-[#f8f9fa] pt-8 pb-4"
-          } px-5`}
-      >
-        {/* Top Header Row */}
-        <div className={`flex items-center transition-all duration-300 relative ${isScrolled ? "mb-4" : "mb-6"}`}>
-          {/* Title */}
-          <h1
-            className={`font-bold text-gray-900 tracking-tight transition-all duration-300 ease-in-out origin-left ${isScrolled
-              ? "text-[18px] absolute left-1/2 -translate-x-1/2"
-              : "text-[32px] relative"
-              }`}
-          >
-            Tasks
-          </h1>
-
-          {/* Spacer to push right content when title is not absolute */}
-          {!isScrolled && <div className="flex-1" />}
-
-          {/* Top Right Action Pills (Menu and Plus) */}
-          <div className={`flex items-center gap-1 p-1 rounded-full shadow-sm border border-black/[0.03] transition-all duration-300 ${isScrolled ? "ml-auto bg-white/40 backdrop-blur-md" : "bg-white"}`}>
-            <button
-              onClick={() => setIsFilterOpen(true)}
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors relative"
-            >
-              <ListFilter size={20} className="text-gray-700" />
-              {(filterProject !== "All" || filterDate !== "All") && (
-                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-              )}
-            </button>
-            <button
-              onClick={() => setIsAddOpen(true)}
-              className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
-            >
-              <Plus size={20} className="text-gray-700" />
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable Filter Menu */}
-        <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-5 px-5">
-          {TABS.map((tab) => {
-            const isActive = activeTab === tab.id;
-            const Icon = tab.icon;
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${isActive
-                  ? `text-gray-900 font-semibold`
-                  : "bg-transparent text-gray-500 font-medium hover:text-gray-700"
-                  }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="activeTabBadgeTasks"
-                    className={`absolute inset-0 rounded-full shadow-sm border border-black/[0.04] ${isScrolled ? "bg-white/60 backdrop-blur-md" : "bg-white"
-                      }`}
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                  />
-                )}
-                <div className="relative z-10 flex items-center gap-2">
-                  <Icon size={16} strokeWidth={isActive ? 2.5 : 2} />
-                  <span className="text-[14px]">{tab.label}</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* TASKS LIST */}
-      <div className="px-5 mt-2 relative z-0">
-        {filteredTasks.length > 0 ? (
-          filteredTasks.map((task) => (
-            <div key={task.id} onClick={() => setSelectedTask(task)} className="cursor-pointer active:scale-[0.98] transition-transform">
-              <TaskCard task={task} />
+    <div className="bg-transparent p-0 transition-colors">
+      <PageWrapper
+        sidebar={
+          <TabSidebar
+            items={TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={16} /> }))}
+            activeTabId={activeTab}
+            onTabChange={setActiveTab}
+          />
+        }
+        isTransparent
+        header={
+          <div className="hidden lg:block mb-0">
+            <div className="flex items-center justify-between gap-4 pt-0">
+              <div>
+                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+                  Tasks
+                </h1>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                  Keep track of your responsibilities and deadlines across all active projects.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsFilterOpen(true)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all relative"
+                >
+                  <ListFilter size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                  {(filterProject !== "All" || filterDate !== "All") && (
+                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setIsAddOpen(true)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all"
+                >
+                  <Plus size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                </button>
+              </div>
             </div>
-          ))
-        ) : (
-          <div className="h-[55vh] flex flex-col items-center justify-center text-center">
-            {activeTab === "all" && (
-              <>
-                <div className="w-24 h-24 bg-[#f8f9fa] rounded-full flex items-center justify-center mb-6 shadow-sm border border-[#f0f0f0]">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-500 opacity-80" />
+            {/* Desktop Tabs Overlay Style (Removed, moved to Sidebar) */}
+            <div className="border-b border-neutral-200 dark:border-neutral-800 mt-5 hidden lg:block" />
+          </div>
+        }
+
+      >
+        {/* Main Content Zone */}
+        <div 
+          className="h-full space-y-6 animate-in fade-in duration-500"
+          onScroll={handleScroll}
+        >
+          {/* Mobile Header - Only visible on small screens */}
+          <div className="lg:hidden">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-[32px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                Tasks
+              </h1>
+              <div className="flex items-center gap-1 p-1 rounded-full bg-white dark:bg-neutral-900 shadow-sm border border-black/[0.03] dark:border-white/[0.05]">
+                <button
+                  onClick={() => setIsFilterOpen(true)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all relative"
+                >
+                  <ListFilter size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                  {(filterProject !== "All" || filterDate !== "All") && (
+                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setIsAddOpen(true)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all"
+                >
+                  <Plus size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Tabs (Kept for mobile view) */}
+            <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 mb-6">
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab.id;
+                const Icon = tab.icon;
+
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={clsx(
+                      "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors flex-shrink-0",
+                      isActive
+                        ? "text-neutral-900 dark:text-white font-semibold"
+                        : "text-neutral-500 font-medium hover:text-neutral-700"
+                    )}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeTabBadgeTasks"
+                        className="absolute inset-0 rounded-full bg-white dark:bg-neutral-800 shadow-sm border border-black/[0.04] dark:border-white/[0.04]"
+                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                      />
+                    )}
+                    <div className="relative z-10 flex items-center gap-2">
+                      <Icon size={16} strokeWidth={isActive ? 2.5 : 2} />
+                      <span className="text-[14px]">{tab.label}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* TASK LIST AREA */}
+          <div className="relative z-0">
+            {filteredTasks.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {filteredTasks.map((task) => (
+                  <div key={task.id} onClick={() => setSelectedTask(task)} className="cursor-pointer active:scale-[0.98] transition-all hover:translate-y-[-2px]">
+                    <TaskCard task={task} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-[40vh] flex flex-col items-center justify-center text-center">
+                <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-6">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500 opacity-80" />
                 </div>
-                <h2 className="text-[20px] font-bold text-gray-900 mb-2">You're all caught up!</h2>
-                <p className="text-[14px] font-medium text-gray-500 max-w-[220px] leading-relaxed opacity-80">
+                <h2 className="text-[18px] font-bold text-neutral-900 dark:text-white mb-2">You're all caught up!</h2>
+                <p className="text-[14px] font-medium text-neutral-500 dark:text-neutral-400 max-w-[220px] leading-relaxed opacity-80">
                   No tasks on your plate right now. Enjoy the breather.
                 </p>
-              </>
-            )}
-            {activeTab === "active" && (
-              <>
-                <div className="w-24 h-24 bg-[#eff4fc] rounded-full flex items-center justify-center mb-6 shadow-sm border border-[#e8effa]">
-                  <History className="w-10 h-10 text-[#5485ea] opacity-80" />
-                </div>
-                <h2 className="text-[20px] font-bold text-gray-900 mb-2">Nothing in progress</h2>
-                <p className="text-[14px] font-medium text-gray-500 max-w-[240px] leading-relaxed opacity-80">
-                  You have no active tasks at the moment. Ready to start something new?
-                </p>
-              </>
-            )}
-            {activeTab === "submitted" && (
-              <>
-                <div className="w-24 h-24 bg-[#fdf4e8] rounded-full flex items-center justify-center mb-6 shadow-sm border border-[#fde2c9]">
-                  <Send className="w-10 h-10 text-[#f29f4b] opacity-80" />
-                </div>
-                <h2 className="text-[20px] font-bold text-gray-900 mb-2">No pending reviews</h2>
-                <p className="text-[14px] font-medium text-gray-500 max-w-[220px] leading-relaxed opacity-80">
-                  You haven't submitted any tasks for approval recently.
-                </p>
-              </>
-            )}
-            {activeTab === "revision" && (
-              <>
-                <div className="w-24 h-24 bg-[#fcebef] rounded-full flex items-center justify-center mb-6 shadow-sm border border-[#f7d4dc]">
-                  <Undo2 className="w-10 h-10 text-[#eb5275] opacity-80" />
-                </div>
-                <h2 className="text-[20px] font-bold text-gray-900 mb-2">Great job!</h2>
-                <p className="text-[14px] font-medium text-gray-500 max-w-[220px] leading-relaxed opacity-80">
-                  None of your tasks were returned for revision. Keep it up!
-                </p>
-              </>
-            )}
-            {activeTab === "done" && (
-              <>
-                <div className="w-24 h-24 bg-[#eaf5ec] rounded-full flex items-center justify-center mb-6 shadow-sm border border-[#cfead4]">
-                  <ListTodo className="w-10 h-10 text-[#4cb05f] opacity-80" />
-                </div>
-                <h2 className="text-[20px] font-bold text-gray-900 mb-2">A clean slate</h2>
-                <p className="text-[14px] font-medium text-gray-500 max-w-[220px] leading-relaxed opacity-80">
-                  Your completed tasks will appear here. Let's get to work!
-                </p>
-              </>
+              </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      </PageWrapper>
 
       {/* TASK DETAIL MODAL */}
       <TaskDetailModal

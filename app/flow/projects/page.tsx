@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import ProjectsPageWrapper from "@/components/flow/projects/ProjectsPageWrapper";
-import ProjectsHeader from "@/components/flow/projects/ProjectsHeader";
+import StandardPageWrapper from "@/components/layout/StandardPageWrapper";
+import StandardPageHeader from "@/components/layout/StandardPageHeader";
+import ProjectsSidebar from "@/components/flow/projects/ProjectsSidebar";
 import { supabase } from "@/lib/supabaseClient";
 import {
   LayoutDashboard,
@@ -347,34 +348,50 @@ export default function ProjectsOverviewPage() {
   const typologyOptions = [{ label: "Select typology...", value: "" }, ...typologies.map(t => ({ label: `${t.name} (${t.code})`, value: t.code }))];
 
 
-  return (
-    <ProjectsPageWrapper
-      breadcrumbItems={[{ label: "Flow" }, { label: "Projects" }]}
-      header={
-        <ProjectsHeader
-          title="Projects"
-          subtitle="Manage and track all your projects."
-          showNewButton={true}
-          onNewClick={() => setIsDrawerOpen(true)}
-        />
-      }
-      mobileToggle={
-        <div className="lg:hidden fixed top-[72px] right-3 z-30">
-          <button
-            onClick={() => setViewMode(viewMode === "personal" ? "team" : "personal")}
-            className="flex items-center gap-1 h-7 px-2 pr-1.5 rounded-full backdrop-blur-xl border border-neutral-200/80 shadow-sm transition-all active:scale-95"
-            style={{ background: 'rgba(255,255,255,0.9)' }}
-          >
-            {viewMode === "personal" ? <User className="w-3.5 h-3.5 text-blue-600" strokeWidth={2} /> : <Users className="w-3.5 h-3.5 text-rose-600" strokeWidth={2} />}
-            <span className="text-[11px] font-semibold text-neutral-600 max-w-[60px] truncate">{viewMode === "personal" ? "Me" : "Team"}</span>
-            <svg className="w-3 h-3 text-neutral-300 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" /></svg>
-          </button>
+  const header = (
+    <StandardPageHeader
+      title="Projects"
+      subtitle="Manage and track all your projects."
+      action={
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center bg-white/20 dark:bg-neutral-800/20 backdrop-blur-md rounded-full p-1 border border-white/40 dark:border-neutral-700/30">
+            <button 
+              ref={personalRef}
+              onClick={() => setViewMode("personal")} 
+              className={clsx("flex items-center gap-2 px-4 py-1.5 rounded-full text-[12px] font-medium transition-all", viewMode === "personal" ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300")}
+            >
+              <User className="w-3.5 h-3.5" /> Personal
+            </button>
+            <button 
+              ref={teamRef}
+              onClick={() => setViewMode("team")} 
+              className={clsx("flex items-center gap-2 px-4 py-1.5 rounded-full text-[12px] font-medium transition-all", viewMode === "team" ? "bg-white dark:bg-neutral-700 shadow-sm text-neutral-900 dark:text-white" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300")}
+            >
+              <Users className="w-3.5 h-3.5" /> Team
+            </button>
+          </div>
+          {CAN_EDIT && (
+            <button
+              onClick={openAddDrawer}
+              className="hidden md:flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white text-sm font-semibold rounded-2xl hover:bg-red-700 transition-all shadow-sm active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              New Project
+            </button>
+          )}
         </div>
       }
+    />
+  );
+
+  return (
+    <StandardPageWrapper
+      breadcrumbItems={[{ label: "Flow" }, { label: "Projects" }]}
+      sidebar={<ProjectsSidebar />}
+      header={header}
+      isTransparent
     >
       <div className="space-y-8 w-full animate-in fade-in duration-500">
-        <div className="border-b border-neutral-200 lg:hidden" />
-
         {/* Stats Grid / Filters */}
         <SummaryCardsRow>
           <SummaryCard
@@ -410,41 +427,33 @@ export default function ProjectsOverviewPage() {
             icon={<TrendingUp className="w-5 h-5 text-purple-600" />}
             iconBg="bg-purple-50"
             label="Total Value"
-            // Display only, or filter by completed? Let's just keep it as display for now or maybe "Completed"
-            // Use 'completed' status mapping for consistency if we want
             value={isLoading ? "..." : new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(stats.totalValue)}
             subtext="Estimated contract value"
           />
         </SummaryCardsRow>
 
-        {/* Desktop Toggle (Hidden on Mobile) */}
-        <div className="hidden lg:flex items-center gap-3 justify-end -mt-4 mb-4">
-          <div className="relative inline-flex p-1 rounded-full h-10 bg-black/5" style={{ background: 'rgba(0, 0, 0, 0.06)' }}>
-            <div
-              className="absolute top-1 bottom-1 rounded-full bg-white shadow-sm transition-all duration-300 ease-out"
-              style={{ width: `${indicatorStyle.width}px`, left: `${indicatorStyle.left}px` }}
-            />
-            <button
-              ref={personalRef}
-              onClick={() => setViewMode("personal")}
-              className={clsx("relative z-10 flex items-center gap-2 px-3 h-full rounded-full text-sm font-medium transition-colors duration-200", viewMode === "personal" ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-            >
-              <User className="w-4 h-4" /> Personal
-            </button>
-            <button
-              ref={teamRef}
-              onClick={() => setViewMode("team")}
-              className={clsx("relative z-10 flex items-center gap-2 px-3 h-full rounded-full text-sm font-medium transition-colors duration-200", viewMode === "team" ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-            >
-              <Users className="w-4 h-4" /> Team
-            </button>
-          </div>
-        </div>
-
         {/* Filters */}
         <div className="flex items-center gap-4">
-          <div className="relative w-64"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input type="text" placeholder="Search projects..." className="pl-9 pr-4 py-2 border rounded-lg text-sm w-full" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} /></div>
-          <select className="px-4 py-2 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">All Status</option><option value="active">Active</option><option value="planning">Planning</option><option value="completed">Completed</option></select>
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+            <input 
+              type="text" 
+              placeholder="Search projects..." 
+              className="pl-9 pr-4 py-2 bg-white/50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/50 rounded-xl text-sm w-full focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all font-medium" 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+            />
+          </div>
+          <select 
+            className="px-4 py-2 bg-white/50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700/50 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500/20 transition-all" 
+            value={filter} 
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="planning">Planning</option>
+            <option value="completed">Completed</option>
+          </select>
         </div>
 
         {/* Loading */}
@@ -452,15 +461,22 @@ export default function ProjectsOverviewPage() {
 
         {/* Empty */}
         {!isLoading && projects.length === 0 && (
-          <div className="text-center py-16 bg-neutral-50/50 rounded-2xl border border-dashed border-neutral-200">
-            <FolderOpen className="w-12 h-12 mx-auto text-neutral-300 mb-4" />
-            <h3 className="text-lg font-medium text-neutral-600 mb-2">No projects yet</h3>
-            <p className="text-sm text-neutral-400 mb-6">Create your first project to get started</p>
-            {CAN_EDIT && (<button onClick={openAddDrawer} className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700"><Plus className="w-4 h-4" /> Create Project</button>)}
+          <div className="text-center py-16 bg-white/20 dark:bg-neutral-800/20 backdrop-blur-sm rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-700/50">
+            <FolderOpen className="w-12 h-12 mx-auto text-neutral-300 dark:text-neutral-600 mb-4" />
+            <h3 className="text-lg font-medium text-neutral-600 dark:text-neutral-400 mb-2">No projects yet</h3>
+            <p className="text-sm text-neutral-400 dark:text-neutral-500 mb-6">Create your first project to get started</p>
+            {CAN_EDIT && (
+              <button 
+                onClick={openAddDrawer} 
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-2xl font-semibold hover:bg-red-700 shadow-sm transition-all active:scale-95"
+              >
+                <Plus className="w-4 h-4" /> Create Project
+              </button>
+            )}
           </div>
         )}
 
-        {/* Table (Desktop) */}
+        {/* Table/Cards */}
         {!isLoading && projects.length > 0 && (
           <>
             {/* Mobile Card View */}
@@ -468,73 +484,91 @@ export default function ProjectsOverviewPage() {
               {sorted.map((p) => (
                 <div
                   key={p.id}
-                  className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm flex flex-col gap-3 active:scale-[0.98] transition-all cursor-pointer"
+                  className="bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm rounded-2xl border border-neutral-200 dark:border-neutral-800 p-4 shadow-sm flex flex-col gap-3 active:scale-[0.98] transition-all cursor-pointer"
                   onClick={() => window.location.href = `/flow/projects/${p.number}-${p.code}`}
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="flex items-center gap-2 text-xs font-mono text-neutral-500 mb-1">
-                        <span className="bg-neutral-100 px-1.5 py-0.5 rounded">{p.number}</span>
+                      <div className="flex items-center gap-2 text-xs font-mono text-neutral-500 dark:text-neutral-400 mb-1">
+                        <span className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">{p.number}</span>
                         <span>{p.code}</span>
                       </div>
-                      <h3 className="font-bold text-neutral-900 line-clamp-2">{p.name}</h3>
+                      <h3 className="font-bold text-neutral-900 dark:text-neutral-100 line-clamp-2">{p.name}</h3>
                     </div>
                     <StatusBadge status={p.status} />
                   </div>
 
-                  <div className="flex items-center justify-between gap-4 pt-2 border-t border-neutral-100">
+                  <div className="flex items-center justify-between gap-4 pt-2 border-t border-neutral-100 dark:border-neutral-800">
                     <div className="flex-1">
-                      <div className="flex justify-between text-xs text-neutral-500 mb-1.5">
+                      <div className="flex justify-between text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">
                         <span>Progress</span>
                         <span>{p.progress}%</span>
                       </div>
-                      <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
                         <div className="h-full bg-red-500 rounded-full" style={{ width: `${p.progress}%` }} />
                       </div>
                     </div>
-                    {/* No eye button needed if whole card is clickable, but keep for visual cue? User asked to remove it in previous turn, so we keep it removed or minimal. The previous turn successfully removed it. */}
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Desktop Table */}
-            <div className="hidden md:block bg-white rounded-2xl border border-neutral-100 shadow-sm overflow-hidden">
+            <div className="hidden md:block bg-white/30 dark:bg-neutral-900/20 backdrop-blur-sm rounded-3xl border border-white/40 dark:border-neutral-700/30 shadow-sm overflow-hidden transition-colors">
               <table className="w-full">
-                <thead className="bg-neutral-50/80 border-b border-neutral-100">
+                <thead className="bg-white/40 dark:bg-neutral-800/40 border-b border-white/40 dark:border-neutral-700/30">
                   <tr>
                     <SortHeader label="Project" sortKeyName="number" />
                     <SortHeader label="Scope" sortKeyName="scope" />
                     <SortHeader label="Progress" sortKeyName="progress" align="center" />
                     <SortHeader label="Value" sortKeyName="value" align="right" />
                     <SortHeader label="Status" sortKeyName="status" />
-                    <th className="px-6 py-3 text-xs font-semibold text-neutral-500 uppercase text-right">Actions</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">{sorted.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="hover:bg-neutral-50/50 cursor-pointer transition-colors"
-                    onClick={() => window.location.href = `/flow/projects/${p.number}-${p.code}`}
-                  >
-                    <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center text-red-600"><LayoutGrid className="w-5 h-5" /></div><div><div className="font-medium text-neutral-900">{p.name || "-"}</div><div className="text-xs text-neutral-500">{p.code || "-"} · {p.number || "-"}</div></div></div></td>
-                    <td className="px-6 py-4 text-sm text-neutral-500">{p.scope || "-"}</td>
-                    <td className="px-6 py-4"><div className="flex items-center gap-2 justify-center"><div className="w-20 h-2 bg-neutral-100 rounded-full overflow-hidden"><div className="h-full bg-red-500 rounded-full" style={{ width: `${p.progress}%` }} /></div><span className="text-sm font-medium">{p.progress}%</span></div></td>
-                    <td className="px-6 py-4 text-sm font-medium text-right">{p.value ? formatShort(p.value) : "-"}</td>
-                    <td className="px-6 py-4"><StatusBadge status={p.status} /></td>
-                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        <Link href={`/flow/projects/${p.number}-${p.code}`} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><Eye className="w-4 h-4 text-neutral-500" /></Link>
-                        {CAN_EDIT && (
-                          <>
-                            <button onClick={() => openEditDrawer(p)} className="p-2 hover:bg-neutral-100 rounded-full transition-colors"><Edit2 className="w-4 h-4 text-neutral-500" /></button>
-                            <button onClick={() => setDeleteTarget(p)} className="p-2 hover:bg-red-50 rounded-full transition-colors"><Trash2 className="w-4 h-4 text-neutral-400 hover:text-red-500" /></button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}</tbody>
+                <tbody className="divide-y divide-neutral-100/50 dark:divide-neutral-800/50">
+                  {sorted.map((p) => (
+                    <tr
+                      key={p.id}
+                      className="hover:bg-white/40 dark:hover:bg-neutral-800/40 cursor-pointer transition-colors"
+                      onClick={() => window.location.href = `/flow/projects/${p.number}-${p.code}`}
+                    >
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-red-500/10 dark:bg-red-400/10 flex items-center justify-center text-red-600 dark:text-red-400">
+                            <LayoutGrid className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-neutral-900 dark:text-white">{p.name || "-"}</div>
+                            <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{p.code || "-"} · {p.number || "-"}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-sm font-medium text-neutral-600 dark:text-neutral-400">{p.scope || "-"}</td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-3 justify-center">
+                          <div className="w-24 h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-red-500 rounded-full" style={{ width: `${p.progress}%` }} />
+                          </div>
+                          <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">{p.progress}%</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5 text-sm font-bold text-neutral-900 dark:text-neutral-100 text-right">{p.value ? formatShort(p.value) : "-"}</td>
+                      <td className="px-6 py-5"><StatusBadge status={p.status} /></td>
+                      <td className="px-6 py-5" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Link href={`/flow/projects/${p.number}-${p.code}`} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"><Eye className="w-4 h-4 text-neutral-400" /></Link>
+                          {CAN_EDIT && (
+                            <>
+                              <button onClick={() => openEditDrawer(p)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"><Edit2 className="w-4 h-4 text-neutral-400" /></button>
+                              <button onClick={() => setDeleteTarget(p)} className="p-2 hover:bg-red-500/10 rounded-full transition-colors group"><Trash2 className="w-4 h-4 text-neutral-400 group-hover:text-red-500" /></button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
           </>
@@ -542,9 +576,8 @@ export default function ProjectsOverviewPage() {
 
         {/* No results */}
         {!isLoading && projects.length > 0 && filtered.length === 0 && (
-          <div className="text-center py-8 text-neutral-500">No projects match your search or filter.</div>
+          <div className="text-center py-12 text-neutral-500 font-medium">No projects match your search or filter.</div>
         )}
-
       </div>
 
       <Drawer
@@ -556,14 +589,14 @@ export default function ProjectsOverviewPage() {
           <FormField label="Project Code" required><FormInput placeholder="e.g. VBL" value={formCode} onChange={(e) => setFormCode(e.target.value)} /></FormField>
           <FormField label="Project Number" required><FormInput placeholder="e.g. 001" value={formNumber} onChange={(e) => setFormNumber(e.target.value)} /></FormField>
           <FormField label="Project Name" required><FormInput placeholder="e.g. Villa Lebak Banten" value={formName} onChange={(e) => setFormName(e.target.value)} /></FormField>
-          <div className="border-t border-neutral-200 pt-4 mt-4">
+          <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4 mt-4">
             <p className="text-xs text-neutral-400 mb-4">Optional Fields</p>
           </div>
           <FormField label="Client"><FormInput placeholder="Client name" value={formClient} onChange={(e) => setFormClient(e.target.value)} /></FormField>
 
           {/* Styled Select for Scope */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-neutral-700">Scope</label>
+            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Scope</label>
             <Select
               options={scopeOptions}
               value={formScope}
@@ -574,7 +607,7 @@ export default function ProjectsOverviewPage() {
 
           {/* Styled Select for Typology */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-neutral-700">Building Type (Typology)</label>
+            <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">Building Type (Typology)</label>
             <Select
               options={typologyOptions}
               value={formTypology}
@@ -595,22 +628,19 @@ export default function ProjectsOverviewPage() {
       </Drawer>
 
       {/* Delete Modal */}
-      {
-        deleteTarget && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
-            <div className="relative bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 animate-in zoom-in-95">
-              <h3 className="text-lg font-bold text-neutral-900 mb-2">Delete Project?</h3>
-              <p className="text-sm text-neutral-600 mb-6">Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.</p>
-              <div className="flex gap-3">
-                <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2.5 px-4 border border-neutral-200 rounded-xl font-medium text-neutral-700 hover:bg-neutral-50">Cancel</button>
-                <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50">{isDeleting ? "Deleting..." : "Delete"}</button>
-              </div>
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
+          <div className="relative bg-white dark:bg-neutral-900 rounded-3xl shadow-xl p-6 max-w-sm w-full mx-4 animate-in zoom-in-95">
+            <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-2">Delete Project?</h3>
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-6">Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteTarget(null)} className="flex-1 py-3 px-4 border border-neutral-200 dark:border-neutral-800 rounded-2xl font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all">Cancel</button>
+              <button onClick={handleDelete} disabled={isDeleting} className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-semibold hover:bg-red-700 disabled:opacity-50 transition-all">{isDeleting ? "Deleting..." : "Delete"}</button>
             </div>
           </div>
-        )
-      }
-
-    </ProjectsPageWrapper>
+        </div>
+      )}
+    </StandardPageWrapper>
   );
 }

@@ -323,7 +323,7 @@ export default function FrameSocialPage() {
                 {/* ============================================================ */}
                 {/* MOBILE CONTENT — Tab-based routing (lg:hidden in wrapper)    */}
                 {/* ============================================================ */}
-                <div className="lg:hidden">
+                <div className="md:hidden">
                     {activeSection === "account-detail" && viewingAccount ? (
                         <AccountDetailPage
                             account={viewingAccount}
@@ -446,7 +446,7 @@ export default function FrameSocialPage() {
                 {/* ============================================================ */}
                 {/* DESKTOP CONTENT — Section-based (hidden on mobile)           */}
                 {/* ============================================================ */}
-                <div className="hidden lg:block">
+                <div className="hidden md:block">
                     {activeSection === "overview" && (
                         <>
                             <SocialPageHeader

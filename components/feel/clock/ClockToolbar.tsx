@@ -50,18 +50,18 @@ export function ClockToolbar({
             <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
                 {/* Search Pill */}
                 <div className="relative group max-w-xs w-full">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-blue-500 transition-colors" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 group-focus-within:text-neutral-600 transition-colors" />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => onSearchChange(e.target.value)}
-                        placeholder="Search requests..."
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-neutral-200 rounded-full text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                        placeholder="Search..."
+                        className="w-full pl-9 pr-4 py-2 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-800 rounded-full text-[12px] outline-none focus:border-neutral-400 focus:ring-4 focus:ring-black/5 transition-all shadow-sm"
                     />
                 </div>
 
                 {/* Filter Tabs Pill */}
-                <div className="hidden sm:flex items-center p-1 bg-neutral-100 rounded-full border border-neutral-200 shadow-inner">
+                <div className="hidden sm:flex items-center p-1 bg-neutral-100/50 dark:bg-neutral-900/50 backdrop-blur-sm rounded-full border border-neutral-200 dark:border-neutral-800 shadow-sm">
                     {tabs.map((tab) => {
                         const isActive = activeTab === tab.id;
                         return (
@@ -69,10 +69,10 @@ export function ClockToolbar({
                                 key={tab.id}
                                 onClick={() => onTabChange(tab.id)}
                                 className={clsx(
-                                    "px-4 py-1.5 rounded-full text-xs font-bold transition-all relative z-10",
+                                    "px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all relative z-10",
                                     isActive
-                                        ? "bg-neutral-900 text-white shadow-md"
-                                        : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-200/50"
+                                        ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 shadow-md"
+                                        : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
                                 )}
                             >
                                 {tab.label}
@@ -88,10 +88,10 @@ export function ClockToolbar({
                     <button
                         onClick={onSort}
                         className={clsx(
-                            "w-9 h-9 flex items-center justify-center rounded-full border transition-all",
+                            "w-9 h-9 flex items-center justify-center rounded-full border transition-all active:scale-95",
                             sortActive
-                                ? "bg-blue-50 border-blue-200 text-blue-600"
-                                : "bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:border-neutral-300"
+                                ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 border-neutral-900 dark:border-white shadow-md shadow-black/10"
+                                : "bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border-neutral-200 dark:border-neutral-800 text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800"
                         )}
                         title="Sort"
                     >
@@ -105,10 +105,10 @@ export function ClockToolbar({
                         onClick={onExport}
                         disabled={isExporting}
                         className={clsx(
-                            "w-9 h-9 flex items-center justify-center rounded-full border transition-all",
+                            "w-9 h-9 flex items-center justify-center rounded-full border transition-all active:scale-95",
                             isExporting
-                                ? "bg-neutral-100 border-neutral-200 text-neutral-400 cursor-not-allowed"
-                                : "bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:border-neutral-300"
+                                ? "bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-400 cursor-not-allowed"
+                                : "bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border-neutral-200 dark:border-neutral-800 text-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-800 shadow-sm"
                         )}
                         title="Export PDF"
                     >
@@ -121,19 +121,19 @@ export function ClockToolbar({
                 )}
 
                 {/* Date Navigation Pill */}
-                <div className="flex items-center bg-white border border-neutral-200 rounded-full p-1 shadow-sm">
+                <div className="flex items-center bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200 dark:border-neutral-800 rounded-full p-1 shadow-sm">
                     <button
                         onClick={() => onMonthChange("prev")}
-                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 text-neutral-500 transition-colors"
+                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors"
                     >
                         <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <span className="px-4 text-xs font-bold text-neutral-700 select-none min-w-[100px] text-center">
+                    <span className="px-4 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider select-none min-w-[120px] text-center">
                         {format(currentDate, "MMMM yyyy")}
                     </span>
                     <button
                         onClick={() => onMonthChange("next")}
-                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 text-neutral-500 transition-colors"
+                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 transition-colors"
                     >
                         <ChevronRight className="w-4 h-4" />
                     </button>
@@ -142,7 +142,7 @@ export function ClockToolbar({
 
             {/* Mobile Tabs Fallback */}
             <div className="flex sm:hidden w-full overflow-x-auto pb-2 scrollbar-none">
-                <div className="flex items-center p-1 bg-neutral-100 rounded-full border border-neutral-200 shadow-inner w-full">
+                <div className="flex items-center p-1 bg-neutral-100/50 dark:bg-neutral-900/50 backdrop-blur-sm rounded-full border border-neutral-200 dark:border-neutral-800 shadow-sm w-full">
                     {tabs.map((tab) => {
                         const isActive = activeTab === tab.id;
                         return (
@@ -150,10 +150,10 @@ export function ClockToolbar({
                                 key={tab.id}
                                 onClick={() => onTabChange(tab.id)}
                                 className={clsx(
-                                    "flex-1 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all whitespace-nowrap",
+                                    "flex-1 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap",
                                     isActive
-                                        ? "bg-neutral-900 text-white shadow-md"
-                                        : "text-neutral-500 hover:text-neutral-900"
+                                        ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-950 shadow-md"
+                                        : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
                                 )}
                             >
                                 {tab.label}

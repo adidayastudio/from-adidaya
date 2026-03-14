@@ -9,6 +9,9 @@ import { useActivityDetails } from "@/hooks/useActivityDetails";
 import { useWeekRingSummary } from "@/hooks/useWeekRingSummary";
 import useUserProfile from "@/hooks/useUserProfile";
 import { format, subDays, startOfDay, isSameDay, addDays, startOfWeek } from "date-fns";
+import PageWrapper from "@/components/layout/PageWrapper";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { useHeader } from "@/components/providers/HeaderProvider";
 
 // Helper to draw a single ring arc that supports overflow up to 300% (iOS Fitness style)
 // Layer 1: 0-100% (base color)
@@ -132,6 +135,46 @@ export default function ActivitySummaryPage() {
 
     const weekRings = useWeekRingSummary(mode, allDates);
 
+    const handleTodayClick = () => {
+        const d = new Date();
+        setSelectedDate(d);
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
+        }
+    };
+
+    // Register Header Content to global WebHeader
+    useHeader({
+        middle: (
+            <span className="text-[13px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                {format(selectedDate, 'EEEE, d MMM')}
+            </span>
+        ),
+        right: (
+            <div className="flex items-center gap-1 bg-white/40 dark:bg-neutral-800/20 backdrop-blur-xl p-1 rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm mr-1">
+                <button
+                    onClick={handleTodayClick}
+                    className="px-3 py-1 rounded-full hover:bg-white/60 dark:hover:bg-neutral-700/60 transition-all text-[11px] font-bold text-neutral-600 dark:text-neutral-300">
+                    Today
+                </button>
+                {isManager && (
+                    <button
+                        onClick={() => setMode(mode === "personal" ? "team" : "personal")}
+                        className={clsx(
+                            "w-7 h-7 rounded-full flex items-center justify-center transition-all",
+                            mode === "team"
+                                ? "bg-blue-500 text-white"
+                                : "hover:bg-white/60 dark:hover:bg-neutral-700/60 text-neutral-600 dark:text-neutral-300"
+                        )}
+                    >
+                        {mode === "team" ? <Users className="w-3.5 h-3.5" strokeWidth={2.5} /> : <User className="w-3.5 h-3.5" strokeWidth={2.5} />}
+                    </button>
+                )}
+            </div>
+        )
+    }, selectedDate?.getTime());
+
+
     const WEEKS_DATA = Array.from({ length: PAST_WEEKS }).map((_, weekIdx) => {
         const weekStart = subDays(currentWeekStart, (PAST_WEEKS - 1 - weekIdx) * 7);
         return Array.from({ length: 7 }).map((_, dayIdx) => {
@@ -153,268 +196,205 @@ export default function ActivitySummaryPage() {
         });
     });
 
-    const handleTodayClick = () => {
-        const d = new Date();
-        setSelectedDate(d);
-        if (scrollContainerRef.current) {
-            scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
-        }
-    };
-
-
     return (
-        <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 pb-24 font-sans text-neutral-900 dark:text-white relative">
-            {/* Liquid Glass Header - Fixed to viewport */}
-            <div
-                className="fixed top-0 left-0 right-0 md:left-[var(--sidebar-width)] z-[100] backdrop-blur-[48px] saturate-[220%] border-b border-white/30 dark:border-white/10 transition-all"
-                style={{
-                    background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)'
-                }}
-            >
-                <div className="flex items-center justify-between px-4 pt-10 pb-4">
-                    <div className="flex-1 flex justify-start">
+        <PageWrapper
+            sidebar={<DashboardSidebar />}
+            isTransparent
+        >
+            <div className="w-full animate-in fade-in duration-500">
+                {/* Mobile Header - Only on small screens (strictly hidden on Tablet/Web) */}
+                <div className="md:hidden">
+                    <div className="flex items-center justify-between mb-4">
                         <button
                             onClick={() => router.back()}
-                            className="w-10 h-10 rounded-full bg-white dark:bg-neutral-800 shadow-[0_2px_10px_rgba(0,0,0,0.06)] dark:shadow-none flex items-center justify-center border border-neutral-100 dark:border-neutral-700 active:scale-95 transition-transform"
+                            className="w-9 h-9 rounded-full bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/5 flex items-center justify-center text-neutral-500 hover:text-neutral-900 dark:hover:text-white active:scale-95 transition-all shadow-sm"
                         >
-                            <ChevronLeft className="w-5 h-5 text-neutral-800 dark:text-neutral-200" strokeWidth={2} />
+                            <ChevronLeft size={20} strokeWidth={2} />
                         </button>
-                    </div>
-
-                    <div className="flex-[2] flex justify-center">
-                        <h1 className="text-base font-bold text-neutral-900 dark:text-white tracking-tight">
-                            {format(selectedDate, 'EEEE d MMM')}
-                        </h1>
-                    </div>
-
-                    <div className="flex-1 flex justify-end items-center gap-2">
-                        <button
-                            onClick={handleTodayClick}
-                            className="px-4 py-2 rounded-full bg-white dark:bg-neutral-800 shadow-[0_2px_10px_rgba(0,0,0,0.06)] dark:shadow-none border border-neutral-100 dark:border-neutral-700 active:scale-95 transition-transform text-xs font-bold text-neutral-900 dark:text-white">
-                            Today
-                        </button>
-                        {isManager && (
+                        <div className="text-center">
+                            <h1 className="text-[18px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                                My Activity
+                            </h1>
+                            <p className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 mt-0.5">
+                                {format(selectedDate, 'EEEE, MMMM d')}
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-1.5">
                             <button
-                                onClick={() => setMode(mode === "personal" ? "team" : "personal")}
-                                className={clsx(
-                                    "w-10 h-10 rounded-full flex items-center justify-center shadow-[0_2px_10px_rgba(0,0,0,0.06)] dark:shadow-none border active:scale-95 transition-all text-sm font-bold",
-                                    mode === "team"
-                                        ? "bg-blue-500 border-blue-500 text-white"
-                                        : "bg-white dark:bg-neutral-800 border-neutral-100 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300"
-                                )}
+                                onClick={handleTodayClick}
+                                className="px-3 py-1.5 rounded-full bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/5 active:scale-95 transition-all text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 shadow-sm"
                             >
-                                {mode === "team" ? <Users className="w-4 h-4" strokeWidth={2.5} /> : <User className="w-4 h-4" strokeWidth={2.5} />}
+                                Today
                             </button>
-                        )}
+                            {isManager && (
+                                <button
+                                    onClick={() => setMode(mode === "personal" ? "team" : "personal")}
+                                    className={clsx(
+                                        "w-9 h-9 rounded-full flex items-center justify-center shadow-sm border active:scale-95 transition-all",
+                                        mode === "team"
+                                            ? "bg-blue-500 border-blue-500 text-white"
+                                            : "bg-white/50 dark:bg-neutral-800/50 border-black/5 dark:border-white/5 text-neutral-500 dark:text-neutral-400"
+                                    )}
+                                >
+                                    {mode === "team" ? <Users className="w-4 h-4" strokeWidth={2.5} /> : <User className="w-4 h-4" strokeWidth={2.5} />}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Spacer to push content below the fixed header (pt-10 + 40px content + pb-4 = ~96px) */}
-            <div className="h-[96px]" />
-
-            <div className="pt-6">
                 {/* Weekly Calendar Rings */}
-                <div ref={scrollContainerRef} className="w-full flex overflow-x-auto snap-x snap-mandatory hide-scrollbar mb-10 pb-2 pt-1 scroll-smooth">
-                    {WEEKS_DATA.map((week, wIdx) => (
-                        <div key={wIdx} className="w-full min-w-full flex justify-between px-6 snap-center flex-shrink-0">
-                            {week.map((day, idx) => (
-                                <div
-                                    key={idx}
-                                    className="flex flex-col items-center gap-2 cursor-pointer"
-                                    onClick={() => setSelectedDate(day.dateObj)}
-                                >
-                                    <span className={clsx(
-                                        "text-[10px] font-bold",
-                                        day.isSelected ? "text-neutral-900 dark:text-white" : "text-neutral-400"
-                                    )}>
-                                        {day.day}
-                                    </span>
+                <div className="pt-2">
+                    <div ref={scrollContainerRef} className="w-full flex overflow-x-auto snap-x snap-mandatory hide-scrollbar mb-10 pb-2 pt-1 scroll-smooth">
+                        {WEEKS_DATA.map((week, wIdx) => (
+                            <div key={wIdx} className="w-full min-w-full flex justify-between snap-center flex-shrink-0">
+                                {week.map((day, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="flex flex-col items-center gap-2 cursor-pointer group"
+                                        onClick={() => setSelectedDate(day.dateObj)}
+                                    >
+                                        <span className={clsx(
+                                            "text-[10px] font-bold uppercase tracking-widest",
+                                            day.isSelected ? "text-neutral-900 dark:text-white" : "text-neutral-400 group-hover:text-neutral-600 transition-colors"
+                                        )}>
+                                            {day.day}
+                                        </span>
 
-                                    <div className="relative">
-                                        {day.isSelected && (
-                                            <div className="absolute -inset-1 bg-neutral-800 dark:bg-neutral-200 rounded-full -z-10" />
-                                        )}
-                                        <SVGRings size={32} strokeWidth={3} tasks={day.tasks} presence={day.presence} pulse={day.pulse} isActive={day.isSelected} />
+                                        <div className="relative">
+                                            {day.isSelected && (
+                                                <div className="absolute -inset-1 bg-neutral-100 dark:bg-neutral-800 rounded-full -z-10 shadow-sm" />
+                                            )}
+                                            <SVGRings size={32} strokeWidth={3} tasks={day.tasks} presence={day.presence} pulse={day.pulse} isActive={day.isSelected} />
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    ))}
-                </div>
-
-                {/* Giant Center Ring */}
-                <div className="flex justify-center mb-6 relative">
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-400/10 dark:bg-blue-500/10 blur-3xl rounded-full pointer-events-none" />
-                    <SVGRings size={240} strokeWidth={24} tasks={details.tasks.percentage} presence={details.presence.percentage} pulse={details.pulse.percentage} isActive={true} />
-                </div>
-
-
-
-
-                {/* Detailed Cards */}
-                <div className="px-4 space-y-4">
-
-                    {/* Tasks Card */}
-                    <div className="bg-white dark:bg-neutral-900 rounded-[32px] p-6 shadow-sm border border-neutral-100 dark:border-neutral-800">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2 text-blue-500 font-bold text-[11px] tracking-wider uppercase">
-                                <Target className="w-4 h-4" strokeWidth={2.5} />
-                                Tasks
+                                ))}
                             </div>
-                            <span className="text-[11px] font-bold text-blue-400 uppercase tracking-widest">
-                                {details.tasks.assignedToday === "-" ? "0" : details.tasks.assignedToday} Tasks Today
-                            </span>
-                        </div>
+                        ))}
+                    </div>
 
-                        <div className="flex items-baseline gap-1 mb-6">
-                            <span className="text-5xl font-extrabold text-blue-500 tracking-tighter">
-                                {details.tasks.percentage === "-" ? "-" : details.tasks.percentage}
-                            </span>
-                            <span className="text-xl font-bold text-neutral-300 dark:text-neutral-600">/100%</span>
-                            <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400 ml-2">completed today</span>
-                        </div>
+                    {/* Giant Center Ring */}
+                    <div className="flex justify-center mb-10 relative">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-400/5 dark:bg-blue-500/5 blur-3xl rounded-full pointer-events-none" />
+                        <SVGRings size={240} strokeWidth={20} tasks={details.tasks.percentage} presence={details.presence.percentage} pulse={details.pulse.percentage} isActive={true} />
+                    </div>
 
-                        {/* Hourly Chart */}
-                        <div className="h-24 flex items-end justify-between px-2 w-full">
-                            {details.tasks.hourly.map((hData) => {
-                                // Find max value safely to scale the chart
-                                const maxVal = Math.max(...details.tasks.hourly.map(d => d.value), 1);
-                                const heightPercent = hData.value > 0 ? (hData.value / maxVal) * 100 : 0;
-
-                                return (
-                                    <div key={hData.hour} className="relative w-full h-full flex flex-col justify-end items-center group px-[1px]">
-                                        <div className={clsx(
-                                            "w-full max-w-[12px] rounded-full transition-all duration-500",
-                                            hData.value > 0 ? "bg-blue-500" : "bg-transparent"
-                                        )} style={{ height: `${heightPercent}%` }} />
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        {/* Chart axis */}
-                        <div className="flex justify-between text-[10px] font-bold text-neutral-400 mt-2 px-1">
-                            <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
-                        </div>
-
-                        {/* Insight */}
-                        {details.tasks.insight && (
-                            <div className="flex items-center gap-2 pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800">
-                                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                                <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                    {details.tasks.insight}
+                    {/* Detailed Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Tasks Card */}
+                        <div className="bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm rounded-[32px] p-6 shadow-sm border border-neutral-200/60 dark:border-neutral-800/60 transition-all hover:bg-white dark:hover:bg-neutral-900">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2 text-blue-500 font-bold text-[10px] tracking-widest uppercase">
+                                    <Target className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                    Tasks
+                                </div>
+                                <span className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+                                    {details.tasks.assignedToday === "-" ? "0" : details.tasks.assignedToday} Today
                                 </span>
                             </div>
-                        )}
-                    </div>
 
-                    {/* Presence Card */}
-                    <div className="bg-white dark:bg-neutral-900 rounded-[32px] p-6 shadow-sm border border-neutral-100 dark:border-neutral-800">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2 text-emerald-500 font-bold text-[11px] tracking-wider uppercase">
-                                <User className="w-4 h-4" strokeWidth={2.5} />
-                                Presence
+                            <div className="flex items-baseline gap-1 mb-6">
+                                <span className="text-5xl font-black text-blue-500 tracking-tighter">
+                                    {details.tasks.percentage === "-" ? "-" : details.tasks.percentage}
+                                </span>
+                                <span className="text-xl font-bold text-neutral-300 dark:text-neutral-600">%</span>
                             </div>
-                            <div className="flex flex-col items-end">
-                                <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-widest">
+
+                            {/* Hourly Chart */}
+                            <div className="h-16 flex items-end justify-between px-1 w-full gap-1">
+                                {details.tasks.hourly.map((hData) => {
+                                    const maxVal = Math.max(...details.tasks.hourly.map(d => d.value), 1);
+                                    const heightPercent = hData.value > 0 ? (hData.value / maxVal) * 100 : 5;
+
+                                    return (
+                                        <div key={hData.hour} className="relative w-full h-full flex flex-col justify-end items-center">
+                                            <div className={clsx(
+                                                "w-full rounded-full transition-all duration-500",
+                                                hData.value > 0 ? "bg-blue-500" : "bg-blue-50/30 dark:bg-blue-500/5"
+                                            )} style={{ height: `${heightPercent}%` }} />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="flex justify-between text-[9px] font-bold text-neutral-400 mt-2 px-1">
+                                <span>00</span><span>12</span><span>24</span>
+                            </div>
+                        </div>
+
+                        {/* Presence Card */}
+                        <div className="bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm rounded-[32px] p-6 shadow-sm border border-neutral-200/60 dark:border-neutral-800/60 transition-all hover:bg-white dark:hover:bg-neutral-900">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2 text-emerald-500 font-bold text-[10px] tracking-widest uppercase">
+                                    <User className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                    Presence
+                                </div>
+                                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">
                                     {details.presence.loggedHours === "-" ? "-" : Number(details.presence.loggedHours).toFixed(1)}H Logged
                                 </span>
-                                <span className="text-[9px] font-medium text-neutral-400 uppercase tracking-wider">
-                                    / {details.presence.expectedHours === "-" ? "-" : Number(details.presence.expectedHours).toFixed(1)}H EXPECTED
-                                </span>
                             </div>
-                        </div>
 
-                        <div className="flex items-baseline gap-1 mb-6">
-                            <span className="text-5xl font-extrabold text-emerald-500 tracking-tighter">
-                                {details.presence.percentage === "-" ? "-" : details.presence.percentage}
-                            </span>
-                            <span className="text-xl font-bold text-neutral-300 dark:text-neutral-600">/100%</span>
-                            <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400 ml-2">attendance rate</span>
-                        </div>
+                            <div className="flex items-baseline gap-1 mb-6">
+                                <span className="text-5xl font-black text-emerald-500 tracking-tighter">
+                                    {details.presence.percentage === "-" ? "-" : details.presence.percentage}
+                                </span>
+                                <span className="text-xl font-bold text-neutral-300 dark:text-neutral-600">%</span>
+                            </div>
 
-                        {/* Hourly Presence Map (Green Blocks) */}
-                        <div className="h-12 flex items-end justify-between px-2 w-full gap-[2px]">
-                            {details.presence.hourly.map((hData) => {
-                                // Value is either 0 or 100 for personal, or a ratio for team
-                                return (
+                            {/* Hourly Presence Map */}
+                            <div className="h-16 flex items-end justify-between px-1 w-full gap-1">
+                                {details.presence.hourly.map((hData) => (
                                     <div key={hData.hour} className={clsx(
-                                        "flex-1 rounded-t-lg transition-all h-full",
-                                        hData.value === 100 ? "bg-emerald-500" :
-                                            hData.value > 0 ? "bg-emerald-500/50" : "bg-emerald-50 dark:bg-emerald-500/10 h-[20%]"
-                                    )} title={`Hour ${hData.hour}: ${hData.value}%`} />
-                                );
-                            })}
-                        </div>
-                        <div className="flex justify-between text-[10px] font-bold text-neutral-400 mt-2 px-1">
-                            <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
+                                        "flex-1 rounded-full transition-all",
+                                        hData.value === 100 ? "bg-emerald-500 h-full" :
+                                            hData.value > 0 ? "bg-emerald-500/50 h-full" : "bg-emerald-50/30 dark:bg-emerald-500/5 h-[20%]"
+                                    )} />
+                                ))}
+                            </div>
+                            <div className="flex justify-between text-[9px] font-bold text-neutral-400 mt-2 px-1">
+                                <span>00</span><span>12</span><span>24</span>
+                            </div>
                         </div>
 
-                        {/* Insight */}
-                        {details.presence.insight && (
-                            <div className="flex items-center gap-2 pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800">
-                                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                    {details.presence.insight}
+                        {/* Pulse Card */}
+                        <div className="bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm rounded-[32px] p-6 shadow-sm border border-neutral-200/60 dark:border-neutral-800/60 transition-all hover:bg-white dark:hover:bg-neutral-900">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2 text-amber-500 font-bold text-[10px] tracking-widest uppercase">
+                                    <Activity className="w-3.5 h-3.5" strokeWidth={2.5} />
+                                    Pulse
+                                </div>
+                                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">
+                                    {details.pulse.avg7Days === "-" ? "-" : details.pulse.avg7Days} Day Avg
                                 </span>
                             </div>
-                        )}
-                    </div>
 
-                    {/* Pulse Card */}
-                    <div className="bg-white dark:bg-neutral-900 rounded-[32px] p-6 shadow-sm border border-neutral-100 dark:border-neutral-800 mb-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center gap-2 text-amber-500 font-bold text-[11px] tracking-wider uppercase">
-                                <Activity className="w-4 h-4" strokeWidth={2.5} />
-                                Pulse
-                            </div>
-                            <span className="text-[11px] font-bold text-amber-400 uppercase tracking-widest">
-                                {details.pulse.avg7Days === "-" ? "-" : `${details.pulse.avg7Days} Avg/Day`}
-                            </span>
-                        </div>
-
-                        <div className="flex items-baseline gap-1 mb-6">
-                            <span className="text-5xl font-extrabold text-amber-500 tracking-tighter">
-                                {details.pulse.percentage === "-" ? "-" : details.pulse.percentage}
-                            </span>
-                            <span className="text-xl font-bold text-neutral-300 dark:text-neutral-600">/100%</span>
-                            <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400 ml-2">momentum vs avg</span>
-                        </div>
-
-                        {/* Hourly Chart */}
-                        <div className="h-24 flex items-end justify-between px-2 w-full">
-                            {details.pulse.hourly.map((hData) => {
-                                // Ratio capped at 150
-                                const heightPercent = hData.value > 0 ? (hData.value / 150) * 100 : 0;
-
-                                return (
-                                    <div key={hData.hour} className="relative w-full h-full flex flex-col justify-end items-center group px-[1px]">
-                                        <div className={clsx(
-                                            "w-full max-w-[12px] rounded-full transition-all duration-500",
-                                            hData.value > 100 ? "bg-amber-400" : hData.value > 0 ? "bg-amber-500" : "bg-transparent"
-                                        )} style={{ height: `${Math.min(heightPercent, 100)}%` }} />
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        {/* Chart axis */}
-                        <div className="flex justify-between text-[10px] font-bold text-neutral-400 mt-2 px-1">
-                            <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
-                        </div>
-
-                        {/* Insight */}
-                        {details.pulse.insight && (
-                            <div className="flex items-center gap-2 pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800">
-                                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                                <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                                    {details.pulse.insight}
+                            <div className="flex items-baseline gap-1 mb-6">
+                                <span className="text-5xl font-black text-amber-500 tracking-tighter">
+                                    {details.pulse.percentage === "-" ? "-" : details.pulse.percentage}
                                 </span>
+                                <span className="text-xl font-bold text-neutral-300 dark:text-neutral-600">%</span>
                             </div>
-                        )}
-                    </div>
 
+                            {/* Hourly Chart */}
+                            <div className="h-16 flex items-end justify-between px-1 w-full gap-1">
+                                {details.pulse.hourly.map((hData) => {
+                                    const heightPercent = hData.value > 0 ? (hData.value / 150) * 100 : 5;
+                                    return (
+                                        <div key={hData.hour} className="relative w-full h-full flex flex-col justify-end items-center">
+                                            <div className={clsx(
+                                                "w-full rounded-full transition-all duration-500",
+                                                hData.value > 100 ? "bg-amber-400" : hData.value > 0 ? "bg-amber-500" : "bg-amber-50/30 dark:bg-amber-500/5"
+                                            )} style={{ height: `${Math.min(heightPercent, 100)}%` }} />
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div className="flex justify-between text-[9px] font-bold text-neutral-400 mt-2 px-1">
+                                <span>00</span><span>12</span><span>24</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </PageWrapper>
     );
 }

@@ -51,49 +51,44 @@ export function CultureSidebar({ activeSection, onSectionChange, viewMode }: Cul
   return (
     <>
       {/* DESKTOP SIDEBAR - Matches ClockSidebar logic exactly */}
-      <aside className="w-full h-full hidden lg:flex flex-col justify-between pb-6">
-        <div className="space-y-6 pt-2">
-          <div className="space-y-1">
-            {mainItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNav(item.id)}
-                className={clsx(
-                  "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
-                  activeSection === item.id
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-neutral-600 hover:bg-neutral-50"
-                )}
-              >
-                <span className={clsx("transition-colors", activeSection === item.id ? "text-blue-600" : "text-neutral-400")}>
-                  <item.icon className="w-4 h-4" />
-                </span>
-                <span>{item.label}</span>
-              </button>
-            ))}
+      <aside className="w-full h-full hidden lg:flex flex-col pt-0">
+        <div className="space-y-0.5">
+          <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest px-3 mb-2 leading-none">Culture</div>
+          {mainItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleNav(item.id)}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                activeSection === item.id
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+              )}
+            >
+              <item.icon className={clsx("w-4 h-4 shrink-0 transition-colors", activeSection === item.id ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate">{item.label}</span>
+            </button>
+          ))}
 
-            {/* Separator for More Items (Desktop only) */}
-            <div className="pt-4 mt-4 border-t border-neutral-100 px-3">
-              <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-2 block">Resources</span>
-            </div>
-            {MORE_MENU.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNav(item.id)}
-                className={clsx(
-                  "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
-                  activeSection === item.id
-                    ? "text-blue-600 bg-blue-50"
-                    : "text-neutral-600 hover:bg-neutral-50"
-                )}
-              >
-                <span className={clsx("transition-colors", activeSection === item.id ? "text-blue-600" : "text-neutral-400")}>
-                  <item.icon className="w-4 h-4" />
-                </span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
+          {/* Separator for More Items (Desktop only) */}
+          <div className="h-px bg-neutral-200/30 dark:bg-neutral-800/30 my-4 mx-3" />
+          <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest px-3 mb-2 leading-none">Resources</div>
+          
+          {MORE_MENU.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleNav(item.id)}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                activeSection === item.id
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+              )}
+            >
+              <item.icon className={clsx("w-4 h-4 shrink-0 transition-colors", activeSection === item.id ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate">{item.label}</span>
+            </button>
+          ))}
         </div>
       </aside>
 

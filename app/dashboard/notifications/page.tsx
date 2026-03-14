@@ -21,17 +21,29 @@ function NotificationsPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-4 md:p-6 relative">
-      <Breadcrumb
-        items={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Notifications", href: "/dashboard/notifications" },
-          { label: labels[section] || "All" }
-        ]}
-      />
-
-      <PageWrapper sidebar={<DashboardSidebar />}>
-        <NotificationsContent section={section} />
+    <div className="bg-transparent p-0 transition-colors">
+      <PageWrapper
+        sidebar={<DashboardSidebar />}
+        isTransparent
+        header={
+          <div className="hidden lg:block mb-0">
+            <div className="flex items-center justify-between gap-4 pt-0">
+              <div>
+                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+                  Notifications
+                </h1>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+                  Stay updated with the latest alerts, mentions, and system updates.
+                </p>
+              </div>
+            </div>
+            <div className="border-b border-neutral-200 dark:border-neutral-800 mt-5" />
+          </div>
+        }
+      >
+        <div className="space-y-8 w-full animate-in fade-in duration-500">
+          <NotificationsContent section={section} />
+        </div>
       </PageWrapper>
     </div>
   );

@@ -64,58 +64,35 @@ export default function SettingsSidebar({ activeView, onViewChange }: SettingsSi
   };
 
   return (
-    <aside className="w-full h-full flex flex-col justify-between pb-6">
-      <div className="space-y-6 pt-2">
-        {/* MOBILE PROFILE CARD */}
-        {profile && (
-          <div className="px-4 py-6 flex flex-col items-center border-b border-neutral-100 mb-2">
-            <div className="w-20 h-20 rounded-full bg-neutral-200 overflow-hidden mb-3">
-              {profile.avatarUrl ? (
-                <img src={profile.avatarUrl} alt={profile.name} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-2xl font-semibold text-neutral-400">
-                  {profile.name?.charAt(0)}
-                </div>
-              )}
-            </div>
-            <h3 className="text-lg font-bold text-neutral-900">{profile.name}</h3>
-            <p className="text-sm text-neutral-500">{profile.email}</p>
-            <div className="mt-3 px-3 py-1 rounded-full bg-neutral-100 text-xs font-medium text-neutral-600 border border-neutral-200">
-              {profile.department || "No Department"} • {profile.role}
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-1">
+      <aside className="w-full h-full flex flex-col pt-0">
+        <div className="space-y-0.5 mb-4">
+          <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest px-3 mb-2 leading-none">Settings</div>
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => onViewChange(item.id)}
               className={clsx(
-                "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                 activeView === item.id
-                  ? "text-neutral-900 bg-neutral-100"
-                  : "text-neutral-600 hover:bg-neutral-50"
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
               )}
             >
-              <span className={clsx("transition-colors", activeView === item.id ? "text-neutral-900" : "text-neutral-400")}>
-                <item.icon className="w-4 h-4" />
-              </span>
-              <span>{item.label}</span>
+              <item.icon className={clsx("w-4 h-4 shrink-0 transition-colors", activeView === item.id ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate">{item.label}</span>
             </button>
           ))}
         </div>
-      </div>
 
-      <div className="mt-auto px-3 border-t border-neutral-100 pt-4">
-        <button
-          onClick={handleLogout}
-          className="w-full text-left rounded-lg text-sm font-medium transition-all flex items-center gap-2 text-red-600 hover:bg-red-50 py-2 px-3"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Log Out</span>
-        </button>
-      </div>
-    </aside>
+        <div className="mt-auto px-0 border-t border-neutral-200/30 dark:border-neutral-800/30 pt-4">
+          <button
+            onClick={handleLogout}
+            className="w-full text-left rounded-lg text-[12px] font-medium transition-all flex items-center gap-2.5 text-red-600 hover:bg-red-500/10 py-1.5 px-3"
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span className="truncate">Log Out</span>
+          </button>
+        </div>
+      </aside>
   );
 }

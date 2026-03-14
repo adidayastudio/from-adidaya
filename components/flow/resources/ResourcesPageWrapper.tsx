@@ -159,11 +159,9 @@ export default function ResourcesPageWrapper({
             </div>
 
             {/* DESKTOP LAYOUT */}
-            <div className="hidden lg:block min-h-screen bg-neutral-50 dark:bg-neutral-950 p-6">
-                <Breadcrumb items={breadcrumbItems} />
-                <PageWrapper sidebar={sidebar}>
+            <div className="hidden lg:block bg-transparent p-0 transition-colors">
+                <PageWrapper sidebar={sidebar} isTransparent>
                     <div className="space-y-8 w-full animate-in fade-in duration-500">
-                        {header}
                         {children}
                     </div>
                 </PageWrapper>

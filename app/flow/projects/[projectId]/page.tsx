@@ -1,10 +1,9 @@
 "use client";
 
-import PageWrapper from "@/components/layout/PageWrapper";
+import StandardPageWrapper from "@/components/layout/StandardPageWrapper";
 import ProjectDetailSidebar from "@/components/flow/projects/project-detail/ProjectDetailSidebar";
 import ProjectDetailHeader from "@/components/flow/projects/project-detail/ProjectDetailHeader";
 import ProjectDetailOverviewContent from "@/components/flow/projects/project-detail/overview/ProjectDetailOverviewContent";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { useProject } from "@/components/flow/project-context";
 import { mapProjectToHeader } from "@/lib/flow/mappers/project-header";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
@@ -32,21 +31,19 @@ export default function ProjectOverviewPage() {
   const projectForComponents = mapProjectToHeader(project);
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
-      <Breadcrumb
-        items={[
-          { label: "Flow" },
-          { label: "Projects", href: "/flow/projects" },
-          { label: breadcrumbLabel },
-        ]}
-      />
-
-      <PageWrapper sidebar={<ProjectDetailSidebar />}>
-        <div className="space-y-6">
-          <ProjectDetailHeader project={projectForComponents as any} />
-          <ProjectDetailOverviewContent project={projectForComponents as any} />
-        </div>
-      </PageWrapper>
-    </div>
+    <StandardPageWrapper
+      breadcrumbItems={[
+        { label: "Flow" },
+        { label: "Projects", href: "/flow/projects" },
+        { label: breadcrumbLabel },
+      ]}
+      sidebar={<ProjectDetailSidebar />}
+      isTransparent
+    >
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <ProjectDetailHeader project={projectForComponents as any} />
+        <ProjectDetailOverviewContent project={projectForComponents as any} />
+      </div>
+    </StandardPageWrapper>
   );
 }

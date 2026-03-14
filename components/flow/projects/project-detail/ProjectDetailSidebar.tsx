@@ -79,23 +79,23 @@ export default function ProjectDetailSidebar() {
   return (
     <>
       {/* DESKTOP SIDEBAR */}
-      <aside className="w-full h-full hidden lg:flex flex-col justify-between pb-6">
-        <div className="space-y-6 pt-2">
+      <aside className="w-full hidden lg:flex flex-col">
+        <div className="space-y-4 pt-0">
           {/* Back link - redesigned */}
           <Link
             href="/flow/projects"
-            className="group inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-red-600 transition-colors"
+            className="group inline-flex items-center gap-2.5 text-[12px] text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 transition-all font-medium px-3"
           >
-            <span className="w-6 h-6 rounded-full bg-neutral-100 group-hover:bg-red-50 flex items-center justify-center transition-colors">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <span className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200 dark:group-hover:bg-neutral-700 flex items-center justify-center transition-colors">
+              <svg className="w-3 h-3 translate-x-[-0.5px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
               </svg>
             </span>
-            <span>Back to Projects</span>
+            <span>Projects</span>
           </Link>
 
           {/* Main Nav */}
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {NAV_ITEMS.map((item) => {
               const active = isActive(item.href);
               return (
@@ -103,47 +103,43 @@ export default function ProjectDetailSidebar() {
                   key={item.label}
                   href={`${basePath}${item.href}`}
                   className={clsx(
-                    "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
+                    "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                     active
-                      ? "text-red-600 bg-red-50"
-                      : "text-neutral-600 hover:bg-neutral-50"
+                      ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                      : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                   )}
                 >
-                  <span className={clsx("transition-colors", active ? "text-red-600" : "text-neutral-400")}>
-                    <item.icon className="w-4 h-4" />
-                  </span>
-                  <span>{item.label}</span>
+                  <item.icon className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                  <span className="truncate">{item.label}</span>
                 </Link>
               );
             })}
 
             {/* Setup Accordion */}
-            <div>
+            <div className="pt-2">
               <button
                 onClick={() => setSetupOpen((v) => !v)}
                 className={clsx(
-                  "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
+                  "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                   isSetupRoute
-                    ? "text-neutral-900" // Open but not "active" red
-                    : "text-neutral-600 hover:bg-neutral-50"
+                    ? "text-neutral-900 dark:text-white font-semibold"
+                    : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                 )}
               >
-                <span className={clsx("transition-colors", isSetupRoute ? "text-neutral-900" : "text-neutral-400")}>
-                  <Settings className="w-4 h-4" />
-                </span>
-                <span className="flex-1">Setup</span>
+                <Settings className={clsx("w-4 h-4 shrink-0 transition-colors", isSetupRoute ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                <span className="flex-1 truncate">Setup</span>
                 <svg
-                  className={clsx("w-4 h-4 text-neutral-400 transition-transform", setupOpen && "rotate-180")}
+                  className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", setupOpen && "rotate-180")}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
               {setupOpen && (
-                <div className="ml-3 mt-1 space-y-1 border-l border-neutral-200 pl-3">
+                <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
                   {SETUP_ITEMS.map((item) => {
                     const active = isSetupItemActive(item.key);
                     return (
@@ -151,16 +147,14 @@ export default function ProjectDetailSidebar() {
                         key={item.key}
                         href={`${basePath}/setup/${item.key}`}
                         className={clsx(
-                          "w-full text-left rounded-lg px-3 py-2 text-sm transition-all flex items-center gap-2",
+                          "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                           active
-                            ? "text-red-600 bg-red-50 font-medium"
-                            : "text-neutral-600 hover:bg-neutral-50"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                         )}
                       >
-                        <span className={clsx("transition-colors", active ? "text-red-600" : "text-neutral-400")}>
-                          <item.icon className="w-4 h-4" />
-                        </span>
-                        <span>{item.label}</span>
+                        <item.icon className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                        <span className="truncate">{item.label}</span>
                       </Link>
                     );
                   })}

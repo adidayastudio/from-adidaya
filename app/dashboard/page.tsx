@@ -9,6 +9,8 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import useUserProfile from "@/hooks/useUserProfile";
+import StandardPageWrapper from "@/components/layout/StandardPageWrapper";
+import StandardPageHeader from "@/components/layout/StandardPageHeader";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import {
   Globe,
@@ -69,9 +71,10 @@ export default function DashboardPage() {
   // Mock metrics for demo
   const mockMetrics: WorkMetrics = {
     tasksCompleted: 3,
-    tasksOpened: 5,
+    tasksTotal: 5,
     tasksOverdue: 0,
-    tasksRescheduled: 0,
+    attendanceRate: 100,
+    pulseScore: 85,
     activeTasks: 4,
     criticalTasksOpen: 0,
     timeLoggedHours: 7.5,
@@ -210,7 +213,6 @@ export default function DashboardPage() {
     { label: "Culture", href: "/feel/culture", icon: Sparkles, color: "text-blue-500", bg: "bg-gradient-to-br from-blue-100/80 to-blue-50/40 border-blue-200/40", category: "FEEL" },
     { label: "Calendar", href: "/feel/calendar", icon: Calendar, color: "text-blue-500", bg: "bg-gradient-to-br from-blue-100/80 to-blue-50/40 border-blue-200/40", category: "FEEL" },
   ];
-
   // Logic for displaying favorites (sorted by category + default state)
   const displayFavorites = favorites.length > 0
     ? [...favorites].sort((a, b) => {
@@ -221,13 +223,13 @@ export default function DashboardPage() {
     : ["Projects", "Finance", "Crew"];
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 md:p-6 relative transition-colors">
-      <Breadcrumb items={[{ label: "Dashboard" }]} className="hidden md:flex" />
-
-      <PageWrapper sidebar={<DashboardSidebar />}>
-        <div className="md:mx-0 -mx-4">
-          <div className="w-full pb-32 md:px-0 px-4">
-
+    <div className="w-full h-full relative transition-colors">
+      <StandardPageWrapper 
+        breadcrumbItems={[{ label: "Dashboard" }]}
+        isTransparent
+        fullWidth
+      >
+        <div className="w-full pb-32">
             {/* NEW REVAMPED DASHBOARD (MOBILE) */}
             <div className="md:hidden">
               <DashboardHeader onOpenNotifications={() => setIsNotifSheetOpen(true)} />
@@ -236,35 +238,31 @@ export default function DashboardPage() {
               <WorkspaceGrid />
             </div>
 
-            {/* DESKTOP DASHBOARD */}
-            <div className="hidden md:block space-y-8">
-              {/* Desktop Greeting */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-white">
-                    {phase.greeting}, {profile?.name?.split(' ')[0] || "Team"}
-                  </h1>
-                  <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                    {phase.message}
-                  </p>
-                </div>
-                <div className={clsx("w-10 h-10 rounded-2xl flex items-center justify-center", phase.bg, phase.border, "border")}>
-                  <PhaseIcon className={clsx("w-5 h-5", phase.color)} strokeWidth={2} />
-                </div>
-              </div>
+            {/* DESKTOP DASHBOARD (macOS Style + Standard Pattern) */}
+            <div className="hidden md:block">
+              <StandardPageHeader 
+                title={`${phase.greeting}, ${profile?.name?.split(' ')[0] || "Team"}`}
+                subtitle={phase.message}
+                action={
+                  <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm backdrop-blur-md border", phase.bg, phase.border)}>
+                    <PhaseIcon className={clsx("w-6 h-6", phase.color)} strokeWidth={2.5} />
+                  </div>
+                }
+              />
 
-              {/* Activity Summary + Vibe Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ActivitySummaryCard />
-                <VibeCard />
+              <div className="space-y-8">
+                {/* Top Row: Activity and Vibe */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <ActivitySummaryCard />
+                  <VibeCard />
+                </div>
+                
+                {/* Bottom Row: Workspace Grid full width */}
+                <WorkspaceGrid />
               </div>
-
-              {/* Workspace Grid (replaces old icon grid) */}
-              <WorkspaceGrid />
             </div>
           </div>
-        </div>
-      </PageWrapper>
+      </StandardPageWrapper>
 
 
 
@@ -291,7 +289,7 @@ export default function DashboardPage() {
                 <div className="w-12 h-1.5 bg-neutral-300/60 rounded-full" />
               </div>
 
-              <div className="px-6 py-4 flex items-center justify-between">
+              <div className="py-4 flex items-center justify-between">
                 <h3 className="text-xl font-bold text-neutral-800 dark:text-white tracking-tight">My Favorite Apps</h3>
                 <button
                   onClick={() => setIsEditMode(true)}
@@ -302,7 +300,7 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              <div className="px-6 pb-32 overflow-y-auto max-h-[75vh] space-y-10 scrollbar-hide">
+              <div className="pb-32 overflow-y-auto max-h-[75vh] space-y-10 scrollbar-hide">
                 {/* FAVORITES SECTION */}
                 <div className="grid grid-cols-4 gap-y-8 gap-x-2">
                   {favorites.length > 0 ? (

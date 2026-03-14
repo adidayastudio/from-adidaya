@@ -17,18 +17,18 @@ const APPS = [
 
 export default function WorkspaceGrid() {
     return (
-        <div className="mt-4 mb-32 md:mt-0 md:mb-0 relative z-10 w-full overflow-hidden px-4 md:px-0">
-            <h2 className="text-[12px] font-bold text-neutral-500 uppercase tracking-widest mb-4">
+        <div className="mt-8 relative z-10 w-full">
+            <h2 className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.2em] mb-4 px-1">
                 Workspace
             </h2>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pb-6 md:pb-0 pt-2 md:pt-0">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {APPS.map((app) => (
                     <Link
                         key={app.label}
                         href={app.href}
                         className={clsx(
-                            "relative overflow-hidden rounded-[24px] h-[95px] p-4 flex flex-col justify-end transition-all active:scale-[0.96] shadow-sm border",
+                            "relative overflow-hidden rounded-[24px] h-[100px] p-4 flex flex-col justify-end transition-all hover:scale-[1.02] hover:shadow-md active:scale-[0.96] shadow-sm border backdrop-blur-md",
                             "bg-gradient-to-br",
                             app.color,
                             app.border
@@ -39,7 +39,7 @@ export default function WorkspaceGrid() {
                         </span>
 
                         {/* Large faded icon at the top right */}
-                        <div className={clsx("absolute top-2 right-2 pointer-events-none transform scale-110 opacity-40 dark:opacity-20", app.iconColor)}>
+                        <div className={clsx("absolute top-2 right-2 pointer-events-none transform scale-110 opacity-30 dark:opacity-20 transition-transform group-hover:scale-125", app.iconColor)}>
                             <app.icon className="w-12 h-12" strokeWidth={2} />
                         </div>
                     </Link>

@@ -488,7 +488,7 @@ export default function LearnDetailPage() {
     // --- Mobile Top Bar (matches Learn browse page toolbar style) ---
     const mobileTopBar = !isShared ? (
         <div className={clsx(
-            "lg:hidden fixed top-0 left-0 right-0 z-50 pt-12 pointer-events-none"
+            "md:hidden fixed top-0 left-0 right-0 z-50 pt-12 pointer-events-none"
         )}>
             {/* Background Mask */}
             <div className={clsx(
@@ -718,7 +718,7 @@ export default function LearnDetailPage() {
             )}
             {/* Related Items - Mobile only (desktop shows in sidebar) */}
             {!isShared && relatedItems.length > 0 && (
-                <div className="lg:hidden space-y-3 mt-2">
+                <div className="md:hidden space-y-3 mt-2">
                     <h3 className="text-[12px] font-bold text-neutral-400 uppercase tracking-widest">Related</h3>
                     <div className="space-y-2">
                         {relatedItems.map(related => (
@@ -851,7 +851,7 @@ export default function LearnDetailPage() {
 
                 <PageWrapper
                     sidebar={
-                        <div className="hidden lg:block">
+                        <div className="hidden md:block">
                             <DetailSidebar
                                 item={item}
                                 activeChapter={activeChapter}

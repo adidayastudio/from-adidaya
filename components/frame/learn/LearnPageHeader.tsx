@@ -1,7 +1,6 @@
 "use client";
 
 import { ViewToggle } from "@/shared/ui/layout/ViewToggle";
-import { PageHeader } from "@/shared/ui/headers/PageHeader";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Input } from "@/shared/ui/primitives/input/input";
 import { Select } from "@/shared/ui/primitives/select/select";
@@ -35,52 +34,58 @@ export default function LearnPageHeader({
   onTypeChange,
   activeQuickView
 }: Props) {
-  // Ensure we have valid options even if activeQuickView is undefined initially
   const typeOptions = getTypeOptions(activeQuickView || "all");
 
   return (
-    <div className="space-y-4">
-      <div className="hidden lg:block">
-        <PageHeader
-          title="Learn"
-          description="Access SOPs, guidelines, templates, and organizational knowledge."
-          actions={
-            <div className="flex items-center gap-3">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                <Input
-                  value={searchQuery}
-                  onChange={e => onSearchChange(e.target.value)}
-                  placeholder="Search knowledge..."
-                  inputSize="sm"
-                  className="pl-9 w-64"
-                />
-              </div>
-
-              {/* Add Knowledge */}
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={onAddKnowledge}
-                icon={<Plus className="w-4 h-4" />}
-              >
-                Add Knowledge
-              </Button>
+    <div className="space-y-6">
+      {/* Premium Desktop Header */}
+      <div className="hidden lg:block mb-0">
+        <div className="flex items-center justify-between gap-4 pt-0">
+          <div>
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+              Knowledge Center
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+              Access SOPs, guidelines, templates, and organizational knowledge.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+              <Input
+                value={searchQuery}
+                onChange={e => onSearchChange(e.target.value)}
+                placeholder="Search knowledge..."
+                inputSize="sm"
+                className="pl-9 w-64 rounded-full bg-white dark:bg-neutral-900/50 border-neutral-200 dark:border-neutral-800 focus:ring-black/5"
+              />
             </div>
-          }
-        />
+
+            {/* Add Knowledge */}
+            <Button
+              variant="primary"
+              className="rounded-full h-9 px-4 text-[11px] font-bold uppercase tracking-wider shadow-md shadow-blue-500/20 active:scale-95 transition-all"
+              onClick={onAddKnowledge}
+              icon={<Plus className="w-4 h-4" />}
+            >
+              Add Knowledge
+            </Button>
+          </div>
+        </div>
+        <div className="border-b border-neutral-200 dark:border-neutral-800 mt-5" />
       </div>
 
-      <div className="hidden lg:flex justify-between items-center">
-        {/* Filters on Left */}
+      {/* Filters and Toggle Row */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Select
             value={selectedDepartment}
             options={DEPARTMENT_OPTIONS}
             onChange={(v) => onDepartmentChange(v as Department)}
             selectSize="sm"
-            className="w-40 text-xs"
+            className="w-40 text-xs rounded-lg"
           />
 
           <Select
@@ -88,7 +93,7 @@ export default function LearnPageHeader({
             options={typeOptions}
             onChange={(v) => onTypeChange(v as KnowledgeType | "ALL")}
             selectSize="sm"
-            className="w-40 text-xs"
+            className="w-40 text-xs rounded-lg"
           />
         </div>
 
@@ -97,8 +102,8 @@ export default function LearnPageHeader({
           value={view}
           onChange={onChangeView}
           options={[
-            { value: "list", label: "List", icon: <List className="w-4 h-4" /> },
-            { value: "grouped", label: "Grouped", icon: <LayoutList className="w-4 h-4" /> },
+            { value: "list", label: "List View", icon: <List className="w-4 h-4" /> },
+            { value: "grouped", label: "Grouped View", icon: <LayoutList className="w-4 h-4" /> },
           ]}
         />
       </div>

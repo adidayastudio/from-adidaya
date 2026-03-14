@@ -19,10 +19,10 @@ export default function FinanceHeader({ title, subtitle, action, hideToggle }: F
             </div>
 
             {/* Desktop: Full layout */}
-            <div className="hidden lg:block space-y-4">
+            <div className="hidden lg:block space-y-4 pt-0 lg:px-0">
                 <div className="flex flex-row items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">{title}</h1>
+                        <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">{title}</h1>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">{subtitle}</p>
                     </div>
                     <div className="flex items-center gap-3">

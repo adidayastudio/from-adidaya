@@ -97,7 +97,7 @@ export default function FrameSidebar({ activeSocialView, onSocialViewChange }: P
                 {/* BACK */}
                 <Link
                     href="/dashboard"
-                    className="inline-flex items-center gap-2 text-sm text-neutral-500 hover:text-neutral-900 transition-colors"
+                    className="inline-flex items-center gap-2 text-[12px] text-neutral-500 hover:text-neutral-900 transition-colors px-2"
                 >
                     ← Back to Dashboard
                 </Link>
@@ -105,11 +105,11 @@ export default function FrameSidebar({ activeSocialView, onSocialViewChange }: P
                 <div className="border-t border-neutral-100" />
 
                 {/* CONTENT MANAGER */}
-                <div className="space-y-4 flex-1 overflow-y-auto">
-                    <div className="text-xs font-semibold text-neutral-400 uppercase tracking-wider px-2">
+                <div className="space-y-0.5 flex-1 overflow-y-auto scrollbar-hide">
+                    <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest px-3 mb-2 leading-none">
                         Content Manager
                     </div>
-                    <nav className="space-y-1">
+                    <nav className="space-y-0.5">
                         {WEBSITE_SECTIONS.map((section: any) => {
                             const isAccordion = section.type === "accordion";
                             const isActive = isAccordion
@@ -125,17 +125,17 @@ export default function FrameSidebar({ activeSocialView, onSocialViewChange }: P
                                         key={section.label}
                                         href={section.href}
                                         className={clsx(
-                                            "group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                                            "group flex items-center justify-between rounded-lg px-3 py-1.5 text-[12px] transition-all",
                                             isActive
-                                                ? "bg-orange-50 text-orange-600"
-                                                : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900"
+                                                ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                                                : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                                         )}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <section.icon className={clsx("w-4 h-4", isActive ? "text-orange-600" : "text-neutral-400 group-hover:text-neutral-600")} />
-                                            {section.label}
+                                        <div className="flex items-center gap-2.5">
+                                            <section.icon className={clsx("w-4 h-4 shrink-0 transition-colors", isActive ? "text-neutral-900 dark:text-white" : "text-neutral-400 group-hover:text-neutral-600")} />
+                                            <span className="truncate">{section.label}</span>
                                         </div>
-                                        {section.count && <span className="text-xs text-neutral-400">{section.count}</span>}
+                                        {section.count && <span className="text-[10px] text-neutral-400 font-bold">{section.count}</span>}
                                     </Link>
                                 );
                             }
@@ -146,22 +146,22 @@ export default function FrameSidebar({ activeSocialView, onSocialViewChange }: P
                                     <button
                                         onClick={() => toggleSection(section.id)}
                                         className={clsx(
-                                            "w-full group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all hover:bg-neutral-50",
+                                            "w-full group flex items-center justify-between rounded-lg px-3 py-1.5 text-[12px] transition-all",
                                             isActive
-                                                ? "bg-orange-50 text-orange-600"
-                                                : "text-neutral-600"
+                                                ? "text-neutral-900 dark:text-white bg-neutral-500/5 dark:bg-neutral-400/10 font-semibold"
+                                                : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                                         )}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <section.icon className={clsx("w-4 h-4", isActive ? "text-orange-600" : "text-neutral-400 group-hover:text-neutral-600")} />
-                                            {section.label}
+                                        <div className="flex items-center gap-2.5">
+                                            <section.icon className={clsx("w-4 h-4 shrink-0 transition-colors", isActive ? "text-neutral-900 dark:text-white" : "text-neutral-400 group-hover:text-neutral-600")} />
+                                            <span className="truncate">{section.label}</span>
                                         </div>
-                                        <ChevronDown className={clsx("w-3 h-3 text-neutral-400 transition-transform", isExpanded && "rotate-180")} />
+                                        <ChevronDown className={clsx("w-3 h-3 text-neutral-400 transition-transform opacity-50", isExpanded && "rotate-180")} />
                                     </button>
 
                                     {/* SUB ITEMS */}
                                     {isExpanded && (
-                                        <div className="ml-9 space-y-0.5 border-l border-neutral-100 pl-2">
+                                        <div className="ml-4 space-y-0.5 border-l border-neutral-200/50 dark:border-neutral-800/50 pl-2 mt-0.5">
                                             {section.items.map((item: any) => {
                                                 const isItemActive = pathname === item.href;
                                                 return (
@@ -169,10 +169,10 @@ export default function FrameSidebar({ activeSocialView, onSocialViewChange }: P
                                                         key={item.label}
                                                         href={item.href}
                                                         className={clsx(
-                                                            "block rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                                                            "block rounded-md px-3 py-1.5 text-[12px] transition-all",
                                                             isItemActive
-                                                                ? "bg-orange-50 text-orange-600"
-                                                                : "text-neutral-500 hover:bg-neutral-50 hover:text-neutral-900"
+                                                                ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold"
+                                                                : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                                                         )}
                                                     >
                                                         {item.label}

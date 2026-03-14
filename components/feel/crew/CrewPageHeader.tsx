@@ -37,66 +37,83 @@ export default function CrewPageHeader({
 }) {
   return (
     <div className="space-y-6">
-      {/* Standard Header */}
-      <div className="flex flex-col gap-6">
-        <div className="flex items-start justify-between border-b border-neutral-200 pb-4">
+      {/* Premium Desktop Header */}
+      <div className="hidden lg:block mb-0">
+        <div className="flex items-center justify-between gap-4 pt-0">
           <div>
-            <h1 className="text-2xl font-bold text-neutral-900">Crew</h1>
-            <p className="text-sm text-neutral-500 mt-1">Manage crew members, roles, and responsibilities.</p>
+            <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+              Crew Directory
+            </h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+              Manage crew members, roles, assignments, and availability.
+            </p>
           </div>
-          <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />} onClick={onAddCrew}>
-            Add Crew
-          </Button>
+          
+          <div className="flex items-center gap-2">
+             <Button
+                variant="secondary"
+                className="rounded-full h-9 px-4 text-[11px] font-bold uppercase tracking-wider text-neutral-600 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-800 shadow-sm active:scale-95"
+                onClick={onAddCrew}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                Add Crew
+              </Button>
+          </div>
         </div>
+        <div className="border-b border-neutral-200 dark:border-neutral-800 mt-5" />
       </div>
 
       {/* Toolbar: Filters & View Toggle */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex items-center justify-between gap-3 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm p-1.5 rounded-full border border-neutral-200/60 dark:border-neutral-800/60 transition-all shadow-sm">
         {/* Filters */}
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 group-focus-within:text-brand-red transition-colors" />
+        <div className="flex items-center gap-2 flex-1 scrollbar-none overflow-x-auto">
+          <div className="relative group min-w-[200px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 group-focus-within:text-neutral-600 transition-colors" />
             <Input
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search crew..."
-              inputSize="sm"
-              className="pl-9 w-64"
+              placeholder="Search..."
+              className="pl-9 h-9 text-[12px] bg-white dark:bg-neutral-950 border-neutral-200/80 dark:border-neutral-800 focus:ring-blue-100 placeholder:text-neutral-400 py-1 rounded-full"
             />
           </div>
 
-          <Select
-            value="all"
-            options={[
-              { value: "all", label: "All Roles" },
-              { value: "mandor", label: "Mandor" },
-              { value: "tukang", label: "Tukang" },
-              { value: "worker", label: "Worker" },
-            ]}
-            onChange={() => { }}
-            selectSize="sm"
-            className="w-40"
-          />
+          <div className="hidden md:flex items-center gap-2">
+            <Select
+              value="all"
+              options={[
+                { value: "all", label: "All Roles" },
+                { value: "mandor", label: "Mandor" },
+                { value: "tukang", label: "Tukang" },
+                { value: "worker", label: "Worker" },
+              ]}
+              onChange={() => { }}
+              selectSize="sm"
+              className="w-36 h-9 text-[11px] font-bold uppercase tracking-wider bg-white dark:bg-neutral-950 border-neutral-200/80 dark:border-neutral-800 rounded-full"
+            />
 
-          <Select
-            value="all"
-            options={[
-              { value: "all", label: "All Status" },
-              { value: "active", label: "Active" },
-              { value: "inactive", label: "Inactive" },
-            ]}
-            onChange={() => { }}
-            selectSize="sm"
-            className="w-36"
-          />
+            <Select
+              value="all"
+              options={[
+                { value: "all", label: "All Status" },
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+              ]}
+              onChange={() => { }}
+              selectSize="sm"
+              className="w-32 h-9 text-[11px] font-bold uppercase tracking-wider bg-white dark:bg-neutral-950 border-neutral-200/80 dark:border-neutral-800 rounded-full"
+            />
+          </div>
         </div>
 
         {/* View Toggle */}
-        <ViewToggle<CrewView>
-          value={view}
-          onChange={onChangeView}
-          options={VIEW_OPTIONS}
-        />
+        <div className="flex items-center gap-2 shrink-0 pr-1">
+          <ViewToggle<CrewView>
+            value={view}
+            onChange={onChangeView}
+            options={VIEW_OPTIONS}
+            className="hidden md:flex"
+          />
+        </div>
       </div>
     </div>
   );

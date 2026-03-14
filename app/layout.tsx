@@ -58,6 +58,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             className="fixed inset-0 pointer-events-none z-[9999]"
           />
 
+          {/* macOS Desktop Background - Desktop only */}
+          <div className="hidden md:block fixed inset-0 z-[-1] pointer-events-none bg-gradient-to-br from-[#E2E8F0] via-[#CBD5E1] to-[#94A3B8] dark:from-[#0F172A] dark:via-[#1E293B] dark:to-[#020617]" />
+          <div className="hidden md:block fixed inset-0 z-[-1] pointer-events-none opacity-50 dark:opacity-20">
+            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/20 blur-[120px] rounded-full" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-400/20 blur-[120px] rounded-full" />
+          </div>
+
           <SidebarWrapper>{children}</SidebarWrapper>
         </ThemeProvider>
       </body>

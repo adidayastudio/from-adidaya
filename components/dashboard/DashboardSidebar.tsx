@@ -173,30 +173,6 @@ export default function DashboardSidebar() {
             </button>
           </div>
         </div>
-
-        {/* NAVIGATION */}
-        <div className="space-y-1">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={clsx(
-                  "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
-                  active
-                    ? "text-neutral-900 bg-neutral-100"
-                    : "text-neutral-600 hover:bg-neutral-50"
-                )}
-              >
-                {item.icon && (
-                  <item.icon className={clsx("w-4 h-4 transition-colors", active ? "text-neutral-900" : "text-neutral-400")} />
-                )}
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
       </aside>
 
       <ClockActionModal

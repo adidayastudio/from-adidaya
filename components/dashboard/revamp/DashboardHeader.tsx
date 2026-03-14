@@ -147,29 +147,32 @@ export default function DashboardHeader({ onOpenNotifications }: DashboardHeader
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ duration: 0.1 }}
-                className="absolute top-14 right-0 w-48 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 dark:border-neutral-800 z-50 p-1.5 origin-top-right transition-colors"
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className="absolute top-14 right-0 w-44 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-3xl rounded-[22px] shadow-[0_20px_40px_rgba(0,0,0,0.15)] border border-white/80 dark:border-white/10 z-50 p-1 origin-top-right transition-colors overflow-hidden"
               >
+                {/* Subtle top highlight glow */}
+                <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+
                 <button
                   onClick={() => { setIsMeMenuOpen(false); router.push("/feel/people/profile"); }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50 transition-colors text-left text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[12px] hover:bg-white/40 dark:hover:bg-white/5 transition-all text-left text-[12px] font-semibold text-neutral-800 dark:text-neutral-100 group"
                 >
-                  <User className="w-4 h-4" />
+                  <User size={13} strokeWidth={2.5} className="text-neutral-500 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
                   Profile
                 </button>
                 <button
                   onClick={() => { setIsMeMenuOpen(false); router.push("/settings"); }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50 transition-colors text-left text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[12px] hover:bg-white/40 dark:hover:bg-white/5 transition-all text-left text-[12px] font-semibold text-neutral-800 dark:text-neutral-100 group"
                 >
-                  <Settings className="w-4 h-4" />
+                  <Settings size={13} strokeWidth={2.5} className="text-neutral-500 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
                   Settings
                 </button>
-                <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1 transition-colors" />
+                <div className="h-px bg-neutral-800/5 dark:bg-white/5 my-0.5 mx-1 transition-colors" />
                 <button
                   onClick={() => { setIsMeMenuOpen(false); handleLogout(); }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50/50 text-red-600 transition-colors text-left text-sm font-medium"
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[12px] hover:bg-red-500/10 transition-all text-left text-[12px] font-bold text-red-500 group"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut size={13} strokeWidth={2.5} />
                   Log Out
                 </button>
               </motion.div>

@@ -37,25 +37,22 @@ export default function LearnSidebar({ activeView, onViewChange }: Props) {
   return (
     <>
       {/* DESKTOP SIDEBAR */}
-      <div className="space-y-6 hidden lg:block">
-
-        <div className="space-y-1">
-          <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-1 mb-2">Browse</div>
+      <div className="space-y-4 hidden lg:block overflow-y-auto max-h-full scrollbar-hide">
+        <div className="space-y-0.5">
+          <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest px-3 mb-2 leading-none">Browse</div>
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => onViewChange(item.id)}
               className={clsx(
-                "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                 activeView === item.id
-                  ? "text-orange-600 bg-orange-50"
-                  : "text-neutral-600 hover:bg-neutral-50"
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
               )}
             >
-              <span className={clsx("transition-colors", activeView === item.id ? "text-orange-600" : "text-neutral-400")}>
-                <item.icon className="w-4 h-4" />
-              </span>
-              <span>{item.label}</span>
+              <item.icon className={clsx("w-4 h-4 shrink-0 transition-colors", activeView === item.id ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate">{item.label}</span>
             </button>
           ))}
         </div>

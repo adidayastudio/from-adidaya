@@ -10,6 +10,10 @@ import { canViewTeamData } from "@/lib/auth-utils";
 import { FEEL_APPS } from "@/lib/navigation-config";
 import { ClockProvider } from "./ClockContext";
 import ClockMobileViewToggle from "./ClockMobileViewToggle";
+import { motion } from "framer-motion";
+import clsx from "clsx";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 
 // Define Clock Tabs matching ClockSidebar logic
 // Href uses query params to switch sections
@@ -37,6 +41,7 @@ interface ClockPageWrapperProps {
         title: string;
         highlight?: boolean;
     };
+    activeTabId?: string; // Add this to highlight active tab
 }
 
 export default function ClockPageWrapper({
@@ -49,14 +54,15 @@ export default function ClockPageWrapper({
     fabAction
 }: ClockPageWrapperProps) {
 
-    // Filter tabs for mobile usage
     const isManager = canViewTeamData(role);
     const filteredTabs = CLOCK_TABS.filter(tab => tab.id !== "approvals" || isManager);
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     return (
         <>
             {/* MOBILE LAYOUT */}
-            <div className="lg:hidden min-h-screen bg-neutral-100 pb-20">
+            <div className="md:hidden min-h-screen bg-neutral-100 pb-20">
                 {/* Single-row liquid glass nav bar */}
                 <LiquidMobileHeader
                     title="Clock"
@@ -86,8 +92,7 @@ export default function ClockPageWrapper({
             </div>
 
             {/* DESKTOP LAYOUT */}
-            <div className="hidden lg:block min-h-screen bg-neutral-50 p-6">
-                <Breadcrumb items={breadcrumbItems} />
+            <div className="hidden md:block bg-transparent p-0 transition-colors">
                 <PageWrapper sidebar={
                     <ClockSidebar
                         activeSection={activeSection}
@@ -96,7 +101,37 @@ export default function ClockPageWrapper({
                         fabAction={fabAction}
                     />
                 } isTransparent>
-                    <div className="animate-in fade-in duration-500 pb-24 lg:pb-0 space-y-6">
+                    <div className="animate-in fade-in duration-500 space-y-8 w-full">
+                        <div className="lg:hidden flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 mb-2">
+                            {filteredTabs.map((tab) => {
+                                const isActive = activeSection === tab.id;
+                                const Icon = tab.icon;
+                                return (
+                                    <Link
+                                        key={tab.id}
+                                        href={tab.href}
+                                        className={clsx(
+                                            "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors flex-shrink-0",
+                                            isActive
+                                                ? "text-neutral-900 dark:text-white font-semibold"
+                                                : "text-neutral-500 font-medium hover:text-neutral-700"
+                                        )}
+                                    >
+                                        {isActive && (
+                                            <motion.div
+                                                layoutId="activeTabBadgeClock"
+                                                className="absolute inset-0 rounded-full bg-white dark:bg-neutral-800 shadow-sm border border-black/[0.04] dark:border-white/[0.04]"
+                                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                                            />
+                                        )}
+                                        <div className="relative z-10 flex items-center gap-2">
+                                            <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-neutral-900 dark:text-white" : "opacity-60"} />
+                                            <span className="text-[13px]">{tab.label}</span>
+                                        </div>
+                                    </Link>
+                                );
+                            })}
+                        </div>
                         {header}
                         {children}
                     </div>

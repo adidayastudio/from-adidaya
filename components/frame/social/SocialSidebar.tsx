@@ -78,35 +78,31 @@ export default function SocialSidebar({
             <aside className="w-full h-full hidden lg:block">
 
                 {/* NAVIGATION */}
-                <div className="space-y-1">
+                <div className="space-y-0.5">
                     <button
                         onClick={() => onSectionChange("overview")}
                         className={clsx(
-                            "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
+                            "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                             activeSection === "overview"
-                                ? "text-orange-600 bg-orange-50"
-                                : "text-neutral-600 hover:bg-neutral-50"
+                                ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                                : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                         )}
                     >
-                        <span className={clsx("transition-colors", activeSection === "overview" ? "text-orange-600" : "text-neutral-400")}>
-                            <LayoutDashboard className="w-4 h-4" />
-                        </span>
-                        <span>Overview</span>
+                        <LayoutDashboard className={clsx("w-4 h-4 shrink-0 transition-colors", activeSection === "overview" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                        <span className="truncate">Overview</span>
                     </button>
 
                     <button
                         onClick={() => onSectionChange("accounts")}
                         className={clsx(
-                            "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
+                            "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                             activeSection === "accounts"
-                                ? "text-orange-600 bg-orange-50"
-                                : "text-neutral-600 hover:bg-neutral-50"
+                                ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                                : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                         )}
                     >
-                        <span className={clsx("transition-colors", activeSection === "accounts" ? "text-orange-600" : "text-neutral-400")}>
-                            <Users className="w-4 h-4" />
-                        </span>
-                        <span>Account Management</span>
+                        <Users className={clsx("w-4 h-4 shrink-0 transition-colors", activeSection === "accounts" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                        <span className="truncate">Account Management</span>
                     </button>
                 </div>
 
@@ -114,45 +110,45 @@ export default function SocialSidebar({
                 {isInAccountDetail && viewingAccount && (
                     <>
                         <div className="border-t border-neutral-100" />
-                        <div className="space-y-1">
-                            <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider px-1 mb-2">
+                        <div className="space-y-0.5">
+                            <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest px-3 mb-2 leading-none">
                                 {viewingAccount.name}
                             </div>
                             <button
                                 onClick={() => onDetailTabChange?.("content")}
                                 className={clsx(
-                                    "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
-                                    activeDetailTab === "content" ? "text-orange-600 bg-orange-50" : "text-neutral-600 hover:bg-neutral-50"
+                                    "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                                    activeDetailTab === "content" 
+                                        ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]" 
+                                        : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                                 )}
                             >
-                                <span className={clsx("transition-colors", activeDetailTab === "content" ? "text-orange-600" : "text-neutral-400")}>
-                                    <FileText className="w-4 h-4" />
-                                </span>
-                                <span>Content Plan</span>
+                                <FileText className={clsx("w-4 h-4 shrink-0 transition-colors", activeDetailTab === "content" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                                <span className="truncate">Content Plan</span>
                             </button>
                             <button
                                 onClick={() => onDetailTabChange?.("settings")}
                                 className={clsx(
-                                    "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
-                                    activeDetailTab === "settings" ? "text-orange-600 bg-orange-50" : "text-neutral-600 hover:bg-neutral-50"
+                                    "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                                    activeDetailTab === "settings" 
+                                        ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]" 
+                                        : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                                 )}
                             >
-                                <span className={clsx("transition-colors", activeDetailTab === "settings" ? "text-orange-600" : "text-neutral-400")}>
-                                    <Settings className="w-4 h-4" />
-                                </span>
-                                <span>Settings</span>
+                                <Settings className={clsx("w-4 h-4 shrink-0 transition-colors", activeDetailTab === "settings" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                                <span className="truncate">Settings</span>
                             </button>
                             <button
                                 onClick={() => onDetailTabChange?.("insights")}
                                 className={clsx(
-                                    "w-full text-left rounded-lg px-3 py-2 text-sm font-medium transition-all flex items-center gap-2",
-                                    activeDetailTab === "insights" ? "text-orange-600 bg-orange-50" : "text-neutral-600 hover:bg-neutral-50"
+                                    "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                                    activeDetailTab === "insights" 
+                                        ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]" 
+                                        : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                                 )}
                             >
-                                <span className={clsx("transition-colors", activeDetailTab === "insights" ? "text-orange-600" : "text-neutral-400")}>
-                                    <BarChart className="w-4 h-4" />
-                                </span>
-                                <span>Insights</span>
+                                <BarChart className={clsx("w-4 h-4 shrink-0 transition-colors", activeDetailTab === "insights" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                                <span className="truncate">Insights</span>
                             </button>
                         </div>
                     </>
@@ -161,11 +157,11 @@ export default function SocialSidebar({
                 {/* FILTERS (only in Overview) */}
                 {isInOverview && (
                     <>
-                        <div className="border-t border-neutral-100" />
+                        <div className="h-px bg-neutral-200/30 dark:bg-neutral-800/30 my-4" />
 
                         <div className="space-y-4">
-                            <div className="space-y-1.5">
-                                <div className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Platform</div>
+                            <div className="space-y-1.5 px-1">
+                                <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest leading-none mb-2">Platform</div>
                                 <Select
                                     value={selectedPlatform}
                                     options={PLATFORMS}
@@ -175,17 +171,17 @@ export default function SocialSidebar({
                                 />
                             </div>
 
-                            <div className="space-y-1.5">
+                            <div className="space-y-1.1">
                                 <button
                                     onClick={() => setAccountsExpanded(!accountsExpanded)}
-                                    className="w-full flex items-center justify-between text-[10px] font-semibold text-neutral-400 uppercase tracking-wider hover:text-neutral-600 transition-colors"
+                                    className="w-full flex items-center justify-between text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest hover:text-neutral-600 transition-colors px-2 mb-2"
                                 >
                                     Accounts
-                                    <ChevronDown className={clsx("w-3 h-3 transition-transform", accountsExpanded && "rotate-180")} />
+                                    <ChevronDown className={clsx("w-3 h-3 transition-transform opacity-50", accountsExpanded && "rotate-180")} />
                                 </button>
 
                                 {accountsExpanded && (
-                                    <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
+                                    <div className="space-y-0.5 max-h-[200px] overflow-y-auto scrollbar-hide">
                                         {filteredAccounts.map(acc => {
                                             const isChecked = selectedAccountIds.includes(acc.id);
                                             const color = PLATFORM_COLORS[acc.platform] || "bg-neutral-400";
@@ -195,15 +191,15 @@ export default function SocialSidebar({
                                                     key={acc.id}
                                                     onClick={() => onToggleAccount(acc.id)}
                                                     className={clsx(
-                                                        "w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition-all",
+                                                        "w-full flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[12px] transition-all",
                                                         isChecked
-                                                            ? "bg-neutral-100 text-neutral-900"
-                                                            : "text-neutral-500 hover:bg-neutral-50"
+                                                            ? "bg-neutral-500/10 dark:bg-neutral-400/20 text-neutral-900 dark:text-white font-semibold"
+                                                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200"
                                                     )}
                                                 >
                                                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color}`} />
-                                                    <span className="font-medium truncate">{acc.name}</span>
-                                                    {isChecked && <span className="text-[9px] text-neutral-400 ml-auto">✓</span>}
+                                                    <span className="truncate flex-1 text-left">{acc.name}</span>
+                                                    {isChecked && <span className="text-[10px] text-neutral-400 font-bold ml-auto shrink-0">✓</span>}
                                                 </button>
                                             );
                                         })}

@@ -2507,35 +2507,35 @@ export default function PurchasingClient() {
                 </div>
 
                 {/* ADVANCED TOOLBAR - DESKTOP  */}
-                <div className="hidden md:flex flex-row gap-2 justify-between items-center p-2 rounded-2xl bg-white/40 backdrop-blur-sm border border-white/40">
+                <div className="hidden md:flex flex-row gap-2 justify-between items-center px-4 py-2 border-b border-neutral-200/40 dark:border-neutral-800/20 mb-4">
                     {/* LEFT: Search, Month, Project */}
                     <div className="flex items-center gap-2 w-full md:w-auto">
-                        <div className="h-10 flex items-center gap-2 px-3 bg-white rounded-xl border border-neutral-200 shadow-sm focus-within:ring-2 focus-within:ring-red-500/10 focus-within:border-red-500/50 transition-all w-full md:w-[200px]">
-                            <Search className="w-4 h-4 text-neutral-400" />
+                        <div className="h-9 flex items-center gap-2 px-3 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm focus-within:ring-2 focus-within:ring-red-500/10 focus-within:border-red-500/20 transition-all w-full md:w-[180px]">
+                            <Search className="w-3.5 h-3.5 text-neutral-400" />
                             <input
                                 type="text"
                                 placeholder="Search..."
-                                className="bg-transparent border-none outline-none text-sm font-medium text-neutral-700 placeholder:text-neutral-400 w-full"
+                                className="bg-transparent border-none outline-none text-[12px] font-bold text-neutral-700 dark:text-neutral-300 placeholder:text-neutral-400 w-full uppercase tracking-tight"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
 
-                        <div className="h-10 flex items-center gap-1 p-1 bg-white rounded-xl border border-neutral-200 shadow-sm">
+                        <div className="h-9 flex items-center gap-1 p-0.5 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm">
                             <button
                                 onClick={() => handleMonthChange("prev")}
-                                className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
+                                className="w-7 h-7 flex items-center justify-center hover:bg-white/60 dark:hover:bg-neutral-700/60 rounded-full text-neutral-400 hover:text-neutral-600 transition-all"
                             >
-                                <ChevronLeft className="w-4 h-4" />
+                                <ChevronLeft className="w-3.5 h-3.5" />
                             </button>
                             <button
                                 onClick={() => handleMonthChange("next")}
-                                className="w-8 h-8 flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-neutral-600 transition-all"
+                                className="w-7 h-7 flex items-center justify-center hover:bg-white/60 dark:hover:bg-neutral-700/60 rounded-full text-neutral-400 hover:text-neutral-600 transition-all"
                             >
-                                <ChevronRight className="w-4 h-4" />
+                                <ChevronRight className="w-3.5 h-3.5" />
                             </button>
-                            <div className="w-[1px] h-4 bg-neutral-200 dark:bg-neutral-700 mx-1" />
-                            <div className="px-2 text-[11px] font-bold text-neutral-400 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-[150px]">
+                            <div className="w-[1px] h-4 bg-neutral-200 dark:bg-neutral-700 mx-0.5" />
+                            <div className="px-2 text-[11px] font-bold text-neutral-400 dark:text-neutral-500 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] uppercase">
                                 {showAllMonths ? "All Time" : (
                                     format(startDate, "MMM yyyy") === format(endDate, "MMM yyyy")
                                         ? format(startDate, "MMM yyyy")
@@ -2551,7 +2551,7 @@ export default function PurchasingClient() {
                                     if (e.target.value === "ALL") setSelectedProjects([]);
                                     else if (e.target.value !== "MULTIPLE") setSelectedProjects([e.target.value]);
                                 }}
-                                className="appearance-none h-10 pl-3 pr-8 bg-white border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/50 transition-all cursor-pointer w-full md:w-auto"
+                                className="appearance-none h-9 pl-4 pr-10 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm text-[11px] font-bold text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/20 transition-all cursor-pointer w-full md:w-auto uppercase tracking-tight"
                             >
                                 <option value="ALL">All Projects</option>
                                 {selectedProjects.length > 1 && <option value="MULTIPLE" disabled>{selectedProjects.length} Projects Selected</option>}
@@ -2559,7 +2559,7 @@ export default function PurchasingClient() {
                                     <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
                                 ))}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
                         </div>
 
                         <div className="relative group">
@@ -2569,7 +2569,7 @@ export default function PurchasingClient() {
                                     if (e.target.value === "ALL") setCategoryFilters([]);
                                     else if (e.target.value !== "MULTIPLE") setCategoryFilters([e.target.value]);
                                 }}
-                                className="appearance-none h-10 pl-3 pr-8 bg-white border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/50 transition-all cursor-pointer w-full md:w-auto"
+                                className="appearance-none h-9 pl-4 pr-10 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm text-[11px] font-bold text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/20 transition-all cursor-pointer w-full md:w-auto uppercase tracking-tight"
                             >
                                 <option value="ALL">All Categories</option>
                                 {categoryFilters.length > 1 && <option value="MULTIPLE" disabled>{categoryFilters.length} Categories</option>}
@@ -2579,23 +2579,23 @@ export default function PurchasingClient() {
                                     </option>
                                 ))}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
+                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
                         </div>
                     </div>
 
                     {/* RIGHT: Export, New */}
                     <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-shrink-0">
-                        <div className="relative group/export h-10">
-                            <button className="h-10 px-4 bg-white border border-neutral-200 rounded-xl flex items-center gap-2 text-sm font-medium text-neutral-700 hover:text-neutral-900 shadow-sm hover:border-neutral-300 transition-all">
-                                <Download className="w-4 h-4" />
+                        <div className="relative group/export h-9">
+                            <button className="h-9 px-4 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm flex items-center gap-2 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 hover:bg-white/60 transition-all uppercase tracking-tight">
+                                <Download className="w-3.5 h-3.5" />
                                 <span className="hidden lg:inline">Export</span>
                             </button>
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-neutral-200 shadow-xl rounded-xl opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all flex flex-col z-50 overflow-hidden py-1">
-                                <button onClick={handleExport} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-left text-sm font-semibold text-neutral-700 transition-colors">
-                                    <FileText className="w-4 h-4 text-red-500" /> Export to PDF
+                            <div className="absolute right-0 top-full mt-2 w-48 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border border-white/40 dark:border-neutral-800 shadow-2xl rounded-2xl opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all flex flex-col z-50 overflow-hidden py-1">
+                                <button onClick={handleExport} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 text-left text-[12px] font-bold text-neutral-700 dark:text-neutral-300 transition-colors uppercase tracking-tight">
+                                    <FileText className="w-3.5 h-3.5 text-red-500" /> Export to PDF
                                 </button>
-                                <button onClick={handleExportExcel} className="flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 text-left text-sm font-semibold text-neutral-700 transition-colors">
-                                    <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to XLS
+                                <button onClick={handleExportExcel} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 text-left text-[12px] font-bold text-neutral-700 dark:text-neutral-300 transition-colors uppercase tracking-tight">
+                                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" /> Export to XLS
                                 </button>
                             </div>
                         </div>
@@ -2605,9 +2605,9 @@ export default function PurchasingClient() {
                                 setEditingItem(null);
                                 setIsDrawerOpen(true);
                             }}
-                            className="h-10 px-5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-200 active:scale-95 transition-all flex items-center gap-2"
+                            className="h-9 px-5 bg-red-600 hover:bg-red-700 text-white rounded-full text-[11px] font-bold shadow-lg shadow-red-200/50 active:scale-95 transition-all flex items-center gap-1.5 uppercase tracking-tight"
                         >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-3.5 h-3.5" />
                             <span>New</span>
                         </button>
                     </div>

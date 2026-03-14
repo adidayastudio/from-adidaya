@@ -46,10 +46,10 @@ export function PageHeader({
 }: PageHeaderProps) {
   return (
     <div className={clsx("space-y-3", className)}>
-      {/* Breadcrumbs */}
+      {/* Breadcrumbs Bubble */}
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav
-          className="hidden md:flex items-center gap-1.5 text-sm"
+          className="hidden md:flex items-center gap-2 px-3 py-1 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm text-[11px] font-bold w-fit uppercase tracking-tight"
           aria-label="Breadcrumb"
         >
           {breadcrumbs.map((item, index) => {
@@ -68,7 +68,7 @@ export function PageHeader({
                   <span
                     className={clsx(
                       isLast
-                        ? "text-neutral-900 font-medium"
+                        ? "text-neutral-900 font-bold"
                         : "text-neutral-500"
                     )}
                   >
@@ -77,7 +77,7 @@ export function PageHeader({
                 )}
 
                 {!isLast && (
-                  <span className="text-neutral-300 select-none">|</span>
+                  <span className="text-neutral-300 select-none mx-0.5">•</span>
                 )}
               </React.Fragment>
             );
@@ -158,7 +158,10 @@ export function Breadcrumb({
 }) {
   return (
     <nav
-      className={clsx("hidden md:flex items-center gap-1.5 text-sm mb-4", className)}
+      className={clsx(
+        "hidden md:flex items-center gap-2 px-3 py-1 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm text-[11px] font-bold w-fit uppercase tracking-tight", 
+        className
+      )}
       aria-label="Breadcrumb"
     >
       {items.map((item, index) => {
@@ -177,7 +180,7 @@ export function Breadcrumb({
               <span
                 className={clsx(
                   isLast
-                    ? "text-neutral-900 font-medium"
+                    ? "text-neutral-900 font-bold"
                     : "text-neutral-500"
                 )}
               >
@@ -186,7 +189,7 @@ export function Breadcrumb({
             )}
 
             {!isLast && (
-              <span className="text-neutral-300 select-none">|</span>
+              <span className="text-neutral-300 select-none mx-0.5">•</span>
             )}
           </React.Fragment>
         );

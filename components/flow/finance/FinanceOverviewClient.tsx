@@ -66,10 +66,13 @@ export default function FinanceOverviewClient() {
 
     return (
         <FinancePageWrapper
-            breadcrumbItems={[
-                { label: "Flow", href: "/flow" },
-                { label: "Finance", href: "/flow/finance" }
-            ]}
+            breadcrumbItems={[]}
+            header={
+                <FinanceHeader 
+                    title="Finance" 
+                    subtitle={viewMode === 'team' ? "Team financial health and summary." : "Your personal expense and claim summary."} 
+                />
+            }
             rightToolbar={
                 <div className="flex items-center gap-1">
                     {canAccessTeam && (
