@@ -1,24 +1,20 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ChevronLeft, ChevronRight, Search, Share2, MoreHorizontal, Bell, Sun, Moon, User, Settings, LogOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Bell, Sun, Moon, User, Settings, LogOut } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useNotifications } from "@/hooks/useNotifications";
 import useUserProfile from "@/hooks/useUserProfile";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
-import Image from "next/image";
 import { useHeader } from "@/components/providers/HeaderProvider";
 import clsx from "clsx";
 
 export default function WebHeader({
-  isSidebarOpen,
-  onToggleSidebar,
   onOpenNotifications
 }: {
-  isSidebarOpen?: boolean;
-  onToggleSidebar?: () => void;
   onOpenNotifications?: () => void;
 }) {
   const pathname = usePathname();
@@ -39,7 +35,11 @@ export default function WebHeader({
 
   // Robust history tracking 
   useEffect(() => {
-    setMounted(true);
+    const frameId = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frameId);
+  }, []);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const updateHistoryButtons = () => {
@@ -92,12 +92,15 @@ export default function WebHeader({
     .filter(Boolean)
     .filter(s => !["flow", "feel", "frame"].includes(s.toLowerCase()));
   const isVibeActive = !!headerContent.shellBackground;
+  const isFinanceRoute = pathname.includes('/flow/finance');
+  const hideDefaults = isFinanceRoute || headerContent.hideGlobalActions;
 
   return (
     <header className="h-[60px] flex items-start px-4 md:px-0 pt-0 gap-3 select-none bg-transparent absolute top-0 left-0 right-0 z-50 pointer-events-none">
       {/* Navigation Buttons Bubble */}
+      {/* Navigation Buttons Bubble */}
       <div className={clsx(
-        "flex items-center gap-0.5 p-1 rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
+        "flex h-9 items-center gap-0.5 p-1 rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
         isVibeActive
           ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md"
           : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl"
@@ -117,7 +120,7 @@ export default function WebHeader({
               )}
               title="Back"
             >
-              <ChevronLeft size={16} strokeWidth={2.5} />
+              <ChevronLeft size={16} strokeWidth={1.5} />
             </button>
             <button
               onClick={() => canGoForward && window.history.forward()}
@@ -130,15 +133,22 @@ export default function WebHeader({
               )}
               title="Forward"
             >
-              <ChevronRight size={16} strokeWidth={2.5} />
+              <ChevronRight size={16} strokeWidth={1.5} />
             </button>
           </>
         )}
       </div>
 
+      {/* Custom Left for Finance (if provided) */}
+      {isFinanceRoute && headerContent.left && (
+        <div className="pointer-events-auto">
+          {headerContent.left}
+        </div>
+      )}
+
       <div className="flex-1 flex justify-center min-w-0">
         <div className={clsx(
-          "flex items-center gap-2 px-6 py-1.5 rounded-full border shadow-sm text-xs font-bold pointer-events-auto truncate max-w-full min-h-[32px] transition-all duration-500",
+          "flex items-center gap-2 px-6 rounded-full border shadow-sm text-[11px] font-medium pointer-events-auto truncate max-w-full h-9 transition-all duration-500 tracking-tight",
           isVibeActive
             ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md text-white/90"
             : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl text-neutral-800 dark:text-neutral-200"
@@ -147,31 +157,55 @@ export default function WebHeader({
             headerContent.middle
           ) : (
             <>
-              {segments.map((segment, i) => (
-                <React.Fragment key={segment}>
-                  <span className="capitalize opacity-90 truncate">{segment}</span>
-                  {i < segments.length - 1 && (
-                    <ChevronRight size={12} className={isVibeActive ? "text-white/40" : "text-neutral-400"} />
-                  )}
-                </React.Fragment>
-              ))}
-              {segments.length === 0 && <span>Dashboard</span>}
+              {/* Desktop breadcrumbs (full) */}
+              <div className="hidden lg:flex items-center gap-2 truncate">
+                {segments.map((segment, i) => {
+                  const isDashboard = segment.toLowerCase() === 'dashboard';
+                  const path = isDashboard ? '/dashboard' : '/' + segments.slice(0, i + 1).map(s => s.toLowerCase()).join('/');
+                  return (
+                    <React.Fragment key={segment}>
+                      <Link href={path} className="capitalize opacity-90 truncate hover:opacity-100 transition-opacity">
+                        {segment}
+                      </Link>
+                      {i < segments.length - 1 && (
+                        <ChevronRight size={12} className={isVibeActive ? "text-white/40" : "text-neutral-400"} />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+
+              {/* Smaller screens breadcrumbs (current segment only) */}
+              <div className="flex lg:hidden items-center gap-2 truncate">
+                {segments.length > 0 ? (
+                  <span className="capitalize opacity-100 truncate">
+                    {segments[segments.length - 1]}
+                  </span>
+                ) : (
+                  <Link href="/dashboard" className="hover:opacity-100 transition-opacity">Dashboard</Link>
+                )}
+              </div>
+
+              {segments.length === 0 && <Link href="/dashboard" className="hidden lg:block hover:opacity-100 transition-opacity">Dashboard</Link>}
             </>
           )}
         </div>
       </div>
 
-      {/* Action Icons Bubble - NEW PORTED FROM MOBILE */}
-      <div className="flex items-center gap-1 relative" ref={meMenuRef}>
-        {headerContent.right ? (
+      {/* Action Icons Area */}
+      <div className="flex items-center gap-2 relative" ref={meMenuRef}>
+        {headerContent.right && (
           <div className="pointer-events-auto">
             {headerContent.right}
           </div>
-        ) : (
-          <>
+        )}
+
+        {/* Standard Global Icons - Individual Bubbles */}
+        {!hideDefaults && (
+          <div className="flex items-center gap-1">
             {/* Notification Bubble */}
             <div className={clsx(
-              "p-1 rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
+              "h-9 w-9 flex items-center justify-center rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
               isVibeActive
                 ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md"
                 : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl"
@@ -184,61 +218,61 @@ export default function WebHeader({
                   isVibeActive ? "hover:bg-white/10 text-white" : "hover:bg-white/20 dark:hover:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200"
                 )}
               >
-                <Bell size={16} strokeWidth={2.5} />
+                <Bell size={16} strokeWidth={1.5} />
                 {unreadCount > 0 && (
                   <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full border border-white dark:border-neutral-800" />
                 )}
               </motion.button>
             </div>
 
-            {/* Theme Bubble */}
-            <div className={clsx(
-              "p-1 rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
-              isVibeActive
-                ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md"
-                : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl"
-            )}>
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className={clsx(
-                  "p-1.5 rounded-full transition-colors",
-                  isVibeActive ? "hover:bg-white/10 text-white" : "hover:bg-white/20 dark:hover:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200"
-                )}
-              >
-                {mounted && (
-                  theme === "dark" ? (
-                    <Sun size={16} strokeWidth={2.5} />
-                  ) : (
-                    <Moon size={16} strokeWidth={2.5} />
-                  )
-                )}
-              </motion.button>
-            </div>
-
-            {/* Profile Bubble */}
-            <div className={clsx(
-              "p-1 rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
-              isVibeActive
-                ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md"
-                : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl"
-            )}>
-              <motion.button
-                whileTap={{ scale: 0.92 }}
-                onClick={() => setIsMeMenuOpen(!isMeMenuOpen)}
-                className={clsx(
-                  "w-[28px] h-[28px] rounded-full transition-all overflow-hidden flex items-center justify-center",
-                  isVibeActive ? "hover:bg-white/10 text-white" : "hover:bg-white/20 dark:hover:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200"
-                )}
-              >
-                {profile?.avatarUrl ? (
-                  <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+          {/* Theme Bubble */}
+          <div className={clsx(
+            "h-9 w-9 flex items-center justify-center rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
+            isVibeActive
+              ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md"
+              : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl"
+          )}>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className={clsx(
+                "p-1.5 rounded-full transition-colors",
+                isVibeActive ? "hover:bg-white/10 text-white" : "hover:bg-white/20 dark:hover:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200"
+              )}
+            >
+              {mounted && (
+                theme === "dark" ? (
+                  <Sun size={16} strokeWidth={1.5} />
                 ) : (
-                  <User size={16} strokeWidth={2.5} />
-                )}
-              </motion.button>
-            </div>
-          </>
+                  <Moon size={16} strokeWidth={1.5} />
+                )
+              )}
+            </motion.button>
+          </div>
+
+          {/* Profile Bubble */}
+          <div className={clsx(
+            "h-9 w-9 flex items-center justify-center rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
+            isVibeActive
+              ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md"
+              : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl"
+          )}>
+            <motion.button
+              whileTap={{ scale: 0.92 }}
+              onClick={() => setIsMeMenuOpen(!isMeMenuOpen)}
+              className={clsx(
+                "w-[28px] h-[28px] rounded-full transition-all overflow-hidden flex items-center justify-center",
+                isVibeActive ? "hover:bg-white/10 text-white" : "hover:bg-white/20 dark:hover:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200"
+              )}
+            >
+              {profile?.avatarUrl ? (
+                <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User size={16} strokeWidth={1.5} />
+              )}
+            </motion.button>
+          </div>
+        </div>
         )}
         {/* Me Menu Dropdown - Web specific positioning */}
         <AnimatePresence>
@@ -260,24 +294,24 @@ export default function WebHeader({
 
               <button
                 onClick={() => { setIsMeMenuOpen(false); router.push("/feel/people/profile"); }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[12px] hover:bg-white/40 dark:hover:bg-white/5 transition-all text-left text-[12px] font-semibold text-neutral-800 dark:text-neutral-100 group"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[12px] hover:bg-white/40 dark:hover:bg-white/5 transition-all text-left text-[12px] font-medium text-neutral-800 dark:text-neutral-100 group"
               >
-                <User size={13} strokeWidth={2.5} className="text-neutral-500 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
+                <User size={13} strokeWidth={1.5} className="text-neutral-500 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
                 Profile
               </button>
               <button
                 onClick={() => { setIsMeMenuOpen(false); router.push("/settings"); }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[12px] hover:bg-white/40 dark:hover:bg-white/5 transition-all text-left text-[12px] font-semibold text-neutral-800 dark:text-neutral-100 group"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[12px] hover:bg-white/40 dark:hover:bg-white/5 transition-all text-left text-[12px] font-medium text-neutral-800 dark:text-neutral-100 group"
               >
-                <Settings size={13} strokeWidth={2.5} className="text-neutral-500 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
+                <Settings size={13} strokeWidth={1.5} className="text-neutral-500 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors" />
                 Settings
               </button>
               <div className="h-px bg-neutral-800/5 dark:bg-white/5 my-0.5 mx-1 transition-colors" />
               <button
                 onClick={() => { setIsMeMenuOpen(false); handleLogout(); }}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[12px] hover:bg-red-500/10 transition-all text-left text-[12px] font-bold text-red-500 group"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[12px] hover:bg-red-500/10 transition-all text-left text-[12px] font-medium text-red-500 group"
               >
-                <LogOut size={13} strokeWidth={2.5} />
+                <LogOut size={13} strokeWidth={1.5} />
                 Log Out
               </button>
             </motion.div>

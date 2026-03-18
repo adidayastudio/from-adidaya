@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef, Fragment } from "react";
 import { generateExport, ExportAttachment, ExportMetadata } from "@/lib/export/export-utils";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
-import { useFinance } from "./FinanceContext";
+import { useFinance } from "@/components/flow/finance/FinanceContext";
 import {
     Search,
     Eye,
@@ -120,7 +120,7 @@ function RejectModal({ item, onClose, onReject }: { item: any, onClose: () => vo
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder="Reason..."
-                    className="w-full h-32 p-4 text-sm border border-neutral-200 rounded-xl bg-neutral-50 mb-6 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                    className="w-full h-32 p-4 text-sm border border-neutral-200 rounded-xl bg-neutral-50 mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
                 <div className="flex gap-3">
                     <button onClick={onClose} className="flex-1 py-2.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-xl transition-all">Cancel</button>
@@ -150,7 +150,7 @@ function Pagination({
     if (totalItems === 0) return null;
 
     return (
-        <div className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border-t border-neutral-100 dark:border-neutral-800">
+        <div className="flex items-center justify-between px-6 py-4">
             <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">
                 Showing <span className="text-neutral-900 dark:text-white">{startItem}-{endItem}</span> of <span className="text-neutral-900 dark:text-white">{totalItems}</span>
             </div>
@@ -173,7 +173,7 @@ function Pagination({
                                     className={clsx(
                                         "w-8 h-8 rounded-full text-xs font-bold transition-all",
                                         currentPage === page
-                                            ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-lg shadow-neutral-200 dark:shadow-none"
+                                            ? "bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
                                             : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                     )}
                                 >
@@ -543,7 +543,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                                                     </button>
                                                     <button
                                                         onClick={() => setProofFiles(prev => prev.filter((_, i) => i !== idx))}
-                                                        className="w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                                        className="w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
                                                     >
                                                         <X className="w-4 h-4" />
                                                     </button>
@@ -570,7 +570,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                                         </div>
                                         <div className="flex flex-col items-center gap-1">
                                             <span className="font-bold text-[13px] text-neutral-600 group-hover:text-blue-700">Upload Images/PDFs</span>
-                                            <span className="text-[10px] font-bold text-red-500/80">Required</span>
+                                            <span className="text-[10px] font-bold text-blue-500/80">Required</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1489,7 +1489,7 @@ function ViewModal({
                                         className={clsx(
                                             "p-4 rounded-3xl border transition-all flex flex-col gap-2 text-left relative overflow-hidden group",
                                             item.existingInvoices?.length > 0
-                                                ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-red-200 dark:hover:border-red-500/30"
+                                                ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-blue-200 dark:hover:border-blue-500/30"
                                                 : "bg-neutral-50/50 dark:bg-neutral-900/30 border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
                                         )}
                                     >
@@ -1674,7 +1674,7 @@ function ViewModal({
                                                         });
                                                     });
                                                 }}
-                                                className="flex-[1.5] h-14 bg-red-600 text-white rounded-full font-bold text-sm shadow-xl shadow-red-200/50 flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
+                                                className="flex-[1.5] h-14 bg-blue-600 text-white rounded-full font-bold text-sm shadow-xl shadow-blue-200/50 flex items-center justify-center gap-3 active:scale-[0.98] transition-all"
                                             >
                                                 <Send size={20} />
                                                 Submit
@@ -1703,24 +1703,22 @@ function ViewModal({
 // -- MAIN CLIENT --
 
 export default function ReimburseClient() {
-    const { viewMode, setViewMode, canAccessTeam, userRole, profile, isLoading: isAuthLoading, userId } = useFinance();
+    const {
+        viewMode,
+        setViewMode,
+        canAccessTeam,
+        userRole,
+        profile,
+        isLoading: isAuthLoading,
+        userId,
+        isInitialized,
+        searchTerm,
+        debouncedSearchTerm,
+        setSearchTerm
+    } = useFinance();
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-
-    // Read search term from URL query parameter 'q' (controlled by MobileBottomBar)
-    const searchTerm = searchParams.get('q') || "";
-
-    // Sync back to URL when desktop search input changes
-    const setSearchTerm = (val: string) => {
-        const params = new URLSearchParams(window.location.search);
-        if (val.trim()) {
-            params.set('q', val.trim());
-        } else {
-            params.delete('q');
-        }
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
 
     // Filters
     const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -1759,6 +1757,13 @@ export default function ReimburseClient() {
 
     const lastHandledRequestId = useRef<string | null>(null);
 
+    const { contextInstanceId } = useFinance();
+
+    useEffect(() => {
+        console.log(`[ReimburseClient] Mounted with Context:${contextInstanceId}`);
+    }, [contextInstanceId]);
+
+
     // States
     const [viewingItem, setViewingItem] = useState<ReimburseRequest | null>(null);
     const [editingItem, setEditingItem] = useState<ReimburseRequest | null>(null);
@@ -1775,7 +1780,7 @@ export default function ReimburseClient() {
     const [previewingDocument, setPreviewingDocument] = useState<{ item: any, initialTab: 'invoice' | 'proof' } | null>(null);
 
     // Sorting
-    const [sortColumn, setSortColumn] = useState<'date' | 'project_name' | 'amount' | 'status' | 'submitter' | null>('date');
+    const [sortColumn, setSortColumn] = useState<'date' | 'project_name' | 'amount' | 'status' | 'submitter' | 'description' | null>('date');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
     const STATUS_ORDER = ['DRAFT', 'PENDING', 'NEED_REVISION', 'APPROVED', 'PAID', 'REJECTED'];
@@ -1787,7 +1792,7 @@ export default function ReimburseClient() {
         return ['ALL', ...Array.from(cats)].sort();
     }, [items]);
 
-    const handleSort = (column: 'date' | 'project_name' | 'amount' | 'status' | 'submitter') => {
+    const handleSort = (column: 'date' | 'project_name' | 'amount' | 'status' | 'submitter' | 'description') => {
         if (sortColumn === column) {
             setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
         } else {
@@ -1796,9 +1801,20 @@ export default function ReimburseClient() {
         }
     };
 
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
+
+    useEffect(() => {
+        const handleExportRequest = () => setShowExportMenu(true);
+        window.addEventListener('export-finance', handleExportRequest);
+        return () => window.removeEventListener('export-finance', handleExportRequest);
+    }, []);
+
     // Load Data
     const loadData = async (isInitial = false) => {
+        // Show loading screen only on initial load to avoid disrupting the UI
         if (isInitial) setIsLoadingData(true);
+        setIsRefreshing(true);
         try {
             const offset = (currentPage - 1) * itemsPerPage;
             const [{ data: rawItems, total, stats }, profiles, projectList] = await Promise.all([
@@ -1808,7 +1824,6 @@ export default function ReimburseClient() {
                     project_id: selectedProjects.length > 0 ? selectedProjects : undefined,
                     status: statusFilter !== "ALL" ? statusFilter : undefined,
                     category: categoryFilters.length > 0 ? categoryFilters : undefined,
-                    q: searchTerm || undefined,
                     start_date: showAllMonths ? undefined : format(startDate, "yyyy-MM-dd"),
                     end_date: showAllMonths ? undefined : format(endDate, "yyyy-MM-dd"),
                     my_requests: !isTeamView
@@ -1841,6 +1856,7 @@ export default function ReimburseClient() {
             console.error("Error loading:", error);
         } finally {
             setIsLoadingData(false);
+            setIsRefreshing(false);
         }
     };
 
@@ -1858,15 +1874,15 @@ export default function ReimburseClient() {
 
     // Initial load and filters change
     useEffect(() => {
-        if (!isAuthLoading && userId) {
+        if (isInitialized && userId) {
             loadData(items.length === 0);
         }
-    }, [isAuthLoading, userId, currentPage, statusFilter, selectedProjects, categoryFilters, searchTerm, startDate, endDate, showAllMonths, isTeamView, currentMonth]);
+    }, [isAuthLoading, isInitialized, userId, currentPage, statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, isTeamView, currentMonth]);
 
-    // Reset page when filters change
+    // Reset page when filters change (not search - search is local)
     useEffect(() => {
         setCurrentPage(1);
-    }, [statusFilter, selectedProjects, categoryFilters, searchTerm, startDate, endDate, showAllMonths, isTeamView]);
+    }, [statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, isTeamView]);
 
     useEffect(() => {
         if (!isAuthLoading && userId) {
@@ -1877,13 +1893,22 @@ export default function ReimburseClient() {
     // FAB Action Listener
     useEffect(() => {
         const handleFabAction = (e: any) => {
-            if (e.detail?.id === 'FINANCE_NEW_PURCHASE') {
+            if (e.detail?.id === 'FINANCE_NEW_REIMBURSE' || e.detail?.id === 'FINANCE_NEW_PURCHASE') {
                 setEditingItem(null);
                 setIsDrawerOpen(true);
             }
         };
+
+        const handleFilterToggle = () => {
+            setShowFilters(true);
+        };
+
         window.addEventListener('fab-action', handleFabAction);
-        return () => window.removeEventListener('fab-action', handleFabAction);
+        window.addEventListener('toggle-filters', handleFilterToggle);
+        return () => {
+            window.removeEventListener('fab-action', handleFabAction);
+            window.removeEventListener('toggle-filters', handleFilterToggle);
+        };
     }, []);
 
     // Handle requestId from notification (or Overview)
@@ -1990,9 +2015,40 @@ export default function ReimburseClient() {
         };
     }, [globalStats]);
 
-    // 3. Final Filtered Items: Now just items (already filtered by backend)
-    const filteredItems = useMemo(() => {
+    // 3. Final Filtered Items: pure local filter, computed every render (no memo caching issues)
+    const filteredItems = (() => {
         let result = [...items];
+
+        if (searchTerm) {
+            const q = searchTerm.replace(/["'“”‘’«»„俘〞‟゛゜]+/g, '').trim().toLowerCase();
+            
+            if (q.length > 0) {
+
+                result = result.filter(item => {
+                    const desc = (item.description || "").toLowerCase();
+                    const projectName = (item.project_name || item.project?.project_name || "").toLowerCase();
+                    const projectCode = (item.project_code || item.project?.project_code || "").toLowerCase();
+                    const staff = (item.staff_name || "").toLowerCase();
+                    const notes = (item.notes || "").toLowerCase();
+                    const subcategory = (item.subcategory || "").toLowerCase();
+                    const category = (item.category || "").toLowerCase();
+                    const reqNum = String(item.request_number || "");
+                    const itemNames = (item.items || []).map((it: any) => (it.name || "").toLowerCase()).join(" ");
+
+                    return (
+                        desc.includes(q) ||
+                        projectName.includes(q) ||
+                        projectCode.includes(q) ||
+                        staff.includes(q) ||
+                        notes.includes(q) ||
+                        subcategory.includes(q) ||
+                        category.includes(q) ||
+                        reqNum.includes(q) ||
+                        itemNames.includes(q)
+                    );
+                });
+            }
+        }
 
         // Apply sorting
         if (sortColumn) {
@@ -2014,13 +2070,16 @@ export default function ReimburseClient() {
                     case 'submitter':
                         comparison = (a.staff_name || '').localeCompare(b.staff_name || '');
                         break;
+                    case 'description':
+                        comparison = (a.description || '').localeCompare(b.description || '');
+                        break;
                 }
                 return sortDirection === 'asc' ? comparison : -comparison;
             });
         }
 
         return result;
-    }, [baseItems, statusFilter, sortColumn, sortDirection, STATUS_ORDER]);
+    })();
 
     const handleExport = async () => {
         if (filteredItems.length === 0) return;
@@ -2154,587 +2213,446 @@ export default function ReimburseClient() {
         }
     };
 
-    if (isAuthLoading || isLoadingData) {
-        return <GlobalLoading />;
-    }
-
     return (
         <FinancePageWrapper
-            breadcrumbItems={[]}
             header={
                 <FinanceHeader
-                    title={isTeamView ? "Team Reimbursement" : "My Reimbursement"}
-                    subtitle={isTeamView ? "Review and approve team expenses." : "Track and manage your expense claims."}
+                    title="Reimbursement"
+                    subtitle={isTeamView ? "Manage all staff reimbursement requests." : "Track your personal reimbursement requests."}
                 />
             }
-            rightToolbar={
-                <>
-                    {canAccessTeam && (
-                        <button
-                            onClick={() => setViewMode(isTeamView ? "personal" : "team")}
-                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
-                        >
-                            {isTeamView ? (
-                                <Users className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
-                            ) : (
-                                <User className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
-                            )}
-                        </button>
-                    )}
-                    <button
-                        onClick={() => setShowFilters(true)}
-                        className={clsx(
-                            "w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative",
-                            (selectedProjects.length > 0 || categoryFilters.length > 0 || !showAllMonths) ? "text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-500/10" : "text-gray-700 dark:text-white"
-                        )}
-                    >
-                        <ListFilter className="w-5 h-5" strokeWidth={1.5} />
-                    </button>
-                    <button
-                        onClick={() => {
-                            setEditingItem(null);
-                            setIsDrawerOpen(true);
-                        }}
-                        className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
-                    >
-                        <Plus className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
-                    </button>
-                </>
-            }
         >
-
-            <div className="flex flex-col gap-6">
-                {/* SUMMARY CARDS */}
-                <div className="-mx-5 lg:mx-0">
-                    <FinanceSummaryCardsRow className="lg:grid-cols-5">
-                        <FinanceSummaryCard
-                            icon={<Package className="w-5 h-5 text-red-600" />}
-                            iconBg="bg-red-50"
-                            label="Total Requests"
-                            value={summaryStats.total.toString()}
-                            subtext={formatCurrency(summaryStats.totalAmount)}
-                            onClick={() => setStatusFilter("ALL")}
-                            isActive={statusFilter === "ALL"}
-                            activeColor="ring-red-500"
-                        />
-
-                        <FinanceSummaryCard
-                            icon={<Clock className="w-5 h-5 text-orange-600" />}
-                            iconBg="bg-orange-50"
-                            label="Pending"
-                            value={summaryStats.pending.toString()}
-                            subtext={formatCurrency(summaryStats.pendingAmount)}
-                            onClick={() => setStatusFilter("PENDING")}
-                            isActive={statusFilter === "PENDING"}
-                            activeColor="ring-orange-500"
-                        />
-
-                        <FinanceSummaryCard
-                            icon={<CheckCircle2 className="w-5 h-5 text-blue-600" />}
-                            iconBg="bg-blue-50"
-                            label="Approved"
-                            value={summaryStats.approved.toString()}
-                            subtext={formatCurrency(summaryStats.approvedAmount)}
-                            onClick={() => setStatusFilter("APPROVED")}
-                            isActive={statusFilter === "APPROVED"}
-                            activeColor="ring-blue-500"
-                        />
-
-                        <FinanceSummaryCard
-                            icon={<CreditCard className="w-5 h-5 text-emerald-600" />}
-                            iconBg="bg-emerald-50"
-                            label="Paid"
-                            value={summaryStats.paid.toString()}
-                            subtext={formatCurrency(summaryStats.paidAmount)}
-                            onClick={() => setStatusFilter("PAID")}
-                            isActive={statusFilter === "PAID"}
-                            activeColor="ring-emerald-500"
-                        />
-
-                        <FinanceSummaryCard
-                            icon={<XCircle className="w-5 h-5 text-neutral-600" />}
-                            iconBg="bg-neutral-100"
-                            label="Rejected"
-                            value={summaryStats.rejected.toString()}
-                            subtext="REJECTED"
-                            onClick={() => setStatusFilter("REJECTED")}
-                            isActive={statusFilter === "REJECTED"}
-                            activeColor="ring-neutral-500"
-                        />
-                    </FinanceSummaryCardsRow>
-                </div>
-
-                {/* MOBILE TOOLBAR */}
-                <div className="flex flex-col gap-2 md:hidden">
-                    <div className="flex items-start gap-1.5 w-full">
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-hide flex-1">
-                            {/* Mobile Date Summary */}
-                            <div className="flex items-center gap-0.5 p-1 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm shrink-0">
-                                <button
-                                    onClick={() => handleMonthChange("prev")}
-                                    className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
-                                >
-                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                    onClick={() => setShowFilters(true)}
-                                    className="text-[12px] font-bold text-neutral-700 dark:text-neutral-300 tracking-tight whitespace-nowrap px-3"
-                                >
-                                    {showAllMonths ? "All Time" : (
-                                        format(startDate, "MMM-yy") === format(endDate, "MMM-yy") && startDate.getDate() === 1 && endDate.getDate() === new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate()
-                                            ? format(startDate, "MMM-yy")
-                                            : `${format(startDate, "d MMM")} - ${format(endDate, "d MMM")}`
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => handleMonthChange("next")}
-                                    className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
-                                >
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-
-                            {/* Project Select */}
-                            <div className="relative shrink-0 flex items-center h-9 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm overflow-hidden">
-                                <select
-                                    value={selectedProjects.length === 1 ? selectedProjects[0] : (selectedProjects.length > 1 ? "MULTIPLE" : "ALL")}
-                                    onChange={(e) => {
-                                        if (e.target.value === "ALL") setSelectedProjects([]);
-                                        else if (e.target.value !== "MULTIPLE") setSelectedProjects([e.target.value]);
-                                    }}
-                                    className="h-full pl-3 pr-8 bg-transparent appearance-none text-[11px] font-bold text-neutral-700 dark:text-neutral-300 outline-none cursor-pointer tracking-tight whitespace-nowrap w-auto max-w-[130px] text-ellipsis overflow-hidden"
-                                >
-                                    <option value="ALL">All Projects</option>
-                                    {selectedProjects.length > 1 && <option value="MULTIPLE" disabled>{selectedProjects.length} Projects</option>}
-                                    {projects.map(p => (
-                                        <option key={p.id} value={p.id}>{p.projectCode || p.projectName}</option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
-                            </div>
-
-                            {/* Category Select */}
-                            <div className="relative shrink-0 flex items-center h-9 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm overflow-hidden">
-                                <select
-                                    value={categoryFilters.length === 1 ? categoryFilters[0] : (categoryFilters.length > 1 ? "MULTIPLE" : "ALL")}
-                                    onChange={(e) => {
-                                        if (e.target.value === "ALL") setCategoryFilters([]);
-                                        else if (e.target.value !== "MULTIPLE") setCategoryFilters([e.target.value]);
-                                    }}
-                                    className="h-full pl-3 pr-8 bg-transparent appearance-none text-[11px] font-bold text-neutral-700 dark:text-neutral-300 outline-none cursor-pointer tracking-tight whitespace-nowrap w-auto max-w-[130px] text-ellipsis overflow-hidden"
-                                >
-                                    <option value="ALL">All Categories</option>
-                                    {categoryFilters.length > 1 && <option value="MULTIPLE" disabled>{categoryFilters.length} Categories</option>}
-                                    {REIMBURSE_CATEGORY_OPTIONS.map(cat => (
-                                        <option key={cat.value} value={cat.value}>{cat.label}</option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        {/* Export Icon pinned to the right side outside overflow container */}
-                        <div className="relative group/export h-9 shrink-0 flex items-start">
-                            <button className="h-9 w-9 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 shadow-sm flex items-center justify-center hover:bg-white dark:hover:bg-neutral-700 transition-colors">
-                                <Download className="w-4 h-4" />
-                            </button>
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-xl opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all flex flex-col z-50 overflow-hidden py-1">
-                                <button onClick={handleExport} className="w-full relative px-4 py-2.5 flex items-center gap-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 transition-colors group/item">
-                                    <div className="absolute inset-y-0 left-0 w-1 bg-red-500 rounded-r-full hidden group-hover/item:block" />
-                                    <FileText className="w-4 h-4 text-red-500" /> Export to PDF
-                                </button>
-                                <button onClick={handleExportExcel} className="w-full relative px-4 py-2.5 flex items-center gap-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 hover:text-emerald-600 transition-colors group/item">
-                                    <div className="absolute inset-y-0 left-0 w-1 bg-emerald-500 rounded-r-full hidden group-hover/item:block" />
-                                    <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to XLS
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ADVANCED TOOLBAR - DESKTOP */}
-                <div className="hidden md:flex flex-row gap-2 justify-between items-center px-4 py-2 border-b border-neutral-200/40 dark:border-neutral-800/20 mb-4">
-                    <div className="flex items-center gap-2 w-full md:w-auto">
-                        <div className="h-9 flex items-center gap-2 px-3 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm focus-within:ring-2 focus-within:ring-red-500/10 focus-within:border-red-500/20 transition-all w-full md:w-[180px]">
-                            <Search className="w-3.5 h-3.5 text-neutral-400" />
-                            <input
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                placeholder="Search range..."
-                                className="bg-transparent border-none text-[12px] outline-none w-full font-bold placeholder:text-neutral-400 uppercase tracking-tight"
+            {(isAuthLoading || isLoadingData) ? <GlobalLoading /> : (
+                <>
+                    <div className="flex flex-col gap-6">
+                        {/* SUMMARY CARDS */}
+                        <FinanceSummaryCardsRow className="!mb-0">
+                            <FinanceSummaryCard
+                                icon={<Package className="w-5 h-5 text-blue-600" />}
+                                iconBg="bg-blue-50"
+                                label="Total Requests"
+                                value={summaryStats.total.toString()}
+                                subtext={formatCurrency(summaryStats.totalAmount)}
+                                onClick={() => setStatusFilter("ALL")}
+                                isActive={statusFilter === "ALL"}
+                                activeColor="ring-blue-500"
                             />
-                        </div>
 
-                        <div className="h-9 flex items-center gap-1 p-0.5 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm">
-                            <button
-                                onClick={() => handleMonthChange("prev")}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-white/60 dark:hover:bg-neutral-700/60 rounded-full text-neutral-400 hover:text-neutral-600 transition-all"
-                            >
-                                <ChevronLeft className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => setShowAllMonths(!showAllMonths)}
-                                className={clsx(
-                                    "px-2 text-[11px] font-bold whitespace-nowrap min-w-[80px] text-center transition-colors uppercase tracking-tight",
-                                    showAllMonths ? "text-red-500" : "text-neutral-700 dark:text-neutral-300"
-                                )}
-                            >
-                                {showAllMonths ? "All Time" : format(currentMonth, "MMM yyyy")}
-                            </button>
-                            <button
-                                onClick={() => handleMonthChange("next")}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-white/60 dark:hover:bg-neutral-700/60 rounded-full text-neutral-400 hover:text-neutral-600 transition-all"
-                            >
-                                <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
+                            <FinanceSummaryCard
+                                icon={<Clock className="w-5 h-5 text-orange-600" />}
+                                iconBg="bg-orange-50"
+                                label="Pending"
+                                value={summaryStats.pending.toString()}
+                                subtext={formatCurrency(summaryStats.pendingAmount)}
+                                onClick={() => setStatusFilter("PENDING")}
+                                isActive={statusFilter === "PENDING"}
+                                activeColor="ring-orange-500"
+                            />
 
-                        {/* Project Select */}
-                        <div className="relative group">
-                            <select
-                                value={selectedProjects.length === 1 ? selectedProjects[0] : (selectedProjects.length > 1 ? "MULTIPLE" : "ALL")}
-                                onChange={(e) => {
-                                    if (e.target.value === "ALL") setSelectedProjects([]);
-                                    else if (e.target.value !== "MULTIPLE") setSelectedProjects([e.target.value]);
-                                }}
-                                className="appearance-none h-9 pl-4 pr-10 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm text-[11px] font-bold text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/20 transition-all cursor-pointer w-full md:w-auto uppercase tracking-tight"
-                            >
-                                <option value="ALL">All Projects</option>
-                                {selectedProjects.length > 1 && <option value="MULTIPLE" disabled>{selectedProjects.length} Projects Selected</option>}
-                                {projects.map(p => (
-                                    <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
-                        </div>
+                            <FinanceSummaryCard
+                                icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                                iconBg="bg-emerald-50"
+                                label="Approved"
+                                value={summaryStats.approved.toString()}
+                                subtext={formatCurrency(summaryStats.approvedAmount)}
+                                onClick={() => setStatusFilter("APPROVED")}
+                                isActive={statusFilter === "APPROVED"}
+                                activeColor="ring-emerald-500"
+                            />
 
-                        {/* Category Select */}
-                        <div className="relative group">
-                            <select
-                                value={categoryFilters.length === 1 ? categoryFilters[0] : (categoryFilters.length > 1 ? "MULTIPLE" : "ALL")}
-                                onChange={(e) => {
-                                    if (e.target.value === "ALL") setCategoryFilters([]);
-                                    else if (e.target.value !== "MULTIPLE") setCategoryFilters([e.target.value]);
-                                }}
-                                className="appearance-none h-9 pl-4 pr-10 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm text-[11px] font-bold text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/20 transition-all cursor-pointer w-full md:w-auto uppercase tracking-tight"
-                            >
-                                <option value="ALL">All Categories</option>
-                                {categoryFilters.length > 1 && <option value="MULTIPLE" disabled>{categoryFilters.length} Categories</option>}
-                                {REIMBURSE_CATEGORY_OPTIONS.map(cat => (
-                                    <option key={cat.value} value={cat.value}>{cat.label}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
-                        </div>
-                    </div>
+                            <FinanceSummaryCard
+                                icon={<CreditCard className="w-5 h-5 text-blue-600" />}
+                                iconBg="bg-blue-50"
+                                label="Paid"
+                                value={summaryStats.paid.toString()}
+                                subtext={formatCurrency(summaryStats.paidAmount)}
+                                onClick={() => setStatusFilter("PAID")}
+                                isActive={statusFilter === "PAID"}
+                                activeColor="ring-blue-600"
+                            />
 
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-shrink-0">
-                        <div className="relative group/export h-9">
-                            <button className="h-9 px-4 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm flex items-center gap-2 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 hover:bg-white/60 transition-all uppercase tracking-tight">
-                                <Download className="w-3.5 h-3.5" />
-                                <span className="hidden lg:inline">Export</span>
-                            </button>
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border border-white/40 dark:border-neutral-800 shadow-2xl rounded-2xl opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all flex flex-col z-50 overflow-hidden py-1">
-                                <button onClick={handleExport} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 text-left text-[12px] font-bold text-neutral-700 dark:text-neutral-300 transition-colors uppercase tracking-tight">
-                                    <FileText className="w-3.5 h-3.5 text-red-500" /> Export to PDF
-                                </button>
-                                <button onClick={handleExportExcel} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 text-left text-[12px] font-bold text-neutral-700 dark:text-neutral-300 transition-colors uppercase tracking-tight">
-                                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" /> Export to XLS
-                                </button>
-                            </div>
-                        </div>
+                            <FinanceSummaryCard
+                                icon={<XCircle className="w-5 h-5 text-neutral-600" />}
+                                iconBg="bg-neutral-100"
+                                label="Rejected"
+                                value={summaryStats.rejected.toString()}
+                                subtext="REJECTED"
+                                onClick={() => setStatusFilter("REJECTED")}
+                                isActive={statusFilter === "REJECTED"}
+                                activeColor="ring-neutral-500"
+                            />
+                        </FinanceSummaryCardsRow>
 
-                        <button
-                            onClick={() => {
-                                setEditingItem(null);
-                                setIsDrawerOpen(true);
-                            }}
-                            className="h-9 px-5 bg-red-600 hover:bg-red-700 text-white rounded-full text-[11px] font-bold shadow-lg shadow-red-200/50 active:scale-95 transition-all flex items-center gap-1.5 uppercase tracking-tight"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>New</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* MOBILE CARD LIST */}
-            <div className="mt-6 block md:hidden space-y-3">
-                {
-                    filteredItems.length === 0 ? (
-                        <div className="bg-white/40 dark:bg-neutral-900/60 backdrop-blur-md rounded-2xl border border-white/50 dark:border-neutral-800 shadow-sm dark:shadow-none p-6 text-center">
-                            <Package className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
-                            <h4 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
-                                {searchTerm ? "No results found" :
-                                    statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
-                                        "No items found"}
-                            </h4>
-                            {!searchTerm && statusFilter === "ALL" && (
-                                <button
-                                    onClick={() => setIsDrawerOpen(true)}
-                                    className="mt-4 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl shadow-lg shadow-red-200/50 dark:shadow-red-900/30"
-                                >
-                                    <Plus className="w-4 h-4 inline mr-1.5" strokeWidth={2.5} />New Request
-                                </button>
-                            )}
-                        </div>
-                    ) : (
-                        (filteredItems.map((item) => {
-                            const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
-                            const isPending = item.status === "PENDING";
-                            const isApprovedNotPaid = item.status === "APPROVED" && item.financial_status !== "PAID";
-                            const isDraftOrRevise = item.status === "DRAFT" || item.status === "NEED_REVISION";
-
-                            const renderMobileActions = () => (
-                                <div className="flex items-center gap-1.5 w-full justify-end">
-                                    {isTeamView ? (
-                                        <>
-                                            {isAdmin && (
-                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
-                                                    <Trash2 className="w-[18px] h-[18px]" />
-                                                </button>
-                                            )}
-                                            {isPending && (
-                                                <>
-                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Reject">
-                                                        <Ban className="w-[18px] h-[18px]" />
-                                                    </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2.5 rounded-full bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                                                        <RotateCcw className="w-[18px] h-[18px]" /> Revise
-                                                    </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
-                                                        <Check className="w-[18px] h-[18px]" /> Approve
-                                                    </button>
-                                                </>
-                                            )}
-                                            {isApprovedNotPaid && (
-                                                <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50">
-                                                    <CreditCard className="w-[18px] h-[18px]" /> Pay Now
-                                                </button>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-500/10 dark:bg-rose-500/10 text-rose-500 border border-rose-200/50 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Delete">
-                                                <Trash2 className="w-[18px] h-[18px]" />
+                        {/* Export Menu Overlay */}
+                        <AnimatePresence>
+                            {showExportMenu && (
+                                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        onClick={() => setShowExportMenu(false)}
+                                        className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm"
+                                    />
+                                    <motion.div
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        exit={{ scale: 0.9, opacity: 0 }}
+                                        className="relative w-full max-w-xs bg-white dark:bg-neutral-900 rounded-[32px] shadow-2xl border border-white/20 dark:border-neutral-800 p-2 overflow-hidden"
+                                    >
+                                        <div className="p-4 border-b border-neutral-100 dark:border-neutral-800">
+                                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Export Options</h3>
+                                        </div>
+                                        <div className="py-1">
+                                            <button onClick={() => { handleExport(); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                                <FileText className="w-4 h-4 text-blue-500" /> Export to PDF
                                             </button>
-                                            {(isDraftOrRevise) && (
-                                                <button onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const editPayload: any = { ...item };
-                                                    // existingInvoices comes from API join
-                                                    setEditingItem(editPayload);
-                                                    setIsDrawerOpen(true);
-                                                }} className="flex-1 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                                                    <Pencil className="w-4 h-4" /> Edit
-                                                </button>
-                                            )}
-                                            {item.status === 'DRAFT' && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        updateReimburseStatus(item.id, { status: 'PENDING' }).then(() => {
-                                                            loadData();
-                                                            setShowSuccess({
-                                                                title: "Request Submitted",
-                                                                message: "Your request has been successfully submitted."
-                                                            });
-                                                        });
-                                                    }}
-                                                    className="flex-[1.5] py-2 rounded-xl bg-red-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-red-200/50"
-                                                >
-                                                    <Send className="w-4 h-4" /> Submit
-                                                </button>
-                                            )}
-                                            {isPending && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setRevertingItem(item); }}
-                                                    className="flex-1 py-2 rounded-xl bg-rose-500/10 text-rose-500 border border-rose-200/50 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                                                >
-                                                    <Undo2 className="w-4 h-4" /> Cancel
-                                                </button>
-                                            )}
-                                        </>
+                                            <button onClick={() => { handleExportExcel(); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                                <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to XLS
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowExportMenu(false)}
+                                            className="w-full mt-1 py-3 text-xs font-bold text-neutral-400 hover:text-neutral-600 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </motion.div>
+                                </div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* MOBILE CARD LIST */}
+                        <div className="mt-6 block lg:hidden space-y-3">
+                            {filteredItems.length === 0 ? (
+                                <div className="bg-white/40 dark:bg-neutral-900/60 backdrop-blur-md rounded-[24px] border border-white/50 dark:border-neutral-800 shadow-sm dark:shadow-none p-6 text-center">
+                                    <Package className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+                                    <h4 className="text-[17px] font-bold text-neutral-900 dark:text-white mt-4">
+                                        {searchTerm ? "No Search Results" :
+                                            statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
+                                                "No Reimbursement Requests Yet"}
+                                    </h4>
+                                    <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-2 max-w-[240px] mx-auto leading-relaxed">
+                                        {searchTerm ? "Try adjusting your search terms to find what you're looking for." :
+                                            "Start by creating a new request to track your claims and expenses."}
+                                    </p>
+                                    {!searchTerm && statusFilter === "ALL" && (
+                                        <button
+                                            onClick={() => setIsDrawerOpen(true)}
+                                            className="mt-6 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-bold rounded-full shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
+                                        >
+                                            <Plus className="w-4 h-4 inline mr-2" strokeWidth={3} />New Request
+                                        </button>
                                     )}
                                 </div>
-                            );
-
-                            return (
-                                <FinanceItemCard
-                                    key={item.id}
-                                    item={item}
-                                    onClick={() => setViewingItem(item)}
-                                    actions={item.status !== 'PAID' ? renderMobileActions() : undefined}
-                                />
-                            );
-                        }))
-                    )
-                }
-            </div >
-
-            {/* DESKTOP TABLE */}
-            < div className="hidden md:block bg-white/40 backdrop-blur-md rounded-3xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.02)] overflow-hidden" >
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-neutral-100 bg-neutral-50/50 backdrop-blur-sm">
-                                <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('date')}>
-                                    <span className="flex items-center gap-1">
-                                        Date
-                                        {sortColumn === 'date' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                    </span>
-                                </th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('project_name')}>
-                                    <span className="flex items-center gap-1">
-                                        Project
-                                        {sortColumn === 'project_name' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                    </span>
-                                </th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Item Detail</th>
-                                <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('amount')}>
-                                    <span className="flex items-center justify-end gap-1">
-                                        Amount
-                                        {sortColumn === 'amount' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                    </span>
-                                </th>
-                                <th className="px-6 py-4 text-center text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('status')}>
-                                    <span className="flex items-center justify-center gap-1">
-                                        Status
-                                        {sortColumn === 'status' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                    </span>
-                                </th>
-                                <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors" onClick={() => handleSort('submitter')}>
-                                    <span className="flex items-center gap-1">
-                                        Submitter
-                                        {sortColumn === 'submitter' && (sortDirection === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
-                                    </span>
-                                </th>
-                                <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-50">
-                            {filteredItems.length === 0 ? (
-                                <tr><td colSpan={7} className="py-16 text-center text-neutral-400">No requests found</td></tr>
                             ) : (
-                                filteredItems.map(item => (
-                                    <tr
-                                        key={item.id}
-                                        onClick={() => setViewingItem(item)}
-                                        className="border-b border-neutral-100 dark:border-neutral-800 transition-all hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20 cursor-pointer group"
-                                    >
-                                        <td className="px-6 py-4 text-xs font-medium text-neutral-500 tabular-nums">{format(new Date(item.date), "dd MMM yyyy")}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold bg-neutral-100 px-1.5 py-0.5 rounded w-fit text-neutral-500 mb-1">{item.project?.project_code || "N/A"}</span>
-                                                <span className="text-xs font-medium text-neutral-900 truncate max-w-[120px]">{cleanEntityName(item.project?.project_name || "Unknown")}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-xs font-semibold text-neutral-900 mb-1">
-                                                {item.items && item.items.length > 1
-                                                    ? `${item.items[0].name} + ${item.items.length - 1} more`
-                                                    : (item.items?.[0]?.name || item.description)}
-                                            </div>
-                                            <span className="text-[10px] text-neutral-400 uppercase font-bold tracking-wider flex items-center gap-1">
-                                                {item.category?.replace(/_/g, " ")}
-                                                {item.subcategory && (
-                                                    <>
-                                                        <span className="text-neutral-300">•</span>
-                                                        <span className="text-neutral-500">{item.subcategory?.replace(/_/g, " ")}</span>
-                                                    </>
-                                                )}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex flex-col items-end">
-                                                {(() => {
-                                                    const approvedAmount = item.approved_amount || item.details?.approved_amount;
-                                                    return (
+                                filteredItems.map((item) => {
+                                    const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
+                                    const isPending = item.status === "PENDING";
+                                    const isApprovedNotPaid = item.status === "APPROVED" && item.financial_status !== "PAID";
+                                    const isDraftOrRevise = item.status === "DRAFT" || item.status === "NEED_REVISION";
+
+                                    const renderMobileActions = () => (
+                                        <div className="flex items-center gap-1.5 w-full justify-end">
+                                            {isTeamView ? (
+                                                <>
+                                                    {isAdmin && (
+                                                        <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
+                                                            <Trash2 className="w-[18px] h-[18px]" />
+                                                        </button>
+                                                    )}
+                                                    {isPending && (
                                                         <>
-                                                            <span className={clsx("text-xs font-bold tabular-nums", approvedAmount && approvedAmount !== item.amount ? "text-neutral-400 line-through" : "text-neutral-900")}>
-                                                                {formatCurrency(item.amount)}
-                                                            </span>
-                                                            {approvedAmount && approvedAmount !== item.amount && (
-                                                                <span className="text-xs font-bold text-emerald-600 tabular-nums bg-emerald-50 px-1 rounded">
-                                                                    {formatCurrency(approvedAmount)}
-                                                                </span>
-                                                            )}
+                                                            <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Reject">
+                                                                <Ban className="w-[18px] h-[18px]" />
+                                                            </button>
+                                                            <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2.5 rounded-full bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                                <RotateCcw className="w-[18px] h-[18px]" /> Revise
+                                                            </button>
+                                                            <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
+                                                                <Check className="w-[18px] h-[18px]" /> Approve
+                                                            </button>
                                                         </>
-                                                    );
-                                                })()}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            {(() => {
-                                                const theme = STATUS_THEMES[item.status as keyof typeof STATUS_THEMES] || STATUS_THEMES.DRAFT;
-                                                return <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", theme.bg, theme.text, theme.border)}>{formatStatus(item.status)}</span>
-                                            })()}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-xs font-bold text-neutral-900">{cleanEntityName(item.staff_name)}</span>
-                                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{item.staff_role}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1.5 hover:bg-blue-50 text-neutral-400 hover:text-blue-600 rounded-full"><Eye className="w-4 h-4" /></button>
-
-                                                {isTeamView && item.status === "PENDING" && (
-                                                    <>
-                                                        <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1.5 hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 rounded-full" title="Approve"><CheckCircle2 className="w-4 h-4" /></button>
-                                                        <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="p-1.5 hover:bg-orange-50 text-neutral-400 hover:text-orange-600 rounded-full" title="Request Revision"><AlertCircle className="w-4 h-4" /></button>
-                                                        <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1.5 hover:bg-rose-50 text-neutral-400 hover:text-rose-600 rounded-full" title="Reject"><Ban className="w-4 h-4" /></button>
-                                                    </>
-                                                )}
-
-                                                {isTeamView && item.status === "APPROVED" && (
-                                                    <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1.5 hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 rounded-full" title="Pay"><CreditCard className="w-4 h-4" /></button>
-                                                )}
-
-                                                {/* Admin Delete Button - Visible in Team View for all statuses */}
-                                                {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
-                                                    <button onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setDeletingItem(item);
-                                                    }} className="p-1.5 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded-full" title="Delete Request"><Trash2 className="w-4 h-4" /></button>
-                                                )}
-
-                                                {(!isTeamView || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (["DRAFT", "NEED_REVISION", "PENDING", "REJECTED"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
-                                                    <>
-                                                        {(!isTeamView && (["DRAFT", "NEED_REVISION", "PENDING"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || ""))) && (
-                                                            <button onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                const editPayload: any = { ...item };
-                                                                // existingInvoices comes from API join
-                                                                setEditingItem(editPayload);
-                                                                setIsDrawerOpen(true);
-                                                            }} className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-full"><Pencil className="w-4 h-4" /></button>
-                                                        )}
+                                                    )}
+                                                    {isApprovedNotPaid && (
+                                                        <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50">
+                                                            <CreditCard className="w-[18px] h-[18px]" /> Pay Now
+                                                        </button>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-500/10 dark:bg-rose-500/10 text-rose-500 border border-rose-200/50 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Delete">
+                                                        <Trash2 className="w-[18px] h-[18px]" />
+                                                    </button>
+                                                    {(isDraftOrRevise) && (
                                                         <button onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setDeletingItem(item);
-                                                        }} className="p-1.5 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded-full"><Trash2 className="w-4 h-4" /></button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
+                                                            const editPayload: any = { ...item };
+                                                            setEditingItem(editPayload);
+                                                            setIsDrawerOpen(true);
+                                                        }} className="flex-1 py-2 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                            <Pencil className="w-4 h-4" /> Edit
+                                                        </button>
+                                                    )}
+                                                    {item.status === 'DRAFT' && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                updateReimburseStatus(item.id, { status: 'PENDING' }).then(() => {
+                                                                    loadData();
+                                                                    setShowSuccess({
+                                                                        title: "Request Submitted",
+                                                                        message: "Your request has been successfully submitted."
+                                                                    });
+                                                                });
+                                                            }}
+                                                            className="flex-[1.5] py-2 rounded-xl bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50"
+                                                        >
+                                                            <Send className="w-4 h-4" /> Submit
+                                                        </button>
+                                                    )}
+                                                    {isPending && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setRevertingItem(item); }}
+                                                            className="flex-1 py-2 rounded-xl bg-rose-500/10 text-rose-500 border border-rose-200/50 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                                                        >
+                                                            <Undo2 className="w-4 h-4" /> Cancel
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+
+                                    return (
+                                        <FinanceItemCard
+                                            key={item.id}
+                                            item={item}
+                                            onClick={() => setViewingItem(item)}
+                                            actions={item.status !== 'PAID' ? renderMobileActions() : undefined}
+                                        />
+                                    );
+                                })
                             )}
-                        </tbody>
-                    </table>
-                </div>
-            </div >
+                        </div>
 
-            <Pagination
-                currentPage={currentPage}
-                totalItems={totalItems}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-            />
+                        {/* DESKTOP TABLE */}
+                        <div className="hidden lg:block bg-white/40 dark:bg-white/[0.03] backdrop-blur-md rounded-3xl border border-white/50 dark:border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.02)] dark:shadow-none overflow-hidden">
+                            <div className="overflow-x-auto scrollbar-hide">
+                                <table className="w-full text-left border-collapse table-fixed">
+                                    <thead>
+                                        <tr className="border-b border-neutral-100 dark:border-white/[0.06] bg-neutral-50/50 dark:bg-white/[0.02]">
+                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onClick={() => handleSort('date')}>
+                                                <div className="flex items-center gap-1 group/header">
+                                                    Date
+                                                    {sortColumn === 'date' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onClick={() => handleSort('project_name')}>
+                                                <div className="flex items-center gap-1 group/header">
+                                                    Project
+                                                    {sortColumn === 'project_name' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onClick={() => handleSort('description')}>
+                                                <div className="flex items-center gap-1 group/header">
+                                                    Item Detail
+                                                    {sortColumn === 'description' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onClick={() => handleSort('amount')}>
+                                                <div className="flex items-center justify-end gap-1 group/header">
+                                                    Amount
+                                                    {sortColumn === 'amount' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-4 text-center text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onClick={() => handleSort('status')}>
+                                                <div className="flex items-center justify-center gap-1 group/header">
+                                                    Status
+                                                    {sortColumn === 'status' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onClick={() => handleSort('submitter')}>
+                                                <div className="flex items-center gap-1 group/header">
+                                                    Submitter
+                                                    {sortColumn === 'submitter' ? (
+                                                        sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
+                                                </div>
+                                            </th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 dark:text-neutral-500">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-neutral-50 dark:divide-white/[0.04]">
+                                        {filteredItems.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={isTeamView ? 8 : 7} className="py-16 text-center">
+                                                    <div className="flex flex-col items-center gap-4">
+                                                        <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
+                                                            <Package className="w-8 h-8 text-neutral-300" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <h4 className="text-base font-semibold text-neutral-700">
+                                                                {searchTerm ? "No results found" :
+                                                                    statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
+                                                                        "No reimbursement requests yet"}
+                                                            </h4>
+                                                            <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                                                {searchTerm ?
+                                                                    `We couldn't find any requests matching "${searchTerm}". Try a different search term.` :
+                                                                    statusFilter !== "ALL" ?
+                                                                        `There are no ${statusFilter.toLowerCase()} reimbursement requests found.` :
+                                                                        isTeamView ?
+                                                                            "When team members submit reimbursement requests, they'll appear here for your review." :
+                                                                            "Start by creating your first reimbursement request. Track claims and expenses easily."}
+                                                            </p>
+                                                        </div>
+                                                        {!searchTerm && statusFilter === "ALL" && (
+                                                            <button
+                                                                onClick={() => setIsDrawerOpen(true)}
+                                                                className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-blue-200/50 transition-all flex items-center gap-2"
+                                                            >
+                                                                <Plus className="w-4 h-4" />
+                                                                New Reimbursement Request
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredItems.map(item => (
+                                                <tr
+                                                    key={item.id}
+                                                    onClick={() => setViewingItem(item)}
+                                                    className="transition-all hover:bg-white/60 dark:hover:bg-white/[0.04] cursor-pointer group"
+                                                >
+                                                    <td className="px-6 py-4 text-xs font-medium text-neutral-500 tabular-nums">{format(new Date(item.date), "dd MMM yyyy")}</td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-bold bg-neutral-100 px-1.5 py-0.5 rounded w-fit text-neutral-500 mb-1">{item.project?.project_code || "N/A"}</span>
+                                                            <span className="text-xs font-medium text-neutral-900 truncate max-w-[120px]">{cleanEntityName(item.project?.project_name || "Unknown")}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="text-xs font-semibold text-neutral-900 mb-1">
+                                                            {item.items && item.items.length > 1
+                                                                ? `${item.items[0].name} + ${item.items.length - 1} more`
+                                                                : (item.items?.[0]?.name || item.description)}
+                                                        </div>
+                                                        <span className="text-[10px] text-neutral-400 uppercase font-bold tracking-wider flex items-center gap-1">
+                                                            {item.category?.replace(/_/g, " ")}
+                                                            {item.subcategory && (
+                                                                <>
+                                                                    <span className="text-neutral-300">•</span>
+                                                                    <span className="text-neutral-500">{item.subcategory?.replace(/_/g, " ")}</span>
+                                                                </>
+                                                            )}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex flex-col items-end">
+                                                            {(() => {
+                                                                const approvedAmount = item.approved_amount || item.details?.approved_amount;
+                                                                return (
+                                                                    <>
+                                                                        <span className={clsx("text-xs font-bold tabular-nums", approvedAmount && approvedAmount !== item.amount ? "text-neutral-400 line-through" : "text-neutral-900")}>
+                                                                            {formatCurrency(item.amount)}
+                                                                        </span>
+                                                                        {approvedAmount && approvedAmount !== item.amount && (
+                                                                            <span className="text-xs font-bold text-emerald-600 tabular-nums bg-emerald-50 px-1 rounded">
+                                                                                {formatCurrency(approvedAmount)}
+                                                                            </span>
+                                                                        )}
+                                                                    </>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        {(() => {
+                                                            const theme = STATUS_THEMES[item.status as keyof typeof STATUS_THEMES] || STATUS_THEMES.DRAFT;
+                                                            return <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", theme.bg, theme.text, theme.border)}>{formatStatus(item.status)}</span>
+                                                        })()}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-bold text-neutral-900">{cleanEntityName(item.staff_name)}</span>
+                                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{item.staff_role}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1.5 hover:bg-blue-50 text-neutral-400 hover:text-blue-600 rounded-full"><Eye className="w-4 h-4" /></button>
 
-            {/* DRAWERS & MODALS (kept as is) */}
+                                                            {isTeamView && item.status === "PENDING" && (
+                                                                <>
+                                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1.5 hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 rounded-full" title="Approve"><CheckCircle2 className="w-4 h-4" /></button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="p-1.5 hover:bg-orange-50 text-neutral-400 hover:text-orange-600 rounded-full" title="Request Revision"><AlertCircle className="w-4 h-4" /></button>
+                                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1.5 hover:bg-rose-50 text-neutral-400 hover:text-rose-600 rounded-full" title="Reject"><Ban className="w-4 h-4" /></button>
+                                                                </>
+                                                            )}
+
+                                                            {isTeamView && item.status === "APPROVED" && (
+                                                                <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1.5 hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 rounded-full" title="Pay"><CreditCard className="w-4 h-4" /></button>
+                                                            )}
+
+                                                            {/* Admin Delete Button - Visible in Team View for all statuses */}
+                                                            {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                                <button onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setDeletingItem(item);
+                                                                }} className="p-1.5 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded-full" title="Delete Request"><Trash2 className="w-4 h-4" /></button>
+                                                            )}
+
+                                                            {(!isTeamView || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (["DRAFT", "NEED_REVISION", "PENDING", "REJECTED"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
+                                                                <>
+                                                                    {(!isTeamView && (["DRAFT", "NEED_REVISION", "PENDING"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || ""))) && (
+                                                                        <button onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const editPayload: any = { ...item };
+                                                                            // existingInvoices comes from API join
+                                                                            setEditingItem(editPayload);
+                                                                            setIsDrawerOpen(true);
+                                                                        }} className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-full"><Pencil className="w-4 h-4" /></button>
+                                                                    )}
+                                                                    <button onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setDeletingItem(item);
+                                                                    }} className="p-1.5 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded-full"><Trash2 className="w-4 h-4" /></button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div >
+
+                        <Pagination
+                            currentPage={currentPage}
+                            totalItems={totalItems}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={setCurrentPage}
+                        />
+                    </div>
+                </>
+            )}
+
+            {/* MODALS & DRAWERS (kept as is) */}
             <NewRequestDrawer
                 isOpen={isDrawerOpen}
                 initialType="REIMBURSE"
@@ -2971,12 +2889,20 @@ export default function ReimburseClient() {
                 />
             )}
             {showFilters && (
-                <div className="fixed md:hidden inset-0 z-[100] flex items-end justify-center">
+                <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center">
                     <div
-                        className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity"
+                        className="absolute inset-0 bg-neutral-900/20 dark:bg-black/40 backdrop-blur-sm transition-opacity"
                         onClick={() => setShowFilters(false)}
                     />
-                    <div className="relative w-full mx-2 mb-2 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border border-white/40 dark:border-neutral-800 p-6 flex flex-col gap-6 max-h-[90dvh]">
+                    <motion.div
+                        initial={{ y: "100%", opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className={clsx(
+                            "relative bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-2xl overflow-hidden border border-white/40 dark:border-neutral-800 flex flex-col max-h-[90dvh]",
+                            "w-full mx-2 mb-2 rounded-[40px] p-6 gap-6", // Mobile
+                            "md:absolute md:right-6 md:top-6 md:bottom-6 md:mb-0 md:mx-0 md:w-[450px] md:rounded-[56px] md:max-h-none" // Desktop Side Drawer
+                        )}
+                    >
                         {/* Header */}
                         <div className="flex items-center justify-between px-2">
                             <h3 className="text-[20px] font-bold text-neutral-900 dark:text-white tracking-tight">Filters</h3>
@@ -2992,16 +2918,16 @@ export default function ReimburseClient() {
                                             setSortColumn('date');
                                             setSortDirection('desc');
                                         }}
-                                        className="text-[13px] font-bold text-red-500 hover:text-red-600 active:scale-95 transition-all outline-none tracking-wider"
+                                        className="text-[13px] font-bold text-blue-600 hover:text-blue-700 active:scale-95 transition-all outline-none tracking-wider"
                                     >
                                         Reset
                                     </button>
                                 )}
                                 <button
                                     onClick={() => setShowFilters(false)}
-                                    className="w-8 h-8 bg-neutral-100 dark:bg-neutral-800 border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                    className="w-10 h-10 bg-white dark:bg-neutral-800 border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center active:scale-95 transition-transform shadow-sm"
                                 >
-                                    <X size={18} className="text-neutral-500" strokeWidth={2} />
+                                    <X size={20} className="text-neutral-500" strokeWidth={2} />
                                 </button>
                             </div>
                         </div>
@@ -3009,10 +2935,12 @@ export default function ReimburseClient() {
                         <div className="flex flex-col gap-6 overflow-y-auto pb-4 pr-1 scrollbar-hide">
                             {/* Sorting Section */}
                             <div className="space-y-4 px-2">
-                                <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Sort By</h4>
+                                <h4 className="text-[11px] font-bold text-neutral-400 tracking-wider">Sort By</h4>
                                 <div className="grid grid-cols-2 gap-2">
                                     {[
-                                        { id: 'date', label: 'Date' },
+                                        { id: 'date', label: 'Submitted Date' },
+                                        { id: 'invoice_date', label: 'Invoice Date' },
+                                        { id: 'paid_date', label: 'Paid Date' },
                                         { id: 'project_name', label: 'Project' },
                                         { id: 'amount', label: 'Amount' },
                                         { id: 'status', label: 'Status' }
@@ -3023,7 +2951,7 @@ export default function ReimburseClient() {
                                             className={clsx(
                                                 "px-4 py-2.5 rounded-full text-[12px] font-bold transition-all border flex items-center justify-between",
                                                 sortColumn === col.id
-                                                    ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-900/50"
+                                                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-900/50"
                                                     : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
                                             )}
                                         >
@@ -3036,7 +2964,7 @@ export default function ReimburseClient() {
                                                         e.stopPropagation();
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer outline-none"
+                                                    className="p-1.5 hover:bg-blue-600 hover:text-white rounded-lg transition-all cursor-pointer outline-none bg-blue-100/50 text-blue-600"
                                                 >
                                                     {sortDirection === 'asc' ? <ArrowUpNarrowWide className="w-3.5 h-3.5" /> : <ArrowDownWideNarrow className="w-3.5 h-3.5" />}
                                                 </div>
@@ -3049,9 +2977,9 @@ export default function ReimburseClient() {
                             {/* Project Filter */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between px-2">
-                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Project</h4>
+                                    <h4 className="text-[11px] font-bold text-neutral-400 tracking-wider">Project</h4>
                                     {selectedProjects.length > 0 && (
-                                        <button onClick={() => setSelectedProjects([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
+                                        <button onClick={() => setSelectedProjects([])} className="text-[11px] font-bold text-blue-600 tracking-wider">Clear</button>
                                     )}
                                 </div>
                                 <div className="flex flex-wrap gap-2 px-2">
@@ -3060,8 +2988,8 @@ export default function ReimburseClient() {
                                         className={clsx(
                                             "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
                                             selectedProjects.length === 0
-                                                ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
-                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                                ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
                                         )}
                                     >
                                         All
@@ -3081,7 +3009,7 @@ export default function ReimburseClient() {
                                                 className={clsx(
                                                     "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
                                                     isSelected
-                                                        ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
+                                                        ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 shadow-sm"
                                                         : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
                                                 )}
                                             >
@@ -3095,9 +3023,9 @@ export default function ReimburseClient() {
                             {/* Category Filter */}
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between px-2">
-                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Category</h4>
+                                    <h4 className="text-[11px] font-bold text-neutral-400 tracking-wider">Category</h4>
                                     {categoryFilters.length > 0 && (
-                                        <button onClick={() => setCategoryFilters([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
+                                        <button onClick={() => setCategoryFilters([])} className="text-[11px] font-bold text-blue-600 tracking-wider">Clear</button>
                                     )}
                                 </div>
                                 <div className="flex flex-wrap gap-2 px-2">
@@ -3106,8 +3034,8 @@ export default function ReimburseClient() {
                                         className={clsx(
                                             "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
                                             categoryFilters.length === 0
-                                                ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
-                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                                ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
                                         )}
                                     >
                                         All
@@ -3127,7 +3055,7 @@ export default function ReimburseClient() {
                                                 className={clsx(
                                                     "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
                                                     isSelected
-                                                        ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
+                                                        ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 shadow-sm"
                                                         : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
                                                 )}
                                             >
@@ -3140,10 +3068,10 @@ export default function ReimburseClient() {
 
                             {/* Date Range Filter */}
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Date Range</h4>
+                                <h4 className="text-[11px] font-bold text-neutral-400 tracking-wider px-2">Date Range</h4>
                                 <div className="flex items-center gap-3 px-2">
                                     <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
-                                        <label className="text-[10px] font-bold text-neutral-400 uppercase pl-3 block">From</label>
+                                        <label className="text-[11px] font-bold text-neutral-400 pl-3 block">From</label>
                                         <input
                                             type="date"
                                             value={format(startDate, "yyyy-MM-dd")}
@@ -3151,11 +3079,11 @@ export default function ReimburseClient() {
                                                 setShowAllMonths(false);
                                                 setStartDate(new Date(e.target.value));
                                             }}
-                                            className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
+                                            className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-full text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-blue-500/20"
                                         />
                                     </div>
                                     <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
-                                        <label className="text-[10px] font-bold text-neutral-400 uppercase pl-3 block">To</label>
+                                        <label className="text-[11px] font-bold text-neutral-400 pl-3 block">To</label>
                                         <input
                                             type="date"
                                             value={format(endDate, "yyyy-MM-dd")}
@@ -3163,7 +3091,7 @@ export default function ReimburseClient() {
                                                 setShowAllMonths(false);
                                                 setEndDate(new Date(e.target.value));
                                             }}
-                                            className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-2xl text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-red-500/20"
+                                            className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-full text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-blue-500/20"
                                         />
                                     </div>
                                 </div>
@@ -3172,7 +3100,7 @@ export default function ReimburseClient() {
                                     className={clsx(
                                         "w-full py-3.5 rounded-2xl text-[12px] font-bold transition-all border",
                                         showAllMonths
-                                            ? "bg-red-600 text-white border-red-500 shadow-md shadow-red-500/20"
+                                            ? "bg-blue-400 text-white border-blue-300 shadow-md shadow-blue-400/20"
                                             : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
                                     )}
                                 >
@@ -3183,11 +3111,11 @@ export default function ReimburseClient() {
 
                         <button
                             onClick={() => setShowFilters(false)}
-                            className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-full font-bold text-[16px] transition-colors shadow-lg shadow-red-500/20 active:scale-[0.98] mt-auto shrink-0"
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-full font-bold text-[16px] transition-colors shadow-lg shadow-blue-500/20 active:scale-[0.98] mt-auto shrink-0"
                         >
                             Apply Filters
                         </button>
-                    </div>
+                    </motion.div>
                 </div>
             )}
         </FinancePageWrapper>

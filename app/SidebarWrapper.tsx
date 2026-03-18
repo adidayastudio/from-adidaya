@@ -39,15 +39,17 @@ function MainLayout({
     <>
       {/* DESKTOP WINDOW SHELL */}
       <div
-        className="hidden md:flex fixed inset-4 z-50 transition-all duration-1000 rounded-[32px] overflow-hidden p-4 gap-4"
         style={headerContent.shellBackground ? {
           background: headerContent.shellBackground,
         } : {
           background: 'rgba(255, 255, 255, 0.4)',
-          backdropFilter: 'blur(32px)',
-          border: '1px solid rgba(255, 255, 255, 0.4)',
-          boxShadow: '0 30px 60px -15px rgba(0,0,0,0.3)',
+          // Dark mode variant handled via CSS class or inline check if possible, 
+          // but since this is style object, let's use a CSS variable or a conditional.
         }}
+        className={clsx(
+          "hidden md:flex fixed inset-4 z-50 transition-all duration-1000 rounded-[32px] overflow-hidden p-4 gap-4",
+          !headerContent.shellBackground && "bg-white/40 dark:bg-black/20 backdrop-blur-[32px] border-4 border-red-500 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)]"
+        )}
       >
         {/* Standard soft white/dark overlay - keep it subtle for Vibe */}
         <div className={clsx(

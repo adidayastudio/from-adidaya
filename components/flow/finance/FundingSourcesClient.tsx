@@ -164,56 +164,6 @@ export default function FundingSourcesClient() {
     const activeCount = sources.filter(s => !s.is_archived).length;
     const archivedCount = sources.filter(s => s.is_archived).length;
 
-    if (isLoading) {
-        return <GlobalLoading />;
-    }
-
-    // Team-only page - show message for personal view
-    if (!canAccessTeam || viewMode === "personal") {
-        return (
-            <FinancePageWrapper
-                breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Funding Sources" }]}
-                header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources." />}
-            >
-                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-neutral-200">
-                    <Landmark className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
-                    <h3 className="text-neutral-900 font-medium text-lg mb-2">Funding Sources are Team Assets</h3>
-                    <p className="text-neutral-500 max-w-md mx-auto mb-8">
-                        This module is available in Team View only.
-                    </p>
-
-                    {/* Logic: If they CAN access team but are in personal mode, show button to switch */}
-                    {canAccessTeam ? (
-                        <div className="flex flex-col items-center gap-4">
-                            <button
-                                onClick={() => setViewMode("team")}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-neutral-900 text-white rounded-full text-sm font-medium hover:bg-neutral-800 transition-all shadow-lg active:scale-95"
-                            >
-                                <ArrowRightLeft className="w-4 h-4" />
-                                Switch to Team View
-                            </button>
-                            <p className="text-xs text-neutral-400">
-                                You are signed in as <strong className="text-neutral-600">{userRole}</strong> (Authorized)
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <p className="text-xs text-neutral-400 max-w-md mx-auto">
-                                Your current detected role is <strong className="text-neutral-600">{(authLoading ? "loading..." : (userRole || "unknown"))}</strong>.
-                                To access this page, you need one of: Superadmin, Admin, Finance, or Management.
-                            </p>
-                            <div className="p-3 bg-neutral-50 rounded text-[10px] text-neutral-400 font-mono inline-block text-left">
-                                DEBUG INFO:<br />
-                                View: {viewMode}<br />
-                                Allowed: {canAccessTeam ? "YES" : "NO"}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </FinancePageWrapper>
-        );
-    }
-
     const handleToggle = async (id: string) => {
         const source = sources.find(s => s.id === id);
         if (!source) return;
@@ -231,8 +181,6 @@ export default function FundingSourcesClient() {
             setSources(prev => prev.map(s => s.id === id ? { ...s, is_active: !newStatus } : s));
         }
     };
-
-
 
     const handleEdit = (id: string) => {
         const source = sources.find(s => s.id === id);
@@ -266,7 +214,6 @@ export default function FundingSourcesClient() {
         }
     };
 
-    // START DELETE LOGIC
     const triggerDelete = (id: string) => {
         const source = sources.find(s => s.id === id);
         if (source) {
@@ -294,10 +241,8 @@ export default function FundingSourcesClient() {
             alert(`Failed to delete funding source: ${error.message}`);
         }
     };
-    // END DELETE LOGIC
 
     const handleMoveSource = async (id: string, direction: "up" | "down") => {
-        // Need to find the item in the *filtered* list to know who to swap with visually
         const currentIndex = filteredSources.findIndex(s => s.id === id);
         if (currentIndex === -1) return;
 
@@ -305,26 +250,18 @@ export default function FundingSourcesClient() {
         if (targetIndex < 0 || targetIndex >= filteredSources.length) return;
 
         const targetSource = filteredSources[targetIndex];
-
-        // Now find them in the global list to swap and update positions
         const sourceIndexMain = sources.findIndex(s => s.id === id);
         const targetIndexMain = sources.findIndex(s => s.id === targetSource.id);
 
         if (sourceIndexMain === -1 || targetIndexMain === -1) return;
 
         const newSources = [...sources];
-
-        // Swap their positions in the object
         const pos1 = newSources[sourceIndexMain].position || 0;
         const pos2 = newSources[targetIndexMain].position || 0;
-
-        // Actually, better to just swap the OBJECTS in the array + swap their position values to persist.
 
         newSources[sourceIndexMain] = { ...newSources[sourceIndexMain], position: pos2 };
         newSources[targetIndexMain] = { ...newSources[targetIndexMain], position: pos1 };
 
-        // Also swap them in the array so the UI updates immediately based on array order
-        // (Since filteredSources is derived from source order)
         [newSources[sourceIndexMain], newSources[targetIndexMain]] = [newSources[targetIndexMain], newSources[sourceIndexMain]];
 
         setSources(newSources);
@@ -342,14 +279,11 @@ export default function FundingSourcesClient() {
     const handleSave = async () => {
         if (!formData.name || !workspaceId) return;
 
-        // Auto-generate account number if missing
         let finalAccountNumber = formData.account_number;
         if (!finalAccountNumber) {
             if (formData.type === "BANK") {
-                // Generate based on common length (random for now)
                 finalAccountNumber = Math.floor(1000000000 + Math.random() * 9000000000).toString();
             } else {
-                // Auto generate 8000...
                 const suffix = Math.floor(1000 + Math.random() * 9000).toString();
                 finalAccountNumber = `80008000${suffix}`;
             }
@@ -406,25 +340,51 @@ export default function FundingSourcesClient() {
         </button>
     );
 
-    if (isLoading && sources.length === 0) {
-        return (
-            <FinancePageWrapper
-                breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Funding Sources" }]}
-                header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources for all projects." />}
-            >
+    return (
+        <FinancePageWrapper
+            header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources for all projects." action={!isLoading && canAccessTeam && viewMode !== "personal" ? addButton : undefined} />}
+        >
+            {isLoading ? (
                 <div className="flex items-center justify-center h-64">
                     <Loader2 className="w-8 h-8 animate-spin text-red-500" />
                 </div>
-            </FinancePageWrapper>
-        );
-    }
+            ) : (!canAccessTeam || viewMode === "personal") ? (
+                <div className="text-center py-20 bg-white dark:bg-neutral-900/40 rounded-[32px] border border-dashed border-neutral-200 dark:border-neutral-800">
+                    <Landmark className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+                    <h3 className="text-neutral-900 dark:text-white font-bold text-lg mb-2">Funding Sources are Team Assets</h3>
+                    <p className="text-neutral-500 max-w-md mx-auto mb-8 font-medium">
+                        This module is available in Team View only.
+                    </p>
 
-    return (
-        <FinancePageWrapper
-            breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Funding Sources" }]}
-            header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources for all projects." action={addButton} />}
-        >
-            {/* TABS - ANIMATED SWITCHER */}
+                    {canAccessTeam ? (
+                        <div className="flex flex-col items-center gap-4">
+                            <button
+                                onClick={() => setViewMode("team")}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-neutral-900 dark:bg-white dark:text-neutral-900 text-white rounded-full text-sm font-bold hover:bg-neutral-800 transition-all shadow-lg active:scale-95"
+                            >
+                                <ArrowRightLeft className="w-4 h-4" />
+                                Switch to Team View
+                            </button>
+                            <p className="text-xs text-neutral-400 font-medium">
+                                You are signed in as <strong className="text-neutral-600 dark:text-neutral-300">{userRole}</strong> (Authorized)
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <p className="text-xs text-neutral-400 max-w-md mx-auto font-medium">
+                                Your current detected role is <strong className="text-neutral-600 dark:text-neutral-300">{(authLoading ? "loading..." : (userRole || "unknown"))}</strong>.
+                                To access this page, you need one of: Superadmin, Admin, Finance, or Management.
+                            </p>
+                            <div className="p-3 bg-neutral-50 dark:bg-neutral-900/60 rounded-xl text-[10px] text-neutral-400 font-mono inline-block text-left border border-neutral-100 dark:border-neutral-800">
+                                DEBUG INFO:<br />
+                                View: {viewMode}<br />
+                                Allowed: {canAccessTeam ? "YES" : "NO"}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <>
             <div className="flex items-center p-1 bg-neutral-100/80 rounded-full w-fit mb-6 ml-1 border border-neutral-200/50">
                 {["ACTIVE", "ARCHIVED"].map((tab) => {
                     const isActive = activeTab === tab;
@@ -646,6 +606,8 @@ export default function FundingSourcesClient() {
                         </div>
                     </div>
                 </div>
+            )}
+                </>
             )}
         </FinancePageWrapper>
     );

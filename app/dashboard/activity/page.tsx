@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Target, User, Activity, Sparkles, Users } from "lucide-react";
 import clsx from "clsx";
@@ -143,36 +143,25 @@ export default function ActivitySummaryPage() {
         }
     };
 
-    // Register Header Content to global WebHeader
-    useHeader({
+    const headerContent = useMemo(() => ({
+        hideGlobalActions: true,
         middle: (
-            <span className="text-[13px] font-bold text-neutral-900 dark:text-white tracking-tight">
+            <span className="text-[13px] font-medium text-neutral-900 dark:text-white">
                 {format(selectedDate, 'EEEE, d MMM')}
             </span>
         ),
         right: (
-            <div className="flex items-center gap-1 bg-white/40 dark:bg-neutral-800/20 backdrop-blur-xl p-1 rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm mr-1">
+            <div className="flex items-center gap-1 bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl p-1 rounded-full border border-white/20 dark:border-neutral-700/20 shadow-sm mr-1">
                 <button
                     onClick={handleTodayClick}
-                    className="px-3 py-1 rounded-full hover:bg-white/60 dark:hover:bg-neutral-700/60 transition-all text-[11px] font-bold text-neutral-600 dark:text-neutral-300">
+                    className="px-3 py-1 rounded-full hover:bg-white/20 dark:hover:bg-neutral-700/60 transition-all text-[11px] font-medium text-neutral-800 dark:text-neutral-200">
                     Today
                 </button>
-                {isManager && (
-                    <button
-                        onClick={() => setMode(mode === "personal" ? "team" : "personal")}
-                        className={clsx(
-                            "w-7 h-7 rounded-full flex items-center justify-center transition-all",
-                            mode === "team"
-                                ? "bg-blue-500 text-white"
-                                : "hover:bg-white/60 dark:hover:bg-neutral-700/60 text-neutral-600 dark:text-neutral-300"
-                        )}
-                    >
-                        {mode === "team" ? <Users className="w-3.5 h-3.5" strokeWidth={2.5} /> : <User className="w-3.5 h-3.5" strokeWidth={2.5} />}
-                    </button>
-                )}
             </div>
         )
-    }, selectedDate?.getTime());
+    }), [selectedDate, handleTodayClick]);
+
+    useHeader(headerContent, selectedDate?.getTime());
 
 
     const WEEKS_DATA = Array.from({ length: PAST_WEEKS }).map((_, weekIdx) => {
@@ -201,53 +190,56 @@ export default function ActivitySummaryPage() {
             sidebar={<DashboardSidebar />}
             isTransparent
         >
-            <div className="w-full animate-in fade-in duration-500">
-                {/* Mobile Header - Only on small screens (strictly hidden on Tablet/Web) */}
-                <div className="md:hidden">
-                    <div className="flex items-center justify-between mb-4">
+            <div className="md:hidden fixed top-0 left-0 right-0 z-50 px-4 py-4 bg-transparent pointer-events-none">
+                <div className="flex items-center justify-between pointer-events-auto w-full">
+                    <button
+                        onClick={() => router.back()}
+                        className="w-10 h-10 rounded-full bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white active:scale-95 transition-all shadow-sm"
+                    >
+                        <ChevronLeft size={20} strokeWidth={1.5} />
+                    </button>
+                    <div className="text-center">
+                        <h1 className="text-[17px] font-medium text-neutral-900 dark:text-white">
+                            My Activity
+                        </h1>
+                        <p className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 mt-0.5 opacity-80">
+                            {format(selectedDate, 'EEEE, MMMM d')}
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
                         <button
-                            onClick={() => router.back()}
-                            className="w-9 h-9 rounded-full bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/5 flex items-center justify-center text-neutral-500 hover:text-neutral-900 dark:hover:text-white active:scale-95 transition-all shadow-sm"
+                            onClick={handleTodayClick}
+                            className="px-4 py-2 rounded-full bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 active:scale-95 transition-all text-[12px] font-medium text-neutral-700 dark:text-neutral-200 shadow-sm"
                         >
-                            <ChevronLeft size={20} strokeWidth={2} />
+                            Today
                         </button>
-                        <div className="text-center">
-                            <h1 className="text-[18px] font-bold text-neutral-900 dark:text-white tracking-tight">
-                                My Activity
-                            </h1>
-                            <p className="text-[11px] font-medium text-neutral-400 dark:text-neutral-500 mt-0.5">
-                                {format(selectedDate, 'EEEE, MMMM d')}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-1.5">
+                        {isManager && (
                             <button
-                                onClick={handleTodayClick}
-                                className="px-3 py-1.5 rounded-full bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/5 active:scale-95 transition-all text-[10px] font-bold uppercase tracking-wider text-neutral-500 dark:text-neutral-400 shadow-sm"
+                                onClick={() => setMode(mode === "personal" ? "team" : "personal")}
+                                className={clsx(
+                                    "w-10 h-10 rounded-full flex items-center justify-center shadow-sm border active:scale-95 transition-all backdrop-blur-xl",
+                                    mode === "team"
+                                        ? "bg-blue-500 border-blue-500 text-white"
+                                        : "bg-white/10 dark:bg-black/20 border-white/20 dark:border-white/5 text-neutral-500 dark:text-neutral-400"
+                                )}
                             >
-                                Today
+                                {mode === "team" ? <Users className="w-4 h-4" strokeWidth={1.5} /> : <User className="w-4 h-4" strokeWidth={1.5} />}
                             </button>
-                            {isManager && (
-                                <button
-                                    onClick={() => setMode(mode === "personal" ? "team" : "personal")}
-                                    className={clsx(
-                                        "w-9 h-9 rounded-full flex items-center justify-center shadow-sm border active:scale-95 transition-all",
-                                        mode === "team"
-                                            ? "bg-blue-500 border-blue-500 text-white"
-                                            : "bg-white/50 dark:bg-neutral-800/50 border-black/5 dark:border-white/5 text-neutral-500 dark:text-neutral-400"
-                                    )}
-                                >
-                                    {mode === "team" ? <Users className="w-4 h-4" strokeWidth={2.5} /> : <User className="w-4 h-4" strokeWidth={2.5} />}
-                                </button>
-                            )}
-                        </div>
+                        )}
                     </div>
                 </div>
+            </div>
 
-                {/* Weekly Calendar Rings */}
-                <div className="pt-2">
+            {/* Mobile Header Spacer */}
+            <div className="h-[80px] md:hidden" />
+
+            <div className="w-full animate-in fade-in duration-500">
+
+
+                <div className="px-4 pt-2">
                     <div ref={scrollContainerRef} className="w-full flex overflow-x-auto snap-x snap-mandatory hide-scrollbar mb-10 pb-2 pt-1 scroll-smooth">
                         {WEEKS_DATA.map((week, wIdx) => (
-                            <div key={wIdx} className="w-full min-w-full flex justify-between snap-center flex-shrink-0">
+                            <div key={wIdx} className="w-full min-w-full flex justify-between gap-4 snap-center flex-shrink-0 px-2 lg:px-0">
                                 {week.map((day, idx) => (
                                     <div
                                         key={idx}
@@ -283,7 +275,7 @@ export default function ActivitySummaryPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Tasks Card */}
                         <div className="bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm rounded-[32px] p-6 shadow-sm border border-neutral-200/60 dark:border-neutral-800/60 transition-all hover:bg-white dark:hover:bg-neutral-900">
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex flex-col gap-1 mb-4">
                                 <div className="flex items-center gap-2 text-blue-500 font-bold text-[10px] tracking-widest uppercase">
                                     <Target className="w-3.5 h-3.5" strokeWidth={2.5} />
                                     Tasks
@@ -323,7 +315,7 @@ export default function ActivitySummaryPage() {
 
                         {/* Presence Card */}
                         <div className="bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm rounded-[32px] p-6 shadow-sm border border-neutral-200/60 dark:border-neutral-800/60 transition-all hover:bg-white dark:hover:bg-neutral-900">
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex flex-col gap-1 mb-4">
                                 <div className="flex items-center gap-2 text-emerald-500 font-bold text-[10px] tracking-widest uppercase">
                                     <User className="w-3.5 h-3.5" strokeWidth={2.5} />
                                     Presence
@@ -357,7 +349,7 @@ export default function ActivitySummaryPage() {
 
                         {/* Pulse Card */}
                         <div className="bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm rounded-[32px] p-6 shadow-sm border border-neutral-200/60 dark:border-neutral-800/60 transition-all hover:bg-white dark:hover:bg-neutral-900">
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex flex-col gap-1 mb-4">
                                 <div className="flex items-center gap-2 text-amber-500 font-bold text-[10px] tracking-widest uppercase">
                                     <Activity className="w-3.5 h-3.5" strokeWidth={2.5} />
                                     Pulse

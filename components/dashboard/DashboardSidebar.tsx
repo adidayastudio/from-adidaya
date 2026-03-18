@@ -49,25 +49,25 @@ export default function DashboardSidebar() {
         {/* CLOCK WIDGET (LIQUID GLASS) */}
         <div className={clsx(
           "mb-6 p-5 rounded-2xl border transition-all duration-300 group relative overflow-hidden",
-          !isCheckedIn && "bg-gradient-to-br from-neutral-50 to-neutral-100/50 border-neutral-200 shadow-sm",
-          isCheckedIn && status === "on-time" && "bg-gradient-to-br from-emerald-50/80 to-teal-50/40 border-emerald-200/50 shadow-[0_8px_30px_rgba(16,185,129,0.08)] ring-1 ring-emerald-100",
-          isCheckedIn && status === "intime" && "bg-gradient-to-br from-amber-50/80 to-orange-50/40 border-amber-200/50 shadow-[0_8px_30px_rgba(245,158,11,0.08)] ring-1 ring-amber-100",
-          isCheckedIn && status === "late" && "bg-gradient-to-br from-red-50/80 to-rose-50/40 border-red-200/50 shadow-[0_8px_30px_rgba(239,68,68,0.08)] ring-1 ring-red-100",
-          isCheckedIn && status === "overtime" && "bg-gradient-to-br from-violet-50/80 to-purple-50/40 border-violet-200/50 shadow-[0_8px_30px_rgba(139,92,246,0.08)] ring-1 ring-violet-100",
+          !isCheckedIn && "bg-gradient-to-br from-neutral-50 to-neutral-100/50 dark:from-neutral-800 dark:to-neutral-900/50 border-neutral-200 dark:border-neutral-700 shadow-sm",
+          isCheckedIn && status === "on-time" && "bg-gradient-to-br from-emerald-50/80 to-teal-50/40 dark:from-emerald-900/30 dark:to-teal-900/20 border-emerald-200/50 dark:border-emerald-700/30 shadow-[0_8px_30px_rgba(16,185,129,0.08)] ring-1 ring-emerald-100 dark:ring-emerald-900/20",
+          isCheckedIn && status === "intime" && "bg-gradient-to-br from-amber-50/80 to-orange-50/40 dark:from-amber-900/30 dark:to-orange-900/20 border-amber-200/50 dark:border-amber-700/30 shadow-[0_8px_30px_rgba(245,158,11,0.08)] ring-1 ring-amber-100 dark:ring-amber-900/20",
+          isCheckedIn && status === "late" && "bg-gradient-to-br from-red-50/80 to-rose-50/40 dark:from-red-900/30 dark:to-rose-900/20 border-red-200/50 dark:border-red-700/30 shadow-[0_8px_30px_rgba(239,68,68,0.08)] ring-1 ring-red-100 dark:ring-red-900/20",
+          isCheckedIn && status === "overtime" && "bg-gradient-to-br from-violet-50/80 to-purple-50/40 dark:from-violet-900/30 dark:to-purple-900/20 border-violet-200/50 dark:border-violet-700/30 shadow-[0_8px_30px_rgba(139,92,246,0.08)] ring-1 ring-violet-100 dark:ring-violet-900/20",
         )}>
           {/* Glass specular highlight */}
-          <div className="absolute inset-0 rounded-2xl pointer-events-none transition-colors bg-gradient-to-br from-white/40 via-transparent to-transparent" />
+          <div className="absolute inset-0 rounded-2xl pointer-events-none transition-colors bg-gradient-to-br from-white/40 via-transparent to-transparent opacity-100 dark:opacity-10" />
 
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className={clsx(
                   "w-10 h-10 rounded-2xl flex items-center justify-center transition-colors shadow-sm",
-                  !isCheckedIn && "bg-neutral-100 text-neutral-400 border border-neutral-200",
-                  isCheckedIn && status === "on-time" && "bg-emerald-100/50 text-emerald-600 border border-emerald-200/50",
-                  isCheckedIn && status === "intime" && "bg-amber-100/50 text-amber-600 border border-amber-200/50",
-                  isCheckedIn && status === "late" && "bg-red-100/50 text-red-600 border border-red-200/50",
-                  isCheckedIn && status === "overtime" && "bg-violet-100/50 text-violet-600 border border-violet-200/50",
+                  !isCheckedIn && "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-700",
+                  isCheckedIn && status === "on-time" && "bg-emerald-100/50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-700/30",
+                  isCheckedIn && status === "intime" && "bg-amber-100/50 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-700/30",
+                  isCheckedIn && status === "late" && "bg-red-100/50 dark:bg-red-900/40 text-red-600 dark:text-red-400 border border-red-200/50 dark:border-red-700/30",
+                  isCheckedIn && status === "overtime" && "bg-violet-100/50 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 border border-violet-200/50 dark:border-violet-700/30",
                 )}>
                   <Clock className="w-5 h-5" strokeWidth={2} />
                 </div>

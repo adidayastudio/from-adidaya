@@ -54,7 +54,12 @@ export interface PurchasingRequestPayload {
 export async function fetchPurchasingRequestById(id: string) {
     const { data, error } = await apiGet<any>(`/api/finance/purchasing/${id}`);
     if (error) {
-        console.error("Error fetching purchasing request:", error);
+        // If the error indicates not found, we don't necessarily want to spam the console
+        if (error.includes("not found") || error.includes("404")) {
+            console.debug("Purchasing request not found (ID: " + id + ")");
+        } else {
+            console.error("Error fetching purchasing request:", error);
+        }
         return null;
     }
     return data;

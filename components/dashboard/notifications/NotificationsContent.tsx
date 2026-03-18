@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
-import { Search, Inbox, Filter, Bell } from "lucide-react";
+import { Search, Bell } from "lucide-react";
 import { SummaryFilterCards, FilterItem } from "@/components/dashboard/shared/SummaryFilterCards";
 import { MobileNotificationTabs } from "./MobileNotificationTabs";
 import { isToday, isYesterday, differenceInHours, isAfter, subDays } from "date-fns";
@@ -17,12 +17,27 @@ import { useNotifications } from "@/hooks/useNotifications";
 
 export type NotificationSection = "all" | "unread" | "finance" | "projects" | "system";
 
-export default function NotificationsContent({ section, isEmbedded = false }: { section: NotificationSection; isEmbedded?: boolean }) {
+export default function NotificationsContent({ 
+    section, 
+    isEmbedded = false,
+    externalSearchQuery = "",
+    onSearchChange
+}: { 
+    section: NotificationSection; 
+    isEmbedded?: boolean;
+    externalSearchQuery?: string;
+    onSearchChange?: (q: string) => void;
+}) {
     const router = useRouter();
-    const { notifications, loading, error, refresh, markAsRead, currentUserId } = useNotifications();
-    const [searchQuery, setSearchQuery] = useState("");
+    const searchParams = useSearchParams();
+    const { notifications, loading, error, refresh, markAsRead, loadMore, hasMore, currentUserId } = useNotifications();
+    const [localSearchQuery, setLocalSearchQuery] = useState("");
     const [permission, setPermission] = useState<NotificationPermission>("default");
     const supabase = createClient();
+    
+    // Direct read from URL if in page context, otherwise use local/prop
+    const searchQuery = (isEmbedded ? (externalSearchQuery || localSearchQuery) : (searchParams.get("q") || externalSearchQuery || "")) || "";
+    const setSearchQuery = onSearchChange || setLocalSearchQuery;
 
     const [debugState, setDebugState] = useState({
         auth: "Checking...",
@@ -49,45 +64,9 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
             if (result === "granted") {
                 const ok = await subscribeToPush();
                 setDebugState(prev => ({ ...prev, push: ok ? "granted (Synced)" : "granted (Sync Failed)" }));
-                // Final success alert
-                triggerLocalNotification("Notifications Enabled", "You will now receive background alerts for new activities.");
             }
         } catch (error) {
             console.error("Error requesting notification permission:", error);
-        }
-    };
-
-    const triggerLocalNotification = async (title: string, body: string, addToUI = false) => {
-        console.log("🔔 [Notification] Attempting to trigger:", { title, body, addToUI });
-
-        if (Notification.permission !== "granted") {
-            const result = await Notification.requestPermission();
-            if (result !== "granted") {
-                alert("Notifications are blocked! Please enable them in your browser settings (Lock icon in URL bar).");
-                return;
-            }
-        }
-
-        const options = {
-            body,
-            icon: '/android-chrome-192x192.png',
-            badge: '/android-chrome-192x192.png',
-            tag: 'adidaya-notif-' + Date.now(),
-            data: { link: '/dashboard/notifications' }
-        };
-
-        try {
-            // Try Service Worker first (More reliable on modern browsers/PWA)
-            if ('serviceWorker' in navigator) {
-                const reg = await navigator.serviceWorker.ready;
-                await reg.showNotification(title, options);
-            } else {
-                // Fallback to classic API
-                new Notification(title, options);
-            }
-        } catch (e) {
-            console.error("Notification Error:", e);
-            alert("Error sending notification: " + e);
         }
     };
 
@@ -123,48 +102,36 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
         }
     });
 
-    if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        filteredNotifications = filteredNotifications.filter(n =>
-            n.title.toLowerCase().includes(q) ||
-            n.description.toLowerCase().includes(q)
-        );
+    if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        filteredNotifications = filteredNotifications.filter(n => {
+            const titleMatch = (n.title || "").toLowerCase().includes(q);
+            const descMatch = (n.description || "").toLowerCase().includes(q);
+            const sourceMatch = (n.source?.name || "").toLowerCase().includes(q);
+            const projectMatch = (n.metadata?.projectCode || "").toLowerCase().includes(q);
+            // Also check for status keyword matches
+            const statusMatch = (n.metadata?.status || "").toLowerCase().includes(q);
+            
+            return titleMatch || descMatch || sourceMatch || projectMatch || statusMatch;
+        });
+    }
+
+    if (isEmbedded) {
+        filteredNotifications = filteredNotifications.slice(0, 50);
     }
 
     const handleMarkAsRead = async (id: string) => {
         await markAsRead(id);
     };
 
-    // Proactive Push Refresh: If already granted, ensures endpoint is up to date in Supabase
-    useEffect(() => {
-        if (permission === "granted" && currentUserId) {
-            console.log("🔄 [Push] Refreshing registration...");
-            subscribeToPush().then(ok => {
-                setDebugState(prev => ({ ...prev, push: ok ? "granted (Synced)" : "granted (Sync Failed)" }));
-            });
-        }
-    }, [permission, currentUserId]);
-
-    // Handle initial prompt (Safari often blocks auto-prompts, so we keep this subtle)
-    useEffect(() => {
-        if (permission === "default") {
-            const timer = setTimeout(() => {
-                requestPermission().catch(() => { });
-            }, 3000);
-            return () => clearTimeout(timer);
-        }
-    }, [permission]);
-
-
-
     // Grouping Logic
     const groupNotifications = (items: UiNotification[]) => {
-        const groups = {
-            new: [] as UiNotification[],
-            today: [] as UiNotification[],
-            yesterday: [] as UiNotification[],
-            last7Days: [] as UiNotification[],
-            last30Days: [] as UiNotification[],
+        const groups: Record<string, UiNotification[]> = {
+            "New": [],
+            "Today": [],
+            "Yesterday": [],
+            "Last 7 Days": [],
+            "Last 30 Days": [],
         };
 
         const now = new Date();
@@ -175,18 +142,16 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
             const date = new Date(item.fullTimestamp);
 
             if (differenceInHours(now, date) < 1) {
-                groups.new.push(item);
+                groups["New"].push(item);
             } else if (isToday(date)) {
-                groups.today.push(item);
+                groups["Today"].push(item);
             } else if (isYesterday(date)) {
-                groups.yesterday.push(item);
+                groups["Yesterday"].push(item);
             } else if (isAfter(date, sevenDaysAgo)) {
-                groups.last7Days.push(item);
+                groups["Last 7 Days"].push(item);
             } else if (isAfter(date, thirtyDaysAgo)) {
-                groups.last30Days.push(item);
+                groups["Last 30 Days"].push(item);
             }
-            // Older items are currently ignored/hidden in the default view per request for "All History" button
-            // Or we can just include them in "Last 30 Days" bucket if user prefers, but "All History" implies separation.
         });
 
         return groups;
@@ -197,40 +162,14 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
 
     return (
         <div className="animate-in fade-in duration-500">
-            {/* HEADER & DEBUG */}
+            {/* Page Header inside the content box */}
             {!isEmbedded && (
-                <div className="space-y-4">
-                    <div className="hidden md:flex items-center justify-between">
-                        <h1 className="text-2xl font-bold text-neutral-900">Notifications</h1>
-                    </div>
+                <div className="mb-6">
+                    <h1 className="text-3xl font-bold text-neutral-900 dark:text-white tracking-tight">
+                        Notifications
+                    </h1>
                 </div>
             )}
-
-
-
-            {/* Debug Dashboard - Desktop Only */}
-            <div className="hidden md:flex flex-wrap gap-2 px-4 py-2 bg-neutral-50 rounded-xl border border-neutral-200/60 shadow-inner">
-                <div className="flex items-center gap-1.5 min-w-fit">
-                    <div className={clsx("w-1.5 h-1.5 rounded-full", currentUserId ? "bg-green-500" : "bg-red-500")} />
-                    <span className="text-[10px] font-bold text-neutral-500 uppercase">
-                        {currentUserId ? "Session Active" : "No Session"}
-                    </span>
-                </div>
-                <span className="text-neutral-300">•</span>
-                <div className="flex items-center gap-1.5 min-w-fit">
-                    <div className={clsx("w-1.5 h-1.5 rounded-full", debugState.realtime.includes("Subscribed") ? "bg-green-500" : "bg-orange-500")} />
-                    <span className="text-[10px] font-bold text-neutral-500 uppercase">Live: {debugState.realtime}</span>
-                </div>
-                <span className="text-neutral-300">•</span>
-                <div className="flex items-center gap-1.5 min-w-fit">
-                    <div className={clsx("w-1.5 h-1.5 rounded-full", debugState.push.includes("Synced") ? "bg-green-500" : "bg-orange-500")} />
-                    <span className="text-[10px] font-bold text-neutral-500 uppercase">Push: {debugState.push}</span>
-                </div>
-            </div>
-
-
-
-
 
             {/* Desktop Cards */}
             {!isEmbedded && (
@@ -238,10 +177,12 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
                     items={filterItems}
                     selectedId={section}
                     onSelect={(id) => router.push(`/dashboard/notifications?section=${id}`)}
-                    className="hidden md:grid"
+                    className="hidden md:flex mb-10"
+                    isScrollable={true}
                 />
             )}
-            {/* Mobile Unified Navbar Pill - only show on standalone page */}
+            
+            {/* Mobile Unified Navbar Pill */}
             {!isEmbedded && (
                 <div className="md:hidden fixed top-0 left-0 right-0 z-50 px-3 pt-3 pb-2 pointer-events-none">
                     <div
@@ -251,16 +192,11 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
                             boxShadow: '0 4px 24px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.6)'
                         }}
                     >
-                        {/* Left: Title (Styled like App Switcher Pill) */}
                         <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/60 border border-white/70 shrink-0">
                             <Bell className="w-3.5 h-3.5 text-neutral-900 fill-neutral-900" />
-                            <span className="font-semibold text-neutral-900 text-xs">Notifications</span>
+                            <span className="font-medium text-neutral-900 text-xs">Notifications</span>
                         </div>
-
-                        {/* Divider */}
                         <div className="w-px h-5 bg-neutral-300/40 shrink-0" />
-
-                        {/* Right: Scrollable Tabs */}
                         <div className="flex-1 overflow-hidden min-w-0">
                             <MobileNotificationTabs
                                 items={filterItems}
@@ -270,103 +206,28 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
                         </div>
                     </div>
                 </div>
-            )
-            }
+            )}
 
-            {/* Mobile Spacer to compensate for Fixed Header */}
+            {/* Mobile Spacer */}
             {!isEmbedded && <div className="md:hidden h-20" />}
 
-            {/* Mobile Mobile Debug Buttons (Temporary) */}
-            {
-                !isEmbedded && (
-                    <div className="md:hidden flex items-center justify-end gap-2 px-4 mb-4">
-                        <button
-                            onClick={() => triggerLocalNotification("Health Check", "Testing Banner...", true)}
-                            className="text-[10px] font-bold text-neutral-400 border border-neutral-200 px-2 py-1 rounded-full hover:bg-neutral-50"
-                        >
-                            Test
-                        </button>
-                        <button
-                            onClick={async () => {
-                                if (confirm("Reset connection?")) {
-                                    const { unsubscribeFromPush, subscribeToPush } = await import("@/lib/api/push-registration");
-                                    await unsubscribeFromPush();
-                                    await subscribeToPush();
-                                    window.location.reload();
-                                }
-                            }}
-                            className="text-[10px] font-bold text-neutral-400 border border-neutral-200 px-2 py-1 rounded-full hover:bg-red-50 hover:text-red-500"
-                        >
-                            Reset
-                        </button>
+            {/* Embedded Search Bar (for drawer) */}
+            {isEmbedded && !loading && !error && hasAnyNotification && (
+                <div className="flex items-center justify-between gap-4 mb-6 px-1">
+                    <div className="relative flex-1 max-w-md">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                        <input
+                            type="text"
+                            placeholder="Search notifications..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-neutral-400 w-full"
+                        />
                     </div>
-                )
-            }
+                </div>
+            )}
 
-            {!isEmbedded && <div className="h-px bg-neutral-100 hidden md:block my-6" />}
-
-            {/* TOOLBAR - Desktop Only */}
-            {
-                !isEmbedded && (
-                    <div className="hidden md:flex items-center justify-between gap-4 mb-6">
-                        <div className="relative flex-1 max-w-md">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                            <input
-                                type="text"
-                                placeholder="Search notifications..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-neutral-400 w-full"
-                            />
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            {permission === "default" && (
-                                <button
-                                    onClick={requestPermission}
-                                    className="bg-neutral-900 text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-800 transition-all flex items-center gap-2 shadow-lg active:scale-95"
-                                >
-                                    <Bell className="w-3.5 h-3.5" />
-                                    Enable App Alerts
-                                </button>
-                            )}
-
-                            <button
-                                onClick={() => triggerLocalNotification("Health Check", "Testing Banner and Realtime Engine...", true)}
-                                className="bg-neutral-100 text-neutral-600 text-xs font-bold px-4 py-2 rounded-full hover:bg-neutral-200 transition-all border border-neutral-200 active:scale-95"
-                            >
-                                Test Alert
-                            </button>
-
-                            <button
-                                onClick={async () => {
-                                    if (confirm("Reset notifications connection? This is useful if you updated the keys.")) {
-                                        const { unsubscribeFromPush, subscribeToPush } = await import("@/lib/api/push-registration");
-                                        await unsubscribeFromPush();
-                                        await subscribeToPush();
-                                        alert("Connection reset! If valid permissions exist, you are now re-registered.");
-                                        window.location.reload();
-                                    }
-                                }}
-                                className="bg-white text-neutral-400 text-xs font-bold px-3 py-2 rounded-full hover:bg-red-50 hover:text-red-500 transition-all border border-neutral-200"
-                                title="Reset Connection"
-                            >
-                                Reset
-                            </button>
-
-                            <button
-                                onClick={refresh}
-                                className="p-2 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all active:scale-90"
-                                title="Sync"
-                            >
-                                <Filter className={clsx("w-5 h-5", loading && "animate-spin")} />
-                            </button>
-                        </div>
-                    </div>
-                )
-            }
-
-            <div className="space-y-6 pb-24 lg:pb-0">
+            <div className="space-y-4 pb-24 lg:pb-0">
                 {loading ? (
                     <div className="text-center py-20 animate-pulse">
                         <Bell className="w-8 h-8 mx-auto mb-3 text-neutral-200" />
@@ -374,9 +235,9 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
                     </div>
                 ) : error ? (
                     <div className="p-10 text-center border-2 border-red-50 border-dashed rounded-3xl bg-red-50/20">
-                        <p className="text-red-600 font-bold mb-2">Sync Interrupted</p>
+                        <p className="text-red-600 font-medium mb-2">Sync Interrupted</p>
                         <p className="text-sm text-red-400 mb-6">{error}</p>
-                        <button onClick={refresh} className="text-sm font-bold text-white bg-red-500 px-8 py-3 rounded-full hover:bg-red-600 shadow-xl shadow-red-200/50">
+                        <button onClick={refresh} className="text-sm font-medium text-white bg-red-500 px-8 py-3 rounded-full hover:bg-red-600 shadow-xl shadow-red-200/50">
                             Reconnect System
                         </button>
                     </div>
@@ -385,7 +246,7 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
                         <div className="w-16 h-16 mb-4 rounded-full bg-neutral-100 dark:bg-white/5 flex items-center justify-center border border-neutral-200/50 dark:border-white/10 shadow-sm">
                             <span className="text-3xl">🎉</span>
                         </div>
-                        <h3 className="text-lg font-bold text-neutral-900 dark:text-white mb-1">You're all set!</h3>
+                        <h3 className="text-lg font-medium text-neutral-900 dark:text-white mb-1">You're all set!</h3>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-[200px]">
                             {section === "all"
                                 ? "You don't have any notifications right now."
@@ -393,65 +254,39 @@ export default function NotificationsContent({ section, isEmbedded = false }: { 
                         </p>
                     </div>
                 ) : (
-                    <>
-                        {/* New */}
-                        {grouped.new.length > 0 && (
-                            <div className="space-y-2">
-                                <h3 className="text-sm font-bold text-neutral-900 px-1">New</h3>
-                                {grouped.new.map(item => (
-                                    <NotificationWrapper key={item.id} item={item} handleMarkAsRead={handleMarkAsRead} />
-                                ))}
-                            </div>
-                        )}
+                    <div className="space-y-10">
+                        {Object.entries(grouped).map(([label, items]) => {
+                            if (items.length === 0) return null;
+                            return (
+                                <div key={label} className="animate-in fade-in slide-in-from-bottom-2 duration-500 first:mt-8">
+                                    <h3 className="text-xs font-medium text-neutral-900 dark:text-white mb-4 px-1">
+                                        {label}
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {items.map((item) => (
+                                            <NotificationWrapper 
+                                                key={item.id} 
+                                                item={item} 
+                                                handleMarkAsRead={handleMarkAsRead} 
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
 
-                        {/* Today */}
-                        {grouped.today.length > 0 && (
-                            <div className="space-y-2">
-                                <h3 className="text-sm font-bold text-neutral-900 px-1">Today</h3>
-                                {grouped.today.map(item => (
-                                    <NotificationWrapper key={item.id} item={item} handleMarkAsRead={handleMarkAsRead} />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Yesterday */}
-                        {grouped.yesterday.length > 0 && (
-                            <div className="space-y-2">
-                                <h3 className="text-sm font-bold text-neutral-900 px-1">Yesterday</h3>
-                                {grouped.yesterday.map(item => (
-                                    <NotificationWrapper key={item.id} item={item} handleMarkAsRead={handleMarkAsRead} />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Last 7 Days */}
-                        {grouped.last7Days.length > 0 && (
-                            <div className="space-y-2">
-                                <h3 className="text-sm font-bold text-neutral-900 px-1">Last 7 Days</h3>
-                                {grouped.last7Days.map(item => (
-                                    <NotificationWrapper key={item.id} item={item} handleMarkAsRead={handleMarkAsRead} />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Last 30 Days */}
-                        {grouped.last30Days.length > 0 && (
-                            <div className="space-y-2">
-                                <h3 className="text-sm font-bold text-neutral-900 px-1">Last 30 Days</h3>
-                                {grouped.last30Days.map(item => (
-                                    <NotificationWrapper key={item.id} item={item} handleMarkAsRead={handleMarkAsRead} />
-                                ))}
-                            </div>
-                        )}
-
-                        {!isEmbedded && (
-                            <div className="pt-8 text-center">
-                                <button className="text-xs font-bold text-neutral-400 hover:text-neutral-600 transition-colors px-4 py-2 rounded-full hover:bg-neutral-100">
-                                    View All History
-                                </button>
-                            </div>
-                        )}
-                    </>
+                {!isEmbedded && hasMore && hasAnyNotification && (
+                    <div className="pt-8 text-center">
+                        <button 
+                            onClick={loadMore}
+                            disabled={loading}
+                            className="text-xs font-medium text-neutral-400 hover:text-neutral-600 transition-colors px-6 py-2.5 rounded-full hover:bg-neutral-100 border border-neutral-200/50 disabled:opacity-50"
+                        >
+                            {loading ? "Loading..." : "See More Notifications"}
+                        </button>
+                    </div>
                 )}
             </div>
         </div>
@@ -467,7 +302,7 @@ function NotificationWrapper({ item, handleMarkAsRead }: { item: UiNotification,
         );
     }
     return (
-        <div onClick={() => !item.isRead && handleMarkAsRead(item.id)} className="transition-all active:scale-[0.98]">
+        <div onClick={() => !item.isRead && handleMarkAsRead(item.id)} className="transition-all active:scale-[0.98] cursor-pointer">
             <NotificationItem item={item} />
         </div>
     );

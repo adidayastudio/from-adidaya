@@ -87,6 +87,37 @@ export async function GET(request: NextRequest) {
         const endDateParam = searchParams.get("end_date");
         const type = searchParams.get("type");
 
+        // Pre-fetch matching IDs for item name search
+        let matchingRequestIds: string[] = [];
+        if (q) {
+            const { data: itemMatches } = await supabase
+                .from("purchasing_items")
+                .select("request_id")
+                .ilike("name", `%${q}%`);
+            if (itemMatches && itemMatches.length > 0) {
+                matchingRequestIds = Array.from(new Set(itemMatches.map(i => i.request_id)));
+            }
+        }
+
+        // Pre-fetch matching project IDs (by name or code)
+        let matchingProjectIds: string[] = [];
+        if (q) {
+            const { data: projectMatches } = await supabase
+                .from("projects")
+                .select("id")
+                .or(`project_name.ilike.%${q}%,project_code.ilike.%${q}%`);
+            if (projectMatches && projectMatches.length > 0) {
+                matchingProjectIds = projectMatches.map(p => p.id);
+            }
+        }
+
+        // Parse numeric part of search term for request_number matching
+        let qNum: number | null = null;
+        if (q) {
+            const parsed = parseInt(q.replace(/\D/g, ''), 10);
+            if (!isNaN(parsed)) qNum = parsed;
+        }
+
         // Build base query for data
         let query = supabase
             .from("purchasing_requests")
@@ -97,7 +128,7 @@ export async function GET(request: NextRequest) {
             .from("purchasing_requests")
             .select("amount, approval_status, financial_status");
 
-        // Apply shared filters
+        // Apply shared filters to a query builder
         const applyFilters = (qBuilder: any, includeStatus: boolean = true) => {
             let b = qBuilder;
             if (projectId && projectId !== "ALL") {
@@ -132,7 +163,24 @@ export async function GET(request: NextRequest) {
             }
 
             if (q) {
-                b = b.or(`description.ilike.%${q}%,vendor.ilike.%${q}%`);
+                let orString = `description.ilike.%${q}%,vendor.ilike.%${q}%,beneficiary_name.ilike.%${q}%,subcategory.ilike.%${q}%,notes.ilike.%${q}%`;
+                
+                if (qNum !== null) {
+                    orString += `,request_number.eq.${qNum}`;
+                }
+                
+                if (matchingRequestIds.length > 0) {
+                    // Limit the number of IDs to prevent URI Too Long errors
+                    const idsStr = matchingRequestIds.slice(0, 100).join(',');
+                    orString += `,id.in.(${idsStr})`;
+                }
+                
+                if (matchingProjectIds.length > 0) {
+                    const pIdsStr = matchingProjectIds.slice(0, 50).join(',');
+                    orString += `,project_id.in.(${pIdsStr})`;
+                }
+                
+                b = b.or(orString);
             }
 
             // Date filtering
@@ -155,7 +203,7 @@ export async function GET(request: NextRequest) {
         query = applyFilters(query, true);
         statsQuery = applyFilters(statsQuery, false);
 
-        // Fetch Data + Stats
+        // Fetch Data + Stats in parallel
         const [dataRes, statsRes] = await Promise.all([
             query
                 .order("date", { ascending: false })
@@ -189,7 +237,7 @@ export async function GET(request: NextRequest) {
             count: dataRes.count || 0,
             stats: stats
         });
-    } catch (e) {
+    } catch (e: any) {
         console.error("Purchasing GET error:", e);
         return serverErrorResponse("Internal server error");
     }

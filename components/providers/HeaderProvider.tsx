@@ -1,12 +1,12 @@
 "use client";
-
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 
 type HeaderContent = {
   left?: React.ReactNode;
   middle?: React.ReactNode;
   right?: React.ReactNode;
   shellBackground?: string; // e.g. a gradient string
+  hideGlobalActions?: boolean;
 };
 
 type HeaderContextType = {
@@ -18,39 +18,55 @@ type HeaderContextType = {
 const HeaderContentContext = createContext<HeaderContent>({});
 const HeaderActionContext = createContext<{
   setHeader: (content: HeaderContent) => void;
-  clearHeader: () => void;
+  clearHeader: (id?: string) => void;
 } | undefined>(undefined);
 
 export function HeaderProvider({ children }: { children: React.ReactNode }) {
-  const [headerContent, setHeaderContent] = useState<HeaderContent>({});
+  const [headerState, setHeaderState] = useState<{ content: HeaderContent; id: string | null }>({ 
+    content: {}, 
+    id: null 
+  });
 
-  const setHeader = useCallback((content: HeaderContent) => {
-    setHeaderContent((prev) => {
-      // Basic stability check
+  const setHeaderWithId = useCallback((content: HeaderContent, id: string) => {
+    setHeaderState((prev) => {
+      // If we are setting the SAME content for the SAME ID, skip to avoid loops
+      // Note: React nodes (JSX) are compared by reference. Memoize them in the consumer.
       if (
-        prev.left === content.left &&
-        prev.middle === content.middle &&
-        prev.right === content.right &&
-        prev.shellBackground === content.shellBackground
+        prev.id === id &&
+        prev.content.left === content.left &&
+        prev.content.middle === content.middle &&
+        prev.content.right === content.right &&
+        prev.content.shellBackground === content.shellBackground &&
+        prev.content.hideGlobalActions === content.hideGlobalActions
       ) {
         return prev;
       }
-      return { ...prev, ...content };
+      return { content: { ...content }, id };
     });
   }, []);
 
-  const clearHeader = useCallback(() => {
-    setHeaderContent((prev) => {
-      if (Object.keys(prev).length === 0) return prev;
-      return {};
+  const clearHeader = useCallback((id?: string) => {
+    setHeaderState((prev) => {
+      // If we are clearing and it's already cleared, skip to avoid loops
+      if (!id || id === prev.id) {
+        if (prev.id === null && Object.keys(prev.content).length === 0) {
+          return prev;
+        }
+        return { content: {}, id: null };
+      }
+      return prev;
     });
   }, []);
 
-  const actions = React.useMemo(() => ({ setHeader, clearHeader }), [setHeader, clearHeader]);
+  const actions = useMemo(() => ({ 
+    setHeader: (content: HeaderContent) => setHeaderWithId(content, `h-${Date.now()}`),
+    setHeaderWithId,
+    clearHeader 
+  }), [setHeaderWithId, clearHeader]);
 
   return (
     <HeaderActionContext.Provider value={actions}>
-      <HeaderContentContext.Provider value={headerContent}>
+      <HeaderContentContext.Provider value={headerState.content}>
         {children}
       </HeaderContentContext.Provider>
     </HeaderActionContext.Provider>
@@ -66,30 +82,43 @@ export function HeaderProvider({ children }: { children: React.ReactNode }) {
 export function useHeader(content?: HeaderContent, updateTrigger?: any) {
   const actions = useContext(HeaderActionContext);
   const headerContent = useContext(HeaderContentContext);
+  const instanceId = React.useId();
 
   if (!actions) {
     throw new Error("useHeader must be used within a HeaderProvider");
   }
 
+  // Extract boolean expressions to stable variables for useMemo
+  const hasLeft = !!content?.left;
+  const hasMiddle = !!content?.middle;
+  const hasRight = !!content?.right;
+  const hideGlobalActions = !!content?.hideGlobalActions;
+
   // Effect to handle content synchronization
-  // We use JSON stringify for stable comparison of non-node properties
-  const contentKey = React.useMemo(() => {
+  const contentKey = useMemo(() => {
     if (!content) return null;
     return JSON.stringify({
       shellBackground: content.shellBackground,
-      // Track existence of nodes
-      hasLeft: !!content.left,
-      hasMiddle: !!content.middle,
-      hasRight: !!content.right
+      hasLeft,
+      hasMiddle,
+      hasRight,
+      hideGlobalActions
     });
-  }, [content?.shellBackground, !!content?.left, !!content?.middle, !!content?.right]);
+  }, [content?.shellBackground, hasLeft, hasMiddle, hasRight, hideGlobalActions]);
 
   useEffect(() => {
     if (content) {
-      actions.setHeader(content);
-      return () => actions.clearHeader();
+      if ('setHeaderWithId' in actions) {
+        (actions as any).setHeaderWithId(content, instanceId);
+      } else {
+        actions.setHeader(content);
+      }
+      return () => actions.clearHeader(instanceId);
     }
-  }, [contentKey, actions, updateTrigger]);
+    // We intentionally exclude 'content' from dependencies because we use 'contentKey'
+    // to decide when the content (shape/presence) has changed significantly.
+    // This prevents infinite loops if the consumer passes a new object on every render.
+  }, [contentKey, actions, instanceId, updateTrigger]);
 
   return { headerContent, setHeader: actions.setHeader, clearHeader: actions.clearHeader };
 }

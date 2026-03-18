@@ -1,22 +1,25 @@
 "use client";
 
 import React from "react";
+import clsx from "clsx";
 
 interface StandardPageHeaderProps {
   title: string;
   subtitle?: string;
   action?: React.ReactNode;
   hideDivider?: boolean;
+  className?: string;
 }
 
 export default function StandardPageHeader({
   title,
   subtitle,
   action,
-  hideDivider = false,
+  hideDivider = true,
+  className,
 }: StandardPageHeaderProps) {
   return (
-    <div className="mb-0">
+    <div className={clsx("mb-6", className)}>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-0">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">

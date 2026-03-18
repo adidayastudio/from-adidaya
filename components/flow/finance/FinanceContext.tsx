@@ -3,17 +3,23 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import useUserProfile from "@/hooks/useUserProfile";
 import { canAccessFinanceTeam } from "@/lib/auth-utils";
+import { useRouter } from "next/navigation";
 
 type ViewMode = "personal" | "team";
 
 interface FinanceContextType {
     viewMode: ViewMode;
-    setViewMode: (mode: ViewMode) => void;
+    setViewMode: (mode: ViewMode | ((prev: ViewMode) => ViewMode)) => void;
     canAccessTeam: boolean;
+    searchTerm: string;
+    debouncedSearchTerm: string;
+    setSearchTerm: (term: string) => void;
     isLoading: boolean;
+    isInitialized: boolean;
     userRole: string | undefined;
     userId: string | undefined;
     profile: any;
+    contextInstanceId?: string;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -22,12 +28,30 @@ const STORAGE_KEY = "finance_view_mode";
 
 export function FinanceProvider({ children }: { children: ReactNode }) {
     const { profile, loading } = useUserProfile();
+    const router = useRouter();
     const [viewMode, setViewModeState] = useState<ViewMode>("personal");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
     const [isInitialized, setIsInitialized] = useState(false);
+    
+    // Diagnostic instance ID to track duplicate mounts
+    const [instanceId] = useState(() => Math.random().toString(36).substring(2, 7));
+
+    useEffect(() => {
+        console.log(`[FinanceProvider:${instanceId}] Mounted. Current Search: "${searchTerm}"`);
+        return () => console.log(`[FinanceProvider:${instanceId}] Unmounted.`);
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+        }, 500); // 500ms debounce
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     const canAccessTeam = canAccessFinanceTeam(profile?.role);
 
-    // Initialize view mode from URL, session storage or based on role
+    // Final initialization once profile is ready
     useEffect(() => {
         if (!loading && !isInitialized) {
             const searchParams = new URLSearchParams(window.location.search);
@@ -35,44 +59,92 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             const stored = sessionStorage.getItem(STORAGE_KEY) as ViewMode | null;
 
             if (canAccessTeam) {
-                // Priority: 1. URL parameter, 2. Stored preference, 3. Default to team
+                // Determine target view: Priority: 1. URL parameter, 2. Stored preference, 3. Keep current (from lazy init)
                 const targetView = (urlView === "personal" || urlView === "team")
                     ? urlView
-                    : (stored === "personal" ? "personal" : "team");
+                    : (stored === "team" ? "team" : (stored === "personal" ? "personal" : viewMode));
 
-                setViewModeState(targetView);
-                if (urlView) {
+                if (targetView !== viewMode) {
+                    setViewModeState(targetView);
+                }
+                
+                // Keep sync with storage
+                if (urlView && urlView !== stored) {
                     sessionStorage.setItem(STORAGE_KEY, urlView);
                 }
             } else {
-                // For staff: always personal, clear any stored team preference
-                setViewModeState("personal");
+                // For staff: always personal
+                if (viewMode !== "personal") {
+                    setViewModeState("personal");
+                }
                 sessionStorage.removeItem(STORAGE_KEY);
             }
             setIsInitialized(true);
         }
-    }, [loading, canAccessTeam, isInitialized]);
+    }, [loading, canAccessTeam, isInitialized, viewMode]);
+
+    // Listen for URL changes (Back/Forward buttons)
+    useEffect(() => {
+        const handlePopState = () => {
+            const searchParams = new URLSearchParams(window.location.search);
+            const urlView = searchParams.get("view") as ViewMode | null;
+            if (urlView === "personal" || urlView === "team") {
+                if (urlView !== viewMode) {
+                    setViewModeState(urlView);
+                    sessionStorage.setItem(STORAGE_KEY, urlView);
+                }
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, [viewMode]);
 
     // Persist view mode changes
-    const setViewMode = (mode: ViewMode) => {
-        // Staff cannot switch to team view
-        if (!canAccessTeam && mode === "team") {
-            return;
-        }
-        setViewModeState(mode);
-        sessionStorage.setItem(STORAGE_KEY, mode);
+    const setViewMode = (mode: ViewMode | ((prev: ViewMode) => ViewMode)) => {
+        let nextMode: ViewMode = viewMode; // optimistic default
+        
+        setViewModeState((prev) => {
+            const calculatedMode = typeof mode === "function" ? mode(prev) : mode;
+            // Staff cannot switch to team view
+            if (!canAccessTeam && calculatedMode === "team") {
+                return prev;
+            }
+            nextMode = calculatedMode;
+            return calculatedMode;
+        });
+
+        // Use setTimeout to defer side-effects
+        setTimeout(() => {
+            if (!canAccessTeam && nextMode === "team") return;
+            sessionStorage.setItem(STORAGE_KEY, nextMode);
+        }, 0);
     };
 
-    // Force personal view if user loses access (role change)
+    // Listen for custom events from the header or other detached components
     useEffect(() => {
-        // CRITICAL FIX: Only force switch if we are NOT loading. 
-        // Prevents race conditions where optimistic load says "staff" briefly before DB says "admin".
+        const handleSetViewMode = (e: any) => {
+            console.log(`[FinanceProvider:${instanceId}] Event: set-view-mode -> ${e.detail}`);
+            setViewMode(e.detail);
+        };
+        const handleSetSearchTerm = (e: any) => {
+            setSearchTerm(e.detail);
+        };
+
+        window.addEventListener('finance:set-view-mode', handleSetViewMode as EventListener);
+        window.addEventListener('finance:set-search-term', handleSetSearchTerm as EventListener);
+        
+        return () => {
+            window.removeEventListener('finance:set-view-mode', handleSetViewMode as EventListener);
+            window.removeEventListener('finance:set-search-term', handleSetSearchTerm as EventListener);
+        };
+    }, [instanceId, setViewMode]); // depends on instanceId and stable setViewMode
+
+    useEffect(() => {
         if (!loading && !canAccessTeam && viewMode === "team") {
             setViewModeState("personal");
             sessionStorage.removeItem(STORAGE_KEY);
         }
-        // DEBUG: Log current state
-        console.log(`[FinanceContext] Role: ${profile?.role}, CanAccessTeam: ${canAccessTeam}, ViewMode: ${viewMode}, Loading: ${loading}`);
     }, [canAccessTeam, viewMode, profile, loading]);
 
     return (
@@ -81,10 +153,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                 viewMode,
                 setViewMode,
                 canAccessTeam,
-                isLoading: loading,
+                searchTerm,
+                debouncedSearchTerm,
+                setSearchTerm,
+                isLoading: loading || !isInitialized, 
+                isInitialized, 
                 userRole: profile?.role,
                 userId: profile?.id,
-                profile
+                profile,
+                contextInstanceId: instanceId
             }}
         >
             {children}

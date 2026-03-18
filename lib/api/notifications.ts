@@ -16,8 +16,8 @@ export interface Notification {
 
 const supabase = createClient();
 
-export const fetchNotifications = async (userId?: string) => {
-    console.log("🛠️ [API] fetchNotifications started");
+export const fetchNotifications = async (userId?: string, limit: number = 50, offset: number = 0) => {
+    console.log("🛠️ [API] fetchNotifications started", { userId, limit, offset });
     try {
         let currentUserId = userId;
 
@@ -35,7 +35,7 @@ export const fetchNotifications = async (userId?: string) => {
             .select("*")
             .eq("user_id", currentUserId)
             .order("created_at", { ascending: false })
-            .limit(50);
+            .range(offset, offset + limit - 1);
 
         if (error) throw error;
         return data as Notification[];

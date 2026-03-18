@@ -365,7 +365,7 @@ export function ReimburseRequestForm({
                                     onChange={e => setReimbDate(e.target.value)}
                                     disabled={!canEdit}
                                     className={clsx(
-                                        "w-full max-w-full block min-w-0 h-9 pl-3 pr-8 text-base md:text-sm border border-neutral-200 rounded-full bg-white text-neutral-900 focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium appearance-none cursor-pointer",
+                                        "w-full max-w-full block min-w-0 h-9 pl-3 pr-8 text-base md:text-sm border border-neutral-200 rounded-full bg-white text-neutral-900 focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium appearance-none cursor-pointer",
                                         !canEdit && "opacity-60 cursor-not-allowed"
                                     )}
                                 />
@@ -378,7 +378,7 @@ export function ReimburseRequestForm({
                                     onChange={e => setTargetDate(e.target.value)}
                                     disabled={!canEdit}
                                     className={clsx(
-                                        "w-full max-w-full block min-w-0 h-9 pl-3 pr-8 text-base md:text-sm border border-neutral-200 rounded-full bg-white text-neutral-900 focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium appearance-none cursor-pointer",
+                                        "w-full max-w-full block min-w-0 h-9 pl-3 pr-8 text-base md:text-sm border border-neutral-200 rounded-full bg-white text-neutral-900 focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium appearance-none cursor-pointer",
                                         !canEdit && "opacity-60 cursor-not-allowed"
                                     )}
                                 />
@@ -425,8 +425,9 @@ export function ReimburseRequestForm({
                                             priority === p
                                                 ? p === "URGENT" ? "bg-red-500 text-white ring-red-500 shadow-md shadow-red-500/20"
                                                     : p === "HIGH" ? "bg-orange-500 text-white ring-orange-500 shadow-md shadow-orange-500/20"
-                                                        : "bg-neutral-800 text-white ring-neutral-800 shadow-md"
-                                                : "bg-white dark:bg-neutral-800 text-neutral-500 ring-neutral-200 dark:ring-neutral-700 hover:ring-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-700",
+                                                        : p === "MEDIUM" ? "bg-blue-600 text-white ring-blue-600 shadow-md shadow-blue-600/20"
+                                                            : "bg-blue-400 text-white ring-blue-400 shadow-md shadow-blue-400/20"
+                                                : "bg-white dark:bg-neutral-800 text-neutral-400 border border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700",
                                             !canEdit && "opacity-50 cursor-not-allowed"
                                         )}
                                     >
@@ -447,7 +448,7 @@ export function ReimburseRequestForm({
                         </h3>
                         <button
                             onClick={addItem}
-                            className="text-[11px] font-bold text-white bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 px-4 py-2 rounded-full transition-all flex items-center gap-1.5 shadow-lg shadow-red-500/25 border border-white/10"
+                            className="text-[11px] font-bold text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 px-4 py-2 rounded-full transition-all flex items-center gap-1.5 shadow-lg shadow-blue-500/25 border border-white/10"
                         >
                             <Plus className="w-3.5 h-3.5" /> Add Item
                         </button>
@@ -472,7 +473,7 @@ export function ReimburseRequestForm({
                                             onChange={e => setTransOrigin(e.target.value)}
                                             disabled={!canEdit}
                                             placeholder="e.g. Office"
-                                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium placeholder:text-[11px]"
+                                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium placeholder:text-[11px]"
                                         />
                                     </div>
                                     <div className="col-span-1">
@@ -483,7 +484,7 @@ export function ReimburseRequestForm({
                                             onChange={e => setTransDestination(e.target.value)}
                                             disabled={!canEdit}
                                             placeholder="e.g. Project Site A"
-                                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium placeholder:text-[11px]"
+                                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium placeholder:text-[11px]"
                                         />
                                     </div>
                                     <div className="col-span-2">
@@ -495,21 +496,21 @@ export function ReimburseRequestForm({
                                                 onChange={e => setTransDistance(parseFloat(e.target.value) || "")}
                                                 disabled={!canEdit}
                                                 placeholder="0"
-                                                className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium placeholder:text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium placeholder:text-[11px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             />
                                             <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400 pointer-events-none">km</span>
                                         </div>
                                     </div>
 
                                     {["MOTOR_PERSONAL", "CAR_PERSONAL"].includes(reimbSubcategory) && (
-                                        <div className="col-span-2 bg-white dark:bg-neutral-800 rounded-2xl p-4 border border-red-100 dark:border-red-500/20 flex justify-between items-center shadow-sm">
+                                        <div className="col-span-2 bg-white dark:bg-neutral-800 rounded-2xl p-4 border border-blue-100 dark:border-blue-500/20 flex justify-between items-center shadow-sm">
                                             <div className="flex flex-col">
                                                 <span className="block text-[10px] font-bold text-neutral-400 uppercase tracking-wider">System Estimation</span>
                                                 <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                                                     {reimbSubcategory === "MOTOR_PERSONAL" ? "Rp 3.000" : "Rp 6.000"} x {typeof transDistance === "number" ? transDistance : 0} km
                                                 </span>
                                             </div>
-                                            <span className="text-sm font-bold text-red-600 dark:text-red-400">Rp {transportEstCost.toLocaleString("id-ID")}</span>
+                                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">Rp {transportEstCost.toLocaleString("id-ID")}</span>
                                         </div>
                                     )}
                                 </div>
@@ -542,7 +543,7 @@ export function ReimburseRequestForm({
                                     {items.length > 1 && (
                                         <button
                                             onClick={() => removeItem(item.id)}
-                                            className="mt-7 p-2 text-neutral-400 dark:text-neutral-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all"
+                                            className="mt-7 p-2 text-neutral-400 dark:text-neutral-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all"
                                         >
                                             <X className="w-4 h-4" strokeWidth={2} />
                                         </button>
@@ -556,7 +557,7 @@ export function ReimburseRequestForm({
                                             type="number"
                                             value={item.qty}
                                             onChange={e => updateItem(item.id, { qty: parseFloat(e.target.value) || 0 })}
-                                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium"
+                                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium"
                                         />
                                     </div>
                                     <div className="col-span-3">
@@ -564,7 +565,7 @@ export function ReimburseRequestForm({
                                         <select
                                             value={item.unit}
                                             onChange={e => updateItem(item.id, { unit: e.target.value })}
-                                            className="w-full h-11 px-4 text-xs border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium appearance-none cursor-pointer"
+                                            className="w-full h-11 px-4 text-xs border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium appearance-none cursor-pointer"
                                         >
                                             {UNIT_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                         </select>
@@ -577,7 +578,7 @@ export function ReimburseRequestForm({
                                                 type="number"
                                                 value={item.unitPrice}
                                                 onChange={e => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                                                className="w-full h-11 pl-11 pr-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-bold text-neutral-900 dark:text-white"
+                                                className="w-full h-11 pl-11 pr-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-bold text-neutral-900 dark:text-white"
                                             />
                                         </div>
                                     </div>
@@ -592,12 +593,12 @@ export function ReimburseRequestForm({
                     </div>
 
                     {/* TOTAL SUMMARY */}
-                    <div className="mt-4 p-8 rounded-3xl bg-gradient-to-br from-red-500 to-red-600 border border-red-400 shadow-xl shadow-red-500/20 relative overflow-hidden">
+                    <div className="mt-4 p-8 rounded-3xl bg-gradient-to-br from-blue-500 to-blue-600 border border-blue-400 shadow-xl shadow-blue-500/20 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
                         <div className="relative flex items-center justify-between">
                             <div className="flex flex-col">
-                                <span className="text-[11px] font-bold text-red-100 uppercase tracking-[0.2em] leading-none mb-2">Total Claim Amount</span>
-                                <span className="text-xs text-red-100/70 font-medium">{items.length} items summarized</span>
+                                <span className="text-[11px] font-bold text-blue-100 uppercase tracking-[0.2em] leading-none mb-2">Total Claim Amount</span>
+                                <span className="text-xs text-blue-100/70 font-medium">{items.length} items summarized</span>
                             </div>
                             <span className="text-3xl font-black text-white tracking-tight">Rp {totalAmount.toLocaleString("id-ID")}</span>
                         </div>
@@ -634,7 +635,7 @@ export function ReimburseRequestForm({
                                     disabled={!canEdit}
                                     placeholder="e.g. BCA"
                                     className={clsx(
-                                        "w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium placeholder:text-[11px]",
+                                        "w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium placeholder:text-[11px]",
                                         !canEdit && "bg-neutral-50 text-neutral-500"
                                     )}
                                 />
@@ -648,7 +649,7 @@ export function ReimburseRequestForm({
                                     disabled={!canEdit}
                                     placeholder="e.g. 1234567890"
                                     className={clsx(
-                                        "w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium placeholder:text-[11px]",
+                                        "w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium placeholder:text-[11px]",
                                         !canEdit && "bg-neutral-50 text-neutral-500"
                                     )}
                                 />
@@ -662,7 +663,7 @@ export function ReimburseRequestForm({
                                     disabled={!canEdit}
                                     placeholder="e.g. Adidaya Studio"
                                     className={clsx(
-                                        "w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-bold text-neutral-900 dark:text-white placeholder:text-[11px]",
+                                        "w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-bold text-neutral-900 dark:text-white placeholder:text-[11px]",
                                         !canEdit && "bg-neutral-50 text-neutral-500"
                                     )}
                                 />
@@ -671,12 +672,12 @@ export function ReimburseRequestForm({
                         {canEdit && bankName && accountNumber && !savedAccounts.some(acc => acc.account_number === accountNumber && acc.bank_name === bankName) && (
                             <div
                                 onClick={() => setSaveToSaved(!saveToSaved)}
-                                className="flex items-center justify-between p-4 rounded-3xl bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-red-200 transition-all group shadow-sm"
+                                className="flex items-center justify-between p-4 rounded-3xl bg-white dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700 cursor-pointer hover:border-blue-200 transition-all group shadow-sm"
                             >
                                 <div className="flex items-center gap-3">
                                     <div className={clsx(
                                         "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                                        saveToSaved ? "bg-red-500 text-white" : "bg-neutral-50 dark:bg-neutral-700 text-neutral-400 group-hover:bg-neutral-100"
+                                        saveToSaved ? "bg-blue-500 text-white" : "bg-neutral-50 dark:bg-neutral-700 text-neutral-400 group-hover:bg-neutral-100"
                                     )}>
                                         <Save className="w-5 h-5" />
                                     </div>
@@ -687,7 +688,7 @@ export function ReimburseRequestForm({
                                 </div>
                                 <div className={clsx(
                                     "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-                                    saveToSaved ? "border-red-500 bg-red-500 text-white" : "border-neutral-200 dark:border-neutral-600"
+                                    saveToSaved ? "border-blue-500 bg-blue-500 text-white" : "border-neutral-200 dark:border-neutral-600"
                                 )}>
                                     {saveToSaved && <CheckCircle className="w-4 h-4" />}
                                 </div>
@@ -706,13 +707,13 @@ export function ReimburseRequestForm({
                     <div className="space-y-3">
                         {/* List of existing and new documents */}
                         {[...previewUrls].map((p, idx) => (
-                            <div key={p.id || idx} className="flex items-center gap-3 p-3 bg-red-50/20 dark:bg-red-500/5 border border-red-100 dark:border-red-500/20 rounded-full pr-5 transition-all hover:bg-red-50/50">
-                                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-500/20 flex items-center justify-center shrink-0">
-                                    <ReceiptText className="w-5 h-5 text-red-600 dark:text-red-400" />
+                            <div key={p.id || idx} className="flex items-center gap-3 p-3 bg-blue-50/20 dark:bg-blue-500/5 border border-blue-100 dark:border-blue-500/20 rounded-full pr-5 transition-all hover:bg-blue-50/50">
+                                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center shrink-0">
+                                    <ReceiptText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div className="flex-1 min-w-0 px-1">
                                     <p className="text-xs font-bold text-neutral-800 dark:text-white truncate uppercase tracking-tight">{p.name}</p>
-                                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-red-600 dark:text-red-400 font-bold hover:underline">View Document</a>
+                                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline">View Document</a>
                                 </div>
                                 {canEdit && (
                                     <button
@@ -725,7 +726,7 @@ export function ReimburseRequestForm({
                                             }
                                             setPreviewUrls(previewUrls.filter((_, i) => i !== idx));
                                         }}
-                                        className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all"
+                                        className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all"
                                     >
                                         <X className="w-4 h-4" strokeWidth={2.5} />
                                     </button>
@@ -735,7 +736,7 @@ export function ReimburseRequestForm({
 
                         {/* Dropzone matching Purchase style */}
                         {canEdit && (
-                            <div className="relative border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 text-center transition-all group hover:border-red-500/30 hover:bg-red-50/20 dark:hover:bg-red-500/5 cursor-pointer">
+                            <div className="relative border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-3xl p-8 text-center transition-all group hover:border-blue-500/30 hover:bg-blue-50/20 dark:hover:bg-blue-500/5 cursor-pointer">
                                 <input
                                     type="file"
                                     multiple
@@ -754,8 +755,8 @@ export function ReimburseRequestForm({
                                         }
                                     }}
                                 />
-                                <Upload className="w-8 h-8 mx-auto mb-3 text-neutral-400 group-hover:text-red-500 transition-colors" strokeWidth={1.5} />
-                                <p className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-red-600 transition-colors">
+                                <Upload className="w-8 h-8 mx-auto mb-3 text-neutral-400 group-hover:text-blue-500 transition-colors" strokeWidth={1.5} />
+                                <p className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-blue-600 transition-colors">
                                     {previewUrls.length > 0 ? "Add More Documents" : "Upload Receipts or Invoices"}
                                 </p>
                                 <p className="text-[10px] text-neutral-400 mt-1.5 uppercase tracking-widest font-bold">Securely click to select files</p>
@@ -777,7 +778,7 @@ export function ReimburseRequestForm({
                             disabled={!canEdit}
                             placeholder="Add your notes here..."
                             rows={3}
-                            className="w-full px-5 py-4 text-sm border border-neutral-200 dark:border-neutral-700 rounded-3xl bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium resize-none placeholder:text-[11px]"
+                            className="w-full px-5 py-4 text-sm border border-neutral-200 dark:border-neutral-700 rounded-3xl bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium resize-none placeholder:text-[11px]"
                         />
                     </div>
                 </section>
@@ -810,7 +811,7 @@ export function ReimburseRequestForm({
                             <button
                                 disabled={!isValid || isSubmitting}
                                 onClick={() => handleSave(false)}
-                                className="flex-[1.5] h-[56px] bg-red-600/95 backdrop-blur-md hover:bg-red-700 text-white rounded-full font-bold text-[14px] active:scale-[0.98] transition-all shadow-lg shadow-red-600/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
+                                className="flex-[1.5] h-[56px] bg-blue-600/95 backdrop-blur-md hover:bg-blue-700 text-white rounded-full font-bold text-[14px] active:scale-[0.98] transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
                             >
                                 {isSubmitting ? "Submitting..." : "Submit Request"}
                             </button>
@@ -832,12 +833,12 @@ export function ReimburseRequestForm({
                     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                         <div className="absolute inset-0 bg-neutral-900/60 backdrop-blur-[2px]" onClick={() => setShowDeleteConfirm(false)} />
                         <div className="relative w-full max-w-sm bg-white dark:bg-neutral-900 rounded-[2.5rem] p-8 shadow-2xl border border-neutral-100 dark:border-neutral-800 animate-in zoom-in-95 duration-200">
-                            <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mx-auto mb-6">
-                                <Trash2 className="w-8 h-8 text-red-500" />
+                            <div className="w-16 h-16 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center mx-auto mb-6">
+                                <Trash2 className="w-8 h-8 text-blue-500" />
                             </div>
                             <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2 text-center">Delete Request?</h3>
                             <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-8 text-center font-medium leading-relaxed">
-                                Are you sure you want to delete this reimburse request? This action <span className="text-red-500 font-bold underline decoration-2 underline-offset-2">cannot be undone</span>.
+                                Are you sure you want to delete this reimburse request? This action <span className="text-blue-500 font-bold underline decoration-2 underline-offset-2">cannot be undone</span>.
                             </p>
                             <div className="grid grid-cols-2 gap-3">
                                 <button
@@ -858,7 +859,7 @@ export function ReimburseRequestForm({
                                         }
                                     }}
                                     disabled={isSubmitting}
-                                    className="py-3.5 text-sm font-extrabold text-white bg-red-500 hover:bg-red-600 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                    className="py-3.5 text-sm font-extrabold text-white bg-blue-500 hover:bg-blue-600 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
                                     {isSubmitting ? "DELETING..." : "DELETE"}
                                 </button>

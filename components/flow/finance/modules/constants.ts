@@ -1,4 +1,6 @@
 
+import { LayoutDashboard, ShoppingCart, Receipt, Wallet, Landmark, BarChart } from "lucide-react";
+
 export type PurchaseStage = "PLANNED" | "INVOICED" | "RECEIVED";
 export type Category =
     | "MATERIAL"
@@ -211,3 +213,20 @@ export const REIMBURSE_SUBCATEGORY_OPTIONS: Record<string, { value: string; labe
         { value: "NON_PROJECT", label: "Non-Project Related (Non-Proyek)" }
     ]
 };
+
+export const FINANCE_TABS = [
+    { id: "overview", label: "Overview", href: "/flow/finance", icon: LayoutDashboard },
+    { id: "purchasing", label: "Purchasing", href: "/flow/finance/purchasing", icon: ShoppingCart },
+    { id: "reimburse", label: "Reimburse", href: "/flow/finance/reimburse", icon: Receipt },
+    { id: "petty-cash", label: "Petty Cash", href: "/flow/finance/petty-cash", icon: Wallet },
+    { id: "funding", label: "Funding", href: "/flow/finance/funding-sources", icon: Landmark },
+    { id: "reports", label: "Reports", href: "/flow/finance/reports", icon: BarChart },
+];
+
+export function getFinanceFabId(pathname: string) {
+    if (pathname.includes('/purchasing') || pathname.includes('/reimburse')) return 'FINANCE_NEW_PURCHASE';
+    if (pathname.includes('/petty-cash')) return 'FINANCE_TOP_UP';
+    if (pathname.includes('/funding-sources')) return 'FINANCE_NEW_SOURCE';
+    if (pathname.includes('/reports')) return 'FINANCE_EXPORT';
+    return 'FINANCE_NEW_REQUEST';
+}

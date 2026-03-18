@@ -25,7 +25,7 @@ export default function StandardPageWrapper({
   return (
     <div className="animate-in fade-in duration-500">
       <PageWrapper sidebar={sidebar === null ? undefined : sidebar} isTransparent={isTransparent} fullWidth={fullWidth}>
-        <div className="space-y-8 w-full">
+        <div className="space-y-4 w-full">
           {header}
           {children}
         </div>

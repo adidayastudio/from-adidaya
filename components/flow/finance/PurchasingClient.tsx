@@ -6,7 +6,7 @@ import { generateExport, ExportAttachment, ExportMetadata } from "@/lib/export/e
 import { createPortal } from "react-dom";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
-import { useFinance } from "./FinanceContext";
+import { useFinance } from "@/components/flow/finance/FinanceContext";
 import {
     Search,
     Eye,
@@ -133,7 +133,7 @@ function Pagination({
     if (totalItems === 0) return null;
 
     return (
-        <div className="flex items-center justify-between px-6 py-4 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm border-t border-neutral-100 dark:border-neutral-800">
+        <div className="flex items-center justify-between px-6 py-4">
             <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500">
                 Showing <span className="text-neutral-900 dark:text-white">{startItem}-{endItem}</span> of <span className="text-neutral-900 dark:text-white">{totalItems}</span>
             </div>
@@ -156,7 +156,7 @@ function Pagination({
                                     className={clsx(
                                         "w-8 h-8 rounded-full text-xs font-bold transition-all",
                                         currentPage === page
-                                            ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-lg shadow-neutral-200 dark:shadow-none"
+                                            ? "bg-neutral-200 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
                                             : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                                     )}
                                 >
@@ -444,11 +444,11 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                     </div>
 
                     {(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) && (
-                        <div className="p-4 rounded-3xl bg-red-50/80 backdrop-blur-sm border border-red-100 flex gap-3 animate-in fade-in">
-                            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                        <div className="p-4 rounded-3xl bg-blue-50/80 backdrop-blur-sm border border-blue-100 flex gap-3 animate-in fade-in">
+                            <AlertTriangle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                             <div>
-                                <h4 className="text-[11px] font-bold text-red-700 mb-1">Missing Requirements</h4>
-                                <p className="text-[11px] text-red-600 font-medium tracking-tight">
+                                <h4 className="text-[11px] font-bold text-blue-700 mb-1">Missing Requirements</h4>
+                                <p className="text-[11px] text-blue-600 font-medium tracking-tight">
                                     Invoice and complete beneficiary details are mandatory before you can process this payment.
                                 </p>
                             </div>
@@ -502,7 +502,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                                                     </button>
                                                     <button
                                                         onClick={() => setProofFiles(prev => prev.filter((_, i) => i !== idx))}
-                                                        className="w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                                        className="w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-colors"
                                                     >
                                                         <X className="w-4 h-4" />
                                                     </button>
@@ -529,7 +529,7 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                                         </div>
                                         <div className="flex flex-col items-center gap-1">
                                             <span className="font-bold text-[13px] text-neutral-600 group-hover:text-blue-700">Upload Images/PDFs</span>
-                                            <span className="text-[9px] font-bold text-red-500/80">Required</span>
+                                            <span className="text-[9px] font-bold text-blue-500/80">Required</span>
                                         </div>
                                     </div>
                                 </div>
@@ -919,9 +919,9 @@ function ViewModal({
                                             {
                                                 label: isRejected ? "Rejected" : "Approved",
                                                 date: isApproved ? (item.updated_at ? fmt(new Date(item.updated_at)) : "✓") : "-",
-                                                accentColor: isRejected ? "text-red-500" : "text-blue-500",
-                                                dotColor: isRejected ? "bg-red-500 border-red-500" : "bg-blue-500 border-blue-500",
-                                                lineActive: "bg-blue-300 dark:bg-blue-500/50",
+                                                accentColor: isRejected ? "text-red-500" : "text-emerald-500",
+                                                dotColor: isRejected ? "bg-red-500 border-red-500" : "bg-emerald-500 border-emerald-500",
+                                                lineActive: "bg-emerald-300 dark:bg-emerald-500/50",
                                             },
                                             {
                                                 label: isOverdue ? "Overdue" : "Deadline",
@@ -933,9 +933,9 @@ function ViewModal({
                                             {
                                                 label: "Paid",
                                                 date: isPaid && item.payment_date ? fmt(new Date(item.payment_date)) : "-",
-                                                accentColor: "text-emerald-500",
-                                                dotColor: "bg-emerald-500 border-emerald-500",
-                                                lineActive: "bg-emerald-300 dark:bg-emerald-500/50",
+                                                accentColor: "text-blue-500",
+                                                dotColor: "bg-blue-500 border-blue-500",
+                                                lineActive: "bg-blue-300 dark:bg-blue-500/50",
                                             },
                                             {
                                                 label: "Received",
@@ -1743,27 +1743,31 @@ function DocumentDrawer({
 }
 
 export default function PurchasingClient() {
-    const { viewMode, setViewMode, canAccessTeam, userRole, profile, isLoading: isAuthLoading } = useFinance();
+    const {
+        viewMode,
+        setViewMode,
+        canAccessTeam,
+        userRole,
+        profile,
+        isLoading: isAuthLoading,
+        isInitialized,
+        searchTerm,
+        debouncedSearchTerm,
+        setSearchTerm
+    } = useFinance();
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
-
-    // Read search term from URL query parameter 'q' (controlled by MobileBottomBar)
-    const searchTerm = searchParams.get('q') || "";
-
-    // Sync back to URL when desktop search input changes
-    const setSearchTerm = (val: string) => {
-        const params = new URLSearchParams(window.location.search);
-        if (val.trim()) {
-            params.set('q', val.trim());
-        } else {
-            params.delete('q');
-        }
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [items, setItems] = useState<PurchasingItem[]>([]);
+
+    const { contextInstanceId } = useFinance();
+
+    useEffect(() => {
+        console.log(`[PurchasingClient] Mounted with Context:${contextInstanceId}`);
+    }, [contextInstanceId]);
+
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [projects, setProjects] = useState<Project[]>([]);
 
@@ -1819,9 +1823,20 @@ export default function PurchasingClient() {
     const [editingItem, setEditingItem] = useState<PurchasingItem | null>(null);
     const [previewingDocument, setPreviewingDocument] = useState<{ item: PurchasingItem; initialTab: 'invoice' | 'proof' } | null>(null);
 
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
+
+    useEffect(() => {
+        const handleExportRequest = () => setShowExportMenu(true);
+        window.addEventListener('export-finance', handleExportRequest);
+        return () => window.removeEventListener('export-finance', handleExportRequest);
+    }, []);
+
     // Fetch Data
     const loadData = async (isInitial = false) => {
+        // Show loading screen only on initial load to avoid disrupting the UI
         if (isInitial) setIsLoadingData(true);
+        setIsRefreshing(true);
         try {
             const offset = (currentPage - 1) * itemsPerPage;
             const [{ data: rawItems, total, stats }, profiles] = await Promise.all([
@@ -1830,7 +1845,6 @@ export default function PurchasingClient() {
                     offset: offset,
                     approval_status: statusFilter,
                     project_id: selectedProjects.length > 0 ? selectedProjects : undefined,
-                    q: searchTerm || undefined,
                     start_date: showAllMonths ? undefined : format(startDate, "yyyy-MM-dd"),
                     end_date: showAllMonths ? undefined : format(endDate, "yyyy-MM-dd"),
                     type: categoryFilters.length > 0 ? categoryFilters : undefined,
@@ -1902,6 +1916,7 @@ export default function PurchasingClient() {
             console.error("Failed to load purchasing requests:", e);
         } finally {
             setIsLoadingData(false);
+            setIsRefreshing(false);
         }
     };
 
@@ -1925,13 +1940,18 @@ export default function PurchasingClient() {
     }, []);
 
     useEffect(() => {
-        loadData(items.length === 0); // Only show GlobalLoading if we have no items
-    }, [currentPage, statusFilter, selectedProjects, categoryFilters, searchTerm, startDate, endDate, showAllMonths, isTeamView]);
+        if (isInitialized) {
+            loadData(items.length === 0); // Only show GlobalLoading if we have no items
+        }
+    }, [currentPage, statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, isTeamView, isInitialized]);
 
-    // Reset page when filters change
+    // Reset page when filters OR search change
     useEffect(() => {
+        if (searchTerm) {
+            console.log(`[PurchasingClient] Search changed to "${searchTerm}", resetting to page 1`);
+        }
         setCurrentPage(1);
-    }, [statusFilter, selectedProjects, categoryFilters, searchTerm, startDate, endDate, showAllMonths, currentMonth]);
+    }, [searchTerm, statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, currentMonth]);
 
     useEffect(() => {
         const handleFabAction = (e: any) => {
@@ -2102,8 +2122,17 @@ export default function PurchasingClient() {
                 handleExport();
             }
         };
+
+        const handleFilterToggle = () => {
+            setShowFilters(true);
+        };
+
         window.addEventListener('fab-action', handleFabAction);
-        return () => window.removeEventListener('fab-action', handleFabAction);
+        window.addEventListener('toggle-filters', handleFilterToggle);
+        return () => {
+            window.removeEventListener('fab-action', handleFabAction);
+            window.removeEventListener('toggle-filters', handleFilterToggle);
+        };
     }, [handleExport]);
 
     // Handle requestId from notification (or Overview)
@@ -2293,758 +2322,635 @@ export default function PurchasingClient() {
         };
     }, [globalStats]);
 
-    // 3. Final Filtered Items: Now just Base Items (already filtered by backend)
-    const filteredItems = useMemo(() => {
+    // 3. Final Filtered Items: pure local filter, computed every render (no memo caching issues)
+    const filteredItems = (() => {
         let current = [...items];
 
-        if (sortColumn) {
+        if (searchTerm) {
+            const q = searchTerm.replace(/["'“”‘’«»„俘〞‟゛゜]+/g, '').trim().toLowerCase();
+            
+            if (q.length > 0) {
+                current = current.filter(item => {
+                    const desc = (item.description || "").toLowerCase();
+                    const vendor = (item.vendor || "").toLowerCase();
+                    const projectName = (item.project_name || item.project?.project_name || "").toLowerCase();
+                    const projectCode = (item.project_code || item.project?.project_code || "").toLowerCase();
+                    const submitter = (item.submitted_by_name || item.created_by_name || "").toLowerCase();
+                    const notes = (item.notes || "").toLowerCase();
+                    const subcategory = (item.subcategory || "").toLowerCase();
+                    const beneficiary = (item.beneficiary_name || "").toLowerCase();
+                    const reqNum = String(item.request_number || "");
+                    const itemNames = (item.items || []).map((it: any) => (it.name || "").toLowerCase()).join(" ");
+
+                    return (
+                        desc.includes(q) ||
+                        vendor.includes(q) ||
+                        projectName.includes(q) ||
+                        projectCode.includes(q) ||
+                        submitter.includes(q) ||
+                        notes.includes(q) ||
+                        subcategory.includes(q) ||
+                        beneficiary.includes(q) ||
+                        reqNum.includes(q) ||
+                        itemNames.includes(q)
+                    );
+                });
+            }
+        }
+
+        if (sortConfig) {
+            const { key, direction } = sortConfig;
             current.sort((a, b) => {
                 let comparison = 0;
-                if (sortColumn === 'status') {
-                    const aIndex = STATUS_ORDER.indexOf(a.approval_status);
-                    const bIndex = STATUS_ORDER.indexOf(b.approval_status);
+                if (key === 'approval_status') {
+                    const DISPLAY_STATUS_ORDER = ['DRAFT', 'SUBMITTED', 'NEED_REVISION', 'UNPAID', 'APPROVED', 'PAID', 'REJECTED', 'CANCELLED'];
+                    const aStatus = getPrimaryStatus(a.approval_status, a.purchase_stage, a.financial_status);
+                    const bStatus = getPrimaryStatus(b.approval_status, b.purchase_stage, b.financial_status);
+                    const aIndex = DISPLAY_STATUS_ORDER.indexOf(aStatus);
+                    const bIndex = DISPLAY_STATUS_ORDER.indexOf(bStatus);
                     comparison = aIndex - bIndex;
-                } else if (sortColumn === 'date') {
+                } else if (key === 'date') {
                     comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
-                } else if (sortColumn === 'project_name') {
-                    comparison = (a.project?.project_name || "").localeCompare(b.project?.project_name || "");
-                } else if (sortColumn === 'amount') {
-                    comparison = (a.amount || 0) - (b.amount || 0);
+                } else if (key === 'project_name') {
+                    const aName = a.project_name || a.project?.project_name || "";
+                    const bName = b.project_name || b.project?.project_name || "";
+                    comparison = aName.localeCompare(bName);
+                } else if (key === 'amount') {
+                    comparison = (Number(a.amount) || 0) - (Number(b.amount) || 0);
+                } else if (key === 'description') {
+                    comparison = (a.description || "").localeCompare(b.description || "");
+                } else if (key === 'type') {
+                    comparison = (a.type || "").localeCompare(b.type || "");
+                } else if (key === 'submitted_by_name') {
+                    comparison = (a.submitted_by_name || "").localeCompare(b.submitted_by_name || "");
                 }
 
                 if (comparison === 0) {
-                    return b.id.localeCompare(a.id);
+                    return (b.id || "").localeCompare(a.id || "");
                 }
-                return sortDirection === 'asc' ? comparison : -comparison;
+                return direction === 'asc' ? comparison : -comparison;
             });
         }
 
         return current;
-    }, [items, sortColumn, sortDirection, STATUS_ORDER]);
-
-    if (isAuthLoading || isLoadingData) {
-        return <GlobalLoading />;
-    }
+    })();
 
     return (
         <FinancePageWrapper
-            breadcrumbItems={[{ label: "Flow", href: "/flow" }, { label: "Finance", href: "/flow/finance" }, { label: "Purchasing", href: "/flow/finance/purchasing" }]}
             header={
                 <FinanceHeader
                     title="Purchasing"
                     subtitle={isTeamView ? "Manage all staff purchase requests." : "Track your material and tool requests."}
                 />
             }
-            rightToolbar={
-                <>
-                    {canAccessTeam && (
-                        <button
-                            onClick={() => setViewMode(viewMode === 'team' ? 'personal' : 'team')}
-                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
-                        >
-                            {viewMode === 'team' ? (
-                                <Users className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
-                            ) : (
-                                <User className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
-                            )}
-                        </button>
-                    )}
-                    <button
-                        onClick={() => setShowFilters(true)}
-                        className={clsx(
-                            "w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative",
-                            (selectedProjects.length > 0 || categoryFilters.length > 0 || !showAllMonths) ? "text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-500/10" : "text-gray-700 dark:text-white"
-                        )}
-                    >
-                        <ListFilter className="w-5 h-5" strokeWidth={1.5} />
-                    </button>
-                    <button
-                        onClick={() => window.dispatchEvent(new CustomEvent('fab-action', { detail: { id: 'FINANCE_NEW_PURCHASE' } }))}
-                        className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
-                    >
-                        <Plus className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
-                    </button>
-                </>
-            }
         >
-            <div className="flex flex-col gap-6">
-                {/* SUMMARY CARDS */}
-                <div className="-mx-5 lg:mx-0">
-                    <FinanceSummaryCardsRow>
-                        <FinanceSummaryCard
-                            icon={<Package className="w-4 h-4 text-red-600" />}
-                            iconBg="bg-red-100"
-                            label="Total Requests"
-                            value={summaryStats.total.toString()}
-                            subtext={formatCurrency(summaryStats.totalAmount)}
-                            onClick={() => setStatusFilter("ALL")}
-                            isActive={statusFilter === "ALL"}
-                            activeColor="ring-red-500"
-                        />
+            {(isAuthLoading || isLoadingData) ? <GlobalLoading /> : (
+                <>
+                    <div className="flex flex-col gap-6">
+                        {/* SUMMARY CARDS */}
+                            <FinanceSummaryCardsRow className="!mb-0">
+                            <FinanceSummaryCard
+                                 icon={<Package className="w-5 h-5 text-blue-600" />}
+                                 iconBg="bg-blue-50"
+                                 label="Total Requests"
+                                 value={summaryStats.total.toString()}
+                                 subtext={formatCurrency(summaryStats.totalAmount)}
+                                 onClick={() => setStatusFilter("ALL")}
+                                 isActive={statusFilter === "ALL"}
+                                 activeColor="ring-blue-600"
+                             />
 
-                        <FinanceSummaryCard
-                            icon={<Clock className="w-4 h-4 text-orange-600" />}
-                            iconBg="bg-orange-100"
-                            label="Pending"
-                            value={summaryStats.pending.toString()}
-                            subtext={formatCurrency(summaryStats.pendingAmount)}
-                            onClick={() => setStatusFilter("SUBMITTED")}
-                            isActive={statusFilter === "SUBMITTED"}
-                            activeColor="ring-orange-500"
-                        />
+                             <FinanceSummaryCard
+                                 icon={<Clock className="w-5 h-5 text-amber-600" />}
+                                 iconBg="bg-amber-50"
+                                 label="Pending"
+                                 value={summaryStats.pending.toString()}
+                                 subtext={formatCurrency(summaryStats.pendingAmount)}
+                                 onClick={() => setStatusFilter("SUBMITTED")}
+                                 isActive={statusFilter === "SUBMITTED"}
+                                 activeColor="ring-amber-500"
+                             />
 
-                        <FinanceSummaryCard
-                            icon={<CheckCircle2 className="w-4 h-4 text-blue-600" />}
-                            iconBg="bg-blue-100"
-                            label="Approved"
-                            value={summaryStats.approved.toString()}
-                            subtext={formatCurrency(summaryStats.approvedAmount)}
-                            onClick={() => setStatusFilter("APPROVED")}
-                            isActive={statusFilter === "APPROVED"}
-                            activeColor="ring-blue-500"
-                        />
+                             <FinanceSummaryCard
+                                 icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+                                 iconBg="bg-emerald-50"
+                                 label="Approved"
+                                 value={summaryStats.approved.toString()}
+                                 subtext={formatCurrency(summaryStats.approvedAmount)}
+                                 onClick={() => setStatusFilter("APPROVED")}
+                                 isActive={statusFilter === "APPROVED"}
+                                 activeColor="ring-emerald-500"
+                             />
 
-                        <FinanceSummaryCard
-                            icon={<CreditCard className="w-4 h-4 text-emerald-600" />}
-                            iconBg="bg-emerald-100"
-                            label="Paid"
-                            value={summaryStats.paid.toString()}
-                            subtext={formatCurrency(summaryStats.paidAmount)}
-                            onClick={() => setStatusFilter("PAID")}
-                            isActive={statusFilter === "PAID"}
-                            activeColor="ring-emerald-500"
-                        />
-                    </FinanceSummaryCardsRow>
-                </div>
+                             <FinanceSummaryCard
+                                 icon={<CreditCard className="w-5 h-5 text-blue-600" />}
+                                 iconBg="bg-blue-50"
+                                 label="Paid"
+                                 value={summaryStats.paid.toString()}
+                                 subtext={formatCurrency(summaryStats.paidAmount)}
+                                 onClick={() => setStatusFilter("PAID")}
+                                 isActive={statusFilter === "PAID"}
+                                 activeColor="ring-blue-600"
+                             />
 
-                {/* MOBILE TOOLBAR (Search + Filters per user request) */}
-                <div className="flex flex-col gap-2 md:hidden">
-                    {/* Quick Filters Row */}
-                    <div className="flex items-start gap-1.5 w-full">
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-hide flex-1">
-                            {/* Mobile Date Summary */}
-                            <div className="flex items-center gap-0.5 p-1 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm shrink-0">
-                                <button
-                                    onClick={() => handleMonthChange("prev")}
-                                    className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
-                                >
-                                    <ChevronLeft className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                    onClick={() => setShowFilters(true)}
-                                    className="text-[12px] font-bold text-neutral-700 dark:text-neutral-300 tracking-tight whitespace-nowrap px-3"
-                                >
-                                    {showAllMonths ? "All Time" : (
-                                        format(startDate, "MMM-yy") === format(endDate, "MMM-yy") && startDate.getDate() === 1 && endDate.getDate() === new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate()
-                                            ? format(startDate, "MMM-yy")
-                                            : `${format(startDate, "d MMM")} - ${format(endDate, "d MMM")}`
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => handleMonthChange("next")}
-                                    className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
-                                >
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
+                             <FinanceSummaryCard
+                                 icon={<XCircle className="w-5 h-5 text-neutral-600" />}
+                                 iconBg="bg-neutral-100"
+                                 label="Rejected"
+                                 value={(summaryStats.rejected || 0).toString()}
+                                 subtext="REJECTED"
+                                 onClick={() => setStatusFilter("REJECTED")}
+                                 isActive={statusFilter === "REJECTED"}
+                             />
+                        </FinanceSummaryCardsRow>
 
-                            {/* Project Select */}
-                            <div className="relative shrink-0 flex items-center h-9 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm overflow-hidden">
-                                <select
-                                    value={selectedProjects.length === 1 ? selectedProjects[0] : (selectedProjects.length > 1 ? "MULTIPLE" : "ALL")}
-                                    onChange={(e) => {
-                                        if (e.target.value === "ALL") setSelectedProjects([]);
-                                        else if (e.target.value !== "MULTIPLE") setSelectedProjects([e.target.value]);
-                                    }}
-                                    className="h-full pl-3 pr-8 bg-transparent appearance-none text-[11px] font-bold text-neutral-700 dark:text-neutral-300 outline-none cursor-pointer tracking-tight whitespace-nowrap w-auto max-w-[130px] text-ellipsis overflow-hidden"
-                                >
-                                    <option value="ALL">All Projects</option>
-                                    {selectedProjects.length > 1 && <option value="MULTIPLE" disabled>{selectedProjects.length} Projects</option>}
-                                    {projects.map(p => (
-                                        <option key={p.id} value={p.id}>{p.projectCode || p.projectName}</option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
-                            </div>
 
-                            {/* Category Select */}
-                            <div className="relative shrink-0 flex items-center h-9 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 shadow-sm overflow-hidden">
-                                <select
-                                    value={categoryFilters.length === 1 ? categoryFilters[0] : (categoryFilters.length > 1 ? "MULTIPLE" : "ALL")}
-                                    onChange={(e) => {
-                                        if (e.target.value === "ALL") setCategoryFilters([]);
-                                        else if (e.target.value !== "MULTIPLE") setCategoryFilters([e.target.value]);
-                                    }}
-                                    className="h-full pl-3 pr-8 bg-transparent appearance-none text-[11px] font-bold text-neutral-700 dark:text-neutral-300 outline-none cursor-pointer tracking-tight whitespace-nowrap w-auto max-w-[130px] text-ellipsis overflow-hidden"
-                                >
-                                    <option value="ALL">All Categories</option>
-                                    {categoryFilters.length > 1 && <option value="MULTIPLE" disabled>{categoryFilters.length} Categories</option>}
-                                    {CATEGORY_OPTIONS.map(cat => (
-                                        <option key={cat.value} value={cat.value}>{cat.label}</option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-neutral-400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        {/* Export Icon pinned to the right side outside overflow container */}
-                        <div className="relative group/export h-9 shrink-0 flex items-start">
-                            <button className="h-9 w-9 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-sm rounded-full border border-white/60 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 shadow-sm flex items-center justify-center hover:bg-white dark:hover:bg-neutral-700 transition-colors">
-                                <Download className="w-4 h-4" />
-                            </button>
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shadow-xl rounded-xl opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all flex flex-col z-50 overflow-hidden py-1">
-                                <button onClick={handleExport} className="w-full relative px-4 py-2.5 flex items-center gap-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-red-50 dark:hover:bg-red-900/10 hover:text-red-600 transition-colors group/item">
-                                    <div className="absolute inset-y-0 left-0 w-1 bg-red-500 rounded-r-full hidden group-hover/item:block" />
-                                    <FileText className="w-4 h-4 text-red-500" /> Export to PDF
-                                </button>
-                                <button onClick={handleExportExcel} className="w-full relative px-4 py-2.5 flex items-center gap-3 text-sm font-semibold text-neutral-700 dark:text-neutral-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 hover:text-emerald-600 transition-colors group/item">
-                                    <div className="absolute inset-y-0 left-0 w-1 bg-emerald-500 rounded-r-full hidden group-hover/item:block" />
-                                    <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to XLS
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* ADVANCED TOOLBAR - DESKTOP  */}
-                <div className="hidden md:flex flex-row gap-2 justify-between items-center px-4 py-2 border-b border-neutral-200/40 dark:border-neutral-800/20 mb-4">
-                    {/* LEFT: Search, Month, Project */}
-                    <div className="flex items-center gap-2 w-full md:w-auto">
-                        <div className="h-9 flex items-center gap-2 px-3 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm focus-within:ring-2 focus-within:ring-red-500/10 focus-within:border-red-500/20 transition-all w-full md:w-[180px]">
-                            <Search className="w-3.5 h-3.5 text-neutral-400" />
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                className="bg-transparent border-none outline-none text-[12px] font-bold text-neutral-700 dark:text-neutral-300 placeholder:text-neutral-400 w-full uppercase tracking-tight"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-
-                        <div className="h-9 flex items-center gap-1 p-0.5 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm">
-                            <button
-                                onClick={() => handleMonthChange("prev")}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-white/60 dark:hover:bg-neutral-700/60 rounded-full text-neutral-400 hover:text-neutral-600 transition-all"
-                            >
-                                <ChevronLeft className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                                onClick={() => handleMonthChange("next")}
-                                className="w-7 h-7 flex items-center justify-center hover:bg-white/60 dark:hover:bg-neutral-700/60 rounded-full text-neutral-400 hover:text-neutral-600 transition-all"
-                            >
-                                <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                            <div className="w-[1px] h-4 bg-neutral-200 dark:bg-neutral-700 mx-0.5" />
-                            <div className="px-2 text-[11px] font-bold text-neutral-400 dark:text-neutral-500 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px] uppercase">
-                                {showAllMonths ? "All Time" : (
-                                    format(startDate, "MMM yyyy") === format(endDate, "MMM yyyy")
-                                        ? format(startDate, "MMM yyyy")
-                                        : `${format(startDate, "d MMM")} - ${format(endDate, "d MMM")}`
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="relative group">
-                            <select
-                                value={selectedProjects.length === 1 ? selectedProjects[0] : (selectedProjects.length > 1 ? "MULTIPLE" : "ALL")}
-                                onChange={(e) => {
-                                    if (e.target.value === "ALL") setSelectedProjects([]);
-                                    else if (e.target.value !== "MULTIPLE") setSelectedProjects([e.target.value]);
-                                }}
-                                className="appearance-none h-9 pl-4 pr-10 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm text-[11px] font-bold text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/20 transition-all cursor-pointer w-full md:w-auto uppercase tracking-tight"
-                            >
-                                <option value="ALL">All Projects</option>
-                                {selectedProjects.length > 1 && <option value="MULTIPLE" disabled>{selectedProjects.length} Projects Selected</option>}
-                                {projects.map(p => (
-                                    <option key={p.id} value={p.id}>{p.projectCode} - {p.projectName}</option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
-                        </div>
-
-                        <div className="relative group">
-                            <select
-                                value={categoryFilters.length === 1 ? categoryFilters[0] : (categoryFilters.length > 1 ? "MULTIPLE" : "ALL")}
-                                onChange={(e) => {
-                                    if (e.target.value === "ALL") setCategoryFilters([]);
-                                    else if (e.target.value !== "MULTIPLE") setCategoryFilters([e.target.value]);
-                                }}
-                                className="appearance-none h-9 pl-4 pr-10 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm text-[11px] font-bold text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-red-500/10 focus:border-red-500/20 transition-all cursor-pointer w-full md:w-auto uppercase tracking-tight"
-                            >
-                                <option value="ALL">All Categories</option>
-                                {categoryFilters.length > 1 && <option value="MULTIPLE" disabled>{categoryFilters.length} Categories</option>}
-                                {CATEGORY_OPTIONS.map(cat => (
-                                    <option key={cat.value} value={cat.value}>
-                                        {cat.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none group-hover:text-neutral-600 transition-colors" />
-                        </div>
-                    </div>
-
-                    {/* RIGHT: Export, New */}
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-shrink-0">
-                        <div className="relative group/export h-9">
-                            <button className="h-9 px-4 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md rounded-full border border-white/40 dark:border-neutral-700/30 shadow-sm flex items-center gap-2 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 hover:bg-white/60 transition-all uppercase tracking-tight">
-                                <Download className="w-3.5 h-3.5" />
-                                <span className="hidden lg:inline">Export</span>
-                            </button>
-                            <div className="absolute right-0 top-full mt-2 w-48 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border border-white/40 dark:border-neutral-800 shadow-2xl rounded-2xl opacity-0 invisible group-hover/export:opacity-100 group-hover/export:visible transition-all flex flex-col z-50 overflow-hidden py-1">
-                                <button onClick={handleExport} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 text-left text-[12px] font-bold text-neutral-700 dark:text-neutral-300 transition-colors uppercase tracking-tight">
-                                    <FileText className="w-3.5 h-3.5 text-red-500" /> Export to PDF
-                                </button>
-                                <button onClick={handleExportExcel} className="flex items-center gap-3 px-4 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 text-left text-[12px] font-bold text-neutral-700 dark:text-neutral-300 transition-colors uppercase tracking-tight">
-                                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-500" /> Export to XLS
-                                </button>
-                            </div>
-                        </div>
-
-                        <button
-                            onClick={() => {
-                                setEditingItem(null);
-                                setIsDrawerOpen(true);
-                            }}
-                            className="h-9 px-5 bg-red-600 hover:bg-red-700 text-white rounded-full text-[11px] font-bold shadow-lg shadow-red-200/50 active:scale-95 transition-all flex items-center gap-1.5 uppercase tracking-tight"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>New</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* MOBILE CARD VIEW */}
-            <div className="mt-6 block md:hidden space-y-3">
-                {filteredItems.length === 0 ? (
-                    <div className="bg-white/40 dark:bg-neutral-900/60 backdrop-blur-md rounded-[24px] border border-white/50 dark:border-neutral-800 shadow-sm dark:shadow-none p-6 text-center">
-                        <Package className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
-                        <h4 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">
-                            {searchTerm ? "No results found" :
-                                statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
-                                    "No items found"}
-                        </h4>
-                        {/* Only show New Request button for current or future months */}
-                        {!searchTerm && statusFilter === "ALL" && (
-                            <button
-                                onClick={() => setIsDrawerOpen(true)}
-                                className="mt-4 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl shadow-lg shadow-red-200/50 dark:shadow-red-900/30"
-                            >
-                                <Plus className="w-4 h-4 inline mr-1.5" strokeWidth={2.5} />New Request
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    filteredItems.map((item) => {
-                        const statusToUse = item.financial_status === 'PAID' ? 'Paid' :
-                            item.approval_status === 'APPROVED' ? 'Approved' :
-                                item.approval_status === 'REJECTED' ? 'Rejected' :
-                                    item.approval_status === 'NEED_REVISION' ? 'Revise' :
-                                        item.approval_status === 'SUBMITTED' ? 'Pending' : 'Draft';
-
-                        const renderMobileActions = () => {
-                            const isDraftOrRevise = item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION";
-                            const isSubmitted = item.approval_status === "SUBMITTED";
-                            const isApprovedNotPaid = item.approval_status === "APPROVED" && item.financial_status !== "PAID";
-                            const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
-
-                            return (
-                                <div className="flex items-center gap-1.5 w-full justify-end">
-                                    {isTeamView ? (
-                                        <>
-                                            {isAdmin && (
-                                                <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
-                                                    <Trash2 className="w-[18px] h-[18px]" />
-                                                </button>
-                                            )}
-                                            {isSubmitted && (
-                                                <>
-                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Reject">
-                                                        <Ban className="w-[18px] h-[18px]" />
-                                                    </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2.5 rounded-full bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                                                        <RotateCcw className="w-[18px] h-[18px]" /> Revise
-                                                    </button>
-                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
-                                                        <Check className="w-[18px] h-[18px]" /> Approve
-                                                    </button>
-                                                </>
-                                            )}
-                                            {isApprovedNotPaid && (
-                                                <>
-                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 flex-shrink-0 active:scale-95 transition-all" title="Edit">
-                                                        <Pencil className="w-[18px] h-[18px]" />
-                                                    </button>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
-                                                        disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
-                                                        className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50"
-                                                    >
-                                                        <CreditCard className="w-[18px] h-[18px]" /> {(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) ? "Missing Data" : "Pay Now"}
-                                                    </button>
-                                                </>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Delete">
-                                                <Trash2 className="w-[18px] h-[18px]" />
+                        {/* Export Menu Overlay */}
+                        <AnimatePresence>
+                            {showExportMenu && (
+                                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        onClick={() => setShowExportMenu(false)}
+                                        className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm"
+                                    />
+                                    <motion.div
+                                        initial={{ scale: 0.9, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        exit={{ scale: 0.9, opacity: 0 }}
+                                        className="relative w-full max-w-xs bg-white dark:bg-neutral-900 rounded-[32px] shadow-2xl border border-white/20 dark:border-neutral-800 p-2 overflow-hidden"
+                                    >
+                                        <div className="p-4 border-b border-neutral-100 dark:border-neutral-800">
+                                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Export Options</h3>
+                                        </div>
+                                        <div className="py-1">
+                                            <button onClick={() => { handleExport(); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                                <FileText className="w-4 h-4 text-red-500" /> Export to PDF
                                             </button>
-                                            {(isDraftOrRevise) && (
-                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
-                                                    <Pencil className="w-[18px] h-[18px]" /> Edit
-                                                </button>
-                                            )}
-                                            {item.approval_status === 'DRAFT' && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        // Fixed: removed fetchItems and changed to object payload
-                                                        updatePurchasingStatus(item.id, { approval_status: 'SUBMITTED' }).then(() => loadData());
-                                                    }}
-                                                    className="flex-[1.5] py-2.5 rounded-full bg-red-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-red-200/50"
-                                                >
-                                                    <Send className="w-[18px] h-[18px]" /> Submit
-                                                </button>
-                                            )}
-                                            {isSubmitted && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setRevertingItem(item); }}
-                                                    className="flex-1 py-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
-                                                >
-                                                    <Undo2 className="w-[18px] h-[18px]" /> Cancel
-                                                </button>
-                                            )}
-                                        </>
+                                            <button onClick={() => { handleExportExcel(); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                                <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to XLS
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={() => setShowExportMenu(false)}
+                                            className="w-full mt-1 py-3 text-xs font-bold text-neutral-400 hover:text-neutral-600 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </motion.div>
+                                </div>
+                            )}
+                        </AnimatePresence>
+
+                        {/* MOBILE/TABLET CARD VIEW */}
+                        <div className="mt-6 block lg:hidden space-y-3">
+                            {filteredItems.length === 0 ? (
+                                <div className="bg-white/40 dark:bg-neutral-900/60 backdrop-blur-md rounded-[24px] border border-white/50 dark:border-neutral-800 shadow-sm dark:shadow-none p-6 text-center">
+                                    <Package className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+                                    <h4 className="text-[17px] font-bold text-neutral-900 dark:text-white mt-4">
+                                        {searchTerm ? "No Search Results" :
+                                            statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
+                                                "No Purchase Requests Yet"}
+                                    </h4>
+                                    <p className="text-[13px] text-neutral-500 dark:text-neutral-400 mt-2 max-w-[240px] mx-auto leading-relaxed">
+                                        {searchTerm ? "Try adjusting your search terms to find what you're looking for." :
+                                            "Start by creating a new request to track your materials and tools."}
+                                    </p>
+                                    {!searchTerm && statusFilter === "ALL" && (
+                                        <button
+                                            onClick={() => setIsDrawerOpen(true)}
+                                            className="mt-6 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white text-[14px] font-bold rounded-full shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all"
+                                        >
+                                            <Plus className="w-4 h-4 inline mr-2" strokeWidth={3} />New Request
+                                        </button>
                                     )}
                                 </div>
-                            );
-                        };
-
-                        return (
-                            <FinanceItemCard
-                                key={item.id}
-                                item={item}
-                                status={statusToUse}
-                                onClick={() => setViewingItem(item)}
-                                actions={statusToUse !== 'Paid' ? renderMobileActions() : undefined}
-                            />
-                        )
-                    })
-                )}
-            </div>
-
-            {/* DESKTOP/TABLET TABLE VIEW */}
-            <div className="mt-6 hidden md:block bg-white/40 backdrop-blur-md rounded-3xl border border-white/50 shadow-[0_8px_32px_rgba(0,0,0,0.02)] overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-neutral-100 bg-neutral-50/50 backdrop-blur-sm">
-                                <th
-                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
-                                    onClick={() => handleSort('date')}
-                                >
-                                    <div className="flex items-center gap-1 group/header">
-                                        Date
-                                        {sortConfig?.key === 'date' ? (
-                                            sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-red-500" /> : <ChevronDown className="w-3.5 h-3.5 text-red-500" />
-                                        ) : <ChevronDown className="w-3.5 h-3.5 opacity-0 group-hover/header:opacity-30 transition-opacity" />}
-                                    </div>
-                                </th>
-                                <th
-                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
-                                    onClick={() => handleSort('project_name')}
-                                >
-                                    <div className="flex items-center gap-1 group/header">
-                                        Project
-                                        {sortConfig?.key === 'project_name' ? (
-                                            sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-red-500" /> : <ChevronDown className="w-3.5 h-3.5 text-red-500" />
-                                        ) : <ChevronDown className="w-3.5 h-3.5 opacity-0 group-hover/header:opacity-30 transition-opacity" />}
-                                    </div>
-                                </th>
-                                <th
-                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
-                                    onClick={() => handleSort('description')}
-                                >
-                                    <div className="flex items-center gap-1 group/header">
-                                        Description
-                                        {sortConfig?.key === 'description' ? (
-                                            sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-red-500" /> : <ChevronDown className="w-3.5 h-3.5 text-red-500" />
-                                        ) : <ChevronDown className="w-3.5 h-3.5 opacity-0 group-hover/header:opacity-30 transition-opacity" />}
-                                    </div>
-                                </th>
-                                <th
-                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
-                                    onClick={() => handleSort('type')}
-                                >
-                                    <div className="flex items-center gap-1 group/header">
-                                        Category
-                                        {sortConfig?.key === 'type' ? (
-                                            sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-red-500" /> : <ChevronDown className="w-3.5 h-3.5 text-red-500" />
-                                        ) : <ChevronDown className="w-3.5 h-3.5 opacity-0 group-hover/header:opacity-30 transition-opacity" />}
-                                    </div>
-                                </th>
-                                <th
-                                    className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors"
-                                    onClick={() => handleSort('amount')}
-                                >
-                                    <div className="flex items-center justify-end gap-1 group/header">
-                                        Amount
-                                        {sortConfig?.key === 'amount' ? (
-                                            sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-red-500" /> : <ChevronDown className="w-3.5 h-3.5 text-red-500" />
-                                        ) : <ChevronDown className="w-3.5 h-3.5 opacity-0 group-hover/header:opacity-30 transition-opacity" />}
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-center text-[10px] font-bold text-neutral-400">Status</th>
-                                {isTeamView && (
-                                    <th
-                                        className="px-6 py-4 text-[10px] font-bold text-neutral-400 cursor-pointer hover:text-neutral-600 transition-colors"
-                                        onClick={() => handleSort('submitted_by_name')}
-                                    >
-                                        <div className="flex items-center gap-1 group/header">
-                                            Submitter
-                                            {sortConfig?.key === 'submitted_by_name' ? (
-                                                sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-red-500" /> : <ChevronDown className="w-3.5 h-3.5 text-red-500" />
-                                            ) : <ChevronDown className="w-3.5 h-3.5 opacity-0 group-hover/header:opacity-30 transition-opacity" />}
-                                        </div>
-                                    </th>
-                                )}
-                                <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-neutral-50">
-                            {filteredItems.length === 0 ? (
-                                <tr>
-                                    <td colSpan={isTeamView ? 8 : 7} className="py-16 text-center">
-                                        <div className="flex flex-col items-center gap-4">
-                                            <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
-                                                <Package className="w-8 h-8 text-neutral-300" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <h4 className="text-base font-semibold text-neutral-700">
-                                                    {searchTerm ? "No results found" :
-                                                        statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
-                                                            "No purchase requests yet"}
-                                                </h4>
-                                                <p className="text-sm text-neutral-400 max-w-xs mx-auto">
-                                                    {searchTerm ?
-                                                        `We couldn't find any requests matching "${searchTerm}". Try a different search term.` :
-                                                        statusFilter !== "ALL" ?
-                                                            `There are no ${statusFilter.toLowerCase()} purchase requests found.` :
-                                                            isTeamView ?
-                                                                "When team members submit purchase requests, they'll appear here for your review." :
-                                                                "Start by creating your first purchase request. Track materials, tools, and services."}
-                                                </p>
-                                            </div>
-                                            {/* Only show New Request button for current or future months */}
-                                            {!searchTerm && statusFilter === "ALL" && (
-                                                <button
-                                                    onClick={() => setIsDrawerOpen(true)}
-                                                    className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-red-200/50 transition-all flex items-center gap-2"
-                                                >
-                                                    <Plus className="w-4 h-4" />
-                                                    New Purchase Request
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
                             ) : (
-                                <>
-                                    {filteredItems.map((item) => (
-                                        <tr
+                                filteredItems.map((item) => {
+                                    const statusToUse = item.financial_status === 'PAID' ? 'Paid' :
+                                        item.approval_status === 'APPROVED' ? 'Approved' :
+                                            item.approval_status === 'REJECTED' ? 'Rejected' :
+                                                item.approval_status === 'NEED_REVISION' ? 'Revise' :
+                                                    item.approval_status === 'SUBMITTED' ? 'Pending' : 'Draft';
+
+                                    const renderMobileActions = () => {
+                                        const isDraftOrRevise = item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION";
+                                        const isSubmitted = item.approval_status === "SUBMITTED";
+                                        const isApprovedNotPaid = item.approval_status === "APPROVED" && item.financial_status !== "PAID";
+                                        const isAdmin = ["admin", "superadmin", "supervisor"].includes(userRole || "");
+
+                                        return (
+                                            <div className="flex items-center gap-1.5 w-full justify-end">
+                                                {isTeamView ? (
+                                                    <>
+                                                        {isAdmin && (
+                                                            <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all">
+                                                                <Trash2 className="w-[18px] h-[18px]" />
+                                                            </button>
+                                                        )}
+                                                        {isSubmitted && (
+                                                            <>
+                                                                <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Reject">
+                                                                    <Ban className="w-[18px] h-[18px]" />
+                                                                </button>
+                                                                <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="flex-1 py-2.5 rounded-full bg-orange-500/10 text-orange-600 text-[11px] font-bold border border-orange-200/50 flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                                    <RotateCcw className="w-[18px] h-[18px]" /> Revise
+                                                                </button>
+                                                                <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="flex-[1.5] py-2.5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-emerald-200/50">
+                                                                    <Check className="w-[18px] h-[18px]" /> Approve
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {isApprovedNotPaid && (
+                                                            <>
+                                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 flex-shrink-0 active:scale-95 transition-all" title="Edit">
+                                                                    <Pencil className="w-[18px] h-[18px]" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
+                                                                    disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
+                                                                    className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50"
+                                                                >
+                                                                    <CreditCard className="w-[18px] h-[18px]" /> {(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) ? "Missing Data" : "Pay Now"}
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Delete">
+                                                            <Trash2 className="w-[18px] h-[18px]" />
+                                                        </button>
+                                                        {(isDraftOrRevise) && (
+                                                            <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="flex-1 py-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 font-bold text-[11px] flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+                                                                <Pencil className="w-[18px] h-[18px]" /> Edit
+                                                            </button>
+                                                        )}
+                                                        {item.approval_status === 'DRAFT' && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    // Fixed: removed fetchItems and changed to object payload
+                                                                    updatePurchasingStatus(item.id, { approval_status: 'SUBMITTED' }).then(() => loadData());
+                                                                }}
+                                                                className="flex-[1.5] py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50"
+                                                            >
+                                                                <Send className="w-[18px] h-[18px]" /> Submit
+                                                            </button>
+                                                        )}
+                                                        {isSubmitted && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); setRevertingItem(item); }}
+                                                                className="flex-1 py-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+                                                            >
+                                                                <Undo2 className="w-[18px] h-[18px]" /> Cancel
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        );
+                                    };
+
+                                    return (
+                                        <FinanceItemCard
                                             key={item.id}
-                                            className="group hover:bg-white/60 hover:shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer"
-                                            onClick={() => {
-                                                // Both views now open ViewModal (read-only for Personal)
-                                                setViewingItem(item);
-                                            }}
-                                        >
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-[12px] font-normal text-neutral-500 tabular-nums">
-                                                    {format(new Date(item.date), "dd MMM yyyy")}
+                                            item={item}
+                                            status={statusToUse}
+                                            onClick={() => setViewingItem(item)}
+                                            actions={statusToUse !== 'Paid' ? renderMobileActions() : undefined}
+                                        />
+                                    )
+                                })
+                            )}
+                        </div>
+
+                        {/* DESKTOP TABLE VIEW */}
+                        <div className="mt-6 hidden lg:block bg-white/40 dark:bg-white/[0.03] backdrop-blur-md rounded-3xl border border-white/50 dark:border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.02)] dark:shadow-none overflow-hidden">
+                            <div className="overflow-x-auto scrollbar-hide">
+                                <table className="w-full text-left border-collapse table-fixed">
+                                    <thead>
+                                        <tr className="border-b border-neutral-100 dark:border-white/[0.06] bg-neutral-50/50 dark:bg-white/[0.02]">
+                                            <th
+                                                className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                                onClick={() => handleSort('date')}
+                                            >
+                                                <div className="flex items-center gap-1 group/header">
+                                                    Date
+                                                    {sortConfig?.key === 'date' ? (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100/60 backdrop-blur-sm px-1 py-0.5 rounded border border-neutral-200/30 tracking-tight w-fit">
-                                                        {item.project_code}
-                                                    </span>
-                                                    <span className="text-[12px] font-medium text-neutral-900 truncate max-w-[150px]">{cleanEntityName(item.project_name)}</span>
+                                            </th>
+                                            <th
+                                                className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                                onClick={() => handleSort('project_name')}
+                                            >
+                                                <div className="flex items-center gap-1 group/header">
+                                                    Project
+                                                    {sortConfig?.key === 'project_name' ? (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="text-[12px] font-semibold text-neutral-900 tracking-tight leading-tight mb-0.5">
-                                                    {item.items && item.items.length > 1
-                                                        ? `${item.items[0].name} + ${item.items.length - 1} more`
-                                                        : (item.items?.[0]?.name || item.description)}
+                                            </th>
+                                            <th
+                                                className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                                onClick={() => handleSort('description')}
+                                            >
+                                                <div className="flex items-center gap-1 group/header">
+                                                    Description
+                                                    {sortConfig?.key === 'description' ? (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
                                                 </div>
-                                                <div className="text-[10px] font-normal text-neutral-400 flex items-center gap-1.5">
-                                                    <span className="text-neutral-500 font-medium">
-                                                        {item.items && item.items.length > 0
-                                                            ? `${item.items.length} items`
-                                                            : (item.quantity ? `${item.quantity} ${item.unit}` : '')}
-                                                    </span>
-                                                    <span className="text-neutral-300">•</span>
-                                                    <div className="flex items-center gap-1.5 overflow-hidden">
-                                                        <span className="hover:text-neutral-600 transition-colors tracking-tight text-[10px] truncate">{cleanEntityName(item.vendor)}</span>
-                                                        {item.approval_status === "APPROVED" && !item.invoice_url && (
-                                                            <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 rounded border border-red-100 flex-shrink-0">NEED INVOICE</span>
-                                                        )}
-                                                        {item.approval_status === "APPROVED" && (!item.beneficiary_bank || !item.beneficiary_number) && (
-                                                            <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 rounded border border-orange-100 flex-shrink-0">NEED BENEFICIARY</span>
-                                                        )}
-                                                    </div>
+                                            </th>
+                                            <th
+                                                className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                                onClick={() => handleSort('type')}
+                                            >
+                                                <div className="flex items-center gap-1 group/header">
+                                                    Category
+                                                    {sortConfig?.key === 'type' ? (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col gap-0.5 group/type">
-                                                    <span className="inline-flex items-center gap-1 text-[12px] font-medium text-neutral-900 w-fit tracking-tight group-hover/type:text-neutral-600 transition-colors">
-                                                        {formatStatus(item.type)}
-                                                    </span>
-                                                    <span className="text-[12px] font-bold text-neutral-900 group-hover/type:text-blue-600 transition-colors capitalize">
-                                                        {item.subcategory?.toLowerCase().replace(/_/g, " ")}
-                                                    </span>
+                                            </th>
+                                            <th
+                                                className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                                onClick={() => handleSort('amount')}
+                                            >
+                                                <div className="flex items-center justify-end gap-1 group/header">
+                                                    Amount
+                                                    {sortConfig?.key === 'amount' ? (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="text-[12px] font-bold text-neutral-900 tabular-nums tracking-tight">
-                                                    {formatCurrency(item.amount)}
+                                            </th>
+                                            <th
+                                                className="px-6 py-4 text-center text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                                onClick={() => handleSort('approval_status')}
+                                            >
+                                                <div className="flex items-center justify-center gap-1 group/header">
+                                                    Status
+                                                    {sortConfig?.key === 'approval_status' ? (
+                                                        sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                    ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
                                                 </div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex flex-col items-center gap-1">
-                                                    <StatusBadge status={getPrimaryStatus(
-                                                        item.approval_status,
-                                                        item.purchase_stage,
-                                                        item.financial_status
-                                                    )} />
-                                                    {item.financial_status === "PAID" && item.purchase_stage === "INVOICED" && (
-                                                        <span className="text-[8px] font-bold text-emerald-600">Goods Pending</span>
-                                                    )}
-                                                </div>
-                                            </td>
+                                            </th>
                                             {isTeamView && (
-                                                <td className="px-6 py-4">
-                                                    <div className="flex flex-col">
-                                                        <div className="text-[12px] font-medium text-neutral-900 tabular-nums">
-                                                            {cleanEntityName(item.submitted_by_name || "N/A")}
+                                                <th
+                                                    className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors"
+                                                    onClick={() => handleSort('submitted_by_name')}
+                                                >
+                                                    <div className="flex items-center gap-1 group/header">
+                                                        Submitter
+                                                        {sortConfig?.key === 'submitted_by_name' ? (
+                                                            sortConfig.direction === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
+                                                        ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
+                                                    </div>
+                                                </th>
+                                            )}
+                                            <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 dark:text-neutral-500">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-neutral-50 dark:divide-white/[0.04]">
+                                        {filteredItems.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={isTeamView ? 8 : 7} className="py-16 text-center">
+                                                    <div className="flex flex-col items-center gap-4">
+                                                        <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
+                                                            <Package className="w-8 h-8 text-neutral-300" />
                                                         </div>
-                                                        <div className="text-[10px] font-bold text-neutral-400">
-                                                            {item.created_by_role}
+                                                        <div className="space-y-1">
+                                                            <h4 className="text-base font-semibold text-neutral-700">
+                                                                {searchTerm ? "No results found" :
+                                                                    statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
+                                                                        "No purchase requests yet"}
+                                                            </h4>
+                                                            <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                                                {searchTerm ?
+                                                                    `We couldn't find any requests matching "${searchTerm}". Try a different search term.` :
+                                                                    statusFilter !== "ALL" ?
+                                                                        `There are no ${statusFilter.toLowerCase()} purchase requests found.` :
+                                                                        isTeamView ?
+                                                                            "When team members submit purchase requests, they'll appear here for your review." :
+                                                                            "Start by creating your first purchase request. Track materials, tools, and services."}
+                                                            </p>
                                                         </div>
+                                                        {/* Only show New Request button for current or future months */}
+                                                        {!searchTerm && statusFilter === "ALL" && (
+                                                            <button
+                                                                onClick={() => setIsDrawerOpen(true)}
+                                                                className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-lg shadow-blue-200/50 transition-all flex items-center gap-2"
+                                                            >
+                                                                <Plus className="w-4 h-4" />
+                                                                New Purchase Request
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
-                                            )}
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                                    {isTeamView ? (
-                                                        <>
-                                                            {item.approval_status === "SUBMITTED" && (
-                                                                <>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all" title="Approve">
-                                                                        <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="p-1.5 text-neutral-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all" title="Request Revision">
-                                                                        <AlertCircle className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all" title="Reject">
-                                                                        <Ban className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            {(item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION") && (
-                                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Edit Request">
-                                                                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
-                                                                </button>
-                                                            )}
-                                                            {item.approval_status === "APPROVED" && item.financial_status !== "PAID" && (
-                                                                <>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Add Missing Details">
-                                                                        <Pencil className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
-                                                                        disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
-                                                                        className={clsx(
-                                                                            "p-1.5 rounded-full transition-all",
-                                                                            (!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number)
-                                                                                ? "text-neutral-200 cursor-not-allowed"
-                                                                                : "text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50"
-                                                                        )}
-                                                                        title={(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) ? "Invoice & Beneficiary required" : "Mark as Paid"}
-                                                                    >
-                                                                        <CreditCard className="w-4 h-4" strokeWidth={1.5} />
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            {/* Admin Delete Button - Visible in Team View for all statuses */}
-                                                            {["admin", "superadmin", "supervisor"].includes(userRole || "") && (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setDeletingItem(item);
-                                                                    }}
-                                                                    className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
-                                                                    title="Delete Request"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
-                                                                </button>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {(["DRAFT", "SUBMITTED", "NEED_REVISION", "REJECTED"].includes(item.approval_status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
-                                                                <>
-                                                                    {(["DRAFT", "SUBMITTED", "NEED_REVISION"].includes(item.approval_status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
-                                                                        <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Edit Request">
-                                                                            <Pencil className="w-4 h-4" strokeWidth={1.5} />
-                                                                        </button>
+                                            </tr>
+                                        ) : (
+                                            <>
+                                                {filteredItems.map((item) => (
+                                                    <tr
+                                                        key={item.id}
+                                                        className="group hover:bg-white/60 dark:hover:bg-white/[0.04] transition-all duration-300 cursor-pointer"
+                                                        onClick={() => {
+                                                            // Both views now open ViewModal (read-only for Personal)
+                                                            setViewingItem(item);
+                                                        }}
+                                                    >
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-[12px] font-normal text-neutral-500 tabular-nums">
+                                                                {format(new Date(item.date), "dd MMM yyyy")}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100/60 backdrop-blur-sm px-1 py-0.5 rounded border border-neutral-200/30 tracking-tight w-fit">
+                                                                    {item.project_code}
+                                                                </span>
+                                                                <span className="text-[12px] font-medium text-neutral-900 truncate max-w-[150px]">{cleanEntityName(item.project_name)}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="text-[12px] font-semibold text-neutral-900 tracking-tight leading-tight mb-0.5">
+                                                                {item.items && item.items.length > 1
+                                                                    ? `${item.items[0].name} + ${item.items.length - 1} more`
+                                                                    : (item.items?.[0]?.name || item.description)}
+                                                            </div>
+                                                            <div className="text-[10px] font-normal text-neutral-400 flex items-center gap-1.5">
+                                                                <span className="text-neutral-500 font-medium">
+                                                                    {item.items && item.items.length > 0
+                                                                        ? `${item.items.length} items`
+                                                                        : (item.quantity ? `${item.quantity} ${item.unit}` : '')}
+                                                                </span>
+                                                                <span className="text-neutral-300">•</span>
+                                                                <div className="flex items-center gap-1.5 overflow-hidden">
+                                                                    <span className="hover:text-neutral-600 transition-colors tracking-tight text-[10px] truncate">{cleanEntityName(item.vendor)}</span>
+                                                                    {item.approval_status === "APPROVED" && !item.invoice_url && (
+                                                                        <span className="text-[9px] font-bold text-red-600 bg-red-50 px-1 rounded border border-red-100 flex-shrink-0">NEED INVOICE</span>
                                                                     )}
+                                                                    {item.approval_status === "APPROVED" && (!item.beneficiary_bank || !item.beneficiary_number) && (
+                                                                        <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-1 rounded border border-orange-100 flex-shrink-0">NEED BENEFICIARY</span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-col gap-0.5 group/type">
+                                                                <span className="inline-flex items-center gap-1 text-[12px] font-medium text-neutral-900 w-fit tracking-tight group-hover/type:text-neutral-600 transition-colors">
+                                                                    {formatStatus(item.type)}
+                                                                </span>
+                                                                <span className="text-[12px] font-bold text-neutral-900 group-hover/type:text-blue-600 transition-colors capitalize">
+                                                                    {item.subcategory?.toLowerCase().replace(/_/g, " ")}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="text-[12px] font-bold text-neutral-900 tabular-nums tracking-tight">
+                                                                {formatCurrency(item.amount)}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-center">
+                                                            <div className="flex flex-col items-center gap-1">
+                                                                <StatusBadge status={getPrimaryStatus(
+                                                                    item.approval_status,
+                                                                    item.purchase_stage,
+                                                                    item.financial_status
+                                                                )} />
+                                                                {item.financial_status === "PAID" && item.purchase_stage === "INVOICED" && (
+                                                                    <span className="text-[8px] font-bold text-emerald-600">Goods Pending</span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        {isTeamView && (
+                                                            <td className="px-6 py-4">
+                                                                <div className="flex flex-col">
+                                                                    <div className="text-[12px] font-medium text-neutral-900 tabular-nums">
+                                                                        {cleanEntityName(item.submitted_by_name || "N/A")}
+                                                                    </div>
+                                                                    <div className="text-[10px] font-bold text-neutral-400">
+                                                                        {item.created_by_role}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                        )}
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                                                {isTeamView ? (
+                                                                    <>
+                                                                        {item.approval_status === "SUBMITTED" && (
+                                                                            <>
+                                                                                <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1.5 text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-full transition-all" title="Approve">
+                                                                                    <CheckCircle2 className="w-4 h-4" strokeWidth={1.5} />
+                                                                                </button>
+                                                                                <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="p-1.5 text-neutral-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all" title="Request Revision">
+                                                                                    <AlertCircle className="w-4 h-4" strokeWidth={1.5} />
+                                                                                </button>
+                                                                                <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-full transition-all" title="Reject">
+                                                                                    <Ban className="w-4 h-4" strokeWidth={1.5} />
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                        {(item.approval_status === "DRAFT" || item.approval_status === "NEED_REVISION") && (
+                                                                            <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Edit Request">
+                                                                                <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                                                                            </button>
+                                                                        )}
+                                                                        {item.approval_status === "APPROVED" && item.financial_status !== "PAID" && (
+                                                                            <>
+                                                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Add Missing Details">
+                                                                                    <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
+                                                                                    disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
+                                                                                    className={clsx(
+                                                                                        "p-1.5 rounded-full transition-all",
+                                                                                        (!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number)
+                                                                                            ? "text-neutral-200 cursor-not-allowed"
+                                                                                            : "text-neutral-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                                                                    )}
+                                                                                    title={(!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number) ? "Invoice & Beneficiary required" : "Mark as Paid"}
+                                                                                >
+                                                                                    <CreditCard className="w-4 h-4" strokeWidth={1.5} />
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                        {/* Admin Delete Button - Visible in Team View for all statuses */}
+                                                                        {["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    setDeletingItem(item);
+                                                                                }}
+                                                                                className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                                                                                title="Delete Request"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                                                                            </button>
+                                                                        )}
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        {(["DRAFT", "SUBMITTED", "NEED_REVISION", "REJECTED"].includes(item.approval_status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
+                                                                            <>
+                                                                                {(["DRAFT", "SUBMITTED", "NEED_REVISION"].includes(item.approval_status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
+                                                                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Edit Request">
+                                                                                        <Pencil className="w-4 h-4" strokeWidth={1.5} />
+                                                                                    </button>
+                                                                                )}
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        setDeletingItem(item);
+                                                                                    }}
+                                                                                    className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
+                                                                                    title="Delete Request"
+                                                                                >
+                                                                                    <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                                                                                </button>
+                                                                            </>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                                <div className="w-px h-4 bg-neutral-200 mx-1" />
+                                                                <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all" title="View Details">
+                                                                    <Eye className="w-4 h-4" strokeWidth={1.5} />
+                                                                </button>
+                                                                {item.invoice_url && (
                                                                     <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            setDeletingItem(item);
-                                                                        }}
+                                                                        onClick={(e) => { e.stopPropagation(); setPreviewingDocument({ item, initialTab: 'invoice' }); }}
                                                                         className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
-                                                                        title="Delete Request"
+                                                                        title="View Invoice"
                                                                     >
-                                                                        <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+                                                                        <Download className="w-4 h-4" strokeWidth={1.5} />
                                                                     </button>
-                                                                </>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                    <div className="w-px h-4 bg-neutral-200 mx-1" />
-                                                    <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1.5 text-neutral-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all" title="View Details">
-                                                        <Eye className="w-4 h-4" strokeWidth={1.5} />
-                                                    </button>
-                                                    {item.invoice_url && (
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); setPreviewingDocument({ item, initialTab: 'invoice' }); }}
-                                                            className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
-                                                            title="View Invoice"
-                                                        >
-                                                            <Download className="w-4 h-4" strokeWidth={1.5} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
 
-            <Pagination
-                currentPage={currentPage}
-                totalItems={totalItems}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-            />
+                        <Pagination
+                            currentPage={currentPage}
+                            totalItems={totalItems}
+                            itemsPerPage={itemsPerPage}
+                            onPageChange={setCurrentPage}
+                        />
+                    </div>
+                </>
+            )}
 
             {
                 payingItem && (
@@ -3374,232 +3280,236 @@ export default function PurchasingClient() {
                 )}
             </AnimatePresence>
 
-            {/* Filter Bottom Sheet / Modal */}
-            {
-                showFilters && (
-                    <div className="fixed md:hidden inset-0 z-[100] flex items-end justify-center">
-                        <div
-                            className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity"
-                            onClick={() => setShowFilters(false)}
-                        />
-                        <div className="relative w-full mx-2 mb-2 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border border-white/40 dark:border-neutral-800 p-6 flex flex-col gap-6 max-h-[90dvh]">
-                            {/* Header */}
-                            <div className="flex items-center justify-between px-2">
-                                <h3 className="text-[20px] font-bold text-neutral-900 dark:text-white tracking-tight">Filters</h3>
-                                <div className="flex items-center gap-3">
-                                    {(selectedProjects.length > 0 || categoryFilters.length > 0 || !showAllMonths) && (
-                                        <button
-                                            onClick={() => {
-                                                setSelectedProjects([]);
-                                                setCategoryFilters([]);
-                                                setShowAllMonths(true);
-                                                setStartDate(startOfMonth(new Date()));
-                                                setEndDate(endOfMonth(new Date()));
-                                                setSortColumn('date');
-                                                setSortDirection('desc');
-                                            }}
-                                            className="text-[13px] font-bold text-red-500 hover:text-red-600 active:scale-95 transition-all outline-none tracking-wider"
-                                        >
-                                            Reset
-                                        </button>
-                                    )}
+            {showFilters && (
+                <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center">
+                    <div
+                        className="absolute inset-0 bg-neutral-900/20 dark:bg-black/40 backdrop-blur-sm transition-opacity"
+                        onClick={() => setShowFilters(false)}
+                    />
+                    <motion.div
+                        initial={{ y: "100%", opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        className={clsx(
+                            "relative bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] shadow-2xl overflow-hidden border border-white/40 dark:border-neutral-800 flex flex-col max-h-[90dvh]",
+                            "w-full mx-2 mb-2 rounded-[40px] p-6 gap-6", // Mobile
+                            "md:absolute md:right-6 md:top-6 md:bottom-6 md:mb-0 md:mx-0 md:w-[450px] md:rounded-[56px] md:max-h-none" // Desktop Side Drawer
+                        )}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="text-[20px] font-bold text-neutral-900 dark:text-white tracking-tight">Filters</h3>
+                            <div className="flex items-center gap-3">
+                                {(selectedProjects.length > 0 || categoryFilters.length > 0 || !showAllMonths) && (
                                     <button
-                                        onClick={() => setShowFilters(false)}
-                                        className="w-8 h-8 bg-neutral-100 dark:bg-neutral-800 border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                        onClick={() => {
+                                            setSelectedProjects([]);
+                                            setCategoryFilters([]);
+                                            setShowAllMonths(true);
+                                            setStartDate(startOfMonth(new Date()));
+                                            setEndDate(endOfMonth(new Date()));
+                                            setSortColumn('date');
+                                            setSortDirection('desc');
+                                        }}
+                                        className="text-[13px] font-bold text-blue-600 hover:text-blue-700 active:scale-95 transition-all outline-none tracking-wider"
                                     >
-                                        <X size={18} className="text-neutral-500" strokeWidth={2} />
+                                        Reset
                                     </button>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-6 overflow-y-auto pb-4 pr-1 scrollbar-hide">
-                                {/* Sorting Section */}
-                                <div className="space-y-4 px-2">
-                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Sort By</h4>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            { id: 'date', label: 'Date' },
-                                            { id: 'project_name', label: 'Project' },
-                                            { id: 'amount', label: 'Amount' },
-                                            { id: 'status', label: 'Status' }
-                                        ].map((col) => (
-                                            <button
-                                                key={col.id}
-                                                onClick={() => setSortColumn(col.id as any)}
-                                                className={clsx(
-                                                    "px-4 py-2.5 rounded-full text-[12px] font-bold transition-all border flex items-center justify-between",
-                                                    sortColumn === col.id
-                                                        ? "bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400 border-red-200 dark:border-red-900/50"
-                                                        : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
-                                                )}
-                                            >
-                                                {col.label}
-                                                {sortColumn === col.id && (
-                                                    <div
-                                                        role="button"
-                                                        tabIndex={0}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                        }}
-                                                        className="p-1 hover:bg-white/20 rounded-lg transition-colors cursor-pointer outline-none"
-                                                    >
-                                                        {sortDirection === 'asc' ? <ArrowUpNarrowWide className="w-3.5 h-3.5" /> : <ArrowDownWideNarrow className="w-3.5 h-3.5" />}
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Project Filter */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between px-2">
-                                        <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Project</h4>
-                                        {selectedProjects.length > 0 && (
-                                            <button onClick={() => setSelectedProjects([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 px-2">
-                                        <button
-                                            onClick={() => setSelectedProjects([])}
-                                            className={clsx(
-                                                "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
-                                                selectedProjects.length === 0
-                                                    ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
-                                                    : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                                            )}
-                                        >
-                                            All
-                                        </button>
-                                        {projects.map((p) => {
-                                            const isSelected = selectedProjects.includes(p.id);
-                                            return (
-                                                <button
-                                                    key={p.id}
-                                                    onClick={() => {
-                                                        if (isSelected) {
-                                                            setSelectedProjects(selectedProjects.filter(id => id !== p.id));
-                                                        } else {
-                                                            setSelectedProjects([...selectedProjects, p.id]);
-                                                        }
-                                                    }}
-                                                    className={clsx(
-                                                        "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
-                                                        isSelected
-                                                            ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
-                                                            : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
-                                                    )}
-                                                >
-                                                    {p.projectCode}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Category Filter */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between px-2">
-                                        <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Category</h4>
-                                        {categoryFilters.length > 0 && (
-                                            <button onClick={() => setCategoryFilters([])} className="text-[10px] font-bold text-red-500 tracking-wider">Clear</button>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 px-2">
-                                        <button
-                                            onClick={() => setCategoryFilters([])}
-                                            className={clsx(
-                                                "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
-                                                categoryFilters.length === 0
-                                                    ? "bg-neutral-800 dark:bg-neutral-200 text-white dark:text-black border-neutral-800 dark:border-neutral-200 shadow-md"
-                                                    : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
-                                            )}
-                                        >
-                                            All
-                                        </button>
-                                        {CATEGORY_OPTIONS.map((cat) => {
-                                            const isSelected = categoryFilters.includes(cat.value);
-                                            return (
-                                                <button
-                                                    key={cat.value}
-                                                    onClick={() => {
-                                                        if (isSelected) {
-                                                            setCategoryFilters(categoryFilters.filter(v => v !== cat.value));
-                                                        } else {
-                                                            setCategoryFilters([...categoryFilters, cat.value]);
-                                                        }
-                                                    }}
-                                                    className={clsx(
-                                                        "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
-                                                        isSelected
-                                                            ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border-red-200 dark:border-red-500/30 shadow-sm"
-                                                            : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
-                                                    )}
-                                                >
-                                                    {cat.label}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {/* Date Range Filter */}
-                                <div className="space-y-4 px-2">
-                                    <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Date Range</h4>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5 min-w-0 overflow-hidden">
-                                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider px-1">From</span>
-                                            <input
-                                                type="date"
-                                                value={format(startDate, "yyyy-MM-dd")}
-                                                onChange={(e) => {
-                                                    setShowAllMonths(false);
-                                                    setStartDate(new Date(e.target.value));
-                                                }}
-                                                className="w-full max-w-full min-w-0 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10 appearance-none"
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5 min-w-0 overflow-hidden">
-                                            <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider px-1">To</span>
-                                            <input
-                                                type="date"
-                                                value={format(endDate, "yyyy-MM-dd")}
-                                                onChange={(e) => {
-                                                    setShowAllMonths(false);
-                                                    setEndDate(new Date(e.target.value));
-                                                }}
-                                                className="w-full max-w-full min-w-0 bg-neutral-50 dark:bg-neutral-800/50 p-3 rounded-full border border-neutral-100 dark:border-neutral-800 text-[13px] font-bold text-neutral-700 dark:text-neutral-200 outline-none focus:ring-2 focus:ring-red-500/10 appearance-none"
-                                            />
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowAllMonths(!showAllMonths)}
-                                        className={clsx(
-                                            "w-full py-3.5 rounded-2xl text-[12px] font-bold transition-all border",
-                                            showAllMonths
-                                                ? "bg-red-600 text-white border-red-500 shadow-md shadow-red-500/20"
-                                                : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
-                                        )}
-                                    >
-                                        {showAllMonths ? "Showing All Time" : "Switch to All Time"}
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Footer Action */}
-                            <div className="pt-2">
+                                )}
                                 <button
                                     onClick={() => setShowFilters(false)}
-                                    className="w-full bg-red-600 text-white py-4 rounded-full font-bold text-[16px] active:scale-[0.98] transition-all shadow-xl shadow-red-600/30 border border-red-500 ring-1 ring-inset ring-white/10"
+                                    className="w-10 h-10 bg-white dark:bg-neutral-800 border border-black/5 dark:border-white/5 rounded-full flex items-center justify-center active:scale-95 transition-transform shadow-sm"
                                 >
-                                    Apply Filters
+                                    <X size={20} className="text-neutral-500" strokeWidth={2} />
                                 </button>
                             </div>
                         </div>
-                    </div>
-                )
-            }
+
+                        <div className="flex flex-col gap-6 overflow-y-auto pb-4 pr-1 scrollbar-hide">
+                            {/* Sorting Section */}
+                            <div className="space-y-4 px-2">
+                                <h4 className="text-[11px] font-bold text-neutral-400 tracking-wider">Sort By</h4>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { id: 'date', label: 'Submitted Date' },
+                                        { id: 'invoice_date', label: 'Invoice Date' },
+                                        { id: 'paid_date', label: 'Paid Date' },
+                                        { id: 'project_name', label: 'Project' },
+                                        { id: 'amount', label: 'Amount' },
+                                        { id: 'status', label: 'Status' }
+                                    ].map((col) => (
+                                        <button
+                                            key={col.id}
+                                            onClick={() => setSortColumn(col.id as any)}
+                                            className={clsx(
+                                                "px-4 py-2.5 rounded-full text-[12px] font-bold transition-all border flex items-center justify-between",
+                                                sortColumn === col.id
+                                                    ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-900/50"
+                                                    : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
+                                            )}
+                                        >
+                                            {col.label}
+                                            {sortColumn === col.id && (
+                                                <div
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                                    }}
+                                                    className="p-1.5 hover:bg-blue-600 hover:text-white rounded-lg transition-all cursor-pointer outline-none bg-blue-100/50 text-blue-600"
+                                                >
+                                                    {sortDirection === 'asc' ? <ArrowUpNarrowWide className="w-3.5 h-3.5" /> : <ArrowDownWideNarrow className="w-3.5 h-3.5" />}
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Project Filter */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-2">
+                                    <h4 className="text-[11px] font-bold text-neutral-400 tracking-wider">Project</h4>
+                                    {selectedProjects.length > 0 && (
+                                        <button onClick={() => setSelectedProjects([])} className="text-[11px] font-bold text-blue-600 tracking-wider">Clear</button>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-2 px-2">
+                                    <button
+                                        onClick={() => setSelectedProjects([])}
+                                        className={clsx(
+                                            "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                            selectedProjects.length === 0
+                                                ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                        )}
+                                    >
+                                        All
+                                    </button>
+                                    {projects.map((p) => {
+                                        const isSelected = selectedProjects.includes(p.id);
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        setSelectedProjects(selectedProjects.filter(id => id !== p.id));
+                                                    } else {
+                                                        setSelectedProjects([...selectedProjects, p.id]);
+                                                    }
+                                                }}
+                                                className={clsx(
+                                                    "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                                    isSelected
+                                                        ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 shadow-sm"
+                                                        : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
+                                                )}
+                                            >
+                                                {p.projectCode}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Category Filter */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-2">
+                                    <h4 className="text-[11px] font-bold text-neutral-400 tracking-wider">Category</h4>
+                                    {categoryFilters.length > 0 && (
+                                        <button onClick={() => setCategoryFilters([])} className="text-[11px] font-bold text-blue-600 tracking-wider">Clear</button>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-2 px-2">
+                                    <button
+                                        onClick={() => setCategoryFilters([])}
+                                        className={clsx(
+                                            "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                            categoryFilters.length === 0
+                                                ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                        )}
+                                    >
+                                        All
+                                    </button>
+                                    {CATEGORY_OPTIONS.map((cat) => {
+                                        const isSelected = categoryFilters.includes(cat.value);
+                                        return (
+                                            <button
+                                                key={cat.value}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        setCategoryFilters(categoryFilters.filter(v => v !== cat.value));
+                                                    } else {
+                                                        setCategoryFilters([...categoryFilters, cat.value]);
+                                                    }
+                                                }}
+                                                className={clsx(
+                                                    "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
+                                                    isSelected
+                                                        ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/30 shadow-sm"
+                                                        : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
+                                                )}
+                                            >
+                                                {cat.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Date Range Filter */}
+                            <div className="space-y-4">
+                                <h4 className="text-[11px] font-bold text-neutral-400 tracking-wider px-2">Date Range</h4>
+                                <div className="flex items-center gap-3 px-2">
+                                    <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
+                                        <label className="text-[11px] font-bold text-neutral-400 pl-3 block">From</label>
+                                        <input
+                                            type="date"
+                                            value={format(startDate, "yyyy-MM-dd")}
+                                            onChange={(e) => {
+                                                setShowAllMonths(false);
+                                                setStartDate(new Date(e.target.value));
+                                            }}
+                                            className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-full text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-blue-500/20"
+                                        />
+                                    </div>
+                                    <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
+                                        <label className="text-[11px] font-bold text-neutral-400 pl-3 block">To</label>
+                                        <input
+                                            type="date"
+                                            value={format(endDate, "yyyy-MM-dd")}
+                                            onChange={(e) => {
+                                                setShowAllMonths(false);
+                                                setEndDate(new Date(e.target.value));
+                                            }}
+                                            className="w-full max-w-full min-w-0 bg-neutral-900/5 dark:bg-neutral-100/5 border-none rounded-full text-[14px] font-bold text-neutral-700 dark:text-neutral-300 outline-none px-4 py-3 appearance-none focus:ring-2 focus:ring-blue-500/20"
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowAllMonths(!showAllMonths)}
+                                    className={clsx(
+                                        "w-full py-3.5 rounded-2xl text-[12px] font-bold transition-all border",
+                                        showAllMonths
+                                            ? "bg-blue-400 text-white border-blue-300 shadow-md shadow-blue-400/20"
+                                            : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800"
+                                    )}
+                                >
+                                    {showAllMonths ? "Custom Range Mode" : "Show All Time"}
+                                </button>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setShowFilters(false)}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-full font-bold text-[16px] transition-colors shadow-lg shadow-blue-500/20 active:scale-[0.98] mt-auto shrink-0"
+                        >
+                            Apply Filters
+                        </button>
+                    </motion.div>
+                </div>
+            )}
 
         </FinancePageWrapper >
     );

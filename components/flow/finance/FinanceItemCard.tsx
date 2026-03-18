@@ -65,7 +65,14 @@ export function FinanceItemCard({
             border: "border-neutral-200/50 dark:border-neutral-700/50"
         };
         const lower = s.toLowerCase();
-        if (lower === "approved" || lower === "paid") {
+        if (lower === "approved") {
+            return {
+                text: "text-emerald-600 dark:text-emerald-400",
+                bg: "bg-emerald-50/50 dark:bg-emerald-500/10",
+                border: "border-emerald-100/50 dark:border-emerald-500/20"
+            };
+        }
+        if (lower === "paid") {
             return {
                 text: "text-blue-600 dark:text-blue-400",
                 bg: "bg-blue-50/50 dark:bg-blue-500/10",
@@ -98,7 +105,7 @@ export function FinanceItemCard({
     const getPriorityClasses = (p?: string) => {
         if (!p) return "";
         const lower = p.toLowerCase();
-        if (lower === "urgent") return "!bg-red-50/50 dark:!bg-red-900/20 !border-red-500/30 dark:!border-red-500/30";
+        if (lower === "urgent") return "!bg-blue-50/50 dark:!bg-blue-900/20 !border-blue-500/30 dark:!border-blue-500/30";
         if (lower === "high") return "!bg-orange-50/50 dark:!bg-orange-900/20 !border-orange-500/30 dark:!border-orange-500/30";
         return "";
     };

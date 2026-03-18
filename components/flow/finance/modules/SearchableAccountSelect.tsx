@@ -46,7 +46,7 @@ export function SearchableAccountSelect({ accounts, onSelect }: SearchableAccoun
                     onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
                     onFocus={() => setIsOpen(true)}
                     placeholder="Search by bank, number, or name..."
-                    className="w-full h-10 pl-10 pr-8 text-sm border border-neutral-200 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-red-500/[0.08] focus:border-red-500/20 transition-all font-medium"
+                    className="w-full h-10 pl-10 pr-8 text-sm border border-neutral-200 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium"
                 />
                 {query && (
                     <button
@@ -59,7 +59,7 @@ export function SearchableAccountSelect({ accounts, onSelect }: SearchableAccoun
             </div>
 
             {isOpen && filtered.length > 0 && (
-                <div className="absolute z-50 mt-1.5 w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl max-h-[200px] overflow-y-auto scrollbar-hide">
+                <div className="absolute z-[200] mt-1.5 w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl shadow-xl max-h-[200px] overflow-y-auto scrollbar-hide">
                     {filtered.map((acc) => (
                         <button
                             key={acc.id}

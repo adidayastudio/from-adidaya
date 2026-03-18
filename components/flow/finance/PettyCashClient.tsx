@@ -5,6 +5,7 @@ import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
 import { useFinance } from "./FinanceContext";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import {
     Wallet,
     Plus,
@@ -128,9 +129,10 @@ export default function PettyCashClient() {
 
     return (
         <FinancePageWrapper
-            breadcrumbItems={[{ label: "Flow" }, { label: "Finance" }, { label: "Petty Cash" }]}
             header={<FinanceHeader title="Petty Cash" subtitle="Manage cash pools for your projects." />}
         >
+            {isLoading ? <GlobalLoading /> : (
+                <>
             {/* OVERVIEW STATS */}
             {/* OVERVIEW STATS */}
             <div className="-mx-5 lg:mx-0 mb-8">
@@ -366,6 +368,8 @@ export default function PettyCashClient() {
                         </div>
                     </div>
                 </div>
+            )}
+                </>
             )}
         </FinancePageWrapper>
     );

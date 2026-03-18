@@ -224,44 +224,45 @@ export default function DashboardPage() {
 
   return (
     <div className="w-full h-full relative transition-colors">
-      <StandardPageWrapper 
+      <StandardPageWrapper
         breadcrumbItems={[{ label: "Dashboard" }]}
         isTransparent
         fullWidth
       >
         <div className="w-full pb-32">
-            {/* NEW REVAMPED DASHBOARD (MOBILE) */}
-            <div className="md:hidden">
-              <DashboardHeader onOpenNotifications={() => setIsNotifSheetOpen(true)} />
-              <ActivitySummaryCard />
-              <VibeCard />
+          {/* NEW REVAMPED DASHBOARD (MOBILE) */}
+          <div className="md:hidden">
+            <DashboardHeader onOpenNotifications={() => setIsNotifSheetOpen(true)} />
+            <ActivitySummaryCard />
+            <VibeCard />
+            <WorkspaceGrid />
+          </div>
+
+          {/* DESKTOP DASHBOARD (macOS Style + Standard Pattern) */}
+          <div className="hidden md:block">
+            <StandardPageHeader
+              title={`${phase.greeting}, ${profile?.name?.split(' ')[0] || "Team"}`}
+              subtitle={phase.message}
+              hideDivider={true}
+              action={
+                <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm backdrop-blur-md border", phase.bg, phase.border)}>
+                  <PhaseIcon className={clsx("w-6 h-6", phase.color)} strokeWidth={2.5} />
+                </div>
+              }
+            />
+
+            <div className="space-y-8">
+              {/* Top Row: Activity and Vibe */}
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 relative z-10 overflow-visible">
+                <ActivitySummaryCard />
+                <VibeCard />
+              </div>
+
+              {/* Bottom Row: Workspace Grid full width */}
               <WorkspaceGrid />
             </div>
-
-            {/* DESKTOP DASHBOARD (macOS Style + Standard Pattern) */}
-            <div className="hidden md:block">
-              <StandardPageHeader 
-                title={`${phase.greeting}, ${profile?.name?.split(' ')[0] || "Team"}`}
-                subtitle={phase.message}
-                action={
-                  <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm backdrop-blur-md border", phase.bg, phase.border)}>
-                    <PhaseIcon className={clsx("w-6 h-6", phase.color)} strokeWidth={2.5} />
-                  </div>
-                }
-              />
-
-              <div className="space-y-8">
-                {/* Top Row: Activity and Vibe */}
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                  <ActivitySummaryCard />
-                  <VibeCard />
-                </div>
-                
-                {/* Bottom Row: Workspace Grid full width */}
-                <WorkspaceGrid />
-              </div>
-            </div>
           </div>
+        </div>
       </StandardPageWrapper>
 
 

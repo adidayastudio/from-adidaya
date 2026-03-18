@@ -31,13 +31,15 @@ export default function PageWrapper({
 
       {/* MAIN CONTENT CONTAINER */}
       <main className="flex-1 min-w-0">
-        {header && <div className="mb-0 lg:mb-6">{header}</div>}
+        {header && <div className="mb-0 lg:mb-6 px-4 md:px-0">{header}</div>}
         <div className={clsx(
-          "px-0 h-full pb-32 md:pb-4",
-          !isTransparent && "lg:bg-white lg:rounded-3xl lg:shadow-sm",
+          "px-4 md:px-0 h-full pb-32 md:pb-4",
+          !isTransparent && "lg:bg-white/40 lg:dark:bg-neutral-800/10 lg:backdrop-blur-md lg:rounded-3xl lg:border lg:border-white/40 lg:dark:border-white/5 lg:shadow-sm",
           !header && "mt-0"
         )}>
-          {children}
+          <div className={clsx(!isTransparent && "p-6 lg:p-8")}>
+            {children}
+          </div>
         </div>
       </main>
     </div>

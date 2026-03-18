@@ -49,7 +49,7 @@ export default function FinanceSidebar() {
   };
 
   return (
-    <div className="w-full hidden lg:flex flex-col">
+    <aside className="w-full hidden lg:flex flex-col">
       <div className="space-y-0 pt-0">
         <div className="space-y-0.5">
           {visibleItems.map((item) => {
@@ -72,6 +72,6 @@ export default function FinanceSidebar() {
           })}
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

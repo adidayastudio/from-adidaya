@@ -47,80 +47,86 @@ export default function ActivitySummaryCard() {
     };
 
     return (
-        <Link href="/dashboard/activity" className="block mt-4 md:mt-0">
-            <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl rounded-[32px] p-4 md:p-6 shadow-sm border border-neutral-100 dark:border-neutral-800 relative overflow-hidden transition-all hover:scale-[1.01] hover:shadow-md active:scale-[0.98] h-full">
-                {/* Background light gradient effect */}
-                <div className="absolute top-0 right-0 w-48 h-48 bg-blue-50/50 dark:bg-blue-900/10 rounded-full blur-3xl pointer-events-none transform translate-x-1/3 -translate-y-1/3" />
-
-                <h2 className="text-[15px] font-bold text-neutral-900 dark:text-white mb-6 tracking-tight relative z-10">
-                    Activity Summary {loading && <span className="text-xs text-neutral-400 font-normal ml-2 animate-pulse">Updating...</span>}
-                </h2>
-
-                <div className="flex items-center justify-between mb-2 relative z-10">
-                    {/* Left: Stats */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full flex items-center justify-center bg-blue-50 dark:bg-blue-500/10">
-                                <Target className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.5} />
+        <Link href="/dashboard/activity" className="block mt-4 md:mt-0 h-full">
+            <motion.div 
+                whileHover={{ scale: 1.01, zIndex: 50 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative h-full transition-all duration-300 group cursor-pointer"
+            >
+                <div className="bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl rounded-[24px] p-6 shadow-sm border border-neutral-100 dark:border-neutral-800 relative overflow-hidden h-full group-hover:shadow-md group-hover:border-neutral-200 dark:group-hover:border-neutral-700 transition-colors">
+                    {/* Background light gradient effect */}
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-blue-50/50 dark:bg-blue-900/10 rounded-full blur-3xl pointer-events-none transform translate-x-1/3 -translate-y-1/3" />
+    
+                    <h2 className="text-[15px] font-bold text-neutral-900 dark:text-white mb-6 tracking-tight relative z-10">
+                        Activity Summary {loading && <span className="text-xs text-neutral-400 font-normal ml-2 animate-pulse">Updating...</span>}
+                    </h2>
+    
+                    <div className="flex items-center justify-between mb-2 relative z-10">
+                        {/* Left: Stats */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center bg-blue-50 dark:bg-blue-500/10">
+                                    <Target className="w-3.5 h-3.5 text-blue-500" strokeWidth={2.5} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-neutral-400 tracking-wider">TASKS</p>
+                                    <p className="text-lg font-bold text-neutral-800 dark:text-white leading-tight">
+                                        {tasksPercentage === "-" ? "-" : `${tasksPercentage}%`}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-[10px] font-bold text-neutral-400 tracking-wider">TASKS</p>
-                                <p className="text-lg font-bold text-neutral-800 dark:text-white leading-tight">
-                                    {tasksPercentage === "-" ? "-" : `${tasksPercentage}%`}
-                                </p>
+    
+                            <div className="flex items-center gap-3">
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10">
+                                    <User className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-neutral-400 tracking-wider">PRESENCE</p>
+                                    <p className="text-lg font-bold text-neutral-800 dark:text-white leading-tight">
+                                        {presencePercentage === "-" ? "-" : `${presencePercentage}%`}
+                                    </p>
+                                </div>
+                            </div>
+    
+                            <div className="flex items-center gap-3">
+                                <div className="w-6 h-6 rounded-full flex items-center justify-center bg-amber-50 dark:bg-amber-500/10">
+                                    <Activity className="w-3.5 h-3.5 text-amber-500" strokeWidth={2.5} />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-bold text-neutral-400 tracking-wider">PULSE</p>
+                                    <p className="text-lg font-bold text-neutral-800 dark:text-white leading-tight">
+                                        {pulsePercentage === "-" ? "-" : `${pulsePercentage}%`}
+                                    </p>
+                                </div>
                             </div>
                         </div>
-
-                        <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full flex items-center justify-center bg-emerald-50 dark:bg-emerald-500/10">
-                                <User className="w-3.5 h-3.5 text-emerald-500" strokeWidth={2.5} />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-bold text-neutral-400 tracking-wider">PRESENCE</p>
-                                <p className="text-lg font-bold text-neutral-800 dark:text-white leading-tight">
-                                    {presencePercentage === "-" ? "-" : `${presencePercentage}%`}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 rounded-full flex items-center justify-center bg-amber-50 dark:bg-amber-500/10">
-                                <Activity className="w-3.5 h-3.5 text-amber-500" strokeWidth={2.5} />
-                            </div>
-                            <div>
-                                <p className="text-[10px] font-bold text-neutral-400 tracking-wider">PULSE</p>
-                                <p className="text-lg font-bold text-neutral-800 dark:text-white leading-tight">
-                                    {pulsePercentage === "-" ? "-" : `${pulsePercentage}%`}
-                                </p>
-                            </div>
+    
+                        {/* Right: Fitness Rings */}
+                        <div className="relative w-36 h-36 flex items-center justify-center -mr-2 shrink-0">
+                            <svg className="w-full h-full transform -rotate-90 origin-center drop-shadow-sm" viewBox="0 0 100 100">
+                                <RingLayers r={42} circ={264} percent={tasksPercentage} colors={{ dim: "text-blue-50 dark:text-blue-500/10", base: "text-blue-500", mid: "text-blue-600" }} />
+                                <RingLayers r={29} circ={182.2} percent={presencePercentage} colors={{ dim: "text-emerald-50 dark:text-emerald-500/10", base: "text-emerald-500", mid: "text-emerald-600" }} />
+                                <RingLayers r={16} circ={100.5} percent={pulsePercentage} colors={{ dim: "text-amber-50 dark:text-amber-500/10", base: "text-amber-500", mid: "text-amber-600" }} />
+                            </svg>
+    
+                            {/* Glow effect for rings */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent mix-blend-overlay rounded-full" />
                         </div>
                     </div>
-
-                    {/* Right: Fitness Rings */}
-                    <div className="relative w-36 h-36 flex items-center justify-center -mr-2 shrink-0">
-                        <svg className="w-full h-full transform -rotate-90 origin-center drop-shadow-sm" viewBox="0 0 100 100">
-                            <RingLayers r={42} circ={264} percent={tasksPercentage} colors={{ dim: "text-blue-50 dark:text-blue-500/10", base: "text-blue-500", mid: "text-blue-600" }} />
-                            <RingLayers r={29} circ={182.2} percent={presencePercentage} colors={{ dim: "text-emerald-50 dark:text-emerald-500/10", base: "text-emerald-500", mid: "text-emerald-600" }} />
-                            <RingLayers r={16} circ={100.5} percent={pulsePercentage} colors={{ dim: "text-amber-50 dark:text-amber-500/10", base: "text-amber-500", mid: "text-amber-600" }} />
-                        </svg>
-
-                        {/* Glow effect for rings */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent mix-blend-overlay rounded-full" />
-                    </div>
+    
+                    {/* Bottom Productivity Callout */}
+                    {insight && insight !== "-" && (
+                        <div className="flex items-center gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800 relative z-10">
+                            <div className="w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
+                                <Sparkles className="w-3 h-3 text-blue-500" strokeWidth={2.5} />
+                            </div>
+                            <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
+                                {insight}
+                            </p>
+                        </div>
+                    )}
                 </div>
-
-                {/* Bottom Productivity Callout */}
-                {insight && insight !== "-" && (
-                    <div className="flex items-center gap-2 pt-4 border-t border-neutral-100 dark:border-neutral-800 relative z-10">
-                        <div className="w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center shrink-0">
-                            <Sparkles className="w-3 h-3 text-blue-500" strokeWidth={2.5} />
-                        </div>
-                        <p className="text-[13px] text-neutral-500 dark:text-neutral-400">
-                            {insight}
-                        </p>
-                    </div>
-                )}
-            </div>
+            </motion.div>
         </Link>
     );
 }

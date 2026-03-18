@@ -1,51 +1,128 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
+import { useState, Suspense, memo, useCallback, useMemo, useEffect, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { Search, ListFilter, X } from "lucide-react";
+import clsx from "clsx";
 import PageWrapper from "@/components/layout/PageWrapper";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import NotificationsContent, { NotificationSection } from "@/components/dashboard/notifications/NotificationsContent";
+import { useHeader } from "@/components/providers/HeaderProvider";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Stable component with URL state and expandable UI
+const NotificationHeaderActions = memo(() => {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isExpanded, setIsExpanded] = useState(!!searchParams.get("q"));
+  const [localQuery, setLocalQuery] = useState(searchParams.get("q") || "");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isExpanded && inputRef.current) {
+        inputRef.current.focus();
+    }
+  }, [isExpanded]);
+
+  const handleSearch = (val: string) => {
+    setLocalQuery(val);
+    const params = new URLSearchParams(searchParams.toString());
+    if (val) {
+        params.set("q", val);
+    } else {
+        params.delete("q");
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const clearSearch = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLocalQuery("");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("q");
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    setIsExpanded(false);
+  };
+
+  const toggleExpand = () => {
+    if (!isExpanded) {
+        setIsExpanded(true);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 pointer-events-auto">
+      {/* Search Bubble */}
+      <div 
+        onClick={toggleExpand}
+        className={clsx(
+            "flex h-9 items-center rounded-full border bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl shadow-sm transition-all duration-300 cursor-pointer overflow-hidden relative",
+            isExpanded ? "w-[240px]" : "w-9"
+        )}
+      >
+        <div className="w-9 h-9 flex items-center justify-center shrink-0">
+          <Search size={16} strokeWidth={1.5} className="text-neutral-800 dark:text-neutral-200" />
+        </div>
+        
+        <div className="flex-1 h-full min-w-0 flex items-center">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Search"
+              value={localQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onBlur={() => !localQuery && setIsExpanded(false)}
+              className="bg-transparent border-none outline-none text-[12px] font-medium text-neutral-800 dark:text-white placeholder:text-neutral-500 w-full h-full pr-2"
+            />
+        </div>
+
+        {localQuery && (
+          <button 
+            onClick={clearSearch}
+            className="w-8 h-8 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-colors mr-1 shrink-0 group/btn"
+          >
+            <X size={15} strokeWidth={2} className="text-neutral-500 group-hover/btn:text-neutral-800 dark:group-hover/btn:text-white transition-colors" />
+          </button>
+        )}
+      </div>
+
+      {/* Filter Bubble */}
+      <button className="h-9 w-9 flex items-center justify-center rounded-full border bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl hover:bg-white/20 dark:hover:bg-neutral-700/40 text-neutral-800 dark:text-neutral-200 transition-all active:scale-95 shadow-sm">
+        <ListFilter size={16} strokeWidth={1.5} />
+      </button>
+    </div>
+  );
+});
+
+NotificationHeaderActions.displayName = "NotificationHeaderActions";
 
 function NotificationsPageContent() {
   const searchParams = useSearchParams();
   const section = (searchParams.get("section") as NotificationSection) || "all";
+  const searchQuery = searchParams.get("q") || "";
 
-  const labels: Record<string, string> = {
-    "all": "All",
-    "unread": "Unread",
-    "approvals": "Approvals",
-    "mentions": "Mentions",
-    "system": "System"
-  };
+  // Stable header config
+  const headerConfig = useMemo(() => ({
+    right: <NotificationHeaderActions />
+  }), []);
+
+  useHeader(headerConfig);
 
   return (
-    <div className="bg-transparent p-0 transition-colors">
-      <PageWrapper
+    <PageWrapper
         sidebar={<DashboardSidebar />}
         isTransparent
-        header={
-          <div className="hidden lg:block mb-0">
-            <div className="flex items-center justify-between gap-4 pt-0">
-              <div>
-                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
-                  Notifications
-                </h1>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                  Stay updated with the latest alerts, mentions, and system updates.
-                </p>
-              </div>
-            </div>
-            <div className="border-b border-neutral-200 dark:border-neutral-800 mt-5" />
-          </div>
-        }
-      >
-        <div className="space-y-8 w-full animate-in fade-in duration-500">
-          <NotificationsContent section={section} />
-        </div>
-      </PageWrapper>
-    </div>
+    >
+      <div className="w-full">
+        <NotificationsContent 
+          section={section} 
+          externalSearchQuery={searchQuery} 
+          onSearchChange={() => {}} // Not needed as we use URL state
+        />
+      </div>
+    </PageWrapper>
   );
 }
 

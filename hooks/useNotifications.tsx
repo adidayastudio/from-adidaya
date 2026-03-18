@@ -12,6 +12,8 @@ export function useNotifications() {
     const [error, setError] = useState<string | null>(null);
     const [permission, setPermission] = useState<NotificationPermission>("default");
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [hasMore, setHasMore] = useState(true);
+    const PAGE_SIZE = 50;
 
     // Map helper
     const mapNotification = (n: any): UiNotification => {
@@ -57,17 +59,36 @@ export function useNotifications() {
     }, [supabase]);
 
     // 2. Load Notifications
-    const loadNotifications = async () => {
+    const loadNotifications = async (isMore = false) => {
         if (!currentUserId) return;
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchNotifications(currentUserId);
-            setNotifications(data.map(mapNotification));
+            const currentOffset = isMore ? notifications.length : 0;
+            const data = await fetchNotifications(currentUserId, PAGE_SIZE, currentOffset);
+            const mapped = data.map(mapNotification);
+            
+            if (isMore) {
+                setNotifications(prev => {
+                    const existingIds = new Set(prev.map(n => n.id));
+                    const newItems = mapped.filter(n => !existingIds.has(n.id));
+                    return [...prev, ...newItems];
+                });
+            } else {
+                setNotifications(mapped);
+            }
+            
+            setHasMore(data.length === PAGE_SIZE);
         } catch (err: any) {
             setError(err.message || "Failed to load notifications");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadMore = () => {
+        if (!loading && hasMore) {
+            loadNotifications(true);
         }
     };
 
@@ -120,7 +141,9 @@ export function useNotifications() {
         loading,
         error,
         markAsRead,
-        refresh: loadNotifications,
+        refresh: () => loadNotifications(false),
+        loadMore,
+        hasMore,
         currentUserId
     };
 }

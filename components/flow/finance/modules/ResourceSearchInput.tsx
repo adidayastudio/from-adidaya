@@ -81,7 +81,7 @@ export function ResourceSearchInput({ value, category, onSelect, placeholder, di
                     disabled={disabled}
                     className={clsx(
                         "w-full h-11 px-5 text-sm border rounded-full bg-white dark:bg-neutral-800 dark:text-white transition-all font-medium placeholder:text-[11px]",
-                        isFocused ? "border-red-500/30 ring-4 ring-red-500/[0.08]" : "border-neutral-200 dark:border-neutral-700",
+                        isFocused ? "border-blue-500/30 ring-4 ring-blue-500/[0.08]" : "border-neutral-200 dark:border-neutral-700",
                         disabled && "opacity-60 cursor-not-allowed"
                     )}
                 />
@@ -103,7 +103,7 @@ export function ResourceSearchInput({ value, category, onSelect, placeholder, di
             </div>
 
             {isOpen && (results.length > 0 || (query && query.length >= 2)) && (
-                <div className="absolute z-[100] mt-2 w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute z-[200] mt-2 w-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     <div className="p-1 px-1.5 pt-2 pb-1 bg-neutral-50/50 dark:bg-neutral-900/50 border-b border-neutral-100 dark:border-neutral-700/50">
                         <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-3">Catalog Suggestions</span>
                     </div>
@@ -126,11 +126,11 @@ export function ResourceSearchInput({ value, category, onSelect, placeholder, di
                                         setIsOpen(false);
                                         setIsFocused(false);
                                     }}
-                                    className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors border-b border-neutral-50 dark:border-neutral-700/30 last:border-0 group"
+                                    className="w-full text-left px-4 py-3 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors border-b border-neutral-50 dark:border-neutral-700/30 last:border-0 group"
                                 >
                                     <div className="flex items-center justify-between gap-3">
                                         <div className="min-w-0">
-                                            <div className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-red-700 dark:group-hover:text-red-400 transition-colors truncate">
+                                            <div className="text-sm font-bold text-neutral-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors truncate">
                                                 {item.name}
                                             </div>
                                             <div className="text-[10px] text-neutral-400 uppercase tracking-wider mt-0.5 flex items-center gap-1 overflow-hidden whitespace-nowrap">

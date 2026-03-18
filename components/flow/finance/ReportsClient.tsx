@@ -124,7 +124,7 @@ export default function ReportsClient({ expenses }: { expenses: Expense[] }) {
                                 <div key={m.label} className="group flex-1 flex flex-col items-center gap-2 relative">
                                     <div className="flex gap-1 items-end w-full justify-center h-full relative">
                                         <div
-                                            className="w-full max-w-[24px] bg-red-100 rounded-t-md group-hover:bg-red-200 transition-colors relative"
+                                            className="w-full max-w-[24px] bg-blue-100 rounded-t-md group-hover:bg-blue-200 transition-colors relative"
                                             style={{ height: `${(m.amount / stats.maxTrend) * 100}%` }}
                                         >
                                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-neutral-900 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
@@ -178,9 +178,9 @@ export default function ReportsClient({ expenses }: { expenses: Expense[] }) {
                         <table className="w-full">
                             <thead className="bg-neutral-50/50 border-b border-neutral-200">
                                 <tr>
-                                    <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-500 uppercase">Month</th>
-                                    <th className="text-right px-6 py-3 text-xs font-semibold text-neutral-500 uppercase">Total Expenses</th>
-                                    <th className="text-right px-6 py-3 text-xs font-semibold text-neutral-500 uppercase">Status</th>
+                                    <th className="text-left px-6 py-3 text-xs font-semibold text-neutral-500">Month</th>
+                                    <th className="text-right px-6 py-3 text-xs font-semibold text-neutral-500">Total Expenses</th>
+                                    <th className="text-right px-6 py-3 text-xs font-semibold text-neutral-500">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-100">
@@ -195,7 +195,7 @@ export default function ReportsClient({ expenses }: { expenses: Expense[] }) {
                                         <td className="px-6 py-4 text-sm text-neutral-500 text-right">
                                             <span className={clsx(
                                                 "px-2 py-1 rounded-full text-xs font-medium",
-                                                m.amount > 0 ? "bg-red-50 text-red-700" : "bg-neutral-100 text-neutral-500"
+                                                m.amount > 0 ? "bg-blue-50 text-blue-700" : "bg-neutral-100 text-neutral-500"
                                             )}>
                                                 {m.amount > 0 ? "Active" : "No Activity"}
                                             </span>

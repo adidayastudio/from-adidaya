@@ -34,7 +34,7 @@ function ActivityItem({ activity }: { activity: RecentActivity }) {
             <div className={clsx(
                 "w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors duration-300",
                 activity.action === "Payment" && "bg-green-50 text-green-600 group-hover:bg-green-100",
-                activity.action === "Approval" && "bg-red-50 text-red-600 group-hover:bg-red-100",
+                activity.action === "Approval" && "bg-blue-50 text-blue-600 group-hover:bg-blue-100",
                 activity.action === "Top Up" && "bg-purple-50 text-purple-600 group-hover:bg-purple-100",
                 activity.action === "Purchase" && "bg-orange-50 text-orange-600 group-hover:bg-orange-100"
             )}>
@@ -44,7 +44,7 @@ function ActivityItem({ activity }: { activity: RecentActivity }) {
                 {activity.action === "Purchase" && <ShoppingCart className="w-5 h-5" />}
             </div>
             <div className="flex-1 min-w-0 py-0.5">
-                <p className="text-sm font-medium text-neutral-900 group-hover:text-red-600 transition-colors truncate">{activity.description}</p>
+                <p className="text-sm font-medium text-neutral-900 group-hover:text-blue-600 transition-colors truncate">{activity.description}</p>
                 <div className="flex items-center gap-2 mt-1">
                     <span className="text-xs text-neutral-500 font-medium bg-neutral-100 px-1.5 py-0.5 rounded">{activity.user}</span>
                     <span className="text-xs text-neutral-400">•</span>

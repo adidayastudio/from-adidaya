@@ -79,6 +79,34 @@ export async function GET(request: NextRequest) {
         const endDateParam = searchParams.get("end_date");
         const category = searchParams.get("category");
 
+        let matchingRequestIds: string[] = [];
+        if (q) {
+            const { data: itemMatches } = await supabase
+                .from("reimbursement_items")
+                .select("reimbursement_id")
+                .ilike("name", `%${q}%`);
+            if (itemMatches && itemMatches.length > 0) {
+                matchingRequestIds = Array.from(new Set(itemMatches.map(i => i.reimbursement_id)));
+            }
+        }
+        
+        let matchingProjectIds: string[] = [];
+        if (q) {
+            const { data: projectMatches } = await supabase
+                .from("projects")
+                .select("id")
+                .or(`project_name.ilike.%${q}%,project_code.ilike.%${q}%`);
+            if (projectMatches && projectMatches.length > 0) {
+                matchingProjectIds = projectMatches.map(p => p.id);
+            }
+        }
+        
+        let qNum: number | null = null;
+        if (q) {
+            const parsed = parseInt(q.replace(/\D/g, ''), 10);
+            if (!isNaN(parsed)) qNum = parsed;
+        }
+
         // Build base query for data
         let query = supabase
             .from("reimbursement_requests")
@@ -119,7 +147,23 @@ export async function GET(request: NextRequest) {
             }
 
             if (q) {
-                b = b.ilike("description", `%${q}%`);
+                let orString = `description.ilike.%${q}%,beneficiary_name.ilike.%${q}%,subcategory.ilike.%${q}%,notes.ilike.%${q}%`;
+                
+                if (qNum !== null) {
+                    orString += `,request_number.eq.${qNum}`;
+                }
+
+                if (matchingRequestIds.length > 0) {
+                    const idsStr = matchingRequestIds.slice(0, 100).join(',');
+                    orString += `,id.in.(${idsStr})`;
+                }
+                
+                if (matchingProjectIds.length > 0) {
+                    const pIdsStr = matchingProjectIds.slice(0, 50).join(',');
+                    orString += `,project_id.in.(${pIdsStr})`;
+                }
+                
+                b = b.or(orString);
             }
 
             // Date filtering

@@ -43,9 +43,9 @@ export function RequestChoiceDrawer({
                 <div className="grid grid-cols-1 gap-4">
                     <button
                         onClick={() => onSelect("PURCHASE")}
-                        className="flex items-center gap-4 p-6 bg-red-50 hover:bg-red-100 border border-red-100 rounded-[2rem] transition-all group"
+                        className="flex items-center gap-4 p-6 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-[2rem] transition-all group"
                     >
-                        <div className="w-12 h-12 rounded-2xl bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-600/20 group-hover:scale-110 transition-transform">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/20 group-hover:scale-110 transition-transform">
                             <ShoppingCart className="w-6 h-6" />
                         </div>
                         <div className="text-left">

@@ -18,6 +18,7 @@ export async function apiGet<T>(url: string): Promise<ApiResponse<T>> {
         const res = await fetch(url, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
+            cache: "no-store",
         });
 
         if (!res.ok) {
