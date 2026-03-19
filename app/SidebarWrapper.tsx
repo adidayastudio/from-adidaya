@@ -48,7 +48,7 @@ function MainLayout({
         }}
         className={clsx(
           "hidden md:flex fixed inset-4 z-50 transition-all duration-1000 rounded-[32px] overflow-hidden p-4 gap-4",
-          !headerContent.shellBackground && "bg-white/40 dark:bg-black/20 backdrop-blur-[32px] border-4 border-red-500 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)]"
+          !headerContent.shellBackground && "bg-white/40 dark:bg-black/20 backdrop-blur-[32px] border border-white/60 dark:border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)]"
         )}
       >
         {/* Standard soft white/dark overlay - keep it subtle for Vibe */}
