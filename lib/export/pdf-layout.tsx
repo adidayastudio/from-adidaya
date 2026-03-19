@@ -2,7 +2,7 @@ import React from "react";
 import { PdfExportPayload } from "./types";
 
 // This layout is rendered on the server to string and passed to Puppeteer
-export function PdfLayout({ meta, summary, columns, data }: PdfExportPayload) {
+export function PdfLayout({ meta, summary, sections }: PdfExportPayload) {
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat("id-ID").format(val);
     };
@@ -69,80 +69,80 @@ export function PdfLayout({ meta, summary, columns, data }: PdfExportPayload) {
                     </div>
                 )}
 
-                {/* TABLE */}
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-500 font-semibold uppercase text-xs">
-                        <tr>
-                            {columns.map(col => (
-                                <th key={col.id} className={`px-4 py-3 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
-                                    {col.label}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-100">
-                        {data.map((row, rI) => (
-                            <tr key={rI} className="border-b border-neutral-50">
-                                {columns.map(col => {
-                                    const val = row[col.id];
-                                    let displayVal = val;
+                {/* SECTIONS */}
+                {sections.map((section, sI) => (
+                    <div key={sI} className="mb-10 last:mb-0">
+                        <h3 className="text-lg font-bold text-neutral-800 mb-4 border-l-4 border-blue-500 pl-3">{section.title}</h3>
+                        <table className="w-full text-sm text-left">
+                            <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-500 font-semibold uppercase text-[10px] tracking-wider">
+                                <tr>
+                                    {section.columns.map(col => (
+                                        <th key={col.id} className={`px-4 py-3 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
+                                            {col.label}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-neutral-100">
+                                {section.data.map((row, rI) => (
+                                    <tr key={rI} className="border-b border-neutral-50 hover:bg-neutral-50/50">
+                                        {section.columns.map(col => {
+                                            const val = row[col.id];
+                                            let displayVal = val;
 
-                                    if (col.format === "currency" && typeof val === "number") {
-                                        displayVal = new Intl.NumberFormat("id-ID").format(val);
-                                    }
+                                            if (col.format === "currency" && typeof val === "number") {
+                                                displayVal = new Intl.NumberFormat("id-ID").format(val);
+                                            }
 
-                                    // Status column special rendering with colors
-                                    if (col.id === "status" && typeof val === "string") {
-                                        const statusVal = val.toLowerCase();
-                                        let bgClass = "bg-neutral-100";
-                                        let textClass = "text-neutral-700";
-                                        let label = val;
+                                            // Status column special rendering
+                                            if (col.id === "status" && typeof val === "string") {
+                                                const statusVal = val.toLowerCase();
+                                                let bgClass = "bg-neutral-100";
+                                                let textClass = "text-neutral-700";
+                                                let label = val;
 
-                                        if (statusVal === "approved" || statusVal === "ontime") {
-                                            bgClass = "bg-emerald-100";
-                                            textClass = "text-emerald-700";
-                                            label = statusVal === "ontime" ? "On Time" : "Approved";
-                                        } else if (statusVal === "pending") {
-                                            bgClass = "bg-orange-100";
-                                            textClass = "text-orange-700";
-                                            label = "Pending";
-                                        } else if (statusVal === "rejected" || statusVal === "cancelled" || statusVal === "late" || statusVal === "absent") {
-                                            bgClass = "bg-red-100";
-                                            textClass = "text-red-700";
-                                            label = statusVal.charAt(0).toUpperCase() + statusVal.slice(1);
-                                        } else if (statusVal === "leave" || statusVal === "sick") {
-                                            bgClass = "bg-purple-100";
-                                            textClass = "text-purple-700";
-                                            label = statusVal.charAt(0).toUpperCase() + statusVal.slice(1);
-                                        } else if (statusVal === "holiday" || statusVal === "weekend") {
-                                            bgClass = "bg-blue-100";
-                                            textClass = "text-blue-700";
-                                            label = statusVal.charAt(0).toUpperCase() + statusVal.slice(1);
-                                        }
+                                                if (statusVal === "approved" || statusVal === "ontime") {
+                                                    bgClass = "bg-emerald-100";
+                                                    textClass = "text-emerald-700";
+                                                    label = statusVal === "ontime" ? "On Time" : "Approved";
+                                                } else if (statusVal === "pending") {
+                                                    bgClass = "bg-orange-100";
+                                                    textClass = "text-orange-700";
+                                                    label = "Pending";
+                                                } else if (statusVal === "rejected" || statusVal === "cancelled" || statusVal === "late" || statusVal === "absent") {
+                                                    bgClass = "bg-red-100";
+                                                    textClass = "text-red-700";
+                                                    label = statusVal.charAt(0).toUpperCase() + statusVal.slice(1);
+                                                }
 
-                                        return (
-                                            <td key={col.id} className={`px-4 py-3 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
-                                                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${bgClass} ${textClass}`}>
-                                                    {label}
-                                                </span>
-                                            </td>
-                                        );
-                                    }
+                                                return (
+                                                    <td key={col.id} className={`px-4 py-3 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
+                                                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${bgClass} ${textClass}`}>
+                                                            {label}
+                                                        </span>
+                                                    </td>
+                                                );
+                                            }
 
-                                    return (
-                                        <td key={col.id} className={`px-4 py-3 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
-                                            {col.format === "currency" ? (
-                                                <span className="font-mono">{displayVal}</span>
-                                            ) : (
-                                                displayVal
-                                            )}
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                            return (
+                                                <td key={col.id} className={`px-4 py-3 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
+                                                    {col.format === "currency" ? (
+                                                        <span className="font-mono font-medium">
+                                                            <span className="currency-superscript mr-0.5">Rp</span>
+                                                            {displayVal}
+                                                        </span>
+                                                    ) : (
+                                                        displayVal
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ))}
             </body>
         </html>
     );

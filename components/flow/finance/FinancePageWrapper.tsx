@@ -16,13 +16,35 @@ import Link from "next/link";
 
 function FinanceInlineTabs() {
     const pathname = usePathname();
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const activeTabRef = useRef<HTMLAnchorElement>(null);
+
     const isActive = (href: string) => {
         if (href === "/flow/finance") return pathname === "/flow/finance";
         return pathname.startsWith(href);
     };
 
+    useEffect(() => {
+        const scrollActiveTab = () => {
+            if (activeTabRef.current && scrollContainerRef.current) {
+                activeTabRef.current.scrollIntoView({ 
+                    behavior: "smooth", 
+                    inline: "center", 
+                    block: "nearest" 
+                });
+            }
+        };
+
+        // Small timeout to ensure DOM is updated and layout is stable
+        const timer = setTimeout(scrollActiveTab, 100);
+        return () => clearTimeout(timer);
+    }, [pathname]);
+
     return (
-        <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div 
+            ref={scrollContainerRef}
+            className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] scroll-smooth"
+        >
             {FINANCE_TABS.map((tab) => {
                 const active = isActive(tab.href);
                 const Icon = tab.icon;
@@ -30,6 +52,7 @@ function FinanceInlineTabs() {
                     <Link
                         key={tab.href}
                         href={tab.href}
+                        ref={active ? activeTabRef : null}
                         className={clsx(
                             "flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all flex-shrink-0 text-[14px]",
                             active
@@ -77,6 +100,7 @@ export default function FinancePageWrapper({
     }, [isSearchExpanded]);
 
     const isOverview = pathname.endsWith('/finance') || pathname.endsWith('/finance/');
+    const isReports = pathname.includes('/reports');
 
     // MODERN HEADER (Revamped) - Only for Desktop/iPad
     const customHeader = useMemo(() => ({
@@ -84,10 +108,10 @@ export default function FinancePageWrapper({
         right: (
             <div className="flex items-center gap-2">
                  {/* 1. View Toggle Slider */}
-                 {canAccessTeam && <FinanceViewToggleUI viewMode={viewMode as 'personal' | 'team'} setViewMode={(v) => window.dispatchEvent(new CustomEvent('finance:set-view-mode', { detail: v }))} canAccessTeam={canAccessTeam} />}
+                 {canAccessTeam && !pathname.includes('/funding-sources') && !pathname.includes('/reports') && <FinanceViewToggleUI viewMode={viewMode as 'personal' | 'team'} setViewMode={(v) => window.dispatchEvent(new CustomEvent('finance:set-view-mode', { detail: v }))} canAccessTeam={canAccessTeam} />}
 
-                {/* 2. Expandable Search + Filter Bubble (Hidden on Overview) */}
-                {!isOverview && (
+                {/* 2. Expandable Search + Filter Bubble (Hidden on Overview and Reports) */}
+                {!isOverview && !isReports && (
                     <div className="h-10 flex items-center bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border border-white/40 dark:border-neutral-700/30 rounded-full shadow-sm px-1.5 gap-1.5 min-w-[40px] overflow-hidden">
                         <motion.div
                             initial={false}
@@ -162,6 +186,7 @@ export default function FinancePageWrapper({
                 )}
 
                 {/* 4. Glassy Blue Plus Bubble */}
+                {(
                 <div className="h-10 w-10 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600/85 dark:bg-blue-500/90 backdrop-blur-[20px]">
                     <motion.button
                         whileTap={{ scale: 0.9 }}
@@ -173,12 +198,13 @@ export default function FinancePageWrapper({
                         <Plus size={22} strokeWidth={2.5} />
                     </motion.button>
                 </div>
+                )}
             </div>
         )
-    }), [viewMode, canAccessTeam, fabId, pathname, isSearchExpanded, searchTerm, isOverview]);
+    }), [viewMode, canAccessTeam, fabId, pathname, isSearchExpanded, searchTerm, isOverview, isReports]);
 
     // Apply header injection ONLY on Desktop/iPad
-    useHeader(isMounted ? customHeader : undefined, [isMounted, viewMode, canAccessTeam, isSearchExpanded, searchTerm, pathname]);
+    useHeader(isMounted ? customHeader : undefined, [isMounted, viewMode, canAccessTeam, isSearchExpanded, searchTerm, pathname, isReports]);
 
     return (
         <>

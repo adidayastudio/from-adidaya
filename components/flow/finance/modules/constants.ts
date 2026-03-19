@@ -140,7 +140,7 @@ export const REIMBURSE_CATEGORY_OPTIONS = [
     { value: "TRANSPORTATION", label: "Transportation" },
     { value: "CONSUMPTION", label: "Meals & Consumption" },
     { value: "ACCOMMODATION", label: "Accommodation" },
-    { value: "PURCHASE_PROJECT", label: "Project Purchase" },
+    { value: "PURCHASE_PROJECT", label: "Purchase Project" },
     { value: "OPERATIONS_PROJECT", label: "Project Operations" },
     { value: "SUPPORT_OFFICE", label: "Office & Work Support" },
     { value: "COMMUNICATION", label: "Communication" },

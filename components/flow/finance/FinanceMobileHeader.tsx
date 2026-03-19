@@ -17,6 +17,8 @@ import {
     FileBarChart,
     User,
     TrendingUp,
+    ListFilter,
+    Download,
 } from "lucide-react";
 import { useFinance } from "./FinanceContext";
 
@@ -113,9 +115,13 @@ export default function FinanceMobileHeader({
                     )}>
                         {rightToolbar !== undefined ? rightToolbar : (
                             <>
-                                {canAccessTeam && (
+                                {canAccessTeam && pathname !== '/flow/finance/funding-sources' && (
                                     <button
-                                        onClick={() => setViewMode(viewMode === 'team' ? 'personal' : 'team')}
+                                        onClick={() => {
+                                            const newMode = viewMode === 'team' ? 'personal' : 'team';
+                                            setViewMode(newMode);
+                                            window.dispatchEvent(new CustomEvent('finance:set-view-mode', { detail: newMode }));
+                                        }}
                                         className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
                                     >
                                         {viewMode === 'team' ? (
@@ -125,9 +131,23 @@ export default function FinanceMobileHeader({
                                         )}
                                     </button>
                                 )}
-                                <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative">
-                                    <Menu className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
-                                </button>
+                                {pathname !== '/flow/finance' && pathname !== '/flow/finance/' && (
+                                    <>
+                                        <button
+                                            onClick={() => window.dispatchEvent(new CustomEvent('toggle-filters'))}
+                                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"
+                                        >
+                                            <ListFilter className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
+                                        </button>
+                                        <button
+                                            onClick={() => window.dispatchEvent(new CustomEvent('export-finance'))}
+                                            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative text-neutral-600 dark:text-neutral-300"
+                                            title="Export"
+                                        >
+                                            <Download className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
+                                        </button>
+                                    </>
+                                )}
                                 <button
                                     onClick={() => window.dispatchEvent(new CustomEvent('fab-action', { detail: { id: fabId } }))}
                                     className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative"

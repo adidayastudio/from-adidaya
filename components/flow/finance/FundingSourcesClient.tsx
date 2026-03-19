@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
 import { useFinance } from "./FinanceContext";
@@ -12,10 +12,12 @@ import {
     ArrowRightLeft,
     Check,
     ChevronDown,
-    Loader2
+    Loader2,
+    ArrowUpNarrowWide,
+    ArrowDownWideNarrow
 } from "lucide-react";
 import { clsx } from 'clsx';
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { FundingSource, BankProvider } from "@/lib/types/finance-types";
 import FundingSourceCard from "./modules/FundingSourceCard";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
@@ -57,7 +59,7 @@ function CustomSelect({ value, options, onChange, placeholder }: { value: string
         <div className={clsx("relative", isOpen ? "z-50" : "z-0")} onClick={e => e.stopPropagation()}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full text-left px-6 py-4 bg-white/40 border-0 ring-1 ring-white/60 shadow-inner rounded-full focus:ring-2 focus:ring-red-500/20 focus:bg-white/60 outline-none transition-all font-medium text-neutral-800 flex items-center justify-between group active:scale-[0.99] duration-200"
+                className="w-full text-left px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-full focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-neutral-900 outline-none transition-all font-medium text-neutral-800 dark:text-white flex items-center justify-between group active:scale-[0.99] duration-200"
             >
                 <span className="truncate">{selectedLabel}</span>
                 <ChevronDown className={clsx("w-4 h-4 text-neutral-400 transition-transform duration-300", isOpen && "rotate-180")} />
@@ -76,8 +78,8 @@ function CustomSelect({ value, options, onChange, placeholder }: { value: string
                             className={clsx(
                                 "w-full text-left px-4 py-3 rounded-2xl text-sm font-medium flex items-center justify-between transition-colors",
                                 value === option.value
-                                    ? "bg-red-500 text-white shadow-md"
-                                    : "text-neutral-700 hover:bg-black/5"
+                                    ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+                                    : "text-neutral-700 dark:text-neutral-300 hover:bg-black/5 dark:hover:bg-white/5"
                             )}
                         >
                             {option.label}
@@ -103,7 +105,8 @@ export default function FundingSourcesClient() {
     const [sources, setSources] = useState<FundingSource[]>([]);
     const [workspaceId, setWorkspaceId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [showAddModal, setShowAddModal] = useState(false);
+    const [showAddDrawer, setShowAddDrawer] = useState(false);
+    const [showFilterDrawer, setShowFilterDrawer] = useState(false);
 
     // DELETE MODAL STATE
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -112,6 +115,14 @@ export default function FundingSourcesClient() {
     const [activeTab, setActiveTab] = useState<"ACTIVE" | "ARCHIVED">("ACTIVE");
 
     const [editingSource, setEditingSource] = useState<FundingSource | null>(null);
+
+    // SEARCH & FILTER STATE
+    const { searchTerm } = useFinance();
+    const [sortBy, setSortBy] = useState<"BANK" | "NAME" | "STATUS">("NAME");
+    const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("ASC");
+    const [filterBank, setFilterBank] = useState<string>("ALL");
+    const [filterStatus, setFilterStatus] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
+
     const [formData, setFormData] = useState({
         name: "",
         type: "BANK",
@@ -147,22 +158,66 @@ export default function FundingSourcesClient() {
             if (e.detail?.id === 'FINANCE_NEW_SOURCE') {
                 setEditingSource(null);
                 setFormData({ name: "", type: "BANK", provider: "MANDIRI", balance: "", account_number: "" });
-                setShowAddModal(true);
+                setShowAddDrawer(true);
             }
         };
+        const handleToggleFilters = () => setShowFilterDrawer(true);
+
         window.addEventListener('fab-action', handleFabAction);
-        return () => window.removeEventListener('fab-action', handleFabAction);
+        window.addEventListener('toggle-filters', handleToggleFilters);
+        return () => {
+            window.removeEventListener('fab-action', handleFabAction);
+            window.removeEventListener('toggle-filters', handleToggleFilters);
+        };
     }, []);
 
+    // Filter & Sort Logic
+    const filteredSources = useMemo(() => {
+        let result = sources.filter((s: FundingSource) => {
+            // Tab filter
+            const matchesTab = activeTab === "ACTIVE" ? !s.is_archived : s.is_archived;
+            if (!matchesTab) return false;
 
-    // Filter sources based on tab
-    const filteredSources = sources.filter(s => {
-        if (activeTab === "ACTIVE") return !s.is_archived;
-        return s.is_archived;
-    });
+            // Search filter
+            if (searchTerm) {
+                const search = searchTerm.toLowerCase();
+                const nameMatch = s.name.toLowerCase().includes(search);
+                const bankMatch = s.provider?.toLowerCase().includes(search);
+                const typeMatch = s.type.toLowerCase().includes(search);
+                if (!nameMatch && !bankMatch && !typeMatch) return false;
+            }
 
-    const activeCount = sources.filter(s => !s.is_archived).length;
-    const archivedCount = sources.filter(s => s.is_archived).length;
+            // Bank filter
+            if (filterBank !== "ALL" && s.provider !== filterBank) return false;
+
+            // Status filter
+            if (filterStatus !== "ALL") {
+                if (filterStatus === "ACTIVE" && !s.is_active) return false;
+                if (filterStatus === "INACTIVE" && s.is_active) return false;
+            }
+
+            return true;
+        });
+
+        // Sorting
+        result.sort((a, b) => {
+            let comparison = 0;
+            if (sortBy === "BANK") {
+                comparison = (a.provider || "").localeCompare(b.provider || "");
+            } else if (sortBy === "STATUS") {
+                comparison = (a.is_active === b.is_active) ? 0 : a.is_active ? -1 : 1;
+            } else {
+                // Default NAME
+                comparison = a.name.localeCompare(b.name);
+            }
+            return sortOrder === "ASC" ? comparison : -comparison;
+        });
+
+        return result;
+    }, [sources, activeTab, searchTerm, sortBy, sortOrder, filterBank, filterStatus]);
+
+    const activeCount = sources.filter((s: FundingSource) => !s.is_archived).length;
+    const archivedCount = sources.filter((s: FundingSource) => s.is_archived).length;
 
     const handleToggle = async (id: string) => {
         const source = sources.find(s => s.id === id);
@@ -193,7 +248,7 @@ export default function FundingSourcesClient() {
                 balance: source.balance?.toString() || "",
                 account_number: source.account_number || "",
             });
-            setShowAddModal(true);
+            setShowAddDrawer(true);
         }
     };
 
@@ -321,28 +376,14 @@ export default function FundingSourcesClient() {
     };
 
     const closeModal = () => {
-        setShowAddModal(false);
+        setShowAddDrawer(false);
         setEditingSource(null);
         setFormData({ name: "", type: "BANK", provider: "MANDIRI", balance: "", account_number: "" });
     };
 
-    const addButton = (
-        <button
-            onClick={() => {
-                setEditingSource(null);
-                setFormData({ name: "", type: "BANK", provider: "MANDIRI", balance: "", account_number: "" });
-                setShowAddModal(true);
-            }}
-            className="h-10 px-6 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-200 active:scale-95 transition-all flex items-center gap-2"
-        >
-            <Plus className="w-4 h-4" />
-            New Source
-        </button>
-    );
-
     return (
         <FinancePageWrapper
-            header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources for all projects." action={!isLoading && canAccessTeam && viewMode !== "personal" ? addButton : undefined} />}
+            header={<FinanceHeader title="Funding Sources" subtitle="Manage payment sources for all projects." />}
         >
             {isLoading ? (
                 <div className="flex items-center justify-center h-64">
@@ -385,232 +426,409 @@ export default function FundingSourcesClient() {
                 </div>
             ) : (
                 <>
-            <div className="flex items-center p-1 bg-neutral-100/80 rounded-full w-fit mb-6 ml-1 border border-neutral-200/50">
-                {["ACTIVE", "ARCHIVED"].map((tab) => {
-                    const isActive = activeTab === tab;
-                    return (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab as any)}
-                            className="relative px-6 py-2 rounded-full text-xs font-medium transition-colors duration-200 outline-none"
-                        >
-                            {isActive && (
-                                <motion.div
-                                    layoutId="activeTab"
-                                    className="absolute inset-0 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] rounded-full"
-                                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                                />
-                            )}
-                            <span className={clsx("relative z-10", isActive ? "text-neutral-800" : "text-neutral-400 hover:text-neutral-600")}>
-                                {tab === "ACTIVE" ? `Active (${activeCount})` : `Archived (${archivedCount})`}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
-
-            {/* SOURCES GRID */}
-            {filteredSources.length === 0 ? (
-                <div className="text-center py-20 border-2 border-dashed border-neutral-100 rounded-3xl">
-                    <p className="text-neutral-400 text-sm">No {activeTab.toLowerCase()} funding sources found.</p>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-1">
-                    {filteredSources.map((source, index) => (
-                        <FundingSourceCard
-                            key={source.id}
-                            source={source}
-                            isFirst={index === 0}
-                            isLast={index === filteredSources.length - 1}
-                            onToggle={handleToggle}
-                            onEdit={handleEdit}
-                            onArchive={handleArchive}
-                            onDelete={triggerDelete}
-                            onMoveUp={() => handleMoveSource(source.id, "up")}
-                            onMoveDown={() => handleMoveSource(source.id, "down")}
-                        />
-                    ))}
-                </div>
-            )}
-
-            {/* DELETE CONFIRMATION MODAL */}
-            {showDeleteModal && sourceToDelete && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowDeleteModal(false)}>
-                    <div className="bg-white/80 backdrop-blur-[50px] rounded-[32px] w-full max-w-sm shadow-[0_32px_64px_rgba(0,0,0,0.2)] p-8 transform transition-all scale-100 border border-white/60 ring-1 ring-white/60 relative overflow-hidden" onClick={e => e.stopPropagation()}>
-
-                        {/* Highlights */}
-                        <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-red-500/10 to-transparent pointer-events-none" />
-
-                        <div className="flex flex-col items-center text-center relative z-10">
-                            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
-                                <Landmark className="w-8 h-8 text-red-600" />
-                            </div>
-
-                            <h3 className="text-xl font-bold text-neutral-900 mb-2">Delete Funding Source</h3>
-                            <p className="text-neutral-500 text-sm mb-8 leading-relaxed">
-                                Are you sure you want to delete <strong className="text-neutral-800">{sourceToDelete.name}</strong>?
-                                <br />This action cannot be undone.
-                            </p>
-
-                            <div className="flex gap-3 w-full">
+                    <div className="flex items-center p-1 bg-neutral-100/80 rounded-full w-fit mb-6 ml-1 border border-neutral-200/50">
+                        {["ACTIVE", "ARCHIVED"].map((tab) => {
+                            const isActive = activeTab === tab;
+                            return (
                                 <button
-                                    onClick={() => setShowDeleteModal(false)}
-                                    className="flex-1 px-4 py-3 border-0 ring-1 ring-black/5 bg-white/40 hover:bg-white/60 rounded-full text-xs font-bold text-neutral-600 transition-all active:scale-95"
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab as any)}
+                                    className="relative px-6 py-2 rounded-full text-xs font-medium transition-colors duration-200 outline-none"
                                 >
-                                    Cancel
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="activeTab"
+                                            className="absolute inset-0 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] rounded-full"
+                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                        />
+                                    )}
+                                    <span className={clsx("relative z-10", isActive ? "text-neutral-800" : "text-neutral-400 hover:text-neutral-600")}>
+                                        {tab === "ACTIVE" ? `Active (${activeCount})` : `Archived (${archivedCount})`}
+                                    </span>
                                 </button>
-                                <button
-                                    onClick={confirmDelete}
-                                    className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-full text-xs font-bold shadow-[0_8px_16px_rgba(220,38,38,0.25)] active:scale-95 transition-all"
-                                >
-                                    Yes, Delete
-                                </button>
-                            </div>
-                        </div>
+                            );
+                        })}
                     </div>
-                </div>
-            )}
 
-            {/* ADD/EDIT MODAL - LIQUID GLASS 26 STYLE */}
-            {showAddModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[100] p-4" onClick={closeModal}>
-                    <div className="bg-white/70 backdrop-blur-[40px] rounded-[40px] w-full max-w-md shadow-[0_32px_64px_rgba(0,0,0,0.2)] p-8 transform transition-all scale-100 border border-white/40 ring-1 ring-white/60 relative overflow-hidden" onClick={e => e.stopPropagation()}>
-
-                        {/* Highlights for liquid feel */}
-                        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-white/40 to-transparent pointer-events-none" />
-
-                        <div className="flex items-center justify-between mb-8 relative z-10">
-                            <div>
-                                <h3 className="text-2xl font-semibold tracking-tight text-neutral-900">
-                                    {editingSource ? "Edit Source" : "New Source"}
-                                </h3>
-                                <p className="text-neutral-500 font-medium text-xs mt-1">
-                                    {editingSource ? "Update funding source details." : "Add a new payment source."}
-                                </p>
-                            </div>
-                            <button onClick={closeModal} className="p-2.5 hover:bg-black/5 rounded-full transition-colors group">
-                                <X className="w-5 h-5 text-neutral-400 group-hover:text-red-500 transition-colors" />
-                            </button>
+                    {/* SOURCES GRID */}
+                    {filteredSources.length === 0 ? (
+                        <div className="text-center py-20 border-2 border-dashed border-neutral-100 rounded-3xl">
+                            <p className="text-neutral-400 text-sm">No {activeTab.toLowerCase()} funding sources found.</p>
                         </div>
-
-                        <div className="space-y-6 mb-10 relative z-20">
-                            {/* NAME */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2">Source Name</label>
-                                <input
-                                    type="text"
-                                    className="w-full px-6 py-4 bg-white/40 border-0 ring-1 ring-white/60 shadow-inner rounded-full focus:ring-2 focus:ring-red-500/20 focus:bg-white/60 outline-none transition-all font-medium text-neutral-800 placeholder:text-neutral-400"
-                                    placeholder="e.g. Bank Mandiri Ops"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-1">
+                            {filteredSources.map((source: FundingSource, index: number) => (
+                                <FundingSourceCard
+                                    key={source.id}
+                                    source={source}
+                                    isFirst={index === 0}
+                                    isLast={index === filteredSources.length - 1}
+                                    onToggle={handleToggle}
+                                    onEdit={handleEdit}
+                                    onArchive={handleArchive}
+                                    onDelete={triggerDelete}
+                                    onMoveUp={() => handleMoveSource(source.id, "up")}
+                                    onMoveDown={() => handleMoveSource(source.id, "down")}
                                 />
-                            </div>
+                            ))}
+                        </div>
+                    )}
 
-                            {/* TYPE - CUSTOM SELECT */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2">Type</label>
-                                <CustomSelect
-                                    value={formData.type}
-                                    options={[
-                                        { value: "BANK", label: "Bank Account" },
-                                        { value: "PETTY_CASH", label: "Petty Cash" },
-                                        { value: "REIMBURSE", label: "Reimburse Pool" },
-                                        { value: "CASH", label: "Cash on Hand" }
-                                    ]}
-                                    onChange={(val) => setFormData({ ...formData, type: val as any })}
-                                    placeholder="Select Type"
-                                />
-                            </div>
+                    {/* DELETE CONFIRMATION MODAL */}
+                    {showDeleteModal && sourceToDelete && (
+                        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[110] p-4" onClick={() => setShowDeleteModal(false)}>
+                            <div className="bg-white/80 backdrop-blur-[50px] rounded-[32px] w-full max-w-sm shadow-[0_32px_64px_rgba(0,0,0,0.2)] p-8 transform transition-all scale-100 border border-white/60 ring-1 ring-white/60 relative overflow-hidden" onClick={e => e.stopPropagation()}>
+                                {/* Highlights */}
+                                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-red-500/10 to-transparent pointer-events-none" />
 
-                            {/* PROVIDER - CUSTOM SELECT (if BANK) */}
-                            {formData.type === "BANK" && (
-                                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2">Bank Provider</label>
-                                    <CustomSelect
-                                        value={formData.provider}
-                                        options={[
-                                            { value: "MANDIRI", label: "Bank Mandiri" },
-                                            { value: "BCA", label: "Bank BCA" },
-                                            { value: "BRI", label: "Bank BRI" },
-                                            { value: "BNI", label: "Bank BNI" },
-                                            { value: "BSI", label: "Bank BSI" },
-                                            { value: "BLU", label: "Blu by BCA" },
-                                            { value: "JAGO", label: "Bank Jago" },
-                                            { value: "JENIUS", label: "Jenius BTPN" },
-                                            { value: "CIMB", label: "CIMB Niaga" },
-                                            { value: "DANAMON", label: "Danamon" },
-                                            { value: "PERMATA", label: "Permata Bank" },
-                                        ]}
-                                        onChange={(val) => setFormData({ ...formData, provider: val as any })}
-                                        placeholder="Select Provider"
-                                    />
-                                </div>
-                            )}
+                                <div className="flex flex-col items-center text-center relative z-10">
+                                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                                        <Landmark className="w-8 h-8 text-red-600" />
+                                    </div>
 
-                            {/* ACCOUNT NUMBER (BANK ONLY) */}
-                            {formData.type === "BANK" && (
-                                <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2">Account Number (Optional)</label>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        className="w-full px-6 py-4 bg-white/40 border-0 ring-1 ring-white/60 shadow-inner rounded-full focus:ring-2 focus:ring-red-500/20 focus:bg-white/60 outline-none transition-all font-medium text-neutral-800 placeholder:text-neutral-400 font-mono tracking-wide"
-                                        placeholder={getBankPlaceholder(formData.provider)}
-                                        value={formData.account_number}
-                                        onChange={e => {
-                                            // Only allow numbers
-                                            const val = e.target.value.replace(/[^0-9]/g, "");
-                                            setFormData({ ...formData, account_number: val });
-                                        }}
-                                    />
-                                    <p className="text-[10px] text-neutral-400 px-3">
-                                        {formData.provider === "BCA" && "10 digits"}
-                                        {formData.provider === "MANDIRI" && "13 digits"}
-                                        {formData.provider === "BRI" && "15 digits"}
-                                        {formData.provider === "BNI" && "10 digits"}
-                                        {formData.provider === "CIMB" && "13 digits"}
-                                        {!["BCA", "MANDIRI", "BRI", "BNI", "CIMB"].includes(formData.provider) && "Enter valid account number"}
-                                        {" • Leave empty to auto-generate"}
+                                    <h3 className="text-xl font-bold text-neutral-900 mb-2">Delete Funding Source</h3>
+                                    <p className="text-neutral-500 text-sm mb-8 leading-relaxed">
+                                        Are you sure you want to delete <strong className="text-neutral-800">{sourceToDelete.name}</strong>?
+                                        <br />This action cannot be undone.
                                     </p>
-                                </div>
-                            )}
 
-                            {/* BALANCE - FORMATTED INPUT */}
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2">Current Balance (IDR)</label>
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    className="w-full px-6 py-4 bg-white/40 border-0 ring-1 ring-white/60 shadow-inner rounded-full focus:ring-2 focus:ring-red-500/20 focus:bg-white/60 outline-none transition-all font-medium text-neutral-800 placeholder:text-neutral-400 font-mono tracking-wide"
-                                    placeholder="0"
-                                    value={formData.balance ? Number(formData.balance).toLocaleString('id-ID') : ""}
-                                    onChange={e => {
-                                        const raw = e.target.value.replace(/\./g, "");
-                                        if (!isNaN(Number(raw))) {
-                                            setFormData({ ...formData, balance: raw });
-                                        }
-                                    }}
-                                />
+                                    <div className="flex gap-3 w-full">
+                                        <button
+                                            onClick={() => setShowDeleteModal(false)}
+                                            className="flex-1 px-4 py-3 border-0 ring-1 ring-black/5 bg-white/40 hover:bg-white/60 rounded-full text-xs font-bold text-neutral-600 transition-all active:scale-95"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={confirmDelete}
+                                            className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 text-white rounded-full text-xs font-bold shadow-[0_8px_16px_rgba(220,38,38,0.25)] active:scale-95 transition-all"
+                                        >
+                                            Yes, Delete
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    )}
 
-                        <div className="flex gap-3 pt-2 relative z-10">
-                            <button onClick={closeModal} className="flex-1 px-6 py-4 border-0 ring-1 ring-black/5 bg-white/30 hover:bg-white/50 rounded-full text-xs font-bold text-neutral-600 transition-all">Cancel</button>
-                            <button
-                                onClick={handleSave}
-                                disabled={!formData.name}
-                                className="flex-1 px-6 py-4 bg-red-600 hover:bg-red-500 text-white rounded-full text-xs font-bold uppercase tracking-widest shadow-[0_8px_16px_rgba(220,38,38,0.25)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                            >
-                                <span className="capitalize">{editingSource ? "Save Changes" : "Create Source"}</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    {/* ADD/EDIT DRAWER */}
+                    <AnimatePresence>
+                        {showAddDrawer && (
+                            <div className="fixed inset-0 z-[120] isolate">
+                                {/* BACKDROP */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300"
+                                    onClick={closeModal}
+                                />
+
+                                {/* Drawer Detail */}
+                                <motion.div
+                                    initial={{ y: "100%", opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    exit={{ y: "100%", opacity: 0 }}
+                                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                    className={clsx(
+                                        "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-300 rounded-[56px] overflow-hidden flex flex-col",
+                                        "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+                                    )}
+                                    onClick={e => e.stopPropagation()}
+                                >
+                                    {/* Sticky Header */}
+                                    <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div>
+                                                <h2 className="text-[24px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                                                    {editingSource ? "Edit Source" : "New Source"}
+                                                </h2>
+                                                <p className="text-neutral-500 font-medium text-xs mt-0.5">
+                                                    {editingSource ? "Update funding source details." : "Add a new payment source."}
+                                                </p>
+                                            </div>
+                                            <button
+                                                onClick={closeModal}
+                                                className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                            >
+                                                <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Scrollable Content */}
+                                    <div className="flex-1 overflow-y-auto px-8 pb-32 scrollbar-hide space-y-6">
+                                        {/* NAME */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2 font-mono">Source Name</label>
+                                            <input
+                                                type="text"
+                                                className="w-full px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-full focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-neutral-800 outline-none transition-all font-medium text-neutral-800 dark:text-white placeholder:text-neutral-400"
+                                                placeholder="e.g. Bank Mandiri Ops"
+                                                value={formData.name}
+                                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            />
+                                        </div>
+
+                                        {/* TYPE */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2 font-mono">Type</label>
+                                            <CustomSelect
+                                                value={formData.type}
+                                                options={[
+                                                    { value: "BANK", label: "Bank Account" },
+                                                    { value: "PETTY_CASH", label: "Petty Cash" },
+                                                    { value: "REIMBURSE", label: "Reimburse Pool" },
+                                                    { value: "CASH", label: "Cash on Hand" }
+                                                ]}
+                                                onChange={(val) => setFormData({ ...formData, type: val as any })}
+                                                placeholder="Select Type"
+                                            />
+                                        </div>
+
+                                        {/* PROVIDER */}
+                                        {formData.type === "BANK" && (
+                                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2 font-mono">Bank Provider</label>
+                                                <CustomSelect
+                                                    value={formData.provider}
+                                                    options={[
+                                                        { value: "MANDIRI", label: "Bank Mandiri" },
+                                                        { value: "BCA", label: "Bank BCA" },
+                                                        { value: "BRI", label: "Bank BRI" },
+                                                        { value: "BNI", label: "Bank BNI" },
+                                                        { value: "BSI", label: "Bank BSI" },
+                                                        { value: "BLU", label: "Blu by BCA" },
+                                                        { value: "JAGO", label: "Bank Jago" },
+                                                        { value: "JENIUS", label: "Jenius BTPN" },
+                                                        { value: "CIMB", label: "CIMB Niaga" },
+                                                        { value: "DANAMON", label: "Danamon" },
+                                                        { value: "PERMATA", label: "Permata Bank" },
+                                                    ]}
+                                                    onChange={(val) => setFormData({ ...formData, provider: val as any })}
+                                                    placeholder="Select Provider"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* ACCOUNT NUMBER */}
+                                        {formData.type === "BANK" && (
+                                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2 font-mono">Account Number (Optional)</label>
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    className="w-full px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-full focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-neutral-800 outline-none transition-all font-medium text-neutral-800 dark:text-white placeholder:text-neutral-400 font-mono tracking-wide"
+                                                    placeholder={getBankPlaceholder(formData.provider)}
+                                                    value={formData.account_number}
+                                                    onChange={e => {
+                                                        const val = e.target.value.replace(/[^0-9]/g, "");
+                                                        setFormData({ ...formData, account_number: val });
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* BALANCE */}
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest px-2 font-mono">Current Balance (IDR)</label>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                className="w-full px-6 py-4 bg-neutral-50/50 dark:bg-neutral-800/50 border border-neutral-200 dark:border-neutral-700 rounded-full focus:ring-2 focus:ring-blue-500/20 focus:bg-white dark:focus:bg-neutral-800 outline-none transition-all font-medium text-neutral-800 dark:text-white placeholder:text-neutral-400 font-mono tracking-wide"
+                                                placeholder="0"
+                                                value={formData.balance ? Number(formData.balance).toLocaleString('id-ID') : ""}
+                                                onChange={e => {
+                                                    const raw = e.target.value.replace(/\./g, "");
+                                                    if (!isNaN(Number(raw))) {
+                                                        setFormData({ ...formData, balance: raw });
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Sticky Floating Footer */}
+                                    <div className="absolute bottom-10 left-0 right-0 px-8 z-40 pointer-events-none">
+                                        <div className="flex gap-3 pointer-events-auto">
+                                            <button
+                                                onClick={closeModal}
+                                                className="flex-1 px-6 py-4 bg-transparent text-neutral-500 hover:text-neutral-700 font-bold rounded-full transition-all active:scale-95 text-sm"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleSave}
+                                                disabled={!formData.name}
+                                                className="flex-[2] px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full text-sm font-bold active:scale-95 disabled:opacity-50 transition-all duration-300 shadow-xl shadow-blue-500/10"
+                                            >
+                                                {editingSource ? "Save Changes" : "Create Source"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* FILTER DRAWER */}
+                    <AnimatePresence>
+                        {showFilterDrawer && (
+                            <div className="fixed inset-0 z-[120] isolate">
+                                {/* BACKDROP */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300"
+                                    onClick={() => setShowFilterDrawer(false)}
+                                />
+
+                                {/* Drawer Detail */}
+                                <motion.div
+                                    initial={{ y: "100%", opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    exit={{ y: "100%", opacity: 0 }}
+                                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                    className={clsx(
+                                        "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-300 rounded-[56px] overflow-hidden flex flex-col",
+                                        "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+                                    )}
+                                    onClick={e => e.stopPropagation()}
+                                >
+                                    {/* Sticky Header */}
+                                    <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div>
+                                                <h2 className="text-[24px] font-bold text-neutral-900 dark:text-white tracking-tight">Filters</h2>
+                                                <p className="text-neutral-500 font-medium text-xs mt-0.5">Refine your sources view.</p>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                {(sortBy !== "NAME" || sortOrder !== "ASC" || filterBank !== "ALL" || filterStatus !== "ALL") && (
+                                                    <button
+                                                        onClick={() => {
+                                                            setSortBy("NAME");
+                                                            setSortOrder("ASC");
+                                                            setFilterBank("ALL");
+                                                            setFilterStatus("ALL");
+                                                        }}
+                                                        className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-all active:scale-95"
+                                                    >
+                                                        Reset
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={() => setShowFilterDrawer(false)}
+                                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                                >
+                                                    <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Scrollable Content */}
+                                    <div className="flex-1 overflow-y-auto px-8 pb-32 scrollbar-hide space-y-8">
+                                        {/* SORT BY */}
+                                        <div className="space-y-4">
+                                            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest px-1 font-mono">Sort By</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {[
+                                                    { id: "NAME", label: "Name" },
+                                                    { id: "BANK", label: "Bank" },
+                                                    { id: "STATUS", label: "Status" }
+                                                ].map(opt => (
+                                                    <button
+                                                        key={opt.id}
+                                                        onClick={() => {
+                                                            if (sortBy === opt.id) {
+                                                                setSortOrder(sortOrder === "ASC" ? "DESC" : "ASC");
+                                                            } else {
+                                                                setSortBy(opt.id as any);
+                                                                setSortOrder("ASC");
+                                                            }
+                                                        }}
+                                                        className={clsx(
+                                                            "px-5 py-2.5 rounded-full text-xs font-bold transition-all border flex items-center gap-2",
+                                                            sortBy === opt.id
+                                                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
+                                                                : "bg-white/40 border-neutral-200 text-neutral-600 hover:bg-white/60"
+                                                        )}
+                                                    >
+                                                        {opt.label}
+                                                        {sortBy === opt.id && (
+                                                            <div className="bg-white/20 p-0.5 rounded-md">
+                                                                {sortOrder === "ASC" ? <ArrowUpNarrowWide size={14} /> : <ArrowDownWideNarrow size={14} />}
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* FILTER BY BANK */}
+                                        <div className="space-y-4">
+                                            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest px-1 font-mono">Filter by Bank</label>
+                                            <div className="relative">
+                                                <select
+                                                    value={filterBank}
+                                                    onChange={(e) => setFilterBank(e.target.value)}
+                                                    className="w-full h-12 px-6 bg-neutral-50/50 dark:bg-neutral-800/50 border border-neutral-200 rounded-full text-[13px] font-bold text-neutral-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 appearance-none cursor-pointer"
+                                                >
+                                                    <option value="ALL">All Banks</option>
+                                                    {Array.from(new Set(sources.filter(s => s.provider).map(s => s.provider!))).sort().map(bank => (
+                                                        <option key={bank} value={bank}>{bank}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                    <ChevronDown className="w-4 h-4 text-neutral-400" />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* FILTER BY STATUS */}
+                                        <div className="space-y-4">
+                                            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest px-1 font-mono">Filter by Status</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {[
+                                                    { id: "ALL", label: "All Status" },
+                                                    { id: "ACTIVE", label: "Active Only" },
+                                                    { id: "INACTIVE", label: "Inactive Only" }
+                                                ].map(opt => (
+                                                    <button
+                                                        key={opt.id}
+                                                        onClick={() => setFilterStatus(opt.id as any)}
+                                                        className={clsx(
+                                                            "px-5 py-2.5 rounded-full text-xs font-bold transition-all border",
+                                                            filterStatus === opt.id
+                                                                ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200"
+                                                                : "bg-white/40 border-neutral-200 text-neutral-600 hover:bg-white/60"
+                                                        )}
+                                                    >
+                                                        {opt.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Sticky Floating Footer */}
+                                    <div className="absolute bottom-10 left-0 right-0 px-8 z-40 pointer-events-none">
+                                        <div className="pointer-events-auto">
+                                            <button
+                                                onClick={() => setShowFilterDrawer(false)}
+                                                className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full transition-all active:scale-95 text-sm shadow-xl shadow-blue-500/20"
+                                            >
+                                                Apply Filter
+                                            </button>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
                 </>
             )}
         </FinancePageWrapper>
     );
 }
-
-

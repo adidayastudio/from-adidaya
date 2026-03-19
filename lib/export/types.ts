@@ -13,15 +13,20 @@ export interface SummaryCard {
     color?: "default" | "blue" | "red" | "green";
 }
 
+export interface PdfSection {
+    title: string;
+    columns: TableColumn[];
+    data: any[];
+}
+
 export interface PdfExportPayload {
     meta: {
         projectCode: string;
         projectName: string;
         documentName: string;
-        periodText: string; // e.g., "Week 2 (06 Jan - 12 Jan)"
+        periodText: string;
         generatedAt: string;
     };
     summary: SummaryCard[];
-    columns: TableColumn[];
-    data: any[]; // Raw row data
+    sections: PdfSection[];
 }

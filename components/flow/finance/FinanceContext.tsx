@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import useUserProfile from "@/hooks/useUserProfile";
 import { canAccessFinanceTeam } from "@/lib/auth-utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type ViewMode = "personal" | "team";
 
@@ -34,6 +34,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
     const [isInitialized, setIsInitialized] = useState(false);
     
+    const searchParams = useSearchParams();
+
     // Diagnostic instance ID to track duplicate mounts
     const [instanceId] = useState(() => Math.random().toString(36).substring(2, 7));
 
@@ -41,6 +43,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         console.log(`[FinanceProvider:${instanceId}] Mounted. Current Search: "${searchTerm}"`);
         return () => console.log(`[FinanceProvider:${instanceId}] Unmounted.`);
     }, []);
+
+    // Sync URL 'q' param with local search term (for MobileBottomBarV2 integration)
+    useEffect(() => {
+        const q = searchParams.get("q") || "";
+        if (q !== searchTerm) {
+            setSearchTerm(q);
+        }
+    }, [searchParams.get("q")]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -54,8 +64,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Final initialization once profile is ready
     useEffect(() => {
         if (!loading && !isInitialized) {
-            const searchParams = new URLSearchParams(window.location.search);
-            const urlView = searchParams.get("view") as ViewMode | null;
+            // Note: window.location.search is fine for initial load, but useSearchParams handles reactivity
+            const currentUrlParams = new URLSearchParams(window.location.search);
+            const urlView = currentUrlParams.get("view") as ViewMode | null;
             const stored = sessionStorage.getItem(STORAGE_KEY) as ViewMode | null;
 
             if (canAccessTeam) {

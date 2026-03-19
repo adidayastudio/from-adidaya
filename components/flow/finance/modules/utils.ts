@@ -13,15 +13,55 @@ export function formatCurrency(amount: number) {
 }
 
 export function formatShort(amount: number) {
-    if (amount >= 1000000000) return `${(amount / 1000000000).toFixed(1)}B`;
-    if (amount >= 1000000) return `${(amount / 1000000).toFixed(0)}M`;
-    if (amount >= 1000) return `${(amount / 1000).toFixed(0)}K`;
+    const formatter = new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+
+    if (amount >= 1000000000) return `${formatter.format(amount / 1000000000)}B`;
+    if (amount >= 1000000) return `${formatter.format(amount / 1000000)}M`;
+    if (amount >= 1000) return `${formatter.format(amount / 1000)}K`;
     return formatCurrency(amount);
 }
 
 // Format full amount without comma, just dots for thousands
 export function formatAmount(amount: number) {
     return `Rp ${amount.toLocaleString('id-ID').replace(/,/g, '.')}`;
+}
+
+export function generateReportFileName(
+    projectIds: string[],
+    projectsWithData: { id: string; code: string; value?: number }[],
+    timeframe: string,
+    extension: "xlsx" | "pdf"
+) {
+    let projectPart = "";
+    
+    if (projectIds.includes("ALL") || projectIds.length === 0) {
+        projectPart = "ALL";
+    } else {
+        // Filter and sort by value if available
+        const selected = projectsWithData
+            .filter(p => projectIds.includes(p.id))
+            .sort((a, b) => (b.value || 0) - (a.value || 0));
+
+        if (selected.length === 1) {
+            projectPart = selected[0].code;
+        } else if (selected.length <= 3) {
+            projectPart = selected.map(p => p.code).join("-");
+        } else {
+            // More than 3: show top one + remaining count
+            projectPart = `${selected[0].code}+${selected.length - 1}`;
+        }
+    }
+
+    // Clean timeframe for filename (remove spaces, slashes, etc)
+    const datePart = timeframe
+        .replace(/\s+/g, "_")
+        .replace(/[^a-zA-Z0-9_]/g, "-")
+        .replace(/-+/g, "-");
+    
+    return `Report_${projectPart}_${datePart}.${extension}`;
 }
 
 // Format date nicely (Day Month Year)

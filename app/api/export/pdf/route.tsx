@@ -38,11 +38,13 @@ export async function POST(req: NextRequest) {
             });
         } else {
             // Development: Use standard puppeteer (bundled Chromium)
+            console.log("[PDF] Launching local puppeteer...");
             const puppeteer = require("puppeteer");
             browser = await puppeteer.launch({
                 headless: true,
                 args: ['--no-sandbox', '--disable-setuid-sandbox']
             });
+            console.log("[PDF] Puppeteer launched successfully.");
         }
 
         const page = await browser.newPage();
