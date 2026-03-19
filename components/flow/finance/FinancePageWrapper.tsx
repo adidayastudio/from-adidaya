@@ -88,7 +88,7 @@ export default function FinancePageWrapper({
 
                 {/* 2. Expandable Search + Filter Bubble (Hidden on Overview) */}
                 {!isOverview && (
-                    <div className="h-9 flex items-center bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border border-white/40 dark:border-neutral-700/30 rounded-full shadow-sm px-1 gap-1 min-w-[36px] overflow-hidden">
+                    <div className="h-10 flex items-center bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border border-white/40 dark:border-neutral-700/30 rounded-full shadow-sm px-1.5 gap-1.5 min-w-[40px] overflow-hidden">
                         <motion.div
                             initial={false}
                             animate={{ width: (isSearchExpanded || searchTerm) ? "auto" : 32 }}
@@ -139,16 +139,16 @@ export default function FinancePageWrapper({
                             whileTap={{ scale: 0.9 }}
                             whileHover={{ scale: 1.05 }}
                             onClick={() => window.dispatchEvent(new CustomEvent('toggle-filters'))}
-                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/40 dark:hover:bg-neutral-700/40 transition-colors shrink-0"
+                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/40 dark:hover:bg-neutral-700/40 transition-colors shrink-0"
                         >
-                            <ListFilter size={16} className="text-neutral-600 dark:text-neutral-300" strokeWidth={1.5} />
+                            <ListFilter size={17} className="text-neutral-600 dark:text-neutral-300" strokeWidth={1.5} />
                         </motion.button>
                     </div>
                 )}
 
                 {/* 3. Export Bubble (Hidden on Overview) */}
                 {!isOverview && (
-                    <div className="h-9 w-9 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border border-white/40 dark:border-neutral-700/30 rounded-full shadow-sm flex items-center justify-center">
+                    <div className="h-10 w-10 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border border-white/40 dark:border-neutral-700/30 rounded-full shadow-sm flex items-center justify-center">
                          <motion.button
                             whileTap={{ scale: 0.9 }}
                             whileHover={{ scale: 1.05 }}
@@ -156,13 +156,13 @@ export default function FinancePageWrapper({
                             className="w-full h-full flex items-center justify-center text-neutral-600 dark:text-neutral-300 transition-colors duration-200"
                             title="Export"
                         >
-                            <Download size={18} strokeWidth={1.5} />
+                            <Download size={19} strokeWidth={1.5} />
                         </motion.button>
                     </div>
                 )}
 
                 {/* 4. Glassy Blue Plus Bubble */}
-                <div className="h-9 w-9 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600/85 dark:bg-blue-500/90 backdrop-blur-[20px]">
+                <div className="h-10 w-10 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600/85 dark:bg-blue-500/90 backdrop-blur-[20px]">
                     <motion.button
                         whileTap={{ scale: 0.9 }}
                         whileHover={{ scale: 1.05 }}
@@ -170,7 +170,7 @@ export default function FinancePageWrapper({
                         className="w-full h-full flex items-center justify-center rounded-full text-blue-50 dark:text-blue-50 transition-all duration-200"
                         title="New Request"
                     >
-                        <Plus size={20} strokeWidth={2.5} />
+                        <Plus size={22} strokeWidth={2.5} />
                     </motion.button>
                 </div>
             </div>

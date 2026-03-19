@@ -1780,7 +1780,7 @@ export default function ReimburseClient() {
     const [previewingDocument, setPreviewingDocument] = useState<{ item: any, initialTab: 'invoice' | 'proof' } | null>(null);
 
     // Sorting
-    const [sortColumn, setSortColumn] = useState<'date' | 'project_name' | 'amount' | 'status' | 'submitter' | 'description' | null>('date');
+    const [sortColumn, setSortColumn] = useState<'date' | 'invoice_date' | 'paid_date' | 'project_name' | 'amount' | 'status' | 'submitter' | 'description' | null>('date');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
     const STATUS_ORDER = ['DRAFT', 'PENDING', 'NEED_REVISION', 'APPROVED', 'PAID', 'REJECTED'];
@@ -1792,7 +1792,7 @@ export default function ReimburseClient() {
         return ['ALL', ...Array.from(cats)].sort();
     }, [items]);
 
-    const handleSort = (column: 'date' | 'project_name' | 'amount' | 'status' | 'submitter' | 'description') => {
+    const handleSort = (column: 'date' | 'invoice_date' | 'paid_date' | 'project_name' | 'amount' | 'status' | 'submitter' | 'description') => {
         if (sortColumn === column) {
             setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
         } else {
@@ -2056,13 +2056,25 @@ export default function ReimburseClient() {
                 let comparison = 0;
                 switch (sortColumn) {
                     case 'date':
+                        // Submitted Date = created_at
+                        comparison = new Date((a as any).created_at || a.date).getTime() - new Date((b as any).created_at || b.date).getTime();
+                        break;
+                    case 'invoice_date':
+                        // Invoice Date = date
                         comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
                         break;
+                    case 'paid_date':
+                        const aDate = a.payment_date ? new Date(a.payment_date).getTime() : 0;
+                        const bDate = b.payment_date ? new Date(b.payment_date).getTime() : 0;
+                        comparison = aDate - bDate;
+                        break;
                     case 'project_name':
-                        comparison = (a.project?.project_name || '').localeCompare(b.project?.project_name || '');
+                        const aProj = a.project_name || a.project?.project_name || '';
+                        const bProj = b.project_name || b.project?.project_name || '';
+                        comparison = aProj.localeCompare(bProj);
                         break;
                     case 'amount':
-                        comparison = (a.amount || 0) - (b.amount || 0);
+                        comparison = (Number(a.amount) || 0) - (Number(b.amount) || 0);
                         break;
                     case 'status':
                         comparison = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
@@ -2440,20 +2452,20 @@ export default function ReimburseClient() {
                         {/* DESKTOP TABLE */}
                         <div className="hidden lg:block bg-white/40 dark:bg-white/[0.03] backdrop-blur-md rounded-3xl border border-white/50 dark:border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.02)] dark:shadow-none overflow-hidden">
                             <div className="overflow-x-auto scrollbar-hide">
-                                <table className="w-full text-left border-collapse table-fixed">
+                                <table className="w-full text-left border-collapse table-auto">
                                     <thead>
                                         <tr className="border-b border-neutral-100 dark:border-white/[0.06] bg-neutral-50/50 dark:bg-white/[0.02]">
-                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onClick={() => handleSort('date')}>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors hidden xl:table-cell" onClick={() => handleSort('date')}>
                                                 <div className="flex items-center gap-1 group/header">
-                                                    Date
+                                                    Timeline
                                                     {sortColumn === 'date' ? (
                                                         sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
                                                     ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
                                                 </div>
                                             </th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onClick={() => handleSort('project_name')}>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors min-w-[120px]" onClick={() => handleSort('project_name')}>
                                                 <div className="flex items-center gap-1 group/header">
-                                                    Project
+                                                    Project / RE
                                                     {sortColumn === 'project_name' ? (
                                                         sortDirection === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-blue-600" /> : <ChevronDown className="w-3.5 h-3.5 text-blue-600" />
                                                     ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
@@ -2483,7 +2495,7 @@ export default function ReimburseClient() {
                                                     ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
                                                 </div>
                                             </th>
-                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors" onClick={() => handleSort('submitter')}>
+                                            <th className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors hidden 2xl:table-cell" onClick={() => handleSort('submitter')}>
                                                 <div className="flex items-center gap-1 group/header">
                                                     Submitter
                                                     {sortColumn === 'submitter' ? (
@@ -2491,7 +2503,7 @@ export default function ReimburseClient() {
                                                     ) : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 opacity-0 group-hover/header:opacity-40 transition-all" />}
                                                 </div>
                                             </th>
-                                            <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 dark:text-neutral-500">Actions</th>
+                                            <th className="px-6 py-4 text-right text-[10px] font-bold text-neutral-400 dark:text-neutral-500 hidden 2xl:table-cell w-[140px]">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-neutral-50 dark:divide-white/[0.04]">
@@ -2537,28 +2549,64 @@ export default function ReimburseClient() {
                                                     onClick={() => setViewingItem(item)}
                                                     className="transition-all hover:bg-white/60 dark:hover:bg-white/[0.04] cursor-pointer group"
                                                 >
-                                                    <td className="px-6 py-4 text-xs font-medium text-neutral-500 tabular-nums">{format(new Date(item.date), "dd MMM yyyy")}</td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] font-bold bg-neutral-100 px-1.5 py-0.5 rounded w-fit text-neutral-500 mb-1">{item.project?.project_code || "N/A"}</span>
-                                                            <span className="text-xs font-medium text-neutral-900 truncate max-w-[120px]">{cleanEntityName(item.project?.project_name || "Unknown")}</span>
+                                                    <td className="px-6 py-4 whitespace-nowrap hidden xl:table-cell">
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex items-baseline gap-1 text-[11px] font-bold text-neutral-900 dark:text-white tabular-nums leading-none">
+                                                                {format(new Date(item.date), "dd MMM")}
+                                                                <span className="text-[8px] font-bold text-neutral-400 uppercase">
+                                                                    {format(new Date(item.created_at || item.date), "dd MMM") === format(new Date(item.date), "dd MMM") ? "(S/I)" : "(I)"}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-col gap-0.5">
+                                                                {format(new Date(item.created_at || item.date), "dd MMM") !== format(new Date(item.date), "dd MMM") && (
+                                                                    <div className="flex items-center gap-1 text-[9px] font-medium text-neutral-400 uppercase tabular-nums">
+                                                                        {format(new Date(item.created_at), "dd MMM")} <span className="text-[7.5px] font-bold opacity-70">(S)</span>
+                                                                    </div>
+                                                                )}
+                                                                {item.payment_date && (
+                                                                    <div className="flex items-center gap-1 text-[9px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tabular-nums">
+                                                                        {format(new Date(item.payment_date), "dd MMM")} <span className="text-[7.5px] font-bold opacity-70">(P)</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4">
-                                                        <div className="text-xs font-semibold text-neutral-900 mb-1">
-                                                            {item.items && item.items.length > 1
-                                                                ? `${item.items[0].name} + ${item.items.length - 1} more`
-                                                                : (item.items?.[0]?.name || item.description)}
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <div className="px-2 py-0.5 rounded-full text-[10px] font-bold w-fit bg-neutral-100 dark:bg-white/10 text-neutral-600 dark:text-neutral-400">
+                                                                {item.project?.project_code || "N/A"}
+                                                            </div>
+                                                            <span className="text-[10px] font-medium text-neutral-400 tabular-nums uppercase whitespace-nowrap">
+                                                                {formatStructuredId('RE', item.project_number, item.request_number, item.project_code)}
+                                                            </span>
                                                         </div>
-                                                        <span className="text-[10px] text-neutral-400 uppercase font-bold tracking-wider flex items-center gap-1">
-                                                            {item.category?.replace(/_/g, " ")}
-                                                            {item.subcategory && (
-                                                                <>
-                                                                    <span className="text-neutral-300">•</span>
-                                                                    <span className="text-neutral-500">{item.subcategory?.replace(/_/g, " ")}</span>
-                                                                </>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col gap-0.5 max-w-[180px]">
+                                                            <span className="font-bold text-neutral-900 dark:text-white text-[12px] line-clamp-2 leading-tight">
+                                                                {item.items && item.items.length > 0 ? (
+                                                                    item.items.length > 2 
+                                                                        ? `${item.items[0].name} +${item.items.length - 1} more` 
+                                                                        : item.items.map((i: any) => i.name).join(", ")
+                                                                ) : item.description}
+                                                            </span>
+                                                            {item.items && item.items.length > 0 && (
+                                                                <span className="text-[10px] text-neutral-400 font-medium">
+                                                                    {item.items.length} {item.items.length > 1 ? "items" : "item"}
+                                                                    {(item as any).vendor && <span className="text-neutral-300 mx-1">•</span>}
+                                                                    {(item as any).vendor && <span className="text-neutral-400">{cleanEntityName((item as any).vendor)}</span>}
+                                                                </span>
                                                             )}
-                                                        </span>
+                                                            <div className="flex items-center gap-1 mt-1 text-[9px] font-bold text-neutral-400 uppercase tracking-wider">
+                                                                <span className="text-neutral-500">{item.category?.replace(/_/g, " ")}</span>
+                                                                {item.subcategory && (
+                                                                    <>
+                                                                        <span className="text-neutral-300">•</span>
+                                                                        <span className="text-neutral-500">{item.subcategory?.replace(/_/g, " ")}</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
                                                         <div className="flex flex-col items-end">
@@ -2585,51 +2633,61 @@ export default function ReimburseClient() {
                                                             return <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border", theme.bg, theme.text, theme.border)}>{formatStatus(item.status)}</span>
                                                         })()}
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-xs font-bold text-neutral-900">{cleanEntityName(item.staff_name)}</span>
-                                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">{item.staff_role}</span>
-                                                        </div>
+                                                    <td className="px-6 py-4 hidden 2xl:table-cell max-w-[100px]">
+                                                        <span className="text-neutral-900 dark:text-white text-[12px] font-medium whitespace-normal leading-tight block">
+                                                            {item.staff_name}
+                                                        </span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button onClick={(e) => { e.stopPropagation(); setViewingItem(item); }} className="p-1.5 hover:bg-blue-50 text-neutral-400 hover:text-blue-600 rounded-full"><Eye className="w-4 h-4" /></button>
-
-                                                            {isTeamView && item.status === "PENDING" && (
+                                                    <td className="px-6 py-4 text-right hidden 2xl:table-cell">
+                                                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                                                            {isTeamView ? (
                                                                 <>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1.5 hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 rounded-full" title="Approve"><CheckCircle2 className="w-4 h-4" /></button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="p-1.5 hover:bg-orange-50 text-neutral-400 hover:text-orange-600 rounded-full" title="Request Revision"><AlertCircle className="w-4 h-4" /></button>
-                                                                    <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1.5 hover:bg-rose-50 text-neutral-400 hover:text-rose-600 rounded-full" title="Reject"><Ban className="w-4 h-4" /></button>
-                                                                </>
-                                                            )}
-
-                                                            {isTeamView && item.status === "APPROVED" && (
-                                                                <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1.5 hover:bg-emerald-50 text-neutral-400 hover:text-emerald-600 rounded-full" title="Pay"><CreditCard className="w-4 h-4" /></button>
-                                                            )}
-
-                                                            {/* Admin Delete Button - Visible in Team View for all statuses */}
-                                                            {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
-                                                                <button onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setDeletingItem(item);
-                                                                }} className="p-1.5 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded-full" title="Delete Request"><Trash2 className="w-4 h-4" /></button>
-                                                            )}
-
-                                                            {(!isTeamView || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (["DRAFT", "NEED_REVISION", "PENDING", "REJECTED"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
-                                                                <>
-                                                                    {(!isTeamView && (["DRAFT", "NEED_REVISION", "PENDING"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || ""))) && (
-                                                                        <button onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            const editPayload: any = { ...item };
-                                                                            // existingInvoices comes from API join
-                                                                            setEditingItem(editPayload);
-                                                                            setIsDrawerOpen(true);
-                                                                        }} className="p-1.5 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600 rounded-full"><Pencil className="w-4 h-4" /></button>
+                                                                    {item.status === 'PENDING' && (
+                                                                        <>
+                                                                            <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-full transition-all" title="Approve">
+                                                                                <CheckCircle2 className="w-4 h-4" strokeWidth={2} />
+                                                                            </button>
+                                                                            <button onClick={(e) => { e.stopPropagation(); setRevisingItem(item); }} className="p-1.5 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-full transition-all" title="Request Revision">
+                                                                                <AlertCircle className="w-4 h-4" strokeWidth={2} />
+                                                                            </button>
+                                                                            <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full transition-all" title="Reject">
+                                                                                <Ban className="w-4 h-4" strokeWidth={2} />
+                                                                            </button>
+                                                                        </>
                                                                     )}
-                                                                    <button onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setDeletingItem(item);
-                                                                    }} className="p-1.5 hover:bg-red-50 text-neutral-400 hover:text-red-600 rounded-full"><Trash2 className="w-4 h-4" /></button>
+                                                                    {item.status === 'APPROVED' && (
+                                                                        <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all" title="Mark as Paid">
+                                                                            <CreditCard className="w-4 h-4" strokeWidth={2} />
+                                                                        </button>
+                                                                    )}
+                                                                    {["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                                        <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full transition-all" title="Delete Request">
+                                                                            <Trash2 className="w-4 h-4" strokeWidth={2} />
+                                                                        </button>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    {(["DRAFT", "PENDING", "NEED_REVISION", "REJECTED"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
+                                                                        <>
+                                                                            {(["DRAFT", "PENDING", "NEED_REVISION"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
+                                                                                <button
+                                                                                    onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }}
+                                                                                    className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all"
+                                                                                    title="Edit Request"
+                                                                                >
+                                                                                    <Pencil className="w-4 h-4" strokeWidth={2} />
+                                                                                </button>
+                                                                            )}
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }}
+                                                                                className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full transition-all"
+                                                                                title="Delete Request"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" strokeWidth={2} />
+                                                                            </button>
+                                                                        </>
+                                                                    )}
                                                                 </>
                                                             )}
                                                         </div>
@@ -2640,7 +2698,7 @@ export default function ReimburseClient() {
                                     </tbody>
                                 </table>
                             </div>
-                        </div >
+                        </div>
 
                         <Pagination
                             currentPage={currentPage}
@@ -2964,7 +3022,7 @@ export default function ReimburseClient() {
                                                         e.stopPropagation();
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="p-1.5 hover:bg-blue-600 hover:text-white rounded-lg transition-all cursor-pointer outline-none bg-blue-100/50 text-blue-600"
+                                                    className="p-1.5 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-500 rounded-lg transition-all cursor-pointer outline-none bg-blue-100/50 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
                                                 >
                                                     {sortDirection === 'asc' ? <ArrowUpNarrowWide className="w-3.5 h-3.5" /> : <ArrowDownWideNarrow className="w-3.5 h-3.5" />}
                                                 </div>
@@ -2989,7 +3047,7 @@ export default function ReimburseClient() {
                                             "px-4 py-2 rounded-full text-[12px] font-bold transition-all border",
                                             selectedProjects.length === 0
                                                 ? "bg-blue-600 text-white border-blue-600 shadow-md"
-                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                                : "bg-white dark:bg-neutral-900 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-800"
                                         )}
                                     >
                                         All
@@ -3014,6 +3072,35 @@ export default function ReimburseClient() {
                                                 )}
                                             >
                                                 {p.projectCode}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Status Filter */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between px-2">
+                                    <h4 className="text-[11px] font-bold text-neutral-400 tracking-wider">Status</h4>
+                                    {statusFilter !== "ALL" && (
+                                        <button onClick={() => setStatusFilter("ALL")} className="text-[11px] font-bold text-blue-600 tracking-wider">Clear</button>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-2 px-2">
+                                    {["ALL", "PENDING", "APPROVED", "PAID", "REJECTED"].map((status) => {
+                                        const isSelected = statusFilter === status;
+                                        return (
+                                            <button
+                                                key={status}
+                                                onClick={() => setStatusFilter(status as any)}
+                                                className={clsx(
+                                                    "px-4 py-2 rounded-full text-[12px] font-bold transition-all border capitalize",
+                                                    isSelected
+                                                        ? "bg-blue-600 text-white border-blue-600 shadow-md"
+                                                        : "bg-neutral-50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border-neutral-100 dark:border-neutral-800 hover:bg-neutral-100"
+                                                )}
+                                            >
+                                                {status.toLowerCase()}
                                             </button>
                                         );
                                     })}
