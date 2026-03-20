@@ -335,17 +335,17 @@ export default function Sidebar({
       {!open && hoveredItem && (
         createPortal(
           <div
-            className="fixed left-[64px] z-[9999] pointer-events-none flex items-center"
+            className="fixed left-[88px] z-[9999] pointer-events-none flex items-center"
             style={{
               top: hoveredItem.top,
               transform: "translateY(-50%)"
             }}
           >
             {/* Triangle Arrow */}
-            <div className="absolute -left-1 w-2 h-2 bg-neutral-900 rotate-45" />
+            <div className="absolute -left-1 w-2 h-2 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-2xl border-l border-b border-white/20 dark:border-neutral-700/20 rotate-45" />
 
             {/* Badge */}
-            <div className="bg-neutral-900 text-white text-xs font-medium py-1.5 px-3 rounded-md shadow-xl animate-in fade-in zoom-in-95 duration-100">
+            <div className="bg-white/20 dark:bg-neutral-800/20 backdrop-blur-2xl text-neutral-900 dark:text-neutral-100 text-[11px] font-bold py-1.5 px-3 rounded-xl border border-white/40 dark:border-neutral-700/30 shadow-[0_8px_32px_rgba(0,0,0,0.12)] animate-in fade-in zoom-in-95 duration-200">
               {hoveredItem.label}
             </div>
           </div>,
