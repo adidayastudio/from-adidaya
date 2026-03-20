@@ -6,8 +6,9 @@ import {
     ChevronDown, CalendarRange, FileText, FileSpreadsheet, Clock, Loader2, X, Trash2, Eye
 } from "lucide-react";
 import { format, startOfMonth, startOfWeek, subMonths, isSameMonth, eachDayOfInterval, eachMonthOfInterval, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo, useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-hot-toast";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "@/components/flow/finance/FinanceSummaryCard";
@@ -205,6 +206,7 @@ export default function ReportsClient() {
     const [isExportManagerOpen, setIsExportManagerOpen] = useState(false);
     const [exportingIds, setExportingIds] = useState<Record<string, boolean>>({});
     const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+    const historyRef = useRef<HTMLDivElement>(null);
     const [generatedReports, setGeneratedReports] = useState<GeneratedReport[]>(() => {
         if (typeof window !== "undefined") {
             const saved = localStorage.getItem("finance_generated_reports");
@@ -432,7 +434,9 @@ export default function ReportsClient() {
                     sections: [
                         { title: "Project Breakdown", columns: projectColumns, data: projectRows },
                         { title: "Category Breakdown", columns: categoryColumns, data: categoryRows }
-                    ]
+                    ],
+                    trendData: statsToUse.trendData,
+                    categoryData: statsToUse.categoryData
                 })
             });
 
@@ -613,6 +617,32 @@ export default function ReportsClient() {
             };
 
             setGeneratedReports(prev => [newReport, ...prev]);
+            setIsGeneratorOpen(false);
+            
+            // Show success feedback
+            toast.success("Report generated successfully!", {
+                style: {
+                    background: 'rgba(255, 255, 255, 0.45)',
+                    backdropFilter: 'blur(24px)',
+                    WebkitBackdropFilter: 'blur(24px)',
+                    border: '1px solid rgba(255, 255, 255, 0.4)',
+                    padding: '14px 24px',
+                    color: '#0f172a',
+                    borderRadius: '24px',
+                    fontWeight: 600,
+                    boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.2)',
+                },
+                iconTheme: {
+                    primary: '#059669',
+                    secondary: '#fff',
+                },
+                duration: 4000,
+            });
+
+            // Scroll to history after a short delay
+            setTimeout(() => {
+                historyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 400);
         } finally {
             setIsGenerating(false);
         }
@@ -634,109 +664,7 @@ export default function ReportsClient() {
         }
     };
 
-    const handlePreviewReport = async (report: GeneratedReport) => {
-        // If it's excel, we just export it (no real "preview" browser-side for xlsx easily)
-        if (report.type === "excel") {
-            handleExportReport(report, "excel");
-            return;
-        }
 
-        const key = `${report.id}-preview`;
-        setExportingIds(prev => ({ ...prev, [key]: true }));
-        try {
-            // Check if blob URL is still valid (usually not after refresh)
-            let finalUrl = report.url;
-            let blob: Blob | null = null;
-
-            if (finalUrl.startsWith("blob:")) {
-                try {
-                    const res = await fetch(finalUrl);
-                    if (!res.ok) throw new Error("Expired");
-                } catch {
-                    // Blob expired, re-generate
-                    setIsGenerating(true);
-                    const timeframeLabel = report.timeframe;
-                    const histOptions = report.options as ReportOptions;
-                    
-                    const statsToUse = histOptions 
-                        ? calculateReportStats(records, histOptions)
-                        : stats;
-
-                    const projectLabel = report.project.split(" · ")[0];
-                    const generatedAt = format(new Date(), "dd MMM yyyy, HH:mm");
-
-                    const summaryCards = [
-                        { label: "Total Spending", value: statsToUse.totalExpenses, format: "currency" as const, color: "blue" as const },
-                        { label: "Purchasing", value: statsToUse.purchasingTotal, format: "currency" as const, color: "green" as const },
-                        { label: "Reimbursement", value: statsToUse.reimburseTotal, format: "currency" as const, color: "orange" as const },
-                        { label: "Active Projects", value: statsToUse.activeProjectsCount, format: "number" as const, color: "neutral" as const },
-                    ];
-
-                    const projectColumns = [
-                        { id: "project", label: "Project", align: "left" as const },
-                        { id: "amount", label: "Amount", align: "right" as const, format: "currency" as const },
-                        { id: "percentage", label: "%", align: "right" as const },
-                    ];
-
-                    const projectRows = statsToUse.projectData.map(p => ({
-                        project: `[${p.code}] ${p.name}`,
-                        amount: p.value,
-                        percentage: statsToUse.totalExpenses > 0 ? `${((p.value / statsToUse.totalExpenses) * 100).toFixed(1)}%` : "0%",
-                    }));
-
-                    const categoryColumns = [
-                        { id: "category", label: "Category", align: "left" as const },
-                        { id: "amount", label: "Amount", align: "right" as const, format: "currency" as const },
-                        { id: "percentage", label: "%", align: "right" as const },
-                    ];
-
-                    const categoryRows = statsToUse.categoryData.map(c => ({
-                        category: c.label,
-                        amount: c.value,
-                        percentage: statsToUse.totalExpenses > 0 ? `${((c.value / statsToUse.totalExpenses) * 100).toFixed(1)}%` : "0%",
-                    }));
-
-                    const response = await fetch("/api/export/pdf", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            meta: {
-                                projectCode: histOptions 
-                                    ? (histOptions.projectIds.includes("ALL") ? "ALL" : projects.find(p => histOptions.projectIds.includes(p.id))?.code || "RPT")
-                                    : (projectId === "ALL" ? "ALL" : projects.find(p => p.id === projectId)?.code || "RPT"),
-                                projectName: projectLabel,
-                                documentName: `Finance Report - ${timeframeLabel}`,
-                                periodText: `Period: ${timeframeLabel}`,
-                                generatedAt,
-                            },
-                            summary: summaryCards,
-                            sections: [
-                                { title: "Project Breakdown", columns: projectColumns, data: projectRows },
-                                { title: "Category Breakdown", columns: categoryColumns, data: categoryRows }
-                            ]
-                        })
-                    });
-
-                    if (!response.ok) throw new Error("Preview Generation Failed");
-                    
-                    blob = await response.blob();
-                    finalUrl = window.URL.createObjectURL(blob);
-                    
-                    // Update the report URL in state so subsequent previews work until next refresh
-                    setGeneratedReports(prev => prev.map(r => r.id === report.id ? { ...r, url: finalUrl } : r));
-                }
-            }
-
-            // Open in new tab
-            window.open(finalUrl, "_blank");
-
-        } catch (error) {
-            console.error("Preview Error:", error);
-        } finally {
-            setExportingIds(prev => ({ ...prev, [key]: false }));
-            setIsGenerating(false);
-        }
-    };
 
     const deleteReport = (id: string) => {
         setGeneratedReports(prev => prev.filter(r => r.id !== id));
@@ -1023,7 +951,7 @@ export default function ReportsClient() {
                         </div>
 
                         {/* GENERATED REPORTS HISTORY */}
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-4" ref={historyRef}>
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <h3 className="font-bold text-lg text-neutral-900 dark:text-white tracking-tight">Generated Reports</h3>
@@ -1088,19 +1016,6 @@ export default function ReportsClient() {
                                                      </div>
 
                                                      <div className="flex items-center gap-3 shrink-0">
-                                                        <div className="flex items-center gap-1.5">
-                                                             <button 
-                                                                 onClick={() => handlePreviewReport(report)}
-                                                                 disabled={exportingIds[`${report.id}-pdf`] || exportingIds[`${report.id}-preview`]}
-                                                                 className="w-10 h-10 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 rounded-xl text-neutral-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-neutral-700 transition-all shadow-sm active:scale-95 disabled:opacity-50"
-                                                                 title="Preview PDF"
-                                                             >
-                                                                 {exportingIds[`${report.id}-preview`] 
-                                                                     ? <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                                                                     : <Eye className="w-4.5 h-4.5" />
-                                                                 }
-                                                             </button>
-
                                                              <button 
                                                                  onClick={() => handleExportReport(report, "excel")}
                                                                  disabled={exportingIds[`${report.id}-excel`]}
@@ -1116,7 +1031,7 @@ export default function ReportsClient() {
                                                              <button 
                                                                  onClick={() => handleExportReport(report, "pdf")}
                                                                  disabled={exportingIds[`${report.id}-pdf`]}
-                                                                 className="group relative flex items-center gap-2 px-3.5 h-10 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl text-red-600 dark:text-red-400 transition-all border border-red-100 dark:border-red-500/20 active:scale-95 disabled:opacity-50"
+                                                                 className="group relative flex items-center gap-2 px-3.5 h-10 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-xl text-red-600 dark:text-red-400 transition-all border border-red-100 dark:border-red-500/20 active:scale-95 disabled:opacity-50 ml-1.5"
                                                              >
                                                                  {exportingIds[`${report.id}-pdf`]
                                                                      ? <Loader2 className="w-4 h-4 animate-spin text-red-500" />
@@ -1125,12 +1040,12 @@ export default function ReportsClient() {
                                                                  <span className="text-[11px] font-black uppercase tracking-widest">{exportingIds[`${report.id}-pdf`] ? 'Wait' : 'PDF'}</span>
                                                              </button>
                                                             
-                                                            <div className="ml-3 flex items-center gap-1 border-l border-neutral-100 dark:border-neutral-800 pl-3 min-w-[44px] justify-center">
+                                                            <div className="flex items-center gap-1 min-w-[44px] justify-center">
                                                                 {confirmDeleteId === report.id ? (
                                                                     <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-2 duration-300">
                                                                         <button 
                                                                             onClick={() => deleteReport(report.id)}
-                                                                            className="px-2.5 py-2 bg-rose-600 text-white text-[10px] font-bold rounded-lg shadow-sm hover:bg-rose-700 transition-colors"
+                                                                            className="px-2.5 py-2 bg-rose-600 text-white text-[10px] font-bold rounded-full shadow-sm hover:bg-rose-700 transition-colors"
                                                                         >
                                                                             Delete
                                                                         </button>
@@ -1144,7 +1059,7 @@ export default function ReportsClient() {
                                                                 ) : (
                                                                     <button 
                                                                         onClick={() => setConfirmDeleteId(report.id)}
-                                                                        className="p-2.5 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl text-neutral-400 hover:text-rose-600 transition-all active:scale-90 group"
+                                                                        className="p-2.5 bg-neutral-50 dark:bg-neutral-800/50 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full text-neutral-400 hover:text-rose-600 transition-all active:scale-90 group"
                                                                         title="Delete Report"
                                                                     >
                                                                         <Trash2 className="w-4.5 h-4.5 group-hover:rotate-12 transition-transform" />
@@ -1152,9 +1067,8 @@ export default function ReportsClient() {
                                                                 )}
                                                             </div>
                                                         </div>
-                                                     </div>
-                                                </motion.div>
-                                            ))}
+                                                 </motion.div>
+                                             ))}
                                         </div>
                                     )}
                                 </AnimatePresence>
@@ -1177,7 +1091,6 @@ export default function ReportsClient() {
             onClose={() => setIsExportManagerOpen(false)}
             reports={generatedReports}
             onExport={handleExportReport}
-            onPreview={handlePreviewReport} 
         />
     </>
     );

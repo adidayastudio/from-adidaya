@@ -12,7 +12,6 @@ interface ExportManagerDrawerProps {
     onClose: () => void;
     reports: GeneratedReport[];
     onExport: (report: GeneratedReport, format: "pdf" | "excel") => void;
-    onPreview: (report: GeneratedReport) => void;
 }
 
 export interface GeneratedReport {
@@ -26,7 +25,7 @@ export interface GeneratedReport {
     options?: ReportOptions;
 }
 
-export function ExportManagerDrawer({ isOpen, onClose, reports, onExport, onPreview }: ExportManagerDrawerProps) {
+export function ExportManagerDrawer({ isOpen, onClose, reports, onExport }: ExportManagerDrawerProps) {
     if (!isOpen) return null;
 
     return (
@@ -116,23 +115,16 @@ export function ExportManagerDrawer({ isOpen, onClose, reports, onExport, onPrev
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2 mt-4 ml-16">
-                                            <button
-                                                onClick={() => onPreview(report)}
-                                                className="w-10 h-10 flex items-center justify-center bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700/50 rounded-2xl text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-neutral-700 transition-all shadow-sm active:scale-95"
-                                                title="Preview PDF"
-                                            >
-                                                <Eye className="w-5 h-5" />
-                                            </button>
+                                        <div className="flex items-center gap-2 mt-4 ml-4">
                                             <button
                                                 onClick={() => onExport(report, "excel")}
-                                                className="px-5 h-10 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-2xl text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all active:scale-95"
+                                                className="px-6 h-10 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-full text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-600 hover:text-white transition-all active:scale-95 shadow-sm"
                                             >
                                                 XLSX
                                             </button>
                                             <button
                                                 onClick={() => onExport(report, "pdf")}
-                                                className="px-5 h-10 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-2xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white transition-all active:scale-95"
+                                                className="px-6 h-10 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-full text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white transition-all active:scale-95 shadow-sm"
                                             >
                                                 PDF
                                             </button>

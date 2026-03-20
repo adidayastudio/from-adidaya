@@ -10,6 +10,8 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
+        const { searchParams } = new URL(req.url);
+        const isPreview = searchParams.get("preview") === "1";
         const body = await req.json() as PdfExportPayload;
 
         // Use dynamic require to prevent Turbopack from complaining during static analysis
@@ -66,7 +68,9 @@ export async function POST(req: NextRequest) {
         return new NextResponse(pdfBuffer as any, {
             headers: {
                 'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${body.meta.documentName}.pdf"`,
+                'Content-Disposition': isPreview
+                    ? `inline; filename="${body.meta.documentName}.pdf"`
+                    : `attachment; filename="${body.meta.documentName}.pdf"`,
             },
         });
 
