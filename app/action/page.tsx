@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     List,
     Zap,
@@ -19,8 +19,11 @@ import {
     Check,
     UploadCloud,
     ChevronDown,
-    X
+    X,
+    RotateCcw,
+    CheckSquare
 } from "lucide-react";
+import { useHeader } from "@/components/providers/HeaderProvider";
 import FrostedGlassFilter from "@/components/layout/FrostedGlassFilter";
 import { fetchAllProjects, fetchProjectWBS } from "@/lib/api/projects";
 import { fetchAllActions, createAction } from "@/lib/api/actions";
@@ -50,8 +53,8 @@ const TABS = [
     { id: "all", label: "All", icon: List },
     { id: "urgent", label: "Urgent", icon: Zap },
     { id: "pending", label: "Pending", icon: Clock },
-    { id: "returned", label: "Returned", icon: Undo2 },
-    { id: "done", label: "Done", icon: CheckCircle2 },
+    { id: "returned", label: "Returned", icon: RotateCcw },
+    { id: "done", label: "Done", icon: CheckSquare },
 ];
 
 const EXTENDED_MOCK_ACTIONS: ActionItem[] = []; // Removed dummy data
@@ -127,7 +130,7 @@ const ActionDetailModal = ({
             />
 
             {/* Modal Content */}
-            <div className="relative w-full sm:w-[400px] sm:rounded-3xl bg-[#f8f9fa] rounded-t-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom flex flex-col max-h-[90dvh]">
+            <div className="relative w-full sm:w-[500px] sm:right-6 sm:bottom-6 sm:rounded-[56px] bg-[#f8f9fa] rounded-t-[56px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-right flex flex-col max-h-[90dvh]">
                 {/* Grabber for Mobile */}
                 <div className="w-full flex justify-center pt-3 pb-1 sm:hidden">
                     <div className="w-12 h-1.5 bg-black/10 rounded-full" />
@@ -338,6 +341,8 @@ import PageWrapper from "@/components/layout/PageWrapper";
 import TabSidebar, { TabItem } from "@/components/sidebar/TabSidebar";
 import clsx from "clsx";
 
+import ModuleMobileHeader from "@/components/layout/ModuleMobileHeader";
+
 export default function ActionPage() {
     const [actions, setActions] = useState<ActionItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -482,10 +487,42 @@ export default function ActionPage() {
         return tabMatch && projMatch && dateMatch;
     });
 
+    // HEADER INJECTION
+    useHeader({
+        hideGlobalActions: true,
+        right: (
+            <div className="flex items-center gap-1.5">
+                {/* Filter Bubble */}
+                <div className="h-9 w-9 flex items-center justify-center rounded-full border border-white/20 dark:border-neutral-700/20 bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl shadow-sm pointer-events-auto transition-all">
+                    <button
+                        onClick={() => setIsFilterOpen(true)}
+                        className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all relative"
+                    >
+                        <ListFilter size={16} strokeWidth={1.5} />
+                        {(filterProject !== "All" || filterDate !== "All") && (
+                            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-blue-500 rounded-full border border-white dark:border-neutral-800"></span>
+                        )}
+                    </button>
+                </div>
+                {/* Add Bubble - Blue, No Shadow */}
+                <div className="h-9 w-9 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600 dark:bg-blue-500 pointer-events-auto active:scale-95 transition-all">
+                    <button
+                        onClick={() => setIsAddOpen(true)}
+                        className="h-7 w-7 flex items-center justify-center rounded-full text-white hover:bg-white/10 transition-colors"
+                        title="Add Action"
+                    >
+                        <Plus size={18} strokeWidth={2.5} />
+                    </button>
+                </div>
+            </div>
+        )
+    }, [filterProject, filterDate]);
+
     return (
         <div className="bg-transparent p-0 transition-colors">
             <FrostedGlassFilter />
             <PageWrapper
+                fullWidth
                 sidebar={
                     <TabSidebar
                         items={TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={16} /> }))}
@@ -495,106 +532,78 @@ export default function ActionPage() {
                 }
                 isTransparent
                 header={
-                    <div className="hidden lg:block mb-0">
-                        <div className="flex items-center justify-between gap-4 pt-0">
-                            <div>
-                                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
-                                    Actions
-                                </h1>
-                                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                                    Track and manage critical approval workflows and required project interactions.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => setIsFilterOpen(true)}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all relative"
-                                >
-                                    <ListFilter size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                                    {(filterProject !== "All" || filterDate !== "All") && (
-                                        <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => setIsAddOpen(true)}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all"
-                                >
-                                    <Plus size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Desktop Tabs (Removed, moved to Sidebar) */}
-                        <div className="border-b border-neutral-200 dark:border-neutral-800 mt-5 hidden lg:block" />
-                    </div>
-                }
-            >
-                {/* Main Content Zone */}
-                <div 
-                    className="h-full space-y-6 animate-in fade-in duration-500"
-                    onScroll={handleScroll}
-                >
-                    {/* Mobile Header - Only visible on small screens */}
-                    <div className="lg:hidden">
-                        <div className="flex items-center justify-between mb-6">
-                            <h1 className="text-[32px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                    <div className="hidden md:block mb-0">
+                        {/* Desktop Title Section */}
+                        <div className="flex flex-col gap-1 mb-0">
+                            <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight leading-none">
                                 Actions
                             </h1>
-                            <div className="flex items-center gap-1 p-1 rounded-full bg-white dark:bg-neutral-900 shadow-sm border border-black/[0.03] dark:border-white/[0.05]">
-                                <button
-                                    onClick={() => setIsFilterOpen(true)}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all relative"
-                                >
-                                    <ListFilter size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                                    {(filterProject !== "All" || filterDate !== "All") && (
-                                        <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => setIsAddOpen(true)}
-                                    className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all"
-                                >
-                                    <Plus size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                                </button>
-                            </div>
                         </div>
-
-                        {/* Mobile Tabs (kept for mobile view) */}
-                        <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 mb-6">
+                        <div className="flex items-center gap-2 overflow-x-auto mt-6 pb-2 hide-scrollbar lg:hidden">
                             {TABS.map((tab) => {
                                 const isActive = activeTab === tab.id;
                                 const Icon = tab.icon;
-
                                 return (
                                     <button
                                         key={tab.id}
                                         onClick={() => setActiveTab(tab.id)}
                                         className={clsx(
-                                            "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors flex-shrink-0",
+                                            "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all flex-shrink-0 text-[13px] group",
                                             isActive
-                                                ? "text-neutral-900 dark:text-white font-semibold"
-                                                : "text-neutral-500 font-medium hover:text-neutral-700"
+                                                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.1] font-bold"
+                                                : "text-neutral-500 dark:text-neutral-400 font-medium hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200"
                                         )}
                                     >
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="activeTabBadgeActions"
-                                                className="absolute inset-0 rounded-full bg-white dark:bg-neutral-800 shadow-sm border border-black/[0.04] dark:border-white/[0.04]"
-                                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                                            />
-                                        )}
-                                        <div className="relative z-10 flex items-center gap-2">
-                                            <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-neutral-900 dark:text-white" : "opacity-60"} />
-                                            <span className="text-[14px]">{tab.label}</span>
-                                        </div>
+                                        <span className="relative z-10">
+                                            <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
+                                        </span>
+                                        <span className="relative z-10">{tab.label}</span>
                                     </button>
                                 );
                             })}
                         </div>
                     </div>
+                }
+            >
+                {/* Main Content Zone */}
+                <div
+                    className="space-y-6 animate-in fade-in duration-500 pb-20 md:px-0"
+                >
+                    {/* Mobile Header - With Premium Scrolling Minimize behavior */}
+                    <div className="md:hidden">
+                        <ModuleMobileHeader
+                            title="Actions"
+                            tabs={TABS}
+                            activeTabId={activeTab}
+                            onTabChange={setActiveTab}
+                            rightToolbar={
+                                <>
+                                    <div className="h-10 w-10 flex items-center justify-center rounded-full border border-black/[0.03] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-sm transition-all relative">
+                                        <button
+                                            onClick={() => setIsFilterOpen(true)}
+                                            className="p-2 rounded-full hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
+                                        >
+                                            <ListFilter size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                                            {(filterProject !== "All" || filterDate !== "All") && (
+                                                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-blue-500 rounded-full border border-white shadow-[0_0_0_2px_white] dark:shadow-[0_0_0_2px_#171717]"></span>
+                                            )}
+                                        </button>
+                                    </div>
+                                    <div className="h-10 w-10 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600 dark:bg-blue-500 shadow-sm">
+                                        <button
+                                            onClick={() => setIsAddOpen(true)}
+                                            className="p-2 rounded-full hover:bg-white/10 text-blue-50 transition-colors"
+                                        >
+                                            <Plus size={20} strokeWidth={2.5} />
+                                        </button>
+                                    </div>
+                                </>
+                            }
+                        />
+                    </div>
 
                     {/* ACTION LIST AREA */}
-                    <div className="relative z-0">
+                    <div className="relative z-0 px-5 lg:px-0">
                         {filteredActions.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                 {filteredActions.map((action) => (
@@ -627,9 +636,9 @@ export default function ActionPage() {
 
             {/* FILTER MODAL */}
             {isFilterOpen && (
-                <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
+                <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-end sm:justify-end">
                     <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setIsFilterOpen(false)} />
-                    <div className="relative w-full sm:w-[400px] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom flex flex-col max-h-[90dvh]">
+                    <div className="relative w-full sm:w-[500px] sm:right-6 sm:bottom-6 bg-white rounded-t-[56px] sm:rounded-[56px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-right flex flex-col max-h-[90dvh]">
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                             <h3 className="font-bold text-lg text-gray-900">Filter Actions</h3>
                             <button onClick={() => setIsFilterOpen(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">
@@ -688,9 +697,9 @@ export default function ActionPage() {
 
             {/* ADD ACTION MODAL */}
             {isAddOpen && (
-                <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
+                <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-end sm:justify-end">
                     <div className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity" onClick={() => setIsAddOpen(false)} />
-                    <div className="relative w-full sm:w-[400px] bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom flex flex-col max-h-[90dvh]">
+                    <div className="relative w-full sm:w-[500px] sm:right-6 sm:bottom-6 bg-white rounded-t-[56px] sm:rounded-[56px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-right flex flex-col max-h-[90dvh]">
                         <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                             <h3 className="font-bold text-lg text-gray-900">New Action</h3>
                             <button onClick={() => setIsAddOpen(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">

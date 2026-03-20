@@ -17,14 +17,13 @@ export function FinanceViewToggleUI({
 }) {
     // Staff only sees personal view, no toggle needed
     if (!canAccessTeam) return null;
-
     return (
-        <div className="relative inline-flex p-1 items-center h-10 rounded-full bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border border-white/40 dark:border-neutral-700/30 shadow-sm">
+        <div className="relative inline-flex p-1 items-center h-9 rounded-full bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20 shadow-sm transition-all duration-300 pointer-events-auto">
             {/* PERSONAL BUTTON */}
             <button
                 onClick={() => setViewMode("personal")}
                 className={clsx(
-                    "relative flex items-center h-full rounded-full text-[12px] font-medium tracking-tight transition-all duration-300 px-4 py-1.5",
+                    "relative flex items-center h-7 rounded-full text-[12px] font-medium tracking-tight transition-all duration-300 px-4",
                     viewMode === "personal" ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
                 )}
             >
@@ -63,7 +62,7 @@ export function FinanceViewToggleUI({
             <button
                 onClick={() => setViewMode("team")}
                 className={clsx(
-                    "relative flex items-center h-full rounded-full text-[12px] font-medium tracking-tight transition-all duration-300 px-4 py-1.5",
+                    "relative flex items-center h-7 rounded-full text-[12px] font-medium tracking-tight transition-all duration-300 px-4",
                     viewMode === "team" ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
                 )}
             >

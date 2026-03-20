@@ -171,7 +171,7 @@ export default function VibeHistoryPage() {
         hideGlobalActions: true,
         right: (
             <div className="flex items-center gap-2">
-                <div className="relative flex bg-neutral-100/50 dark:bg-black/40 p-1 rounded-full border border-neutral-200 dark:border-white/10 backdrop-blur-2xl shadow-sm mr-1 h-9 items-center pointer-events-auto">
+                <div className="relative flex bg-white/10 dark:bg-neutral-800/10 p-1 rounded-full border border-white/20 dark:border-neutral-700/20 backdrop-blur-xl shadow-sm mr-1 h-9 items-center pointer-events-auto">
                     <motion.div
                         className="absolute inset-1 rounded-full bg-white dark:bg-white/20 shadow-sm border border-white/50 dark:border-white/10"
                         initial={false}
@@ -201,10 +201,10 @@ export default function VibeHistoryPage() {
                     ))}
                 </div>
                 <button
-                    className="p-2 rounded-full bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 active:scale-95 transition-all text-neutral-700 dark:text-neutral-200 shadow-sm"
+                    className="h-9 w-9 flex items-center justify-center rounded-full bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20 active:scale-95 transition-all text-neutral-700 dark:text-neutral-200 shadow-sm"
                     title="Share"
                 >
-                    <Share2 className="w-5 h-5" strokeWidth={1.5} />
+                    <Share2 className="w-4 h-4" strokeWidth={1.5} />
                 </button>
             </div>
         )
@@ -231,9 +231,9 @@ export default function VibeHistoryPage() {
                     <div className="md:hidden flex items-center gap-4 mb-4 px-4 pt-4">
                         <button
                             onClick={() => router.back()}
-                            className="w-10 h-10 rounded-full bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 flex items-center justify-center text-neutral-500 dark:text-neutral-400"
+                            className="w-9 h-9 rounded-full bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20 flex items-center justify-center text-neutral-500 dark:text-neutral-400"
                         >
-                            <ChevronLeft size={20} strokeWidth={2.5} />
+                            <ChevronLeft size={18} strokeWidth={2.5} />
                         </button>
                         <h1 className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">History</h1>
                     </div>

@@ -108,6 +108,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const didInitRef = useRef(false);
     const profileFetchIdRef = useRef(0);
     const authRefreshInFlightRef = useRef<Promise<void> | null>(null);
+    const profileRef = useRef<UserProfile | null>(null);
+
+    // Keep profileRef in sync
+    useEffect(() => {
+        profileRef.current = profile;
+    }, [profile]);
 
     /* ----------------------------- Local actions ----------------------------- */
 
@@ -211,8 +217,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
             // - If no profile yet, set status loading.
             setProfileStatus((prev) => {
                 if (prev === "loading") return prev;
-                if (background) return prev; // don't change status on background refresh
-                return profile ? prev : "loading";
+                if (background) return prev; 
+                // We use the 'profile' variable here, but we can't easily avoid it 
+                // without a ref or functional update that has access to both status and profile.
+                // However, we can use a ref for the profile to avoid dependency.
+                return profileRef.current ? prev : "loading";
             });
 
             setError(null);
@@ -285,7 +294,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 setProfile((prev) => prev ?? buildOptimisticProfile(user));
             }
         },
-        [authStatus, user, profile, supabase, buildOptimisticProfile]
+        [authStatus, user, supabase, buildOptimisticProfile]
     );
 
     /* ----------------------------- Initialization ----------------------------- */
@@ -305,7 +314,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         void refreshAuth();
 
         // 3) Subscribe to auth changes (this is the PRIMARY source of truth)
-        const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
             const nextUser = session?.user ?? null;
 
             if (nextUser) {

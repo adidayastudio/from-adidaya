@@ -91,7 +91,7 @@ export default function FinanceMobileHeader({
                 <div className="flex items-center justify-between px-5 pointer-events-auto relative z-10 pb-2">
                     <div className={clsx(
                         "p-1 rounded-full shadow-sm border border-black/[0.03] dark:border-white/[0.05] transition-all duration-300",
-                        scrolled ? "bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md" : "bg-white dark:bg-neutral-900"
+                        scrolled ? "bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20" : "bg-white dark:bg-neutral-900"
                     )}>
                         <button
                             onClick={() => router.push(backUrl)}
@@ -111,7 +111,7 @@ export default function FinanceMobileHeader({
 
                     <div className={clsx(
                         "flex items-center gap-1 p-1 rounded-full shadow-sm border border-black/[0.03] dark:border-white/[0.05] transition-all duration-300",
-                        scrolled ? "bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md" : "bg-white dark:bg-neutral-900"
+                        scrolled ? "bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20" : "bg-white dark:bg-neutral-900"
                     )}>
                         {rightToolbar !== undefined ? rightToolbar : (
                             <>

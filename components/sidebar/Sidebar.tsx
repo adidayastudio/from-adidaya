@@ -172,7 +172,7 @@ export default function Sidebar({
         }}
       >
         <div className="md:p-0 h-full flex flex-col">
-          <div className="h-full flex flex-col bg-white/20 dark:bg-neutral-800/20 backdrop-blur-2xl rounded-[22px] border border-white/40 dark:border-neutral-700/30 shadow-sm overflow-hidden">
+          <div className="h-full flex flex-col bg-white/20 dark:bg-neutral-800/20 backdrop-blur-2xl rounded-[18px] border border-white/40 dark:border-neutral-700/30 shadow-sm overflow-hidden">
             {/* HEADER */}
             <div className={clsx(
               "h-[60px] flex items-center gap-3",

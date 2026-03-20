@@ -194,9 +194,9 @@ export default function ActivitySummaryPage() {
                 <div className="flex items-center justify-between pointer-events-auto w-full">
                     <button
                         onClick={() => router.back()}
-                        className="w-10 h-10 rounded-full bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white active:scale-95 transition-all shadow-sm"
+                        className="w-9 h-9 rounded-full bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20 flex items-center justify-center text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white active:scale-95 transition-all shadow-sm"
                     >
-                        <ChevronLeft size={20} strokeWidth={1.5} />
+                        <ChevronLeft size={18} strokeWidth={1.5} />
                     </button>
                     <div className="text-center">
                         <h1 className="text-[17px] font-medium text-neutral-900 dark:text-white">
@@ -209,7 +209,7 @@ export default function ActivitySummaryPage() {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleTodayClick}
-                            className="px-4 py-2 rounded-full bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 active:scale-95 transition-all text-[12px] font-medium text-neutral-700 dark:text-neutral-200 shadow-sm"
+                            className="h-9 px-4 rounded-full bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20 active:scale-95 transition-all text-[12px] font-medium text-neutral-700 dark:text-neutral-200 shadow-sm flex items-center justify-center"
                         >
                             Today
                         </button>
@@ -217,13 +217,13 @@ export default function ActivitySummaryPage() {
                             <button
                                 onClick={() => setMode(mode === "personal" ? "team" : "personal")}
                                 className={clsx(
-                                    "w-10 h-10 rounded-full flex items-center justify-center shadow-sm border active:scale-95 transition-all backdrop-blur-xl",
+                                    "w-9 h-9 rounded-full flex items-center justify-center shadow-sm border active:scale-95 transition-all backdrop-blur-xl",
                                     mode === "team"
                                         ? "bg-blue-500 border-blue-500 text-white"
-                                        : "bg-white/10 dark:bg-black/20 border-white/20 dark:border-white/5 text-neutral-500 dark:text-neutral-400"
+                                        : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 text-neutral-500 dark:text-neutral-400"
                                 )}
                             >
-                                {mode === "team" ? <Users className="w-4 h-4" strokeWidth={1.5} /> : <User className="w-4 h-4" strokeWidth={1.5} />}
+                                {mode === "team" ? <Users className="w-3.5 h-3.5" strokeWidth={1.5} /> : <User className="w-3.5 h-3.5" strokeWidth={1.5} />}
                             </button>
                         )}
                     </div>

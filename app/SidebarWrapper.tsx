@@ -64,7 +64,7 @@ function MainLayout({
             onWidthChange={setSidebarWidth}
           />
 
-          <div className="flex-1 flex flex-col min-w-0 h-full relative rounded-[22px] overflow-hidden">
+          <div className="flex-1 flex flex-col min-w-0 h-full relative rounded-[18px] overflow-hidden">
             <WebHeader
               onOpenNotifications={() => setIsNotifSheetOpen(true)}
             />

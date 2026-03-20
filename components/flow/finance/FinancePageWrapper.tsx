@@ -112,7 +112,7 @@ export default function FinancePageWrapper({
 
                 {/* 2. Expandable Search + Filter Bubble (Hidden on Overview and Reports) */}
                 {!isOverview && !isReports && (
-                    <div className="h-10 flex items-center bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border border-white/40 dark:border-neutral-700/30 rounded-full shadow-sm px-1.5 gap-1.5 min-w-[40px] overflow-hidden">
+                    <div className="h-9 flex items-center bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20 rounded-full shadow-sm px-1.5 gap-1.5 min-w-[36px]">
                         <motion.div
                             initial={false}
                             animate={{ width: (isSearchExpanded || searchTerm) ? "auto" : 32 }}
@@ -120,7 +120,7 @@ export default function FinancePageWrapper({
                         >
                             <div className={clsx(
                                 "flex items-center h-7 rounded-full transition-all duration-300 gap-1.5",
-                                (isSearchExpanded || searchTerm) ? "pl-2.5 pr-1.5 bg-white/40 dark:bg-neutral-700/40" : "w-8 justify-center hover:bg-white/40 dark:hover:bg-neutral-700/40 cursor-pointer"
+                                (isSearchExpanded || searchTerm) ? "pl-2.5 pr-1.5 bg-white/40 dark:bg-neutral-700/40" : "w-7 justify-center hover:bg-white/40 dark:hover:bg-neutral-700/40 cursor-pointer"
                             )}
                                 onClick={() => !isSearchExpanded && setIsSearchExpanded(true)}
                             >
@@ -136,17 +136,19 @@ export default function FinancePageWrapper({
                                         >
                                             <input
                                                 ref={searchInputRef}
+                                                autoFocus
                                                 type="text"
                                                 placeholder="Search..."
                                                 value={searchTerm}
-                                                onChange={(e) => window.dispatchEvent(new CustomEvent("finance:set-search-term", { detail: e.target.value }))}
-                                                onBlur={() => !searchTerm && setIsSearchExpanded(false)}
-                                                className="bg-transparent border-none outline-none text-[13px] font-medium text-neutral-700 dark:text-white placeholder:text-neutral-400/80 w-[70px] md:w-[100px]"
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Escape') setIsSearchExpanded(false);
+                                                }}
+                                                className="bg-transparent border-none outline-none text-[12px] font-medium text-neutral-800 dark:text-white placeholder:text-neutral-500 w-full"
                                             />
                                             <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    window.dispatchEvent(new CustomEvent("finance:set-search-term", { detail: "" }));
+                                                onClick={() => {
+                                                    setSearchTerm("");
                                                     setIsSearchExpanded(false);
                                                 }}
                                                 className="p-0.5 hover:bg-white/60 dark:hover:bg-neutral-600/50 rounded-full transition-colors shrink-0"
@@ -157,48 +159,48 @@ export default function FinancePageWrapper({
                                     )}
                                 </AnimatePresence>
                             </div>
+                            
+                            {!isSearchExpanded && (
+                                <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    whileHover={{ scale: 1.05 }}
+                                    onClick={() => window.dispatchEvent(new CustomEvent('toggle-filters'))}
+                                    className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/20 dark:hover:bg-neutral-700/60 transition-colors shrink-0"
+                                >
+                                    <ListFilter size={16} className="text-neutral-800 dark:text-neutral-200" strokeWidth={1.5} />
+                                </motion.button>
+                            )}
                         </motion.div>
-
-                        <motion.button
-                            whileTap={{ scale: 0.9 }}
-                            whileHover={{ scale: 1.05 }}
-                            onClick={() => window.dispatchEvent(new CustomEvent('toggle-filters'))}
-                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/40 dark:hover:bg-neutral-700/40 transition-colors shrink-0"
-                        >
-                            <ListFilter size={17} className="text-neutral-600 dark:text-neutral-300" strokeWidth={1.5} />
-                        </motion.button>
                     </div>
                 )}
 
                 {/* 3. Export Bubble (Hidden on Overview) */}
                 {!isOverview && (
-                    <div className="h-10 w-10 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border border-white/40 dark:border-neutral-700/30 rounded-full shadow-sm flex items-center justify-center">
+                    <div className="h-9 w-9 bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20 rounded-full shadow-sm flex items-center justify-center">
                          <motion.button
                             whileTap={{ scale: 0.9 }}
                             whileHover={{ scale: 1.05 }}
                             onClick={() => window.dispatchEvent(new CustomEvent('export-finance'))}
-                            className="w-full h-full flex items-center justify-center text-neutral-600 dark:text-neutral-300 transition-colors duration-200"
+                            className="h-7 w-7 flex items-center justify-center rounded-full text-neutral-800 dark:text-neutral-200 transition-colors duration-200 hover:bg-white/10 dark:hover:bg-neutral-800/40"
                             title="Export"
                         >
-                            <Download size={19} strokeWidth={1.5} />
+                            <Download size={16} strokeWidth={1.5} />
                         </motion.button>
                     </div>
                 )}
 
                 {/* 4. Glassy Blue Plus Bubble */}
-                {(
-                <div className="h-10 w-10 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600/85 dark:bg-blue-500/90 backdrop-blur-[20px]">
+                <div className="h-9 w-9 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600 dark:bg-blue-500 shadow-sm">
                     <motion.button
                         whileTap={{ scale: 0.9 }}
                         whileHover={{ scale: 1.05 }}
                         onClick={() => window.dispatchEvent(new CustomEvent('fab-action', { detail: { id: fabId } }))}
-                        className="w-full h-full flex items-center justify-center rounded-full text-blue-50 dark:text-blue-50 transition-all duration-200"
+                        className="h-7 w-7 flex items-center justify-center rounded-full text-blue-50 hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
                         title="New Request"
                     >
-                        <Plus size={22} strokeWidth={2.5} />
+                        <Plus size={18} strokeWidth={2.5} />
                     </motion.button>
                 </div>
-                )}
             </div>
         )
     }), [viewMode, canAccessTeam, fabId, pathname, isSearchExpanded, searchTerm, isOverview, isReports]);

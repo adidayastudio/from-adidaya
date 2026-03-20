@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
 import {
   List,
@@ -21,7 +21,9 @@ import {
   ListFilter,
   Check,
   UploadCloud,
-  ChevronDown
+  ChevronDown,
+  Search,
+  Filter
 } from "lucide-react";
 import { fetchAllProjects, fetchProjectWBS } from "@/lib/api/projects";
 import { fetchAllTasks, createTask } from "@/lib/api/tasks";
@@ -138,7 +140,7 @@ const TaskDetailModal = ({
       />
 
       {/* Bottom Floating Drawer */}
-      <div className="fixed bottom-2 left-2 right-2 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/40 rounded-[56px] shadow-2xl z-[100] animate-in slide-in-from-bottom duration-500 overflow-hidden flex flex-col max-h-[85vh]">
+      <div className="fixed z-[100] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px] bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/40 rounded-[56px] shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-right duration-500 overflow-hidden flex flex-col">
 
         {/* Subtle Blue Glow */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-blue-400/15 blur-[100px] pointer-events-none" />
@@ -387,6 +389,9 @@ const flattenWBS = (items: WBSItem[], level: number = 0): any[] => {
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import TabSidebar, { TabItem } from "@/components/sidebar/TabSidebar";
+import { useHeader } from "@/components/providers/HeaderProvider";
+
+import ModuleMobileHeader from "@/components/layout/ModuleMobileHeader";
 
 export default function TaskPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -432,6 +437,7 @@ export default function TaskPage() {
     loadData();
   }, []);
 
+
   // Filter & Add State
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -439,6 +445,56 @@ export default function TaskPage() {
   // Filter form state
   const [filterProject, setFilterProject] = useState<string>("All");
   const [filterDate, setFilterDate] = useState<string>("All");
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => { setIsMounted(true); }, []);
+
+  // Header Injection
+  useHeader(useMemo(() => ({
+    hideGlobalActions: true,
+    right: (
+      <div className="flex items-center gap-1.5">
+        <div className="h-9 w-9 flex items-center justify-center rounded-full border border-white/20 dark:border-neutral-700/20 bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl shadow-sm">
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => window.dispatchEvent(new CustomEvent('task:open-filter'))}
+            className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-white/20 dark:hover:bg-neutral-700/60 transition-colors relative"
+            title="Filter Tasks"
+          >
+            <ListFilter size={18} strokeWidth={1.5} className="text-neutral-800 dark:text-neutral-200" />
+            {(filterProject !== "All" || filterDate !== "All") && (
+              <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full border border-white dark:border-neutral-800"></span>
+            )}
+          </motion.button>
+        </div>
+        {/* 2. Glassy Blue Add Bubble */}
+        <div className="h-9 w-9 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600 dark:bg-blue-500 pointer-events-auto active:scale-95 transition-all">
+            <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={() => window.dispatchEvent(new CustomEvent('task:open-add'))}
+                className="h-7 w-7 flex items-center justify-center rounded-full text-white hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+                title="Add Task"
+            >
+                <Plus size={18} strokeWidth={2.5} />
+            </motion.button>
+        </div>
+      </div>
+    )
+  }), [filterProject, filterDate, isMounted]), [isMounted, filterProject, filterDate]);
+
+  // Event Listeners for Header Actions
+  useEffect(() => {
+    const handleOpenFilter = () => setIsFilterOpen(true);
+    const handleOpenAdd = () => setIsAddOpen(true);
+
+    window.addEventListener('task:open-filter', handleOpenFilter);
+    window.addEventListener('task:open-add', handleOpenAdd);
+
+    return () => {
+      window.removeEventListener('task:open-filter', handleOpenFilter);
+      window.removeEventListener('task:open-add', handleOpenAdd);
+    };
+  }, []);
 
   // Add form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -546,6 +602,7 @@ export default function TaskPage() {
   return (
     <div className="bg-transparent p-0 transition-colors">
       <PageWrapper
+        fullWidth
         sidebar={
           <TabSidebar
             items={TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={16} /> }))}
@@ -555,106 +612,84 @@ export default function TaskPage() {
         }
         isTransparent
         header={
-          <div className="hidden lg:block mb-0">
+          <div className="hidden md:block mb-0">
             <div className="flex items-center justify-between gap-4 pt-0">
-              <div>
-                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight">
+              <div className="flex flex-col gap-1 mb-0">
+                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight leading-none">
                   Tasks
                 </h1>
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
-                  Keep track of your responsibilities and deadlines across all active projects.
-                </p>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsFilterOpen(true)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all relative"
-                >
-                  <ListFilter size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                  {(filterProject !== "All" || filterDate !== "All") && (
-                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                  )}
-                </button>
-                <button
-                  onClick={() => setIsAddOpen(true)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-800 shadow-sm border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all"
-                >
-                  <Plus size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                </button>
+              <div className="flex items-center gap-2 font-medium">
+                {/* Global actions moved to useHeader */}
               </div>
             </div>
-            {/* Desktop Tabs Overlay Style (Removed, moved to Sidebar) */}
-            <div className="border-b border-neutral-200 dark:border-neutral-800 mt-5 hidden lg:block" />
+            {/* Desktop/iPad Pill Tabs - Hidden on Desktop (lg+) as requested because sidebar is present */}
+            <div className="flex items-center gap-2 overflow-x-auto mt-6 pb-2 hide-scrollbar lg:hidden">
+                {TABS.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  const Icon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={clsx(
+                        "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all flex-shrink-0 text-[13px] group",
+                        isActive
+                          ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.1] font-bold"
+                          : "text-neutral-500 dark:text-neutral-400 font-medium hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200"
+                      )}
+                    >
+                      <span className="relative z-10">
+                        <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
+                      </span>
+                      <span className="relative z-10">{tab.label}</span>
+                    </button>
+                  );
+                })}
+            </div>
           </div>
         }
 
       >
         {/* Main Content Zone */}
-        <div 
-          className="h-full space-y-6 animate-in fade-in duration-500"
-          onScroll={handleScroll}
+        <div
+          className="space-y-6 animate-in fade-in duration-500 md:px-0"
         >
-          {/* Mobile Header - Only visible on small screens */}
-          <div className="lg:hidden">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-[32px] font-bold text-neutral-900 dark:text-white tracking-tight">
-                Tasks
-              </h1>
-              <div className="flex items-center gap-1 p-1 rounded-full bg-white dark:bg-neutral-900 shadow-sm border border-black/[0.03] dark:border-white/[0.05]">
-                <button
-                  onClick={() => setIsFilterOpen(true)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all relative"
-                >
-                  <ListFilter size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                  {(filterProject !== "All" || filterDate !== "All") && (
-                    <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-                  )}
-                </button>
-                <button
-                  onClick={() => setIsAddOpen(true)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-95 transition-all"
-                >
-                  <Plus size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile Tabs (Kept for mobile view) */}
-            <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 mb-6">
-              {TABS.map((tab) => {
-                const isActive = activeTab === tab.id;
-                const Icon = tab.icon;
-
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={clsx(
-                      "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors flex-shrink-0",
-                      isActive
-                        ? "text-neutral-900 dark:text-white font-semibold"
-                        : "text-neutral-500 font-medium hover:text-neutral-700"
-                    )}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeTabBadgeTasks"
-                        className="absolute inset-0 rounded-full bg-white dark:bg-neutral-800 shadow-sm border border-black/[0.04] dark:border-white/[0.04]"
-                        transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                      />
-                    )}
-                    <div className="relative z-10 flex items-center gap-2">
-                      <Icon size={16} strokeWidth={isActive ? 2.5 : 2} />
-                      <span className="text-[14px]">{tab.label}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Mobile Header - With Premium Scrolling Minimize behavior */}
+          <div className="md:hidden">
+            <ModuleMobileHeader
+              title="Tasks"
+              tabs={TABS}
+              activeTabId={activeTab}
+              onTabChange={setActiveTab}
+              rightToolbar={
+                <>
+                  <div className="h-10 w-10 flex items-center justify-center rounded-full border border-black/[0.03] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-sm transition-all relative">
+                    <button
+                      onClick={() => setIsFilterOpen(true)}
+                      className="p-2 rounded-full hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                      <ListFilter size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
+                      {(filterProject !== "All" || filterDate !== "All") && (
+                        <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white shadow-[0_0_0_2px_white] dark:shadow-[0_0_0_2px_#171717]"></span>
+                      )}
+                    </button>
+                  </div>
+                  <div className="h-10 w-10 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600 dark:bg-blue-500 shadow-sm">
+                    <button
+                      onClick={() => setIsAddOpen(true)}
+                      className="p-2 rounded-full hover:bg-white/10 text-blue-50 transition-colors"
+                    >
+                      <Plus size={20} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                </>
+              }
+            />
           </div>
 
           {/* TASK LIST AREA */}
-          <div className="relative z-0">
+          <div className="relative z-0 px-5 lg:px-0">
             {filteredTasks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredTasks.map((task) => (
@@ -664,7 +699,7 @@ export default function TaskPage() {
                 ))}
               </div>
             ) : (
-              <div className="h-[40vh] flex flex-col items-center justify-center text-center">
+              <div className="h-[40vh] flex flex-col items-center justify-center text-center px-5">
                 <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-6">
                   <CheckCircle2 className="w-8 h-8 text-emerald-500 opacity-80" />
                 </div>
@@ -695,7 +730,7 @@ export default function TaskPage() {
           />
 
           {/* Bottom Floating Drawer */}
-          <div className="fixed bottom-2 left-2 right-2 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/40 rounded-[56px] shadow-2xl z-[100] animate-in slide-in-from-bottom duration-500 overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="fixed z-[100] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px] bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/40 rounded-[56px] shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-right duration-500 overflow-hidden flex flex-col">
 
             {/* Subtle Blue Glow */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-blue-400/15 blur-[100px] pointer-events-none" />
@@ -787,7 +822,7 @@ export default function TaskPage() {
           />
 
           {/* Bottom Floating Drawer */}
-          <div className="fixed bottom-2 left-2 right-2 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/40 rounded-[56px] shadow-2xl z-[100] animate-in slide-in-from-bottom duration-500 overflow-hidden flex flex-col max-h-[85vh]">
+          <div className="fixed z-[100] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px] bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/40 rounded-[56px] shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-right duration-500 overflow-hidden flex flex-col">
 
             {/* Subtle Blue Glow */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-blue-400/15 blur-[100px] pointer-events-none" />

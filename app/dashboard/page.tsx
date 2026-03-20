@@ -229,7 +229,7 @@ export default function DashboardPage() {
         isTransparent
         fullWidth
       >
-        <div className="w-full pb-32">
+        <div className="w-full pb-32 px-5 md:px-0">
           {/* NEW REVAMPED DASHBOARD (MOBILE) */}
           <div className="md:hidden">
             <DashboardHeader onOpenNotifications={() => setIsNotifSheetOpen(true)} />

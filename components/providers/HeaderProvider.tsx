@@ -106,6 +106,14 @@ export function useHeader(content?: HeaderContent, updateTrigger?: any) {
     });
   }, [content?.shellBackground, hasLeft, hasMiddle, hasRight, hideGlobalActions]);
 
+  // Stabilize updateTrigger - if it's an array (common case for dependencies), 
+  // we want to depend on its contents, not its reference.
+  const memoizedTrigger = useMemo(() => {
+    if (Array.isArray(updateTrigger)) return JSON.stringify(updateTrigger);
+    if (typeof updateTrigger === 'object') return JSON.stringify(updateTrigger);
+    return updateTrigger;
+  }, [updateTrigger]);
+
   useEffect(() => {
     if (content) {
       if ('setHeaderWithId' in actions) {
@@ -117,8 +125,7 @@ export function useHeader(content?: HeaderContent, updateTrigger?: any) {
     }
     // We intentionally exclude 'content' from dependencies because we use 'contentKey'
     // to decide when the content (shape/presence) has changed significantly.
-    // This prevents infinite loops if the consumer passes a new object on every render.
-  }, [contentKey, actions, instanceId, updateTrigger]);
+  }, [contentKey, actions, instanceId, memoizedTrigger]);
 
   return { headerContent, setHeader: actions.setHeader, clearHeader: actions.clearHeader };
 }

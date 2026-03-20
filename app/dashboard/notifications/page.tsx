@@ -58,7 +58,7 @@ const NotificationHeaderActions = memo(() => {
       <div 
         onClick={toggleExpand}
         className={clsx(
-            "flex h-9 items-center rounded-full border bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl shadow-sm transition-all duration-300 cursor-pointer overflow-hidden relative",
+            "flex h-9 items-center rounded-full border bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl shadow-sm transition-all duration-300 cursor-pointer relative",
             isExpanded ? "w-[240px]" : "w-9"
         )}
       >

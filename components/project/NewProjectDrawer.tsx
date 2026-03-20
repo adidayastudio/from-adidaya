@@ -214,21 +214,21 @@ export default function NewProjectDrawer({
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-end justify-center">
+                <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-end sm:justify-end">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/10 backdrop-blur-[4px]"
+                        className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
                     />
 
                     <motion.div
-                        initial={{ y: "100%" }}
-                        animate={{ y: 0 }}
-                        exit={{ y: "100%" }}
+                        initial={{ x: "100%" }}
+                        animate={{ x: 0 }}
+                        exit={{ x: "100%" }}
                         transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
-                        className="relative w-full max-w-xl mx-2 mb-2 bg-white/80 dark:bg-black/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[48px] shadow-2xl overflow-hidden border border-white/40 dark:border-white/10 flex flex-col max-h-[92dvh]"
+                        className="relative w-full sm:w-[500px] sm:right-6 sm:bottom-6 bg-white dark:bg-neutral-900 rounded-t-[56px] sm:rounded-[56px] shadow-2xl overflow-hidden animate-in slide-in-from-right flex flex-col max-h-[90dvh]"
                     >
                         <div className="pt-4 pb-2 flex justify-center shrink-0">
                             <div className="w-12 h-1.5 bg-neutral-200 dark:bg-neutral-800 rounded-full" />
