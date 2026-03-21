@@ -22,7 +22,6 @@ import {
     FileText,
 } from "lucide-react";
 import { DEPARTMENT_OPTIONS, SORT_OPTIONS } from "./types";
-import KnowledgeDrawer from "./KnowledgeDrawer";
 import { useUserContext } from "@/components/providers/UserProvider";
 
 const LEARN_TABS = [
@@ -30,11 +29,10 @@ const LEARN_TABS = [
     { id: "documentation", label: "Docs", href: "/frame/learn?category=documentation", icon: FileText },
     { id: "templates", label: "Templates", href: "/frame/learn?category=templates", icon: Layout },
     { id: "references", label: "References", href: "/frame/learn?category=references", icon: BookOpen },
-    { id: "favorites", label: "Favorites", href: "/frame/learn?view=favorite", icon: Star },
+    { id: "favorite", label: "Favorites", href: "/frame/learn?view=favorite", icon: Star },
 ];
 
 interface LearnMobileHeaderProps {
-    onAddKnowledge?: () => void;
     backUrl?: string;
     // View props
     view?: "list" | "grouped";
@@ -48,10 +46,13 @@ interface LearnMobileHeaderProps {
     selectedSort?: string;
     onSortChange?: (sort: any) => void;
     onAddKnowledgeSuccess?: (data: any) => void;
+    // New props to connect with wrapper
+    onOpenFilters?: () => void;
+    onOpenAddKnowledge?: () => void;
+    isFilterActive?: boolean;
 }
 
 export default function LearnMobileHeader({
-    onAddKnowledge,
     backUrl = "/dashboard",
     view = "list",
     onChangeView,
@@ -62,21 +63,22 @@ export default function LearnMobileHeader({
     typeOptions = [],
     selectedSort,
     onSortChange,
-    onAddKnowledgeSuccess
+    onAddKnowledgeSuccess,
+    onOpenFilters,
+    onOpenAddKnowledge,
+    isFilterActive = false
 }: LearnMobileHeaderProps) {
     const pathname = usePathname();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [scrolled, setScrolled] = useState(false);
-    const [showFilters, setShowFilters] = useState(false);
-    const [showAddKnowledge, setShowAddKnowledge] = useState(false);
     const { profile } = useUserContext();
 
     const canManage = !!(profile?.role && ["superadmin", "admin", "administrator", "supervisor", "hr", "pm", "management", "owner"].includes(profile.role.toLowerCase()));
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
-        const handleOpenAdd = () => setShowAddKnowledge(true);
+        const handleOpenAdd = () => onOpenAddKnowledge?.();
 
         window.addEventListener('scroll', handleScroll);
         window.addEventListener('ADIDAYA_OPEN_ADD_KNOWLEDGE', handleOpenAdd);
@@ -109,7 +111,6 @@ export default function LearnMobileHeader({
     };
 
     const isBrowseActive = true; // Always show filters and view toggle on mobile learn
-    const isFilterActive = selectedDepartment[0] !== "ALL" || selectedType[0] !== "ALL" || (selectedSort && selectedSort !== "name-asc");
 
 
     return (
@@ -167,7 +168,7 @@ export default function LearnMobileHeader({
                                     )}
                                 </button>
                                 <button
-                                    onClick={() => setShowFilters(true)}
+                                    onClick={() => onOpenFilters?.()}
                                     className={clsx(
                                         "w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all duration-200 pointer-events-auto relative",
                                         isFilterActive ? "text-blue-600 bg-blue-50/50" : "text-gray-700"
@@ -179,7 +180,7 @@ export default function LearnMobileHeader({
                         )}
                         {canManage && (
                             <button
-                                onClick={() => setShowAddKnowledge(true)}
+                                onClick={() => onOpenAddKnowledge?.()}
                                 className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 active:scale-90 transition-all duration-200 pointer-events-auto"
                             >
                                 <Plus className="w-5 h-5 text-gray-700" strokeWidth={1.5} />
@@ -189,195 +190,7 @@ export default function LearnMobileHeader({
                 </div>
             </div>
 
-            {/* Filter Bottom Sheet / Modal */}
-            {showFilters && (
-                <div className="fixed inset-0 z-[100] flex items-end justify-center">
-                    <div
-                        className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity"
-                        onClick={() => setShowFilters(false)}
-                    />
-                    <div className="relative w-full mx-2 mb-2 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[56px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border border-white/40 p-8 flex flex-col gap-8 max-h-[85dvh]">
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-2">
-                            <h3 className="text-[22px] font-bold text-neutral-900 tracking-tight">Filters</h3>
-                            <div className="flex items-center gap-3">
-                                {isFilterActive && (
-                                    <button
-                                        onClick={() => {
-                                            onDepartmentChange?.("ALL");
-                                            onTypeChange?.("ALL");
-                                            onSortChange?.("name-asc");
-                                        }}
-                                        className="text-[13px] font-medium text-blue-600 hover:text-blue-700 active:scale-95 transition-all outline-none"
-                                    >
-                                        Clear Filters
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => setShowFilters(false)}
-                                    className="w-10 h-10 bg-white/50 backdrop-blur-xl border border-black/5 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-                                >
-                                    <X size={20} className="text-neutral-500" strokeWidth={1.5} />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-8 overflow-y-auto pb-4 pr-1 scrollbar-hide">
-                            {/* Department */}
-                            <div className="space-y-4">
-                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Department</h4>
-                                <div className="flex flex-wrap gap-2.5">
-                                    {DEPARTMENT_OPTIONS.map((opt: any) => {
-                                        const isSelected = selectedDepartment.includes(opt.value);
-                                        return (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => onDepartmentChange?.(opt.value)}
-                                                className={clsx(
-                                                    "px-4 py-2 rounded-full text-[13px] transition-all border",
-                                                    isSelected
-                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
-                                                        : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04] hover:bg-neutral-100"
-                                                )}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Type */}
-                            <div className="space-y-4">
-                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Knowledge Type</h4>
-                                <div className="flex flex-wrap gap-2.5">
-                                    {typeOptions.map((opt: any) => {
-                                        const isSelected = selectedType.includes(opt.value);
-                                        return (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => onTypeChange?.(opt.value)}
-                                                className={clsx(
-                                                    "px-4 py-2 rounded-full text-[13px] transition-all border",
-                                                    isSelected
-                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
-                                                        : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04] hover:bg-neutral-100"
-                                                )}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Sort By */}
-                            <div className="space-y-4">
-                                <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Sort By</h4>
-                                <div className="px-1">
-                                    <div className="flex items-center justify-between w-full">
-                                        {/* Left Side: Main Sort Categories */}
-                                        <div className="flex items-center gap-2">
-                                            <button
-                                                onClick={() => onSortChange?.((selectedSort || 'date-desc').startsWith('name') ? selectedSort! : 'name-asc')}
-                                                className={clsx(
-                                                    "px-5 py-2.5 rounded-full text-[13px] transition-all border shrink-0",
-                                                    (selectedSort || 'date-desc').startsWith('name')
-                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-md shadow-[#001F3F]/10 font-medium"
-                                                        : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04]"
-                                                )}
-                                            >
-                                                Name
-                                            </button>
-                                            <button
-                                                onClick={() => onSortChange?.((selectedSort || 'date-desc').startsWith('date') ? selectedSort! : 'date-desc')}
-                                                className={clsx(
-                                                    "px-5 py-2.5 rounded-full text-[13px] transition-all border shrink-0",
-                                                    (selectedSort || 'date-desc').startsWith('date')
-                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-md shadow-[#001F3F]/10 font-medium"
-                                                        : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04]"
-                                                )}
-                                            >
-                                                Date
-                                            </button>
-                                        </div>
-
-                                        {/* Right Side: Sub Categories based on selection */}
-                                        <div className="flex items-center shrink-0">
-                                            {(selectedSort || 'date-desc').startsWith('name') && (
-                                                <div className="flex items-center gap-1.5 p-1 bg-black/[0.02] rounded-full border border-black/[0.04]">
-                                                    <button
-                                                        onClick={() => onSortChange?.('name-asc')}
-                                                        className={clsx(
-                                                            "px-4 py-1.5 rounded-full text-[12px] font-medium transition-all",
-                                                            selectedSort === 'name-asc' ? "bg-white text-[#001F3F]/80 shadow-sm border border-black/5" : "text-neutral-500 hover:text-neutral-700"
-                                                        )}
-                                                    >
-                                                        A-Z
-                                                    </button>
-                                                    <button
-                                                        onClick={() => onSortChange?.('name-desc')}
-                                                        className={clsx(
-                                                            "px-4 py-1.5 rounded-full text-[12px] font-medium transition-all",
-                                                            selectedSort === 'name-desc' ? "bg-white text-[#001F3F]/80 shadow-sm border border-black/5" : "text-neutral-500 hover:text-neutral-700"
-                                                        )}
-                                                    >
-                                                        Z-A
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                            {(selectedSort || 'date-desc').startsWith('date') && (
-                                                <div className="flex items-center gap-1.5 p-1 bg-black/[0.02] rounded-full border border-black/[0.04]">
-                                                    <button
-                                                        onClick={() => onSortChange?.('date-desc')}
-                                                        className={clsx(
-                                                            "px-4 py-1.5 rounded-full text-[12px] font-medium transition-all",
-                                                            selectedSort === 'date-desc' ? "bg-white text-[#001F3F]/80 shadow-sm border border-black/5" : "text-neutral-500 hover:text-neutral-700"
-                                                        )}
-                                                    >
-                                                        Newest
-                                                    </button>
-                                                    <button
-                                                        onClick={() => onSortChange?.('date-asc')}
-                                                        className={clsx(
-                                                            "px-4 py-1.5 rounded-full text-[12px] font-medium transition-all",
-                                                            selectedSort === 'date-asc' ? "bg-white text-[#001F3F]/80 shadow-sm border border-black/5" : "text-neutral-500 hover:text-neutral-700"
-                                                        )}
-                                                    >
-                                                        Oldest
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-
-                        {/* Footer Action */}
-                        <div className="pt-2">
-                            <button
-                                onClick={() => setShowFilters(false)}
-                                className="w-full bg-[#001F3F] backdrop-blur-xl backdrop-saturate-[1.5] text-white py-4 rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-[#001F3F]/30 mb-1 border border-white/20 ring-1 ring-inset ring-white/10"
-                            >
-                                Apply Filters
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Add Knowledge Drawer */}
-            <KnowledgeDrawer
-                isOpen={showAddKnowledge}
-                onClose={() => setShowAddKnowledge(false)}
-                onSuccess={(data) => {
-                    if (onAddKnowledgeSuccess) onAddKnowledgeSuccess(data);
-                    setShowAddKnowledge(false);
-                }}
-            />
+            {/* Filters and Drawer are now handled by LearnPageWrapper for consistency */}
 
             {/* Large Scrollable Title Area */}
             <div className="lg:hidden pt-20 pb-2">

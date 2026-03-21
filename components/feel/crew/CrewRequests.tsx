@@ -723,34 +723,96 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
             )}
 
             {showDrawer && (
-                <div className="fixed inset-0 z-50 flex justify-end">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDrawer(false)} />
-                    <div className="relative w-full max-w-md bg-white h-full shadow-xl animate-in slide-in-from-right overflow-y-auto">
-                        <div className="sticky top-0 bg-white z-10 flex items-center justify-between p-4 border-b">
-                            <h2 className="text-lg font-bold text-neutral-900">New Request</h2>
-                            <button onClick={() => setShowDrawer(false)} className="p-2 rounded-full hover:bg-neutral-100"><X className="w-5 h-5 text-neutral-500" /></button>
-                        </div>
-                        <div className="p-4 space-y-4 pb-24">
-                            <div>
-                                <label className="block text-sm font-medium text-neutral-700 mb-2">Request Type *</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {(["LEAVE", "KASBON", "REIMBURSE"] as RequestType[]).map(t => <button key={t} onClick={() => setFormType(t)} className={clsx("py-3 px-4 rounded-xl border text-sm font-medium transition-all", formType === t ? (t === "LEAVE" ? "bg-purple-100 border-purple-300 text-purple-700" : t === "KASBON" ? "bg-red-100 border-red-300 text-red-700" : "bg-blue-100 border-blue-300 text-blue-700") : "bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300")}>{t === "LEAVE" ? "Leave" : t === "KASBON" ? "Cash Adv" : "Reimburse"}</button>)}
-                                </div>
+                <div className="fixed inset-0 z-[100] isolate">
+                    <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={() => setShowDrawer(false)} />
+                    <div className={clsx(
+                        "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] overflow-hidden flex flex-col",
+                        "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]",
+                        showDrawer ? "translate-y-0 sm:translate-x-0 opacity-100 scale-100" : "translate-y-full sm:translate-y-0 sm:translate-x-full opacity-0 sm:scale-95"
+                    )}>
+                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">{editingId ? "Edit Request" : "New Request"}</h2>
+                                <button
+                                    onClick={() => setShowDrawer(false)}
+                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                                </button>
                             </div>
-                            <Select label="Project *" value={formProject} onChange={v => { setFormProject(v); setFormCrew(""); }} options={projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))} placeholder="Select project" />
-                            <Select label="Crew *" value={formCrew} onChange={setFormCrew} disabled={!formProject} options={crew.filter(c => {
-                                if (!formProject || !c.projectCode) return true;
-                                const p1 = formProject.toLowerCase();
-                                const p2 = c.projectCode.toLowerCase();
-                                return p1.includes(p2) || p2.includes(p1);
-                            }).map(c => ({ value: c.id, label: `${c.name} (${CREW_ROLE_LABELS[c.role]?.en || c.role})` }))} placeholder={formProject ? "Select crew" : "Select project first"} />
-                            {formType === "LEAVE" && <><FormInput label="Start Date *" type="date" value={formStartDate} onChange={setFormStartDate} /><FormInput label="End Date *" type="date" value={formEndDate} onChange={setFormEndDate} /></>}
-                            {(formType === "KASBON" || formType === "REIMBURSE") && <FormInput label="Amount *" type="number" value={formAmount} onChange={setFormAmount} placeholder="e.g. 500000" />}
-                            <div><label className="block text-sm font-medium text-neutral-700 mb-1.5">{formType === "REIMBURSE" ? "Description *" : "Reason *"}</label><textarea value={formReason} onChange={e => setFormReason(e.target.value)} className={inputClass} rows={3} placeholder={formType === "REIMBURSE" ? "Describe the expense..." : "Explain the reason..."} /></div>
-                            {formType === "REIMBURSE" && <div><label className="block text-sm font-medium text-neutral-700 mb-1.5">Proof (Receipt/Invoice) *</label><div className="border-2 border-dashed border-neutral-200 rounded-xl p-6 text-center hover:border-neutral-300 cursor-pointer transition-colors"><Upload className="w-8 h-8 mx-auto text-neutral-400 mb-2" /><p className="text-sm text-neutral-500">Click to upload</p><p className="text-xs text-neutral-400 mt-1">JPG, PNG, PDF up to 5MB</p></div></div>}
                         </div>
-                        <div className="fixed bottom-0 right-0 w-full max-w-md p-4 border-t bg-white">
-                            <button onClick={handleSubmit} className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">Submit Request</button>
+
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32">
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-500 mb-2 uppercase tracking-wider text-[10px] font-bold">Request Type *</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {(["LEAVE", "KASBON", "REIMBURSE"] as RequestType[]).map(t => (
+                                            <button
+                                                key={t}
+                                                onClick={() => setFormType(t)}
+                                                className={clsx(
+                                                    "py-3 px-2 rounded-2xl border text-[11px] font-bold uppercase transition-all flex flex-col items-center gap-1.5",
+                                                    formType === t 
+                                                        ? (t === "LEAVE" ? "bg-purple-500 text-white border-purple-400 shadow-lg shadow-purple-500/20" : t === "KASBON" ? "bg-red-500 text-white border-red-400 shadow-lg shadow-red-500/20" : "bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/20") 
+                                                        : "bg-white/50 dark:bg-neutral-800/50 border-black/5 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 transition-colors"
+                                                )}
+                                            >
+                                                {t === "LEAVE" ? "Leave" : t === "KASBON" ? "Cash" : "Reimb"}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <Select label="Project *" value={formProject} onChange={v => { setFormProject(v); setFormCrew(""); }} options={projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))} placeholder="Select project" accentColor="blue" searchable={true} />
+                                <Select 
+                                    label="Crew *" 
+                                    value={formCrew} 
+                                    onChange={setFormCrew} 
+                                    disabled={!formProject} 
+                                    options={crew.filter(c => {
+                                        if (!formProject || !c.projectCode) return true;
+                                        const p1 = formProject.toLowerCase();
+                                        const p2 = c.projectCode.toLowerCase();
+                                        return p1.includes(p2) || p2.includes(p1);
+                                    }).map(c => ({ value: c.id, label: `${c.name} (${CREW_ROLE_LABELS[c.role]?.en || c.role})` }))} 
+                                    placeholder={formProject ? "Select crew member" : "Select project first"}
+                                    accentColor="blue"
+                                    searchable={true}
+                                />
+                                {formType === "LEAVE" && (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormInput label="Start Date *" type="date" value={formStartDate} onChange={setFormStartDate} />
+                                        <FormInput label="End Date *" type="date" value={formEndDate} onChange={setFormEndDate} />
+                                    </div>
+                                )}
+                                {(formType === "KASBON" || formType === "REIMBURSE") && (
+                                    <FormInput label="Amount *" type="number" value={formAmount} onChange={setFormAmount} placeholder="e.g. 500000" />
+                                )}
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-500 mb-1.5 uppercase tracking-wider text-[10px] font-bold">{formType === "REIMBURSE" ? "Description *" : "Reason *"}</label>
+                                    <textarea 
+                                        value={formReason} 
+                                        onChange={e => setFormReason(e.target.value)} 
+                                        className={clsx(inputClass, "min-h-[100px] resize-none")} 
+                                        placeholder={formType === "REIMBURSE" ? "Describe the expense details..." : "Provide a detailed reason for the request..."} 
+                                    />
+                                </div>
+                                {formType === "REIMBURSE" && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-neutral-500 mb-1.5 uppercase tracking-wider text-[10px] font-bold">Proof of Transaction *</label>
+                                        <div className="border-2 border-dashed border-black/10 dark:border-white/10 rounded-3xl p-8 text-center hover:border-blue-400 cursor-pointer transition-all group bg-white/30 dark:bg-neutral-800/30 backdrop-blur-sm">
+                                            <Upload className="w-10 h-10 mx-auto text-neutral-400 group-hover:text-blue-500 mb-3 transition-colors" strokeWidth={1.5} />
+                                            <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Click or drag to upload</p>
+                                            <p className="text-xs text-neutral-400 mt-1 font-medium">JPG, PNG, PDF up to 5MB</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="absolute bottom-8 left-8 right-8">
+                            <button onClick={handleSubmit} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] flex items-center justify-center gap-2">
+                                <span>{editingId ? "Update Request" : "Submit Request"}</span>
+                            </button>
                         </div>
                     </div>
                 </div>

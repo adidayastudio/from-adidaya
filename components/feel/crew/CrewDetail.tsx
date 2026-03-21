@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import clsx from "clsx";
 import { ArrowLeft, Phone, Mail, Building2, CreditCard, Edit2, Calendar, FileText, Download, Clock, MapPin, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
+import { Select } from "@/shared/ui/primitives/select/select";
 import {
     fetchCrewMemberById,
     fetchCrewProjectHistory,
@@ -11,6 +12,8 @@ import {
     CrewMember,
     CrewProjectHistory,
 } from "@/lib/api/crew";
+import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
+import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 interface CrewDetailProps {
@@ -39,6 +42,7 @@ const InputField = ({ label, value, onChange, type = "text" }: { label: string, 
 
 export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
     const [crew, setCrew] = useState<CrewMember | null>(null);
+    const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
     const [projectHistory, setProjectHistory] = useState<CrewProjectHistory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -52,13 +56,21 @@ export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
         const loadData = async () => {
             setIsLoading(true);
             try {
-                const [memberData, historyData] = await Promise.all([
+                const wsId = await fetchDefaultWorkspaceId();
+                const [memberData, historyData, projectsData] = await Promise.all([
                     fetchCrewMemberById(crewId),
-                    fetchCrewProjectHistory(crewId)
+                    fetchCrewProjectHistory(crewId),
+                    fetchProjectsByWorkspace(wsId || undefined)
                 ]);
                 setCrew(memberData);
                 setFormData(memberData);
                 setProjectHistory(historyData);
+                if (projectsData) {
+                    setProjects(projectsData.map((p: any) => ({
+                        code: `${p.project_number}-${p.project_code}`,
+                        name: p.project_name
+                    })));
+                }
             } catch (err) {
                 console.error("Failed to load crew detail:", err);
             } finally {
@@ -237,7 +249,18 @@ export function CrewDetail({ crewId, onBack }: CrewDetailProps) {
                     <div className="bg-white rounded-xl border border-neutral-200 p-5 space-y-4">
                         <h3 className="font-semibold text-neutral-900 flex items-center gap-2"><MapPin className="w-4 h-4 text-orange-500" /> Current Project</h3>
                         {isEditing ? (
-                            <InputField label="Project Code" value={formData.currentProjectCode || ""} onChange={(v) => setFormData({ ...formData, currentProjectCode: v })} />
+                            <Select 
+                                label="Project"
+                                value={formData.currentProjectCode || ""}
+                                onChange={(v) => setFormData({ ...formData, currentProjectCode: v })}
+                                options={[
+                                    { value: "", label: "No Project (Unassigned)" },
+                                    ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))
+                                ]}
+                                placeholder="Assign to project"
+                                accentColor="blue"
+                                labelClassName="text-xs text-neutral-500 mb-1 block capitalize font-normal tracking-normal"
+                            />
                         ) : (
                             crew.currentProjectCode ? (
                                 <div className="flex items-center gap-3">

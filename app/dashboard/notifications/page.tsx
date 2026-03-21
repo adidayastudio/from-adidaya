@@ -63,7 +63,7 @@ const NotificationHeaderActions = memo(() => {
         )}
       >
         <div className="w-9 h-9 flex items-center justify-center shrink-0">
-          <Search size={16} strokeWidth={1.5} className="text-neutral-800 dark:text-neutral-200" />
+          <Search size={18} strokeWidth={1.5} className="text-neutral-800 dark:text-neutral-200" />
         </div>
         
         <div className="flex-1 h-full min-w-0 flex items-center">
@@ -83,14 +83,14 @@ const NotificationHeaderActions = memo(() => {
             onClick={clearSearch}
             className="w-8 h-8 flex items-center justify-center hover:bg-black/10 dark:hover:bg-white/20 rounded-full transition-colors mr-1 shrink-0 group/btn"
           >
-            <X size={15} strokeWidth={2} className="text-neutral-500 group-hover/btn:text-neutral-800 dark:group-hover/btn:text-white transition-colors" />
+            <X size={16} strokeWidth={2} className="text-neutral-500 group-hover/btn:text-neutral-800 dark:group-hover/btn:text-white transition-colors" />
           </button>
         )}
       </div>
 
       {/* Filter Bubble */}
       <button className="h-9 w-9 flex items-center justify-center rounded-full border bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl hover:bg-white/20 dark:hover:bg-neutral-700/40 text-neutral-800 dark:text-neutral-200 transition-all active:scale-95 shadow-sm">
-        <ListFilter size={16} strokeWidth={1.5} />
+        <ListFilter size={18} strokeWidth={1.5} />
       </button>
     </div>
   );

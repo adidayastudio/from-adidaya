@@ -1,8 +1,8 @@
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
 /**
- * Supabase Client
- * Uses environment variables for connection
+ * Supabase Client (Browser)
+ * Uses @supabase/ssr to ensure session synchronization
  */
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -12,4 +12,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
     console.warn("⚠️ Missing Supabase environment variables - functionality may be limited");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey);

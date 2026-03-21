@@ -124,7 +124,6 @@ export default function FrameLearnPage() {
     <LearnPageWrapper
       breadcrumbItems={[{ label: "Frame" }, { label: "Learn" }]}
       header={header}
-      onAddKnowledge={() => { }} // Handled by mobile header internal state
       onAddKnowledgeSuccess={fetchItems}
       view={view}
       onChangeView={setView}
@@ -135,6 +134,9 @@ export default function FrameLearnPage() {
       typeOptions={typeOptions}
       selectedSort={sortOption}
       onSortChange={(val) => setSortOption(val as SortOptionValue)}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      activeQuickView={activeQuickView}
       sidebar={
         <LearnSidebar
           activeView={activeQuickView}
@@ -144,7 +146,7 @@ export default function FrameLearnPage() {
     >
       {loading ? (
         <div className="flex items-center justify-center p-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#001F3F]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       ) : (
         <LearnContent

@@ -202,7 +202,7 @@ export default function WebHeader({
 
         {/* Standard Global Icons - Individual Bubbles */}
         {!hideDefaults && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {/* Notification Bubble */}
             <div className={clsx(
               "h-9 w-9 flex items-center justify-center rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
@@ -218,7 +218,7 @@ export default function WebHeader({
                   isVibeActive ? "hover:bg-white/10 text-white" : "hover:bg-white/20 dark:hover:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200"
                 )}
               >
-                <Bell size={16} strokeWidth={1.5} />
+                <Bell size={18} strokeWidth={1.5} />
                 {unreadCount > 0 && (
                   <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full border border-white dark:border-neutral-800" />
                 )}
@@ -242,9 +242,9 @@ export default function WebHeader({
             >
               {mounted && (
                 theme === "dark" ? (
-                  <Sun size={16} strokeWidth={1.5} />
+                  <Sun size={18} strokeWidth={1.5} />
                 ) : (
-                  <Moon size={16} strokeWidth={1.5} />
+                  <Moon size={18} strokeWidth={1.5} />
                 )
               )}
             </motion.button>
@@ -268,7 +268,7 @@ export default function WebHeader({
               {profile?.avatarUrl ? (
                 <img src={profile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <User size={16} strokeWidth={1.5} />
+                <User size={18} strokeWidth={1.5} />
               )}
             </motion.button>
           </div>

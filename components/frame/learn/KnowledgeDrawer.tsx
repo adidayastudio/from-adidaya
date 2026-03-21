@@ -200,12 +200,16 @@ export default function KnowledgeDrawer({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:justify-end">
             <div
                 className="absolute inset-0 bg-black/5 backdrop-blur-[2px] transition-opacity"
                 onClick={onClose}
             />
-            <div className="relative w-full mx-2 mb-2 bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[56px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-500 border border-white/40 p-8 flex flex-col gap-8 max-h-[92dvh]">
+            <div className={clsx(
+                "relative bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] rounded-[56px] shadow-2xl overflow-hidden border border-white/40 p-8 flex flex-col gap-8 transition-all duration-500",
+                "w-[calc(100%-16px)] mx-2 mb-2 max-h-[92dvh] animate-in slide-in-from-bottom",
+                "sm:w-[500px] sm:mr-6 sm:mb-6 sm:mx-0 sm:max-h-[calc(100vh-48px)]"
+            )}>
                 {/* Header */}
                 <div className="flex items-center justify-between px-2">
                     <h3 className="text-[22px] font-bold text-neutral-900 tracking-tight">
@@ -219,7 +223,7 @@ export default function KnowledgeDrawer({
                     </button>
                 </div>
 
-                <div className="flex flex-col gap-8 overflow-y-auto pb-4 pr-1 scrollbar-hide">
+                <div className="flex flex-col gap-8 overflow-y-auto pb-24 pr-1 scrollbar-hide">
                     {/* Basic Info */}
                     <div className="space-y-4">
                         <h4 className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2">Basic Information</h4>
@@ -229,14 +233,14 @@ export default function KnowledgeDrawer({
                                 placeholder="Knowledge Title"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className="w-full bg-white/40 backdrop-blur-md border border-black/[0.04] rounded-[24px] px-6 py-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#001F3F]/20 placeholder:text-neutral-400"
+                                className="w-full bg-white/40 backdrop-blur-md border border-black/[0.04] rounded-[24px] px-6 py-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-neutral-400"
                             />
                             <textarea
                                 placeholder="Description"
                                 rows={3}
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                className="w-full bg-white/40 backdrop-blur-md border border-black/[0.04] rounded-[24px] px-6 py-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-[#001F3F]/20 placeholder:text-neutral-400 resize-none"
+                                className="w-full bg-white/40 backdrop-blur-md border border-black/[0.04] rounded-[24px] px-6 py-4 text-[15px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 placeholder:text-neutral-400 resize-none"
                             />
                         </div>
                     </div>
@@ -258,7 +262,7 @@ export default function KnowledgeDrawer({
                                         className={clsx(
                                             "px-6 py-3 rounded-full text-[14px] transition-all border",
                                             isSelected
-                                                ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
+                                                ? "bg-blue-600 backdrop-blur-md text-white border-blue-500 shadow-lg shadow-blue-500/10 ring-1 ring-white/10 font-medium"
                                                 : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04]"
                                         )}
                                     >
@@ -282,7 +286,7 @@ export default function KnowledgeDrawer({
                                         className={clsx(
                                             "px-5 py-2.5 rounded-full text-[13px] transition-all border",
                                             isSelected
-                                                ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-md shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
+                                                ? "bg-blue-600 backdrop-blur-md text-white border-blue-500 shadow-md shadow-blue-500/10 ring-1 ring-white/10 font-medium"
                                                 : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04]"
                                         )}
                                     >
@@ -306,7 +310,7 @@ export default function KnowledgeDrawer({
                                         className={clsx(
                                             "px-5 py-2.5 rounded-full text-[13px] transition-all border",
                                             isSelected
-                                                ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
+                                                ? "bg-blue-600 backdrop-blur-md text-white border-blue-500 shadow-lg shadow-blue-500/10 ring-1 ring-white/10 font-medium"
                                                 : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04] hover:bg-white/50"
                                         )}
                                     >
@@ -342,7 +346,7 @@ export default function KnowledgeDrawer({
                             {formData.files.map((asset: any, idx: number) => (
                                 <div key={idx} className="flex gap-2 items-center bg-white/40 p-2 pl-3 rounded-2xl border border-black/[0.04] shadow-sm">
                                     <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center border border-black/5 shrink-0">
-                                        <FileIcon size={14} className="text-[#001F3F]/60" />
+                                        <FileIcon size={14} className="text-blue-600/60" />
                                     </div>
                                     <input
                                         type="text"
@@ -376,7 +380,7 @@ export default function KnowledgeDrawer({
                             {formData.files.length < 10 && (
                                 <button
                                     onClick={() => document.getElementById('knowledge-file-multi')?.click()}
-                                    className="w-full py-4 bg-white/30 backdrop-blur-md border border-dashed border-black/10 hover:border-[#001F3F]/30 hover:bg-[#001F3F]/[0.03] rounded-[20px] flex flex-col items-center justify-center gap-2 active:scale-[0.99] transition-all"
+                                    className="w-full py-4 bg-white/30 backdrop-blur-md border border-dashed border-black/10 hover:border-blue-500/30 hover:bg-blue-500/[0.03] rounded-[20px] flex flex-col items-center justify-center gap-2 active:scale-[0.99] transition-all"
                                 >
                                     <Upload size={18} className="text-neutral-400" />
                                     <span className="text-[12px] font-medium text-neutral-500">
@@ -403,7 +407,7 @@ export default function KnowledgeDrawer({
                                                 newItems[idx].text = e.target.value;
                                                 setFormData({ ...formData, checklistItems: newItems });
                                             }}
-                                            className="flex-1 bg-white/40 border border-black/[0.04] rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#001F3F]/30"
+                                            className="flex-1 bg-white/40 border border-black/[0.04] rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500/30"
                                         />
                                         <div className="flex items-center gap-1">
                                             <button
@@ -614,12 +618,12 @@ export default function KnowledgeDrawer({
                 </div>
 
                 {/* Footer Actions */}
-                <div className="pt-2 flex flex-col gap-3">
+                <div className="absolute bottom-0 left-0 right-0 px-8 pb-8 bg-transparent flex flex-col gap-3">
                     <button
                         onClick={handleSubmit}
                         disabled={submitting}
                         className={clsx(
-                            "w-full bg-[#001F3F] backdrop-blur-xl backdrop-saturate-[1.5] text-white py-4 rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-[#001F3F]/30 border border-white/20 ring-1 ring-inset ring-white/10 flex items-center justify-center gap-2",
+                            "w-full bg-blue-600/90 dark:bg-blue-500/90 backdrop-blur-xl backdrop-saturate-[1.5] text-white py-4 rounded-full font-bold text-[17px] active:scale-[0.98] transition-all border border-white/20 ring-1 ring-inset ring-white/10 flex items-center justify-center gap-2",
                             submitting && "opacity-70 cursor-not-allowed"
                         )}
                     >

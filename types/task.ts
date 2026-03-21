@@ -20,6 +20,8 @@ export interface TaskModel {
     // Joins
     projectCode?: string;
     projectName?: string;
+    wbsCode?: string;
+    wbsTitle?: string;
     assignees?: string[]; // Arrays of User IDs
 }
 

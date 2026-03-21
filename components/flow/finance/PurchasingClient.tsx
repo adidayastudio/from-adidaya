@@ -2715,15 +2715,15 @@ export default function PurchasingClient() {
                                                 <td colSpan={isTeamView ? 7 : 6} className="py-16 text-center">
                                                     <div className="flex flex-col items-center gap-4">
                                                         <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
-                                                            <Package className="w-8 h-8 text-neutral-300" />
+                                                            <Package className="w-8 h-8 text-neutral-400" />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <h4 className="text-base font-semibold text-neutral-700">
+                                                            <h4 className="text-base font-bold text-neutral-900">
                                                                 {searchTerm ? "No results found" :
                                                                     statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
                                                                         "No purchase requests yet"}
                                                             </h4>
-                                                            <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                                            <p className="text-sm text-neutral-500 max-w-xs mx-auto">
                                                                 {searchTerm ?
                                                                     `We couldn't find any requests matching "${searchTerm}". Try a different search term.` :
                                                                     statusFilter !== "ALL" ?

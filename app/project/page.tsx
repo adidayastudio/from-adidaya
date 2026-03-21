@@ -52,14 +52,14 @@ export default function ProjectPage() {
     useHeader({
         hideGlobalActions: true,
         right: (
-            <div className="flex items-center gap-1.5 px-0 pointer-events-auto">
+            <div className="flex items-center gap-2 px-0 pointer-events-auto">
                 {/* Settings Bubble */}
                 <div className="h-9 w-9 flex items-center justify-center rounded-full border border-white/20 dark:border-neutral-700/20 bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl shadow-sm pointer-events-auto transition-all">
                     <button
                         onClick={() => setIsFilterOpen(true)}
                         className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all"
                     >
-                        <Settings size={16} strokeWidth={1.5} />
+                        <Settings size={18} strokeWidth={1.5} />
                     </button>
                 </div>
                 {/* Add Bubble - Blue, No Shadow */}

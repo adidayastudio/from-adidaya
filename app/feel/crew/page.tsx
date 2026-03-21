@@ -138,7 +138,6 @@ export default function CrewPage() {
           { label: "Crew" },
           { label: getBreadcrumbLabel() },
         ]}
-        header={header}
         activeSection={activeSection}
         onSectionChange={(section) => {
           // Update URL
@@ -153,6 +152,9 @@ export default function CrewPage() {
         }}
         role={userRole}
         fabAction={fab ? {
+          id: activeSection === 'directory' ? 'CREW_ADD' : 
+              activeSection === 'assignments' ? 'CREW_ASSIGNMENT_NEW' : 
+              activeSection === 'requests' ? 'CREW_REQUEST_NEW' : undefined,
           icon: fab.icon,
           onClick: fab.onClick,
           title: fab.title,

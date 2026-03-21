@@ -8,7 +8,8 @@ export async function fetchAllTasks(): Promise<TaskModel[]> {
         .select(`
             *,
             projects ( project_code, project_name ),
-            task_assignees ( user_id )
+            task_assignees ( user_id ),
+            project_wbs_items!wbs_id ( wbs_code, title )
         `)
         .order("created_at", { ascending: false });
 
@@ -41,12 +42,16 @@ export async function createTask(
         })
         .select(`
             *,
-            projects ( project_code, project_name )
+            projects ( project_code, project_name ),
+            project_wbs_items!wbs_id ( wbs_code, title )
         `)
         .single();
 
     if (error || !data) {
-        console.error("Failed to create task:", error);
+        console.error("❌ CREATE TASK ERROR MESSAGE:", error?.message);
+        console.error("❌ CREATE TASK ERROR CODE:", error?.code);
+        console.error("❌ CREATE TASK ERROR DETAILS:", error?.details);
+        console.error("❌ CREATE TASK ERROR HINT:", error?.hint);
         return null;
     }
 
@@ -84,6 +89,8 @@ function mapDbToTask(dbRow: any): TaskModel {
 
         projectCode: dbRow.projects?.project_code,
         projectName: dbRow.projects?.project_name,
+        wbsCode: dbRow.project_wbs_items?.wbs_code,
+        wbsTitle: dbRow.project_wbs_items?.title,
         assignees: dbRow.task_assignees ? dbRow.task_assignees.map((ta: any) => ta.user_id) : []
     };
 }

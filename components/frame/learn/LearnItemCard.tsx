@@ -30,8 +30,8 @@ const TYPE_ICON: Record<string, React.ReactNode> = {
 const getThemeStyles = (dept: string) => {
     return {
         bg: "bg-white border border-neutral-100/80",
-        iconBg: "bg-[#001F3F]/[0.03]",
-        iconColor: "text-[#001F3F]/80",
+        iconBg: "bg-neutral-100/50",
+        iconColor: "text-neutral-500",
     };
 };
 

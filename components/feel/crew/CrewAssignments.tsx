@@ -554,50 +554,71 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
 
             {/* DELETE CONFIRMATION */}
             {deleteConfirmId && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)} />
-                    <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6 animate-in zoom-in-95">
-                        <div className="flex flex-col items-center text-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600"><Trash2 className="w-6 h-6" /></div>
-                            <h3 className="text-lg font-bold text-neutral-900">Delete Assignment?</h3>
-                            <p className="text-sm text-neutral-500">Are you sure you want to remove this assignment? This action cannot be undone.</p>
-                            <div className="flex gap-2 w-full mt-2">
-                                <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-2.5 text-sm font-medium text-neutral-600 bg-neutral-100 rounded-lg hover:bg-neutral-200">Cancel</button>
-                                <button onClick={handleDelete} className="flex-1 py-2.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Delete</button>
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={() => setDeleteConfirmId(null)} />
+                    <div className="relative bg-white dark:bg-neutral-900 rounded-[32px] shadow-2xl max-w-sm w-full p-8 animate-in zoom-in-95 border border-black/[0.05] dark:border-white/[0.1]">
+                        <div className="flex flex-col items-center text-center gap-6">
+                            <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center shadow-inner"><Trash2 className="w-8 h-8" /></div>
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-bold text-neutral-900 dark:text-white">Delete Assignment?</h3>
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">Are you sure you want to remove this assignment? This action cannot be undone.</p>
+                            </div>
+                            <div className="flex gap-3 w-full">
+                                <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 rounded-full hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">Cancel</button>
+                                <button onClick={handleDelete} className="flex-1 py-3 text-sm font-bold text-white bg-red-600 rounded-full hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 active:scale-95">Delete</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-
-
             {/* DRAWER */}
             {showDrawer && (
-                <div className="fixed inset-0 z-50 flex justify-end">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDrawer(false)} />
-                    <div className="relative w-full max-w-md bg-white h-full shadow-xl animate-in slide-in-from-right overflow-y-auto">
-                        <div className="sticky top-0 bg-white z-10 flex items-center justify-between p-4 border-b">
-                            <h2 className="text-lg font-bold text-neutral-900">{editingAssignment ? "Edit Assignment" : "New Assignment"}</h2>
-                            <button onClick={() => setShowDrawer(false)} className="p-2 rounded-full hover:bg-neutral-100"><X className="w-5 h-5 text-neutral-500" /></button>
+                <div className="fixed inset-0 z-[100] isolate">
+                    <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={() => setShowDrawer(false)} />
+                    <div className={clsx(
+                        "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] overflow-hidden flex flex-col",
+                        "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]",
+                        showDrawer ? "translate-y-0 sm:translate-x-0 opacity-100 scale-100" : "translate-y-full sm:translate-y-0 sm:translate-x-full opacity-0 sm:scale-95"
+                    )}>
+                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">{editingAssignment ? "Edit Assignment" : "New Assignment"}</h2>
+                                <button
+                                    onClick={() => setShowDrawer(false)}
+                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                                </button>
+                            </div>
                         </div>
-                        <div className="p-4 space-y-4 pb-32 sm:pb-24">
-                            <Select label="Role *" value={formRole} onChange={(v) => { setFormRole(v as CrewRole); setFormCrew(""); }} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role first" accentColor="blue" />
-                            <Select
-                                label="Crew *"
-                                value={formCrew}
-                                onChange={setFormCrew}
-                                disabled={!formRole}
-                                options={crewOptions.filter(c => c.role === formRole).map(c => ({ value: c.value, label: c.label }))}
-                                placeholder={formRole ? "Select crew member" : "Select role first"}
-                                accentColor="blue"
-                                searchable={true}
-                            />
-                            <Select label="Project *" value={formProject} onChange={setFormProject} options={projects.map(p => ({ value: p.code, label: `[${p.code}] ${p.name}` }))} placeholder="Select project" accentColor="blue" searchable={true} />
-                            <FormInput label="Start Date *" type="date" value={formStartDate} onChange={setFormStartDate} />
-                            <FormInput label="End Date" type="date" value={formEndDate} onChange={setFormEndDate} />
+
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32">
+                            <div className="space-y-6">
+                                <Select label="Role *" value={formRole} onChange={(v) => { setFormRole(v as CrewRole); setFormCrew(""); }} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role first" accentColor="blue" />
+                                <Select
+                                    label="Crew *"
+                                    value={formCrew}
+                                    onChange={setFormCrew}
+                                    disabled={!formRole}
+                                    options={crewOptions.filter(c => c.role === formRole).map(c => ({ value: c.value, label: c.label }))}
+                                    placeholder={formRole ? "Select crew member" : "Select role first"}
+                                    accentColor="blue"
+                                    searchable={true}
+                                />
+                                <Select label="Project *" value={formProject} onChange={setFormProject} options={projects.map(p => ({ value: p.code, label: `[${p.code}] ${p.name}` }))} placeholder="Select project" accentColor="blue" searchable={true} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormInput label="Start Date *" type="date" value={formStartDate} onChange={setFormStartDate} />
+                                    <FormInput label="End Date" type="date" value={formEndDate} onChange={setFormEndDate} />
+                                </div>
+                            </div>
                         </div>
-                        <div className="fixed bottom-24 md:bottom-0 right-0 w-full max-w-md p-4 border-t bg-white"><button onClick={handleSave} className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors">Save Assignment</button></div>
+
+                        <div className="absolute bottom-8 left-8 right-8">
+                            <button onClick={handleSave} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] flex items-center justify-center gap-2">
+                                <span>Save Assignment</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

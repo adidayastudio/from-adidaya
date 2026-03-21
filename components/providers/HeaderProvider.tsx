@@ -109,9 +109,16 @@ export function useHeader(content?: HeaderContent, updateTrigger?: any) {
   // Stabilize updateTrigger - if it's an array (common case for dependencies), 
   // we want to depend on its contents, not its reference.
   const memoizedTrigger = useMemo(() => {
-    if (Array.isArray(updateTrigger)) return JSON.stringify(updateTrigger);
-    if (typeof updateTrigger === 'object') return JSON.stringify(updateTrigger);
-    return updateTrigger;
+    try {
+      if (Array.isArray(updateTrigger)) return JSON.stringify(updateTrigger);
+      if (typeof updateTrigger === 'object' && updateTrigger !== null) return JSON.stringify(updateTrigger);
+      return updateTrigger;
+    } catch (e) {
+      // If cyclic structure or other error, fallback to null or a stable value.
+      // This prevents crashes when passing complex objects like React Nodes.
+      console.warn("useHeader: updateTrigger failed to stringify", e);
+      return null;
+    }
   }, [updateTrigger]);
 
   useEffect(() => {

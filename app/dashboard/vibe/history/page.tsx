@@ -204,7 +204,7 @@ export default function VibeHistoryPage() {
                     className="h-9 w-9 flex items-center justify-center rounded-full bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20 active:scale-95 transition-all text-neutral-700 dark:text-neutral-200 shadow-sm"
                     title="Share"
                 >
-                    <Share2 className="w-4 h-4" strokeWidth={1.5} />
+                    <Share2 size={18} strokeWidth={1.5} />
                 </button>
             </div>
         )
@@ -248,9 +248,9 @@ export default function VibeHistoryPage() {
                         ) : history.length === 0 ? (
                             <div className="py-20 text-center">
                                 <div className="w-24 h-24 bg-white/5 rounded-[32px] flex items-center justify-center mx-auto mb-8 border border-dashed border-white/10">
-                                    <History className="w-12 h-12 text-white/10" />
+                                    <History className="w-12 h-12 text-neutral-400/80" />
                                 </div>
-                                <p className="text-[13px] font-black text-white/30 tracking-[0.3em]">No historical records</p>
+                                <p className="text-[13px] font-black text-neutral-500 tracking-[0.3em] uppercase">No historical records</p>
                             </div>
                         ) : (
                             <div className="flex gap-4 overflow-x-auto pt-4 pb-12 no-scrollbar snap-x px-6 scroll-pl-6">

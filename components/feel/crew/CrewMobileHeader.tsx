@@ -241,7 +241,7 @@ export default function CrewMobileHeader({
                                                 className={clsx(
                                                     "px-4 py-2 rounded-full text-[13px] transition-all border",
                                                     isSelected
-                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
+                                                        ? "bg-blue-600 backdrop-blur-md text-white border-blue-500 shadow-lg shadow-blue-500/10 ring-1 ring-white/10 font-medium"
                                                         : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04] hover:bg-neutral-100"
                                                 )}
                                             >
@@ -265,7 +265,7 @@ export default function CrewMobileHeader({
                                                 className={clsx(
                                                     "px-4 py-2 rounded-full text-[13px] transition-all border",
                                                     isSelected
-                                                        ? "bg-[#001F3F]/60 backdrop-blur-md text-white border-[#001F3F]/50 shadow-lg shadow-[#001F3F]/10 ring-1 ring-white/10 font-medium"
+                                                        ? "bg-blue-600 backdrop-blur-md text-white border-blue-500 shadow-lg shadow-blue-500/10 ring-1 ring-white/10 font-medium"
                                                         : "bg-white/40 backdrop-blur-md text-neutral-600 border-black/[0.04] hover:bg-neutral-100"
                                                 )}
                                             >
@@ -281,7 +281,7 @@ export default function CrewMobileHeader({
                         <div className="pt-2">
                             <button
                                 onClick={() => setShowFilters(false)}
-                                className="w-full bg-[#001F3F] backdrop-blur-xl backdrop-saturate-[1.5] text-white py-4 rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-[#001F3F]/30 mb-1 border border-white/20 ring-1 ring-inset ring-white/10"
+                                className="w-full bg-blue-600 backdrop-blur-xl backdrop-saturate-[1.5] text-white py-4 rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-blue-600/30 mb-1 border border-white/20 ring-1 ring-inset ring-white/10"
                             >
                                 Apply
                             </button>

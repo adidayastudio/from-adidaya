@@ -216,19 +216,18 @@ function ListView({ items, onItemClick, canManage, docType, quickView, sortOptio
     return (
       <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
         <div className="relative mb-6">
-          <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full" />
           <div className="relative w-24 h-24 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/20 flex items-center justify-center shadow-2xl">
-            <FolderOpen className="w-12 h-12 text-[#001F3F]/60" strokeWidth={1.5} />
+            <FolderOpen className="w-12 h-12 text-neutral-400" strokeWidth={1.5} />
           </div>
         </div>
-        <h3 className="text-xl font-bold text-[#001F3F] mb-2">{isFavorite ? "No favorites yet" : "No knowledge found"}</h3>
-        <p className="text-[#001F3F]/50 max-w-[280px] leading-relaxed mb-8">
+        <h3 className="text-xl font-bold text-neutral-900 mb-2">{isFavorite ? "No favorites yet" : "No knowledge found"}</h3>
+        <p className="text-neutral-500 max-w-[280px] leading-relaxed mb-8">
           {naturalMessage}
         </p>
         {canManage && (
           <button
             onClick={() => window.dispatchEvent(new CustomEvent('ADIDAYA_OPEN_ADD_KNOWLEDGE'))}
-            className="px-8 py-3 bg-[#001F3F]/90 backdrop-blur-md text-white rounded-full font-bold text-[15px] shadow-lg active:scale-95 transition-all"
+            className="px-8 py-3 bg-blue-600 backdrop-blur-md text-white rounded-full font-bold text-[15px] shadow-lg active:scale-95 transition-all"
           >
             Add New Knowledge
           </button>
@@ -355,21 +354,28 @@ function GroupedView({ items, onItemClick, canManage, docType, quickView, sortOp
   };
 
   if (Object.keys(grouped).length === 0) {
+    const isFavorite = quickView.includes('favorite');
+    const category = docType[0];
+    const categoryLabel = category ? category.toLowerCase() : (isFavorite ? 'favorite' : 'knowledge');
+    const naturalMessage = isFavorite
+      ? "You haven't added any favorites yet. Start bookmarking important items to see them here."
+      : `Ready to start building our library? Add your first ${categoryLabel} piece right here.`;
+
     return (
       <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
         <div className="relative mb-6">
-          <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full" />
           <div className="relative w-24 h-24 bg-white/40 backdrop-blur-xl rounded-3xl border border-white/20 flex items-center justify-center shadow-2xl">
-            <FolderOpen className="w-12 h-12 text-[#001F3F]/60" strokeWidth={1.5} />
+            <FolderOpen className="w-12 h-12 text-neutral-400" strokeWidth={1.5} />
           </div>
         </div>
-        <h3 className="text-xl font-bold text-[#001F3F] mb-2">No knowledge found</h3>
-        <p className="text-[#001F3F]/50 max-w-[260px] leading-relaxed mb-8">
-          This category is currently empty. Start by adding your first knowledge item here.
+        <h3 className="text-xl font-bold text-neutral-900 mb-2">{isFavorite ? "No favorites yet" : "No knowledge found"}</h3>
+        <p className="text-neutral-500 max-w-[280px] leading-relaxed mb-8">
+          {naturalMessage}
         </p>
         {canManage && (
           <button
-            className="px-8 py-3 bg-[#001F3F]/90 backdrop-blur-md text-white rounded-full font-bold text-[15px] shadow-lg active:scale-95 transition-all"
+            onClick={() => window.dispatchEvent(new CustomEvent('ADIDAYA_OPEN_ADD_KNOWLEDGE'))}
+            className="px-8 py-3 bg-blue-600 backdrop-blur-md text-white rounded-full font-bold text-[15px] shadow-lg active:scale-95 transition-all"
           >
             Add New Knowledge
           </button>

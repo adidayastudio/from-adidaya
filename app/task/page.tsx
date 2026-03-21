@@ -31,6 +31,12 @@ import { fetchPeopleDirectory } from "@/lib/api/people";
 import { Person } from "@/components/feel/people/types";
 import { Project, WBSItem } from "@/types/project";
 import { TaskStatus, TaskPriority } from "@/types/task";
+import { Select } from "@/shared/ui/primitives/select/select";
+import useUserProfile from "@/hooks/useUserProfile";
+import PageWrapper from "@/components/layout/PageWrapper";
+import TabSidebar, { TabItem as SidebarTabItem } from "@/components/sidebar/TabSidebar";
+import { useHeader } from "@/components/providers/HeaderProvider";
+import ModuleMobileHeader from "@/components/layout/ModuleMobileHeader";
 
 // --- MOCK DATA & TYPES ---
 type StatusType = TaskStatus;
@@ -387,24 +393,44 @@ const flattenWBS = (items: WBSItem[], level: number = 0): any[] => {
   return result;
 };
 
-import PageWrapper from "@/components/layout/PageWrapper";
-import TabSidebar, { TabItem } from "@/components/sidebar/TabSidebar";
-import { useHeader } from "@/components/providers/HeaderProvider";
 
-import ModuleMobileHeader from "@/components/layout/ModuleMobileHeader";
 
 export default function TaskPage() {
+  const { profile, loading: profileLoading } = useUserProfile();
+
+  // Add form state
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskProject, setNewTaskProject] = useState("PRG");
+  const [newTaskWBS, setNewTaskWBS] = useState("");
+  const [newTaskDeadlineDate, setNewTaskDeadlineDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newTaskDeadlineTime, setNewTaskDeadlineTime] = useState("");
+  const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>("TODO");
+  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("MEDIUM");
+  const [newTaskAssignees, setNewTaskAssignees] = useState<string[]>([]);
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskFile, setNewTaskFile] = useState<File | null>(null);
+
+  // Other UI state
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("all");
   const [isScrolled, setIsScrolled] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
-
-  // Database Projects
   const [dbProjects, setDbProjects] = useState<Project[]>([]);
-
-  // People Directory for Assignees
+  const [wbsList, setWbsList] = useState<WBSItem[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [filterProject, setFilterProject] = useState<string>("All");
+  const [filterDate, setFilterDate] = useState<string>("All");
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => { setIsMounted(true); }, []);
+
+  // Memoized valid assignees for validation and UI
+  const validAssignees = useMemo(() => {
+    return newTaskAssignees.filter(id => id && id.trim() !== "");
+  }, [newTaskAssignees]);
 
   useEffect(() => {
     async function loadData() {
@@ -414,40 +440,45 @@ export default function TaskPage() {
         fetchPeopleDirectory()
       ]);
       setDbProjects(projectsData);
-      // Filter only people with status "INCLUDED"
-      setPeople(peopleData.filter(p => (p.status || "").toUpperCase() === "INCLUDED"));
+      
+      let includedPeople = peopleData.filter(p => (p.status || "").toUpperCase() === "INCLUDED");
+      if (includedPeople.length === 0 && peopleData.length > 0) {
+        includedPeople = peopleData;
+      }
+      setPeople(includedPeople);
 
-      const mappedTasks: TaskItem[] = tasksData.map(t => ({
-        id: t.id,
-        refId: t.wbsId || undefined,
-        title: t.title,
-        projectCode: t.projectCode || "UNK",
-        projectName: t.projectName || "Unknown Project",
-        date: t.deadlineDate,
-        time: t.deadlineTime || undefined,
-        status: t.status as StatusType,
-        priority: t.priority as PriorityType,
-        icon: "fileText",
-        avatars: t.assignees?.length ? t.assignees : ["U"],
-        theme: "pink",
-      }));
+      console.log(`[DIAGNOSTIC] Loaded ${projectsData.length} projects, ${peopleData.length} total people.`);
+      console.log(`[DIAGNOSTIC] Current user profile:`, profile);
+
+      const mappedTasks: TaskItem[] = tasksData.map(t => {
+        const tAvatars = t.assignees?.map(uid => {
+          const p = includedPeople.find(person => person.id === uid);
+          if (p?.name) {
+            return p.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+          }
+          return "U";
+        }) || ["U"];
+
+        return {
+          id: t.id,
+          refId: t.wbsCode || t.wbsTitle || undefined,
+          title: t.title,
+          projectCode: t.projectCode || "UNK",
+          projectName: t.projectName || "Unknown Project",
+          date: t.deadlineDate,
+          time: t.deadlineTime || undefined,
+          status: t.status as StatusType,
+          priority: t.priority as PriorityType,
+          icon: "fileText",
+          avatars: tAvatars.length > 0 ? tAvatars : ["U"],
+          theme: "pink",
+        };
+      });
       setTasks(mappedTasks);
       setIsLoading(false);
     }
     loadData();
-  }, []);
-
-
-  // Filter & Add State
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isAddOpen, setIsAddOpen] = useState(false);
-
-  // Filter form state
-  const [filterProject, setFilterProject] = useState<string>("All");
-  const [filterDate, setFilterDate] = useState<string>("All");
-
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => { setIsMounted(true); }, []);
+  }, [profile]);
 
   // Header Injection
   useHeader(useMemo(() => ({
@@ -467,7 +498,6 @@ export default function TaskPage() {
             )}
           </motion.button>
         </div>
-        {/* 2. Glassy Blue Add Bubble */}
         <div className="h-9 w-9 flex items-center justify-center rounded-full border border-blue-400/40 bg-blue-600 dark:bg-blue-500 pointer-events-auto active:scale-95 transition-all">
             <motion.button
                 whileTap={{ scale: 0.92 }}
@@ -486,42 +516,25 @@ export default function TaskPage() {
   useEffect(() => {
     const handleOpenFilter = () => setIsFilterOpen(true);
     const handleOpenAdd = () => setIsAddOpen(true);
-
     window.addEventListener('task:open-filter', handleOpenFilter);
     window.addEventListener('task:open-add', handleOpenAdd);
-
     return () => {
       window.removeEventListener('task:open-filter', handleOpenFilter);
       window.removeEventListener('task:open-add', handleOpenAdd);
     };
   }, []);
 
-  // Add form state
-  const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [newTaskProject, setNewTaskProject] = useState("PRG");
-  const [newTaskWBS, setNewTaskWBS] = useState("");
-  const [newTaskDeadlineDate, setNewTaskDeadlineDate] = useState(new Date().toISOString().split('T')[0]);
-  const [newTaskDeadlineTime, setNewTaskDeadlineTime] = useState("");
-  const [newTaskStatus, setNewTaskStatus] = useState<StatusType>("TODO");
-  const [newTaskPriority, setNewTaskPriority] = useState<PriorityType>("MEDIUM");
-  const [newTaskAssignees, setNewTaskAssignees] = useState<string[]>([]);
-  const [newTaskDescription, setNewTaskDescription] = useState("");
-  const [newTaskFile, setNewTaskFile] = useState<File | null>(null);
-
-  // WBS List state
-  const [wbsList, setWbsList] = useState<WBSItem[]>([]);
-
   // Fetch WBS when project changes
   useEffect(() => {
     async function loadWBS() {
       if (!newTaskProject) return;
-      // find the project id from the code
       const proj = dbProjects.find(p => p.projectCode === newTaskProject);
       if (proj) {
         const wbs = await fetchProjectWBS(proj.id);
-        setWbsList(flattenWBS(wbs));
-        if (wbs.length > 0) {
-          setNewTaskWBS(wbs[0].wbsCode || "");
+        const flatWbs = flattenWBS(wbs);
+        setWbsList(flatWbs);
+        if (flatWbs.length > 0) {
+          setNewTaskWBS(flatWbs[0].id || "");
         } else {
           setNewTaskWBS("");
         }
@@ -537,48 +550,74 @@ export default function TaskPage() {
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
 
-    const proj = dbProjects.find(p => p.projectCode === newTaskProject);
-    if (!proj) return;
+    try {
+      const proj = dbProjects.find(p => p.projectCode === newTaskProject);
+      if (!proj) {
+        console.error("Project not found for code:", newTaskProject);
+        return;
+      }
 
-    const newTaskDbPayload = {
-      title: newTaskTitle,
-      description: newTaskDescription,
-      projectId: proj.id,
-      wbsId: newTaskWBS || null,
-      deadlineDate: newTaskDeadlineDate,
-      deadlineTime: newTaskDeadlineTime || null,
-      status: newTaskStatus,
-      priority: newTaskPriority,
-      createdBy: null // To be replaced with actual user logic if needed
-    };
+      const currentUserId = profile?.id || null;
+      if (!currentUserId) {
+        console.error("Cannot create task: User profile not loaded.");
+        return;
+      }
 
-    const createdTask = await createTask(newTaskDbPayload, newTaskAssignees);
-
-    if (createdTask) {
-      const newTask: TaskItem = {
-        id: createdTask.id,
-        refId: createdTask.wbsId || undefined,
-        title: createdTask.title,
-        projectCode: createdTask.projectCode || proj.projectCode,
-        projectName: createdTask.projectName || proj.projectName,
-        date: createdTask.deadlineDate,
-        time: createdTask.deadlineTime || undefined,
-        status: createdTask.status as StatusType,
-        priority: createdTask.priority as PriorityType,
-        icon: "fileText",
-        avatars: newTaskAssignees.length > 0 ? newTaskAssignees : ["U"],
-        theme: "pink",
+      const newTaskDbPayload = {
+        title: newTaskTitle,
+        description: newTaskDescription,
+        projectId: proj.id,
+        wbsId: newTaskWBS || null,
+        deadlineDate: newTaskDeadlineDate,
+        deadlineTime: newTaskDeadlineTime || null,
+        status: newTaskStatus,
+        priority: newTaskPriority,
+        createdBy: currentUserId
       };
 
-      setTasks([newTask, ...tasks]);
-    }
+      console.log("Creating task with payload:", newTaskDbPayload, "and assignees:", validAssignees);
 
-    setNewTaskTitle("");
-    setNewTaskDescription("");
-    setNewTaskAssignees([]);
-    setNewTaskFile(null);
-    setNewTaskDeadlineTime("");
-    setIsAddOpen(false);
+      const createdTask = await createTask(newTaskDbPayload, validAssignees);
+
+      if (createdTask) {
+        const newTaskAvatars = validAssignees.map(uid => {
+          const p = people.find(person => person.id === uid);
+          if (p?.name) {
+            return p.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+          }
+          return "U";
+        });
+
+        const newTask: TaskItem = {
+          id: createdTask.id,
+          refId: createdTask.wbsCode || createdTask.wbsTitle || undefined,
+          title: createdTask.title,
+          projectCode: createdTask.projectCode || proj.projectCode,
+          projectName: createdTask.projectName || proj.projectName,
+          date: createdTask.deadlineDate,
+          time: createdTask.deadlineTime || undefined,
+          status: createdTask.status as StatusType,
+          priority: createdTask.priority as PriorityType,
+          icon: "fileText",
+          avatars: newTaskAvatars.length > 0 ? newTaskAvatars : ["U"],
+          theme: "pink",
+        };
+
+        setTasks([newTask, ...tasks]);
+
+        // Reset form
+        setNewTaskTitle("");
+        setNewTaskDescription("");
+        setNewTaskAssignees([]);
+        setNewTaskFile(null);
+        setNewTaskDeadlineTime("");
+        setIsAddOpen(false);
+      } else {
+        console.error("Task creation failed: createTask returned null");
+      }
+    } catch (error) {
+      console.error("Failed to create task in handleAddTask:", error);
+    }
   };
 
   const filteredTasks = tasks.filter((t) => {
@@ -813,218 +852,197 @@ export default function TaskPage() {
       )}
 
       {/* ADD TASK MODAL */}
-      {isAddOpen && (
-        <>
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-[90] transition-all duration-500"
-            onClick={() => setIsAddOpen(false)}
-          />
+      <AnimatePresence>
+        {isAddOpen && (
+          <div className="fixed inset-0 z-[150] isolate">
+            {/* BACKDROP */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm"
+              onClick={() => setIsAddOpen(false)}
+            />
 
-          {/* Bottom Floating Drawer */}
-          <div className="fixed z-[100] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px] bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/40 rounded-[56px] shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-right duration-500 overflow-hidden flex flex-col">
-
-            {/* Subtle Blue Glow */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-blue-400/15 blur-[100px] pointer-events-none" />
-
-            {/* Drag Handle Indicator */}
-            <div className="flex-shrink-0 pt-3 flex justify-center relative z-10">
-              <div className="w-10 h-1.5 rounded-full bg-neutral-200/50" />
-            </div>
-
-            {/* HEADER */}
-            <div className="flex items-center justify-between px-8 py-6 relative z-10">
-              <h3 className="text-[22px] font-bold text-neutral-900 tracking-tight">
-                New Task
-              </h3>
-              <button onClick={() => setIsAddOpen(false)} className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-xl border border-black/5 flex items-center justify-center text-neutral-400 hover:text-neutral-900 active:scale-95 transition-all shadow-sm">
-                <X size={20} strokeWidth={1.5} />
-              </button>
-            </div>
-
-            {/* SCROLLABLE BODY */}
-            <div className="flex-1 overflow-y-auto px-8 py-2 pb-8 space-y-6 relative z-10">
-              {/* Task Title */}
-              <div>
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-1.5">Task Title *</label>
-                <input
-                  type="text"
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
-                  placeholder="e.g. Audit Safety Plan"
-                  className="w-full bg-white/40 backdrop-blur-md border border-black/5 rounded-full h-11 text-[14px] font-medium text-neutral-800 px-5 focus:bg-white focus:border-blue-200 outline-none transition-all shadow-sm shadow-black/[0.02] placeholder:text-neutral-300 font-sans"
-                />
+            {/* DRAWER CONTAINER */}
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
+              className={clsx(
+                "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-3xl border border-white/60 dark:border-neutral-800 shadow-2xl rounded-[56px] overflow-hidden flex flex-col",
+                "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+              )}
+            >
+              {/* STICKY HEADER */}
+              <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent flex items-center justify-between">
+                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">Add New Task</h2>
+                <button
+                  onClick={() => setIsAddOpen(false)}
+                  className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                >
+                  <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                </button>
               </div>
 
-              {/* Project & WBS */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-1.5">Project *</label>
-                  <div className="relative w-full">
-                    <select
-                      value={newTaskProject}
-                      onChange={(e) => setNewTaskProject(e.target.value)}
-                      className="w-full bg-white/40 backdrop-blur-md border border-black/5 rounded-full h-11 text-[13px] font-bold text-neutral-800 px-4 appearance-none cursor-pointer outline-none focus:bg-white focus:border-blue-200 transition-all font-sans"
-                    >
-                      {dbProjects.map(proj => (
-                        <option key={proj.id} value={proj.projectCode}>
-                          {proj.projectCode} - {proj.projectName}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
-                      <ChevronDown size={18} strokeWidth={1.5} />
+              {/* SCROLLABLE CONTENT */}
+              <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+                <div className="px-8 pb-32 space-y-8">
+                  {/* SECTION: BASIC INFO */}
+                  <section className="space-y-4 pt-4">
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-neutral-500" strokeWidth={2} /> Task Information
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Task Title *</label>
+                        <input
+                          type="text"
+                          placeholder="What needs to be done?"
+                          className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium placeholder:text-[11px]"
+                          value={newTaskTitle}
+                          onChange={(e) => setNewTaskTitle(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <Select
+                          label="Project *"
+                          value={newTaskProject}
+                          onChange={setNewTaskProject}
+                          options={[
+                            { label: "Internal Project", value: "INTERNAL" },
+                            ...dbProjects.map(p => ({ label: `${p.projectCode} - ${p.projectName}`, value: p.projectCode }))
+                          ]}
+                        />
+                        <Select
+                          label="WBS *"
+                          value={newTaskWBS}
+                          onChange={setNewTaskWBS}
+                          options={[
+                            { label: "None", value: "" },
+                            ...wbsList.map(w => ({ 
+                              label: `${"\u00A0".repeat((w.level || 0) * 2)}${w.wbsCode} - ${w.title}`, 
+                              value: w.id || "" 
+                            }))
+                          ]}
+                        />
+                      </div>
+
+                      <Select
+                        label="Assignee"
+                        value={newTaskAssignees[0] || ""}
+                        onChange={(val) => setNewTaskAssignees([val])}
+                        options={people.map(p => ({ label: p.name, value: p.id }))}
+                        placeholder="Select someone..."
+                      />
                     </div>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-1.5">WBS *</label>
-                  <div className="relative w-full">
-                    <select
-                      value={newTaskWBS}
-                      onChange={(e) => setNewTaskWBS(e.target.value)}
-                      className="w-full bg-white/40 backdrop-blur-md border border-black/5 rounded-full h-11 text-[13px] font-bold text-neutral-800 px-4 appearance-none cursor-pointer outline-none focus:bg-white focus:border-blue-200 transition-all font-sans"
-                    >
-                      {wbsList.length === 0 ? (
-                        <option value="">None</option>
-                      ) : (
-                        wbsList.map(wbs => (
-                          <option key={wbs.id} value={wbs.wbsCode}>
-                            {"\u00A0".repeat((wbs.level || 0) * 3)}
-                            {(wbs.level || 0) > 0 ? "└─ " : ""}
-                            {wbs.wbsCode} - {wbs.title}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
-                      <ChevronDown size={18} strokeWidth={1.5} />
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  </section>
 
-              {/* Deadline */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-1.5">Date *</label>
-                  <input
-                    type="date"
-                    value={newTaskDeadlineDate}
-                    onChange={(e) => setNewTaskDeadlineDate(e.target.value)}
-                    className="w-full bg-white/40 backdrop-blur-md border border-black/5 rounded-full h-11 text-[14px] font-medium text-neutral-800 px-5 focus:bg-white focus:border-blue-200 outline-none transition-all shadow-sm font-sans"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-1.5">Time</label>
-                  <input
-                    type="time"
-                    value={newTaskDeadlineTime}
-                    onChange={(e) => setNewTaskDeadlineTime(e.target.value)}
-                    className="w-full bg-white/40 backdrop-blur-md border border-black/5 rounded-full h-11 text-[14px] font-medium text-neutral-800 px-5 focus:bg-white focus:border-blue-200 outline-none transition-all shadow-sm font-sans"
-                  />
-                </div>
-              </div>
+                  {/* SECTION: DETAILS */}
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-neutral-500" strokeWidth={2} /> Priority & Deadline
+                    </h3>
 
-              {/* Priority */}
-              <div>
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-1.5">Priority</label>
-                <div className="relative w-full">
-                  <select
-                    value={newTaskPriority}
-                    onChange={(e) => setNewTaskPriority(e.target.value as PriorityType)}
-                    className="w-full bg-white/40 backdrop-blur-md border border-black/5 rounded-full h-11 text-[13px] font-bold text-neutral-800 px-4 appearance-none cursor-pointer outline-none focus:bg-white focus:border-blue-200 transition-all font-sans"
-                  >
-                    <option value="URGENT">URGENT</option>
-                    <option value="HIGH">HIGH</option>
-                    <option value="MEDIUM">MEDIUM</option>
-                    <option value="LOW">LOW</option>
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-300">
-                    <ChevronDown size={18} strokeWidth={1.5} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Assignees */}
-              <div>
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-3">Assignees</label>
-                <div className="flex overflow-x-auto pb-4 gap-4 px-2 no-scrollbar scroll-smooth">
-                  {people.map(person => {
-                    const isSelected = newTaskAssignees.includes(person.id);
-                    const displayName = person.name.split(' ')[0];
-
-                    return (
-                      <button
-                        key={person.id}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) setNewTaskAssignees(newTaskAssignees.filter(a => a !== person.id));
-                          else setNewTaskAssignees([...newTaskAssignees, person.id]);
-                        }}
-                        className="flex flex-col items-center gap-2 group flex-shrink-0"
-                      >
-                        <div className={`w-12 h-12 rounded-full font-bold text-[12px] transition-all border flex items-center justify-center overflow-hidden relative ${isSelected
-                          ? "bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/25 scale-110"
-                          : "bg-white/60 backdrop-blur-md text-neutral-400 border-black/5 group-hover:bg-white group-hover:border-blue-100"}`}
-                        >
-                          {person.avatarUrl ? (
-                            <img src={person.avatarUrl} alt={person.initials} className="w-full h-full object-cover" />
-                          ) : (
-                            <span>{person.initials}</span>
-                          )}
-                          {isSelected && (
-                            <div className="absolute inset-0 bg-blue-500/10 backdrop-blur-[1px]" />
-                          )}
+                    <div className="space-y-4">
+                      <Select
+                        label="Priority"
+                        value={newTaskPriority}
+                        onChange={(val) => setNewTaskPriority(val as PriorityType)}
+                        options={[
+                          { label: "Low", value: "LOW" },
+                          { label: "Medium", value: "MEDIUM" },
+                          { label: "High", value: "HIGH" },
+                          { label: "Urgent", value: "URGENT" }
+                        ]}
+                      />
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Deadline Date *</label>
+                          <input
+                            type="date"
+                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium"
+                            value={newTaskDeadlineDate}
+                            onChange={(e) => setNewTaskDeadlineDate(e.target.value)}
+                          />
                         </div>
-                        <span className={`text-[10px] font-bold tracking-tight transition-colors ${isSelected ? "text-blue-600" : "text-neutral-400"}`}>
-                          {displayName}
-                        </span>
-                      </button>
-                    );
-                  })}
+                        <div>
+                          <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Deadline Time</label>
+                          <input
+                            type="time"
+                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium"
+                            value={newTaskDeadlineTime}
+                            onChange={(e) => setNewTaskDeadlineTime(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* SECTION: NOTES & ATTACHMENTS */}
+                  <section className="space-y-4">
+                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                      <History className="w-4 h-4 text-neutral-500" strokeWidth={2} /> Notes & Attachments
+                    </h3>
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Notes</label>
+                        <textarea
+                          placeholder="Add some details..."
+                          className="w-full h-32 p-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-[32px] bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium placeholder:text-[11px] resize-none"
+                          value={newTaskDescription}
+                          onChange={(e) => setNewTaskDescription(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Attachments</label>
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-[32px] bg-white/40 dark:bg-neutral-800/40 hover:bg-white/60 dark:hover:bg-neutral-800/60 transition-all cursor-pointer group">
+                          <div className="flex items-center gap-3">
+                            <UploadCloud className="w-5 h-5 text-neutral-400 group-hover:text-blue-500 transition-colors" />
+                            <span className="text-xs font-bold text-neutral-500 group-hover:text-neutral-700 dark:group-hover:text-neutral-300">
+                              {newTaskFile ? newTaskFile.name : "Tap to upload file"}
+                            </span>
+                          </div>
+                          <input type="file" className="hidden" onChange={(e) => setNewTaskFile(e.target.files?.[0] || null)} />
+                        </label>
+                      </div>
+                    </div>
+                  </section>
                 </div>
               </div>
 
-              {/* Description */}
-              <div>
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-1.5">Notes</label>
-                <textarea
-                  value={newTaskDescription}
-                  onChange={(e) => setNewTaskDescription(e.target.value)}
-                  placeholder="Additional details..."
-                  className="w-full bg-white/40 backdrop-blur-md border border-black/5 rounded-[24px] p-4 text-[14px] font-medium text-neutral-800 outline-none focus:bg-white focus:border-blue-200 transition-all min-h-[100px] font-sans placeholder:text-neutral-300"
-                />
+              {/* STICKY GLASSY FOOTER */}
+              <div className="absolute bottom-0 left-0 right-0 w-full px-8 py-6 z-30 bg-transparent">
+                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex gap-3">
+                  <button
+                    onClick={() => setIsAddOpen(false)}
+                    className="flex-1 h-12 rounded-full border border-neutral-200 dark:border-neutral-700 text-sm font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddTask}
+                    disabled={!newTaskTitle.trim() || validAssignees.length === 0 || !profile}
+                    className="flex-[2] h-12 rounded-full bg-[#0062ff] text-white text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
+                  >
+                    {!profile ? "Loading Profile..." : (
+                      <>
+                        <Check size={18} /> Create Task
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-
-              {/* File Upload */}
-              <div>
-                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] px-2 block mb-1.5">Attachments</label>
-                <label className="flex flex-col items-center justify-center w-full h-[100px] border-2 border-dashed border-neutral-200/50 rounded-[24px] bg-white/20 backdrop-blur-md cursor-pointer hover:bg-white/40 transition-all active:scale-[0.98]">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <UploadCloud className="w-6 h-6 text-neutral-300 mb-1" />
-                    <p className="text-[12px] text-neutral-400 font-medium">
-                      {newTaskFile ? newTaskFile.name : "Tap to upload file"}
-                    </p>
-                  </div>
-                  <input type="file" className="hidden" onChange={(e) => setNewTaskFile(e.target.files?.[0] || null)} />
-                </label>
-              </div>
-            </div>
-
-            {/* FOOTER */}
-            <div className="px-8 pb-10 pt-4 flex flex-col gap-3 relative z-10">
-              <button
-                onClick={handleAddTask}
-                disabled={!newTaskTitle.trim()}
-                className="w-full bg-blue-500 text-white h-[64px] rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-blue-500/30 border border-white/20 disabled:opacity-50 disabled:active:scale-100"
-              >
-                Create Task
-              </button>
-            </div>
+            </motion.div>
           </div>
-        </>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

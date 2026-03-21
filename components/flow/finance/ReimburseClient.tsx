@@ -2338,7 +2338,7 @@ export default function ReimburseClient() {
                         <div className="mt-6 block lg:hidden space-y-3">
                             {filteredItems.length === 0 ? (
                                 <div className="bg-white/40 dark:bg-neutral-900/60 backdrop-blur-md rounded-[24px] border border-white/50 dark:border-neutral-800 shadow-sm dark:shadow-none p-6 text-center">
-                                    <Package className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
+                                    <Package className="w-10 h-10 text-neutral-400 dark:text-neutral-600 mx-auto mb-2" />
                                     <h4 className="text-[17px] font-bold text-neutral-900 dark:text-white mt-4">
                                         {searchTerm ? "No Search Results" :
                                             statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
@@ -2512,15 +2512,15 @@ export default function ReimburseClient() {
                                                 <td colSpan={isTeamView ? 8 : 7} className="py-16 text-center">
                                                     <div className="flex flex-col items-center gap-4">
                                                         <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
-                                                            <Package className="w-8 h-8 text-neutral-300" />
+                                                            <Package className="w-8 h-8 text-neutral-400" />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <h4 className="text-base font-semibold text-neutral-700">
+                                                            <h4 className="text-base font-bold text-neutral-900">
                                                                 {searchTerm ? "No results found" :
                                                                     statusFilter !== "ALL" ? `No ${statusFilter.toLowerCase()} requests` :
                                                                         "No reimbursement requests yet"}
                                                             </h4>
-                                                            <p className="text-sm text-neutral-400 max-w-xs mx-auto">
+                                                            <p className="text-sm text-neutral-500 max-w-xs mx-auto">
                                                                 {searchTerm ?
                                                                     `We couldn't find any requests matching "${searchTerm}". Try a different search term.` :
                                                                     statusFilter !== "ALL" ?

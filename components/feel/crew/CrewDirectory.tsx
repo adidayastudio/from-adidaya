@@ -682,7 +682,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                                     <button onClick={() => openEditDrawer(crew)} className="p-2.5 rounded-xl bg-blue-50 text-blue-600 active:scale-90 transition-all">
                                         <Edit2 className="w-4 h-4" />
                                     </button>
-                                    <button onClick={() => openDeleteConfirm(crew)} className="p-2.5 rounded-xl bg-red-50 text-red-50 hover:text-red-600 active:scale-90 transition-all">
+                                    <button onClick={() => openDeleteConfirm(crew)} className="p-2.5 rounded-xl bg-red-50 text-red-600 active:scale-90 transition-all">
                                         <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
@@ -762,43 +762,64 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
             {/* Add Drawer */}
             {showAddDrawer && (
-                <div className="fixed inset-0 z-50 flex justify-end">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAddDrawer(false)} />
-                    <div className="relative w-full max-w-md bg-white h-full shadow-xl animate-in slide-in-from-right overflow-y-auto">
-                        <div className="sticky top-0 bg-white z-10 flex items-center justify-between p-4 border-b">
-                            <h2 className="text-lg font-bold text-neutral-900">Add Crew</h2>
-                            <button onClick={() => setShowAddDrawer(false)} className="p-2 rounded-full hover:bg-neutral-100"><X className="w-5 h-5 text-neutral-500" /></button>
-                        </div>
-                        <div className="p-4 space-y-4 pb-48 md:pb-24">
-                            <div className="flex justify-center">
-                                <div className="w-20 h-20 rounded-full bg-neutral-100 border-2 border-dashed border-neutral-300 flex items-center justify-center cursor-pointer hover:border-neutral-400">
-                                    <Plus className="w-6 h-6 text-neutral-400" />
+                <div className="fixed inset-0 z-[100] isolate">
+                    <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={() => setShowAddDrawer(false)} />
+                    <div className={clsx(
+                        "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] overflow-hidden flex flex-col",
+                        "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]",
+                        showAddDrawer ? "translate-y-0 sm:translate-x-0 opacity-100 scale-100" : "translate-y-full sm:translate-y-0 sm:translate-x-full opacity-0 sm:scale-95"
+                    )}>
+                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">Add Crew</h2>
+                                <button
+                                    onClick={() => setShowAddDrawer(false)}
+                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                                </button>
+                            </div>
+                        </div>                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32">
+                            <div className="space-y-6">
+                                <div className="flex justify-center py-4">
+                                    <div className="w-24 h-24 rounded-full bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors group">
+                                        <Plus className="w-8 h-8 text-neutral-400 group-hover:text-blue-500 transition-colors" />
+                                    </div>
+                                </div>
+                                 <FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" />
+                                <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" accentColor="blue" />
+                                <Select 
+                                    label="Current Project" 
+                                    value={formProject} 
+                                    onChange={setFormProject} 
+                                    options={[
+                                        { value: "", label: "No Project (Unassigned)" },
+                                        ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))
+                                    ]} 
+                                    placeholder="Assign to project" 
+                                    accentColor="blue" 
+                                />
+                                <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" accentColor="blue" />
+                                <FormInput label="Skills (comma separated)" value={formSkills} onChange={setFormSkills} placeholder="e.g. Beton, Finishing" />
+
+                                <div className="pt-6 border-t border-black/[0.05] dark:border-white/[0.05]">
+                                    <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-[0.1em] mb-4">Rates (IDR)</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormInput label="Daily Rate" value={formBaseRate} onChange={setFormBaseRate} type="number" />
+                                        <FormInput label="Sunday/Holiday" value={formOvertimeRate} onChange={setFormOvertimeRate} type="number" />
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 mt-4">
+                                        <FormInput label="OT Hour 1" value={formOtRate1} onChange={setFormOtRate1} type="number" />
+                                        <FormInput label="OT Hour 2" value={formOtRate2} onChange={setFormOtRate2} type="number" />
+                                        <FormInput label="OT Hour 3" value={formOtRate3} onChange={setFormOtRate3} type="number" />
+                                    </div>
                                 </div>
                             </div>
-                            <FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" />
-                            <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" accentColor="blue" />
-                            <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" accentColor="blue" />
-                            {/* Project is set via Project Assignments only */}
-                            <FormInput label="Skills (comma separated)" value={formSkills} onChange={setFormSkills} placeholder="e.g. Beton, Finishing" />
-
-                            <div className="border-t pt-4 mt-2">
-                                <h3 className="font-semibold text-neutral-900 mb-3">Rates (IDR)</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormInput label="Daily Rate" value={formBaseRate} onChange={setFormBaseRate} type="number" />
-                                    <FormInput label="Sunday/Holiday" value={formOvertimeRate} onChange={setFormOvertimeRate} type="number" />
-                                </div>
-                                <div className="grid grid-cols-3 gap-4 mt-4">
-                                    <FormInput label="OT Hour 1" value={formOtRate1} onChange={setFormOtRate1} type="number" />
-                                    <FormInput label="OT Hour 2" value={formOtRate2} onChange={setFormOtRate2} type="number" />
-                                    <FormInput label="OT Hour 3" value={formOtRate3} onChange={setFormOtRate3} type="number" />
-                                </div>
-                            </div>
-
                         </div>
-                        <div className="fixed bottom-24 md:bottom-0 right-0 w-full max-w-md p-4 border-t bg-white">
-                            <button onClick={handleAddCrew} disabled={isSaving || !formName.trim()} className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                Save Crew
+                        <div className="absolute bottom-8 left-8 right-8">
+                            <button onClick={handleAddCrew} disabled={isSaving || !formName.trim()} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
+                                <span>{isSaving ? "Saving..." : "Add Crew"}</span>
                             </button>
                         </div>
                     </div>
@@ -807,38 +828,69 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
             {/* Edit Drawer */}
             {showEditDrawer && selectedCrew && (
-                <div className="fixed inset-0 z-50 flex justify-end">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowEditDrawer(false)} />
-                    <div className="relative w-full max-w-md bg-white h-full shadow-xl animate-in slide-in-from-right overflow-y-auto">
-                        <div className="sticky top-0 bg-white z-10 flex items-center justify-between p-4 border-b">
-                            <h2 className="text-lg font-bold text-neutral-900">Edit Crew</h2>
-                            <button onClick={() => setShowEditDrawer(false)} className="p-2 rounded-full hover:bg-neutral-100"><X className="w-5 h-5 text-neutral-500" /></button>
+                <div className="fixed inset-0 z-[100] isolate">
+                    <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={() => setShowEditDrawer(false)} />
+                    <div className={clsx(
+                        "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] overflow-hidden flex flex-col",
+                        "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]",
+                        showEditDrawer ? "translate-y-0 sm:translate-x-0 opacity-100 scale-100" : "translate-y-full sm:translate-y-0 sm:translate-x-full opacity-0 sm:scale-95"
+                    )}>
+                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">Edit Crew</h2>
+                                <button
+                                    onClick={() => setShowEditDrawer(false)}
+                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                >
+                                    <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                                </button>
+                            </div>
                         </div>
-                        <div className="p-4 space-y-4 pb-48 md:pb-24">
-                            <div className="flex justify-center">
-                                <div className="w-20 h-20 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-2xl font-bold">{formInitials}</div>
-                            </div>
-                            <div className="flex gap-3">
-                                <div className="flex-1"><FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" /></div>
-                                <div className="w-24"><FormInput label="Initials" value={formInitials} onChange={setFormInitials} placeholder="XX" /></div>
-                            </div>
-                            <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" accentColor="blue" />
-                            <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" accentColor="blue" />
-                            {/* Project is set via Project Assignments only */}
-                            {selectedCrew.projectCode && (
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1.5">Current Project</label>
-                                    <div className="w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-neutral-50 text-neutral-600">
-                                        {formatProjectCode(selectedCrew.projectCode)}
+
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32">
+                            <div className="space-y-6">
+                                <div className="flex justify-center py-4">
+                                    <div className="w-24 h-24 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 text-2xl font-bold shadow-inner">
+                                        {selectedCrew.initials}
                                     </div>
                                 </div>
-                            )}
-                            <FormInput label="Skills (comma separated)" value={formSkills} onChange={setFormSkills} placeholder="e.g. Beton, Finishing" />
+                                <div className="flex gap-3">
+                                    <div className="flex-1"><FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" /></div>
+                                    <div className="w-24"><FormInput label="Initials" value={formInitials} onChange={setFormInitials} placeholder="XX" /></div>
+                                </div>
+                                <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" accentColor="blue" />
+                                <Select 
+                                    label="Current Project" 
+                                    value={formProject} 
+                                    onChange={setFormProject} 
+                                    options={[
+                                        { value: "", label: "No Project (Unassigned)" },
+                                        ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))
+                                    ]} 
+                                    placeholder="Assign to project" 
+                                    accentColor="blue" 
+                                />
+                                <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" accentColor="blue" />
+                                <FormInput label="Skills (comma separated)" value={formSkills} onChange={setFormSkills} placeholder="e.g. Beton, Finishing" />
+
+                                <div className="pt-6 border-t border-black/[0.05] dark:border-white/[0.05]">
+                                    <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-[0.1em] mb-4">Rates (IDR)</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormInput label="Daily Rate" value={formBaseRate} onChange={setFormBaseRate} type="number" />
+                                        <FormInput label="Sunday/Holiday" value={formOvertimeRate} onChange={setFormOvertimeRate} type="number" />
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 mt-4">
+                                        <FormInput label="OT Hour 1" value={formOtRate1} onChange={setFormOtRate1} type="number" />
+                                        <FormInput label="OT Hour 2" value={formOtRate2} onChange={setFormOtRate2} type="number" />
+                                        <FormInput label="OT Hour 3" value={formOtRate3} onChange={setFormOtRate3} type="number" />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="fixed bottom-24 md:bottom-0 right-0 w-full max-w-md p-4 border-t bg-white">
-                            <button onClick={handleEditCrew} disabled={isSaving || !formName.trim()} className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                                Save Changes
+                        <div className="absolute bottom-8 left-8 right-8">
+                            <button onClick={handleEditCrew} disabled={isSaving || !formName.trim()} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
+                                <span>{isSaving ? "Saving..." : "Save Changes"}</span>
                             </button>
                         </div>
                     </div>
@@ -847,16 +899,16 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
             {/* Delete Confirm */}
             {showDeleteConfirm && selectedCrew && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
-                    <div className="relative bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6 animate-in zoom-in-95">
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+                    <div className="relative bg-white dark:bg-neutral-900 rounded-[32px] shadow-2xl max-w-sm w-full p-8 animate-in zoom-in-95 border border-black/[0.05] dark:border-white/[0.1]">
                         <div className="text-center">
-                            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center mb-4"><Trash2 className="w-6 h-6" /></div>
-                            <h3 className="text-lg font-bold text-neutral-900 mb-2">Delete Crew?</h3>
-                            <p className="text-sm text-neutral-500 mb-6">Are you sure you want to delete <strong>{selectedCrew.name}</strong>?</p>
+                            <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 mx-auto flex items-center justify-center mb-6 shadow-inner"><Trash2 className="w-8 h-8" /></div>
+                            <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Delete Crew?</h3>
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-8 leading-relaxed">Are you sure you want to delete <strong>{selectedCrew.name}</strong> from the directory?</p>
                             <div className="flex gap-3">
-                                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-2.5 px-4 border border-neutral-200 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50">Cancel</button>
-                                <button onClick={handleDeleteCrew} disabled={isSaving} className="flex-1 py-2.5 px-4 bg-red-600 rounded-xl text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 px-4 border border-neutral-200 dark:border-neutral-700 rounded-full text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">Cancel</button>
+                                <button onClick={handleDeleteCrew} disabled={isSaving} className="flex-1 py-3 px-4 bg-red-600 rounded-full text-sm font-bold text-white hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
                                     {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                                     Delete
                                 </button>

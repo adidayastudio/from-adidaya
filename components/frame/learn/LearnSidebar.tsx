@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import clsx from "clsx";
-import { Sparkles, BookOpen, FileText, Layout, Clock, Star, MoreHorizontal, X, Plus } from "lucide-react";
+import { Sparkles, LayoutGrid, FileText, Layout, BookOpen, Star, MoreHorizontal, X, Plus } from "lucide-react";
 import { QuickView } from "./types";
 import type { LucideIcon } from "lucide-react";
 
@@ -19,10 +19,10 @@ interface NavItemConfig {
 }
 
 const NAV_ITEMS: NavItemConfig[] = [
-  { id: "all", label: "All Knowledge", shortLabel: "All", icon: BookOpen },
+  { id: "all", label: "All Knowledge", shortLabel: "All", icon: LayoutGrid },
   { id: "documentation", label: "Documentation", shortLabel: "Docs", icon: FileText },
   { id: "templates", label: "Templates", shortLabel: "Template", icon: Layout },
-  { id: "recent", label: "Recently Viewed", shortLabel: "Recent", icon: Clock },
+  { id: "references", label: "References", shortLabel: "Ref", icon: BookOpen },
   { id: "favorite", label: "Favorites", shortLabel: "Faves", icon: Star },
 ];
 
@@ -38,8 +38,8 @@ export default function LearnSidebar({ activeView, onViewChange }: Props) {
     <>
       {/* DESKTOP SIDEBAR */}
       <div className="space-y-4 hidden lg:block overflow-y-auto max-h-full scrollbar-hide">
-        <div className="space-y-0.5">
-          <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest px-3 mb-2 leading-none">Browse</div>
+        <div className="space-y-0.5 pt-0">
+
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}

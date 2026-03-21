@@ -89,23 +89,25 @@ export default function ResourcesPageWrapper({
                 />
             </div>
 
-            <button
-                onClick={() => {
-                    setIsSearching(!isSearching);
-                    if (!isSearching) setTimeout(() => searchInputRef.current?.focus(), 100);
-                }}
-                className={clsx(
-                    "w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto",
-                    isSearching && "text-blue-500 bg-blue-50 dark:bg-blue-500/10"
-                )}>
-                <Search className="w-5 h-5" strokeWidth={2} />
-            </button>
-            <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto">
-                <ListFilter className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
-            </button>
-            <button className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto">
-                <Plus className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
-            </button>
+            <div className="h-9 flex items-center bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl border border-white/20 dark:border-neutral-700/20 rounded-full shadow-sm px-2 gap-2 pointer-events-auto">
+                <button
+                    onClick={() => {
+                        setIsSearching(!isSearching);
+                        if (!isSearching) setTimeout(() => searchInputRef.current?.focus(), 100);
+                    }}
+                    className={clsx(
+                        "w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-neutral-700/60 active:scale-95 transition-all duration-200 shrink-0",
+                        isSearching && "text-blue-500 bg-white/20 dark:bg-neutral-700/40"
+                    )}>
+                    <Search size={18} strokeWidth={1.5} />
+                </button>
+                <button className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-neutral-700/60 active:scale-95 transition-all duration-200 shrink-0">
+                    <ListFilter size={18} strokeWidth={1.5} className="text-gray-700 dark:text-white" />
+                </button>
+                <button className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-neutral-700/60 active:scale-95 transition-all duration-200 shrink-0">
+                    <Plus size={18} strokeWidth={2.5} className="text-gray-700 dark:text-white" />
+                </button>
+            </div>
 
             <div className="relative" ref={moreMenuRef}>
                 <button
