@@ -1943,7 +1943,7 @@ export default function PurchasingClient() {
         if (isInitialized) {
             loadData(items.length === 0); // Only show GlobalLoading if we have no items
         }
-    }, [currentPage, statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, isTeamView, isInitialized]);
+    }, [currentPage, statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, isTeamView, isInitialized, debouncedSearchTerm]);
 
     // Reset page when filters OR search change
     useEffect(() => {

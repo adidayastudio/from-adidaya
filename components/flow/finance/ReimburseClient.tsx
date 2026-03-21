@@ -1877,12 +1877,12 @@ export default function ReimburseClient() {
         if (isInitialized && userId) {
             loadData(items.length === 0);
         }
-    }, [isAuthLoading, isInitialized, userId, currentPage, statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, isTeamView, currentMonth]);
+    }, [isAuthLoading, isInitialized, userId, currentPage, statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, isTeamView, currentMonth, debouncedSearchTerm]);
 
-    // Reset page when filters change (not search - search is local)
+    // Reset page when filters OR search change
     useEffect(() => {
         setCurrentPage(1);
-    }, [statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, isTeamView]);
+    }, [searchTerm, statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, isTeamView, currentMonth]);
 
     useEffect(() => {
         if (!isAuthLoading && userId) {
