@@ -175,11 +175,6 @@ export async function GET(request: NextRequest) {
                     orString += `,id.in.(${idsStr})`;
                 }
                 
-                if (matchingProjectIds.length > 0) {
-                    const pIdsStr = matchingProjectIds.slice(0, 50).join(',');
-                    orString += `,project_id.in.(${pIdsStr})`;
-                }
-                
                 b = b.or(orString);
             }
 

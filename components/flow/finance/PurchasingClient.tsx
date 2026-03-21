@@ -1848,7 +1848,8 @@ export default function PurchasingClient() {
                     start_date: showAllMonths ? undefined : format(startDate, "yyyy-MM-dd"),
                     end_date: showAllMonths ? undefined : format(endDate, "yyyy-MM-dd"),
                     type: categoryFilters.length > 0 ? categoryFilters : undefined,
-                    my_requests: !isTeamView
+                    my_requests: !isTeamView,
+                    q: debouncedSearchTerm ? debouncedSearchTerm : undefined
                 }),
                 fetchTeamMembers()
             ]);
@@ -2319,6 +2320,10 @@ export default function PurchasingClient() {
     }, [globalStats]);
 
     // 3. Final Filtered Items: pure local filter, computed every render (no memo caching issues)
+    useEffect(() => {
+        console.log(`[DEBUG PurchasingClient] Render. searchTerm: "${searchTerm}", debouncedSearchTerm: "${debouncedSearchTerm}", items length: ${items.length}`);
+    }, [searchTerm, debouncedSearchTerm, items.length]);
+
     const filteredItems = (() => {
         let current = [...items];
 
@@ -2341,8 +2346,6 @@ export default function PurchasingClient() {
                     return (
                         desc.includes(q) ||
                         vendor.includes(q) ||
-                        projectName.includes(q) ||
-                        projectCode.includes(q) ||
                         submitter.includes(q) ||
                         notes.includes(q) ||
                         subcategory.includes(q) ||

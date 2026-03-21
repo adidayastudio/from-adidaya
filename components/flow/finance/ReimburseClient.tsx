@@ -1826,7 +1826,8 @@ export default function ReimburseClient() {
                     category: categoryFilters.length > 0 ? categoryFilters : undefined,
                     start_date: showAllMonths ? undefined : format(startDate, "yyyy-MM-dd"),
                     end_date: showAllMonths ? undefined : format(endDate, "yyyy-MM-dd"),
-                    my_requests: !isTeamView
+                    my_requests: !isTeamView,
+                    q: debouncedSearchTerm ? debouncedSearchTerm : undefined
                 }),
                 fetchTeamMembers(),
                 fetchAllProjects()
@@ -2037,8 +2038,6 @@ export default function ReimburseClient() {
 
                     return (
                         desc.includes(q) ||
-                        projectName.includes(q) ||
-                        projectCode.includes(q) ||
                         staff.includes(q) ||
                         notes.includes(q) ||
                         subcategory.includes(q) ||
