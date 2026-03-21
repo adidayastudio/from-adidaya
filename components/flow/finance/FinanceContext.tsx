@@ -40,24 +40,44 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const [instanceId] = useState(() => Math.random().toString(36).substring(2, 7));
 
     useEffect(() => {
-        console.log(`[FinanceProvider:${instanceId}] Mounted. Current Search: "${searchTerm}"`);
-        return () => console.log(`[FinanceProvider:${instanceId}] Unmounted.`);
+        // console.log(`[FinanceProvider:${instanceId}] Mounted.`);
     }, []);
 
-    // Sync URL 'q' param with local search term (for MobileBottomBarV2 integration)
+    // Sync URL 'q' param to local state ONLY if it changes externally (e.g. navigation)
     useEffect(() => {
         const q = searchParams.get("q") || "";
+        // Only update local state if the URL is different FROM what we currently have
+        // and we aren't "in the middle" of a local update (heuristic: local value is same as last pushed)
         if (q !== searchTerm) {
             setSearchTerm(q);
         }
     }, [searchParams.get("q")]);
 
+    // Update debounced term
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm);
-        }, 500); // 500ms debounce
+        }, 500); 
         return () => clearTimeout(timer);
     }, [searchTerm]);
+
+    // Push debounced term to URL
+    useEffect(() => {
+        if (!isInitialized) return;
+        
+        const params = new URLSearchParams(window.location.search);
+        const currentQ = params.get("q") || "";
+        
+        if (debouncedSearchTerm !== currentQ) {
+            if (debouncedSearchTerm) {
+                params.set("q", debouncedSearchTerm);
+            } else {
+                params.delete("q");
+            }
+            const newUrl = `${window.location.pathname}?${params.toString()}`;
+            router.replace(newUrl, { scroll: false });
+        }
+    }, [debouncedSearchTerm, router, isInitialized]);
 
     const canAccessTeam = canAccessFinanceTeam(profile?.role);
 

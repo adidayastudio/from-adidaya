@@ -90,14 +90,27 @@ export async function GET(request: NextRequest) {
             }
         }
         
+        // Pre-fetch matching project IDs (only by project_code, not name!)
         let matchingProjectIds: string[] = [];
         if (q) {
             const { data: projectMatches } = await supabase
                 .from("projects")
                 .select("id")
-                .or(`project_name.ilike.%${q}%,project_code.ilike.%${q}%`);
+                .ilike("project_code", `%${q}%`);
             if (projectMatches && projectMatches.length > 0) {
                 matchingProjectIds = projectMatches.map(p => p.id);
+            }
+        }
+
+        // Pre-fetch matching user IDs for submitter search
+        let matchingUserIds: string[] = [];
+        if (q) {
+            const { data: userMatches } = await supabase
+                .from("profiles")
+                .select("id")
+                .or(`full_name.ilike.%${q}%,username.ilike.%${q}%`);
+            if (userMatches && userMatches.length > 0) {
+                matchingUserIds = userMatches.map(u => u.id);
             }
         }
         
@@ -147,15 +160,25 @@ export async function GET(request: NextRequest) {
             }
 
             if (q) {
-                let orString = `description.ilike.%${q}%,beneficiary_name.ilike.%${q}%,subcategory.ilike.%${q}%,notes.ilike.%${q}%`;
+                let orString = `description.ilike.%${q}%`;
                 
                 if (qNum !== null) {
                     orString += `,request_number.eq.${qNum}`;
                 }
 
                 if (matchingRequestIds.length > 0) {
-                    const idsStr = matchingRequestIds.slice(0, 100).join(',');
+                    const idsStr = matchingRequestIds.slice(0, 50).join(',');
                     orString += `,id.in.(${idsStr})`;
+                }
+                
+                if (matchingProjectIds.length > 0) {
+                    const pIdsStr = matchingProjectIds.slice(0, 50).join(',');
+                    orString += `,project_id.in.(${pIdsStr})`;
+                }
+
+                if (matchingUserIds.length > 0) {
+                    const uIdsStr = matchingUserIds.slice(0, 50).join(',');
+                    orString += `,created_by.in.(${uIdsStr})`;
                 }
                 
                 b = b.or(orString);

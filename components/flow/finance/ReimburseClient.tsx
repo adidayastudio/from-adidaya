@@ -2038,12 +2038,10 @@ export default function ReimburseClient() {
 
                     return (
                         desc.includes(q) ||
-                        staff.includes(q) ||
-                        notes.includes(q) ||
-                        subcategory.includes(q) ||
-                        category.includes(q) ||
+                        itemNames.includes(q) ||
+                        projectCode.includes(q) ||
                         reqNum.includes(q) ||
-                        itemNames.includes(q)
+                        staff.includes(q)
                     );
                 });
             }

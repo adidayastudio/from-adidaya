@@ -209,32 +209,33 @@ export default function FinancePageWrapper({
     useHeader(isMounted ? customHeader : undefined, [isMounted, viewMode, canAccessTeam, isSearchExpanded, searchTerm, pathname, isReports]);
 
     return (
-        <>
-            {/* MOBILE LAYOUT - EXACT GITHUB MAIN STRUCTURE */}
-            <div className="md:hidden min-h-screen bg-neutral-100 dark:bg-neutral-950 transition-colors">
+        <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 md:bg-transparent transition-colors">
+            {/* 1. Mobile-only header is fine to keep separate as it doesn't wrap children */}
+            <div className="md:hidden">
                 <FinanceMobileHeader fabId={fabId} backUrl="/dashboard" rightToolbar={rightToolbar} />
-                <div className="pb-32 px-5 space-y-4 mt-2">
-                    {header}
-                    {children}
-                </div>
             </div>
 
-            {/* DESKTOP/IPAD LAYOUT - PARITY WITH RESOURCES STRUCTURE */}
-            <div className="hidden md:block bg-transparent p-0 transition-colors">
+            {/* 2. Unified Wrapper - children rendered ONLY ONCE here */}
+            <div className="px-0">
                 <PageWrapper sidebar={<FinanceSidebar />} isTransparent>
                     <div className="space-y-4 w-full animate-in fade-in duration-500">
-                        <div className="flex flex-col md:px-0">
+                        {/* Headers */}
+                        <div className="flex flex-col px-5 md:px-0 mt-2 md:mt-0">
                             {header}
                         </div>
+                        
+                        {/* iPad Inline Tabs */}
                         <div className="hidden md:block lg:hidden md:px-0 pb-2">
                             <FinanceInlineTabs />
                         </div>
-                        <div className="md:px-0">
+
+                        {/* Main Content Area */}
+                        <div className="px-5 md:px-0 pb-32 md:pb-0">
                             {children}
                         </div>
                     </div>
                 </PageWrapper>
             </div>
-        </>
+        </div>
     );
 }

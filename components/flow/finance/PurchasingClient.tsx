@@ -1764,9 +1764,9 @@ export default function PurchasingClient() {
 
     const { contextInstanceId } = useFinance();
 
-    useEffect(() => {
-        console.log(`[PurchasingClient] Mounted with Context:${contextInstanceId}`);
-    }, [contextInstanceId]);
+    // useEffect(() => {
+    //     console.log(`[PurchasingClient] Mounted with Context:${contextInstanceId}`);
+    // }, [contextInstanceId]);
 
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [projects, setProjects] = useState<Project[]>([]);
@@ -1912,7 +1912,15 @@ export default function PurchasingClient() {
                     })) || []
                 };
             });
-            setItems(flattened);
+            if (isInitial || currentPage === 1) {
+                setItems(flattened);
+            } else {
+                setItems(prev => {
+                    const existingIds = new Set(prev.map(i => i.id));
+                    const uniqueNew = flattened.filter(i => !existingIds.has(i.id));
+                    return [...prev, ...uniqueNew];
+                });
+            }
         } catch (e) {
             console.error("Failed to load purchasing requests:", e);
         } finally {
@@ -1948,9 +1956,6 @@ export default function PurchasingClient() {
 
     // Reset page when filters OR search change
     useEffect(() => {
-        if (searchTerm) {
-            console.log(`[PurchasingClient] Search changed to "${searchTerm}", resetting to page 1`);
-        }
         setCurrentPage(1);
     }, [searchTerm, statusFilter, selectedProjects, categoryFilters, startDate, endDate, showAllMonths, currentMonth]);
 
@@ -2319,11 +2324,6 @@ export default function PurchasingClient() {
         };
     }, [globalStats]);
 
-    // 3. Final Filtered Items: pure local filter, computed every render (no memo caching issues)
-    useEffect(() => {
-        console.log(`[DEBUG PurchasingClient] Render. searchTerm: "${searchTerm}", debouncedSearchTerm: "${debouncedSearchTerm}", items length: ${items.length}`);
-    }, [searchTerm, debouncedSearchTerm, items.length]);
-
     const filteredItems = (() => {
         let current = [...items];
 
@@ -2345,13 +2345,10 @@ export default function PurchasingClient() {
 
                     return (
                         desc.includes(q) ||
-                        vendor.includes(q) ||
-                        submitter.includes(q) ||
-                        notes.includes(q) ||
-                        subcategory.includes(q) ||
-                        beneficiary.includes(q) ||
+                        itemNames.includes(q) ||
+                        projectCode.includes(q) ||
                         reqNum.includes(q) ||
-                        itemNames.includes(q)
+                        submitter.includes(q)
                     );
                 });
             }
@@ -2471,7 +2468,6 @@ export default function PurchasingClient() {
                                  isActive={statusFilter === "REJECTED"}
                              />
                         </FinanceSummaryCardsRow>
-
 
                         {/* Export Menu Overlay */}
                         <AnimatePresence>
@@ -2630,7 +2626,7 @@ export default function PurchasingClient() {
                                             onClick={() => setViewingItem(item)}
                                             actions={statusToUse !== 'Paid' ? renderMobileActions() : undefined}
                                         />
-                                    )
+                                    );
                                 })
                             )}
                         </div>
