@@ -35,6 +35,7 @@ export interface FundingSource {
     balance?: number;
     account_number?: string;
     workspace_id?: string;
+    project_id?: string;
     position?: number;
     is_active: boolean;
     is_archived?: boolean;
@@ -171,15 +172,17 @@ export interface PettyCashPool {
     last_updated: string;
 }
 
-export interface PettyCashTransaction {
+export interface FundingSourceTransaction {
     id: string;
-    pool_id: string;
+    funding_source_id: string;
     type: "TOP_UP" | "WITHDRAWAL" | "ADJUSTMENT";
     amount: number;
-    description: string;
-    performed_by: string;
-    performed_by_name?: string;
+    description?: string;
+    reference_type?: "PURCHASE" | "REIMBURSE" | "MANUAL";
+    reference_id?: string;
+    performed_by?: string;
     created_at: string;
+    updated_at: string;
 }
 
 // Summary types for Overview page

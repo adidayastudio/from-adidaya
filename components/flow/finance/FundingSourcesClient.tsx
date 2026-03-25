@@ -319,10 +319,11 @@ export default function FundingSourcesClient() {
 
         [newSources[sourceIndexMain], newSources[targetIndexMain]] = [newSources[targetIndexMain], newSources[sourceIndexMain]];
 
+        if (!workspaceId) return;
         setSources(newSources);
 
         try {
-            await updateFundingSourcePositions([
+            await updateFundingSourcePositions(workspaceId, [
                 { id: newSources[sourceIndexMain].id, position: newSources[sourceIndexMain].position! },
                 { id: newSources[targetIndexMain].id, position: newSources[targetIndexMain].position! }
             ]);
@@ -426,24 +427,38 @@ export default function FundingSourcesClient() {
                 </div>
             ) : (
                 <>
-                    <div className="flex items-center p-1 bg-neutral-100/80 rounded-full w-fit mb-6 ml-1 border border-neutral-200/50">
-                        {["ACTIVE", "ARCHIVED"].map((tab) => {
+                    <div className="flex gap-0 w-fit items-center bg-neutral-100/70 dark:bg-neutral-800/60 rounded-full p-[2px] relative mb-8 ml-1">
+                        {(["ACTIVE", "ARCHIVED"] as const).map((tab) => {
                             const isActive = activeTab === tab;
                             return (
                                 <button
                                     key={tab}
-                                    onClick={() => setActiveTab(tab as any)}
-                                    className="relative px-6 py-2 rounded-full text-xs font-medium transition-colors duration-200 outline-none"
+                                    onClick={() => setActiveTab(tab)}
+                                    className={clsx(
+                                        "relative px-4 py-1.5 rounded-full text-[11px] transition-colors whitespace-nowrap z-10 outline-none",
+                                        isActive
+                                            ? "font-medium text-neutral-900 dark:text-white"
+                                            : "font-normal text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                                    )}
                                 >
                                     {isActive && (
                                         <motion.div
-                                            layoutId="activeTab"
-                                            className="absolute inset-0 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] rounded-full"
-                                            transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                            layoutId="funding-tab-pill"
+                                            className="absolute inset-0 bg-white dark:bg-neutral-700 rounded-full"
+                                            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+                                            transition={{ type: "spring", bounce: 0.15, duration: 0.45 }}
                                         />
                                     )}
-                                    <span className={clsx("relative z-10", isActive ? "text-neutral-800" : "text-neutral-400 hover:text-neutral-600")}>
-                                        {tab === "ACTIVE" ? `Active (${activeCount})` : `Archived (${archivedCount})`}
+                                    <span className="relative z-10 flex items-center gap-1.5">
+                                        {tab === "ACTIVE" ? "Active" : "Archived"}
+                                        <span className={clsx(
+                                            "text-[10px] px-1.5 py-0.5 rounded-full",
+                                            isActive 
+                                                ? "bg-neutral-100 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-400" 
+                                                : "bg-black/5 dark:bg-white/5 text-neutral-400"
+                                        )}>
+                                            {tab === "ACTIVE" ? activeCount : archivedCount}
+                                        </span>
                                     </span>
                                 </button>
                             );
@@ -452,8 +467,18 @@ export default function FundingSourcesClient() {
 
                     {/* SOURCES GRID */}
                     {filteredSources.length === 0 ? (
-                        <div className="text-center py-20 border-2 border-dashed border-neutral-100 rounded-3xl">
-                            <p className="text-neutral-400 text-sm">No {activeTab.toLowerCase()} funding sources found.</p>
+                        <div className="flex flex-col items-center justify-center py-32 px-4 bg-white/40 dark:bg-white/[0.02] backdrop-blur-md rounded-[48px] border border-white/60 dark:border-white/[0.05] shadow-[0_8px_32px_rgba(0,0,0,0.02)] border-dashed">
+                            <div className="w-20 h-20 bg-neutral-100/50 dark:bg-white/5 rounded-[28px] flex items-center justify-center mb-6 shadow-sm border border-white/50">
+                                <Landmark className="w-10 h-10 text-neutral-300 dark:text-neutral-600" />
+                            </div>
+                            <h3 className="text-base font-bold text-neutral-900 dark:text-white mb-2">
+                                No {activeTab.toLowerCase()} funding sources
+                            </h3>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 max-w-[240px] text-center leading-relaxed font-medium">
+                                {activeTab === "ACTIVE" 
+                                    ? "Create your first funding source to start managing payments." 
+                                    : "No archived sources found. Archive sources you no longer use."}
+                            </p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-1">

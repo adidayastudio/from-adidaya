@@ -45,16 +45,18 @@ export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2
 }
 
 export const HARDCODED_LOCATIONS: ClockLocation[] = [
-    { id: "1", code: "ADY", type: "office", latitude: -6.2362817, longitude: 106.7979101, radius_meters: 50, is_active: true },
-    { id: "2", code: "SDV", type: "office", latitude: -7.4252715, longitude: 109.2371945, radius_meters: 50, is_active: true },
-    { id: "3", code: "PRG", type: "project", latitude: -6.2362817, longitude: 106.7979101, radius_meters: 50, is_active: true },
-    { id: "4", code: "JPF", type: "project", latitude: -6.269871, longitude: 106.796965, radius_meters: 50, is_active: true },
-    { id: "5", code: "TPC", type: "project", latitude: -6.296829, longitude: 106.815109, radius_meters: 50, is_active: true },
-    { id: "6", code: "LAX", type: "project", latitude: -6.6300371, longitude: 106.903698, radius_meters: 50, is_active: true },
-    { id: "7", code: "RWM", type: "project", latitude: -6.195692, longitude: 106.890671, radius_meters: 50, is_active: true },
-    { id: "8", code: "MBM", type: "project", latitude: -7.6424214, longitude: 111.5290243, radius_meters: 50, is_active: true },
-    { id: "9", code: "KPA", type: "project", latitude: -6.1920658, longitude: 106.8943532, radius_meters: 50, is_active: true },
-    { id: "10", code: "RBH", type: "project", latitude: -6.125400, longitude: 106.153325, radius_meters: 50, is_active: true },
+    { id: "1", code: "ADY", type: "office", latitude: -6.2362817, longitude: 106.7979101, radius_meters: 75, is_active: true },
+    { id: "2", code: "SDV", type: "office", latitude: -7.4252759, longitude: 109.23977, radius_meters: 75, is_active: true },
+    { id: "3", code: "PRG", type: "project", latitude: -6.2362817, longitude: 106.7979101, radius_meters: 75, is_active: true },
+    { id: "4", code: "JPF", type: "project", latitude: -6.269871, longitude: 106.796965, radius_meters: 75, is_active: true },
+    { id: "5", code: "TPC", type: "project", latitude: -6.296829, longitude: 106.815109, radius_meters: 75, is_active: true },
+    { id: "6", code: "LAX", type: "project", latitude: -6.6300371, longitude: 106.903698, radius_meters: 75, is_active: true },
+    { id: "7", code: "RWM", type: "project", latitude: -6.195692, longitude: 106.890671, radius_meters: 75, is_active: true },
+    { id: "8", code: "MBM", type: "project", latitude: -7.6424214, longitude: 111.5290243, radius_meters: 75, is_active: true },
+    { id: "9", code: "KPA", type: "project", latitude: -6.1920658, longitude: 106.8943532, radius_meters: 75, is_active: true },
+    { id: "10", code: "RBH", type: "project", latitude: -6.125400, longitude: 106.153325, radius_meters: 75, is_active: true },
+    { id: "11", code: "JLP", type: "project", latitude: -6.212709, longitude: 106.796505, radius_meters: 75, is_active: true },
+    { id: "12", code: "GRB", type: "project", latitude: -6.2438522, longitude: 106.6756343, radius_meters: 75, is_active: true },
 ];
 
 export class HardcodedLocationProvider implements LocationProvider {

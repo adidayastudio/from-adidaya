@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, useRef, ReactNode } from "react";
 import useUserProfile from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
 
@@ -21,46 +21,55 @@ const STORAGE_KEY = "clock_view_mode";
 
 export function ClockProvider({ children }: { children: ReactNode }) {
     const { profile, loading } = useUserProfile();
-    const [viewMode, setViewModeState] = useState<ViewMode>("personal");
+    const [viewMode, setViewModeState] = useState<ViewMode>(() => {
+        if (typeof window !== "undefined") {
+            const stored = sessionStorage.getItem(STORAGE_KEY);
+            // Also check URL for immediate override
+            const params = new URLSearchParams(window.location.search);
+            const urlView = params.get("view");
+            if (urlView === "personal" || urlView === "team") return urlView as ViewMode;
+            if (stored === "team") return "team";
+        }
+        return "personal";
+    });
     const [isInitialized, setIsInitialized] = useState(false);
 
     const canAccessTeam = canViewTeamData(profile?.role);
 
-    // Initialize view mode from URL, session storage or based on role
+    // Mark as initialized once loading is done
     useEffect(() => {
         if (!loading && !isInitialized) {
-            const searchParams = new URLSearchParams(window.location.search);
-            const urlView = searchParams.get("view") as ViewMode | null;
-            const stored = sessionStorage.getItem(STORAGE_KEY) as ViewMode | null;
-
-            if (canAccessTeam) {
-                // Priority: 1. URL parameter, 2. Stored preference, 3. Default to personal for Clock (unlike Finance)
-                const targetView = (urlView === "personal" || urlView === "team")
-                    ? urlView
-                    : (stored === "team" ? "team" : "personal");
-
-                setViewModeState(targetView);
-                if (urlView) {
-                    sessionStorage.setItem(STORAGE_KEY, urlView);
-                }
-            } else {
-                // For staff: always personal, clear any stored team preference
-                setViewModeState("personal");
-                sessionStorage.removeItem(STORAGE_KEY);
-            }
             setIsInitialized(true);
         }
-    }, [loading, canAccessTeam, isInitialized]);
+    }, [loading, isInitialized]);
 
     // Persist view mode changes
     const setViewMode = (mode: ViewMode) => {
-        // Staff cannot switch to team view
-        if (!canAccessTeam && mode === "team") {
-            return;
-        }
+        // We set the state regardless of profile loading status here
+        // as the UI toggle already handles the visibility check.
+        // This avoids blocking the toggle if the context's profile fetch is delayed.
         setViewModeState(mode);
         sessionStorage.setItem(STORAGE_KEY, mode);
     };
+
+    // Use a ref for the setter to keep the event listener stable
+    const setViewModeRef = useRef(setViewMode);
+    useEffect(() => {
+        setViewModeRef.current = setViewMode;
+    }, [setViewMode]);
+
+    // Listen for custom events from the header or other detached components
+    useEffect(() => {
+        const handleSetViewMode = (e: any) => {
+            if (setViewModeRef.current) {
+                setViewModeRef.current(e.detail);
+            }
+        };
+        window.addEventListener('clock:set-view-mode', handleSetViewMode as EventListener);
+        return () => {
+            window.removeEventListener('clock:set-view-mode', handleSetViewMode as EventListener);
+        };
+    }, []);
 
     // Force personal view if user loses access (role change)
     useEffect(() => {

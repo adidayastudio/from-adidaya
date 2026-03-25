@@ -1,5 +1,6 @@
 
 import { createClient } from "@/utils/supabase/client";
+import { formatMinutes } from "@/lib/clock-data-logic";
 import { AttendanceRecord, LeaveRequest, OvertimeLog, BusinessTrip, AttendanceSession, AttendanceLog } from "./clock.types";
 const supabase = createClient();
 
@@ -7,20 +8,22 @@ const supabase = createClient();
 async function getProfilesMap(): Promise<Map<string, { full_name: string | null; username: string | null; nickname: string | null }>> {
     const { data: profiles, error } = await supabase
         .from("profiles")
-        .select("id, full_name, username, nickname");
+        .select("id, full_name, username, nickname")
+        .limit(5000);
 
     if (error || !profiles) return new Map();
 
     const map = new Map<string, { full_name: string | null; username: string | null; nickname: string | null }>();
     profiles.forEach((p: any) => {
-        map.set(p.id, { full_name: p.full_name, username: p.username, nickname: p.nickname });
+        if (p.id) map.set(p.id.toLowerCase(), { full_name: p.full_name, username: p.username, nickname: p.nickname });
     });
     return map;
 }
 
 // Helper: Get userName from profile map
 function getUserName(profilesMap: Map<string, any>, userId: string): string | undefined {
-    const profile = profilesMap.get(userId);
+    if (!userId) return undefined;
+    const profile = profilesMap.get(userId.toLowerCase());
     if (!profile) return undefined;
     return profile.full_name || profile.username || profile.nickname || undefined;
 }
@@ -32,26 +35,34 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
     if (startDate) query = query.gte("date", startDate);
     if (endDate) query = query.lte("date", endDate);
 
-    const { data, error } = await query.order("date", { ascending: false });
+    const [{ data, error }, profilesMap] = await Promise.all([
+        query.order("date", { ascending: false }).limit(5000),
+        getProfilesMap()
+    ]);
 
     if (error) return [];
     // Minimal mapping for compatibility
     return (data || []).map((row: any) => ({
         id: row.id,
         userId: row.user_id,
+        employee: getUserName(profilesMap, row.user_id),
         date: row.date,
         clockIn: row.clock_in,
         clockOut: row.clock_out,
         status: row.status,
         totalMinutes: row.total_minutes || 0,
+        duration: row.total_minutes ? formatMinutes(row.total_minutes) : "-",
         overtimeMinutes: row.overtime_minutes || 0,
+        overtime: row.overtime_minutes ? `+${formatMinutes(row.overtime_minutes)}` : "-",
         checkInLatitude: row.check_in_latitude,
         checkInLongitude: row.check_in_longitude,
         checkInLocationCode: row.check_in_location_code,
         checkInLocationType: row.check_in_location_type,
         checkInRemoteMode: row.check_in_remote_mode,
         checkInLocationStatus: row.check_in_location_status,
-        notes: row.check_in_notes
+        notes: row.check_in_notes,
+        checkInPhotoUrl: row.check_in_photo_url,
+        checkOutPhotoUrl: row.check_out_photo_url
     }));
 }
 
@@ -97,7 +108,7 @@ export async function fetchOvertimeLogs(userId?: string, startDate?: string, end
     if (endDate) query = query.lte("date", endDate);
 
     const [{ data, error }, profilesMap] = await Promise.all([
-        query.order("date", { ascending: false }),
+        query.order("date", { ascending: false }).limit(5000),
         getProfilesMap()
     ]);
 
@@ -169,13 +180,17 @@ export async function fetchAttendanceSessions(userId?: string, startDate?: strin
     if (startDate) query = query.gte("date", startDate);
     if (endDate) query = query.lte("date", endDate);
 
-    const { data, error } = await query.order("date", { ascending: false }).order("session_number", { ascending: true });
+    const [{ data, error }, profilesMap] = await Promise.all([
+        query.order("date", { ascending: false }).order("session_number", { ascending: true }).limit(5000),
+        getProfilesMap()
+    ]);
 
     if (error) return [];
 
     return (data || []).map((row: any) => ({
         id: row.id,
         userId: row.user_id,
+        userName: getUserName(profilesMap, row.user_id),
         date: row.date,
         sessionNumber: row.session_number,
         clockIn: row.clock_in,
@@ -187,7 +202,9 @@ export async function fetchAttendanceSessions(userId?: string, startDate?: strin
         locationCode: row.location_code,
         locationType: row.location_type,
         remoteMode: row.remote_mode,
-        locationStatus: row.location_status
+        locationStatus: row.location_status,
+        photoUrl: row.photo_url,
+        notes: row.notes || row.override_reason
     }));
 }
 
@@ -198,19 +215,25 @@ export async function fetchAttendanceLogs(userId?: string, startDate?: string, e
     if (startDate) query = query.gte("timestamp", `${startDate}T00:00:00`);
     if (endDate) query = query.lte("timestamp", `${endDate}T23:59:59`);
 
-    const { data, error } = await query.order("timestamp", { ascending: false });
+    const [{ data, error }, profilesMap] = await Promise.all([
+        query.order("timestamp", { ascending: false }),
+        getProfilesMap()
+    ]);
 
     if (error) return [];
 
     return (data || []).map((row: any) => ({
         id: row.id,
         userId: row.user_id,
+        userName: getUserName(profilesMap, row.user_id),
         type: row.type,
         timestamp: row.timestamp,
         latitude: row.latitude,
         longitude: row.longitude,
         detectedLocationCode: row.detected_location_code,
         locationStatus: row.location_status,
-        createdAt: row.created_at
+        createdAt: row.created_at,
+        photoUrl: row.photo_url,
+        notes: row.override_reason || row.notes
     }));
 }

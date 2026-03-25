@@ -12,8 +12,27 @@ import { canViewTeamData } from "@/lib/auth-utils";
 import { calculateStats, formatMinutes, ClockStats, calculateAdidayaScore } from "@/lib/clock-data-logic";
 import { useClockData } from "@/hooks/useClockData";
 import useUserProfile from "@/hooks/useUserProfile";
-import { AttendanceRecord } from "@/lib/api/clock";
+import { AttendanceRecord, AttendanceStatus, AttendanceSession } from "@/lib/api/clock/clock.types";
+import { clearClockCache } from "@/lib/api/clock/clock.cache";
 import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
+import { PhotoPreviewModal } from "./PhotoPreviewModal";
+import { Camera } from "lucide-react";
+import { toast } from "react-hot-toast";
+
+interface TimesheetRow extends Omit<AttendanceRecord, 'clockIn' | 'clockOut'> {
+    clockIn: string | null;
+    clockOut: string | null;
+    employee: string;
+    day: string;
+    schedule: string;
+    duration: string;
+    overtime: string;
+    isAbsent: boolean;
+    isHoliday: boolean;
+    holidayName?: string;
+    isLeave: boolean;
+    avatar?: string;
+}
 
 interface ClockTimesheetsProps {
     role?: UserRole;
@@ -28,6 +47,9 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
     const [viewMode, setViewMode] = useState<"list" | "grid" | "chart">("list");
     const [sortBy, setSortBy] = useState<"date" | "employee">("date");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+    
+    // Photo Preview Modal
+    const [previewPhoto, setPreviewPhoto] = useState<{ url: string, userName: string, date: string } | null>(null);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -269,55 +291,51 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
 
     // -- MAP DATA TO UI FORMAT --
     const rawData = useMemo(() => {
-        const base = attendance.map(r => {
-            const member = teamMembers.find(m => m.id === r.userId);
-            const employeeName = member?.username || r.userName || "Unknown";
+        // Safe time formatter to prevent Invalid Date crash
+        const safeFormatTime = (timeStr: string | null | undefined) => {
+            if (!timeStr || timeStr === "-") return "-";
+            // If already HH:mm, return as is
+            if (/^\d{2}:\d{2}$/.test(timeStr)) return timeStr;
+            
+            try {
+                // Handle HH:mm:ss from DB time columns
+                if (/^\d{2}:\d{2}:\d{2}$/.test(timeStr)) {
+                    return timeStr.substring(0, 5);
+                }
+                
+                const date = new Date(timeStr);
+                if (isNaN(date.getTime())) return "-";
+                return format(date, "HH:mm");
+            } catch (e) {
+                return "-";
+            }
+        };
 
+        const base: TimesheetRow[] = (attendance as AttendanceRecord[]).map(r => {
+            const member = teamMembers.find(m => String(m.id).toLowerCase() === String(r.userId).toLowerCase());
+            const employeeName = member?.username || (member as any)?.full_name || r.userName || "Unknown";
+            
             return {
                 ...r,
                 employee: employeeName,
-                day: format(new Date(r.date), "EEE"),
-                schedule: "-", // We could derive this from shift settings later
+                day: r.date ? format(new Date(r.date), "EEE") : "-",
+                schedule: "-", 
                 duration: r.totalMinutes ? formatMinutes(r.totalMinutes) : "-",
                 overtime: r.overtimeMinutes ? formatMinutes(r.overtimeMinutes) : "-",
-                clockIn: r.clockIn ? format(new Date(r.clockIn), "HH:mm") : "-",
-                clockOut: r.clockOut ? format(new Date(r.clockOut), "HH:mm") : "-",
-            };
+                clockIn: r.clockIn ? safeFormatTime(r.clockIn) : "-",
+                clockOut: r.clockOut ? safeFormatTime(r.clockOut) : "-",
+                isAbsent: (r as any).isAbsent || false,
+                isHoliday: (r as any).isHoliday || false,
+                holidayName: (r as any).holidayName,
+                isLeave: r.status === "leave",
+                avatar: r.avatar || member?.avatar_url || undefined,
+                checkInPhotoUrl: r.checkInPhotoUrl,
+                checkOutPhotoUrl: r.checkOutPhotoUrl
+            } as TimesheetRow;
         });
 
-        // Find sessions that don't have a matching record in 'attendance'
-        const orphanedSessions = (sessions || []).filter((s: any) =>
-            !attendance.some(a => a.userId === s.userId && a.date === s.date)
-        );
-
-        // Group sessions by userId and date to avoid multiple entries per day in the same view
-        const groupedOrphans: Record<string, any> = {};
-        orphanedSessions.forEach((s: any) => {
-            const key = `${s.userId}-${s.date}`;
-            if (!groupedOrphans[key]) {
-                const member = teamMembers.find(m => m.id === s.userId);
-                groupedOrphans[key] = {
-                    id: `orphan-s-${s.id}`,
-                    userId: s.userId,
-                    date: s.date,
-                    employee: member?.username || s.userName || "Unknown",
-                    day: format(new Date(s.date), "EEE"),
-                    clockIn: s.clockIn ? format(new Date(s.clockIn), "HH:mm") : "-",
-                    clockOut: s.clockOut ? format(new Date(s.clockOut), "HH:mm") : "-",
-                    duration: s.durationMinutes ? formatMinutes(s.durationMinutes) : "-",
-                    status: "intime" as any, // Fallback status
-                    overtime: "-",
-                    notes: "Raw Activity (Record Missing)"
-                };
-            } else if (s.clockOut) {
-                // If we found another session for same day, try to update clockOut if it has one
-                groupedOrphans[key].clockOut = format(new Date(s.clockOut), "HH:mm");
-                // Note: duration calculation for orphans is simplified here
-            }
-        });
-
-        return [...base, ...Object.values(groupedOrphans)];
-    }, [attendance, sessions, teamMembers]);
+        return base;
+    }, [attendance, teamMembers]);
 
     // -- STATS CALCULATION --
     const [stats, setStats] = useState<ClockStats | null>(null);
@@ -340,136 +358,46 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
     };
 
     // const EXCLUDED_USERS = ["Adidaya Admin", "Adidaya IT", "Adidaya Finance", "Adidaya Staff", "harryadin", "Adidaya Studio", "Harryadin Mahardika"];
+    
     const filteredData = useMemo(() => {
-        let baseData = [...rawData];
+        let baseData = [...(rawData as TimesheetRow[])];
 
-        // EXCLUDE SYSTEM ACCOUNTS & EXCLUDED PROFILES - ONLY FOR TEAM VIEW
+        // 1. Filter by Person (Team View)
         if (personalTeamView === "team") {
+            // Exclude system accounts
             const excludedIds = teamMembers
                 .filter(m => m.account_type !== 'human_account' || m.include_in_performance === false)
                 .map(m => m.id);
-
             baseData = baseData.filter(d => !excludedIds.includes(d.userId));
-        }
 
-        // DENSE DATA GENERATION (Personal View Only)
-        if (personalTeamView === "personal") {
-            // 1. Find the earliest date from Records OR Sessions OR Logs to start the view from
-            const allSourceDates = [
-                ...baseData.map(r => r.date),
-                ...((sessions || []).map(s => s.date)),
-                ...((logs || []).map(l => l.timestamp.split('T')[0]))
-            ].filter(Boolean).sort();
-
-            if (allSourceDates.length > 0) {
-                const firstActivityDate = new Date(allSourceDates[0]);
-
-                // 2. Define the End Boundary: Min(Today, EndOfCurrentMonth)
-                const today = new Date();
-                const endMonth = endOfMonth(currentMonth);
-                const endDate = today < endMonth ? today : endMonth;
-
-                // Only generate if firstActivityDate <= endDate
-                if (firstActivityDate <= endDate) {
-                    const denseData: any[] = [];
-                    const allDays = eachDayOfInterval({ start: firstActivityDate, end: endDate });
-
-                    allDays.forEach(dayObj => {
-                        const dayStr = format(dayObj, "yyyy-MM-dd");
-                        const existingRecord = baseData.find(r => r.date === dayStr);
-
-                        if (existingRecord) {
-                            denseData.push(existingRecord);
-                        } else {
-                            // FALLBACK: Check Sessions or Logs if no record exists
-                            const daySession = (sessions || []).find(s => s.date === dayStr);
-                            const dayLog = (logs || []).find(l => {
-                                if (l.type !== 'IN') return false;
-                                // Robust date comparison handling timezone
-                                const logDate = new Date(l.timestamp);
-                                return format(logDate, "yyyy-MM-dd") === dayStr;
-                            });
-
-                            if (daySession || dayLog) {
-                                denseData.push({
-                                    id: `fallback-${dayStr}`,
-                                    date: dayStr,
-                                    clockIn: daySession?.clockIn ? format(new Date(daySession.clockIn), "HH:mm") : (dayLog ? format(new Date(dayLog.timestamp), "HH:mm") : "-"),
-                                    clockOut: daySession?.clockOut ? format(new Date(daySession.clockOut), "HH:mm") : "-",
-                                    duration: daySession?.durationMinutes ? formatMinutes(daySession.durationMinutes) : "-",
-                                    status: "intime" as any, // Use intime as a fallback indicator
-                                    overtime: "-",
-                                    employee: userName,
-                                    day: format(dayObj, "EEE"),
-                                    userId: profile?.id,
-                                    notes: "Raw Activity (Record Missing)"
-                                });
-                            } else {
-                                // GAP FILLING (Standard Absent/Holiday)
-                                const isSun = isSunday(dayObj);
-                                const holidayInfo = HOLIDAYS_2026.find(h => h.date === dayStr);
-
-                                let status = "absent";
-                                let notes: string | undefined;
-
-                                if (holidayInfo) {
-                                    status = holidayInfo.type === "collective_leave" ? "leave" : "holiday";
-                                    notes = holidayInfo.nameEn;
-                                } else if (isSun) {
-                                    status = "holiday";
-                                    notes = "Weekend";
-                                }
-
-                                denseData.push({
-                                    id: `gen-${dayStr}`,
-                                    date: dayStr,
-                                    clockIn: "-",
-                                    clockOut: "-",
-                                    duration: "0h 0m",
-                                    status: status as any,
-                                    overtime: "-",
-                                    employee: userName,
-                                    day: format(dayObj, "EEE"),
-                                    userId: profile?.id,
-                                    totalMinutes: 0,
-                                    notes: notes
-                                });
-                            }
-                        }
-                    });
-                    baseData = denseData;
-                }
+            if (selectedPerson !== "all") {
+                baseData = baseData.filter(d => d.employee === selectedPerson);
             }
         }
 
-        // Filter by selected person (Team View)
-        if (selectedPerson !== "all") {
-            baseData = baseData.filter(d => d.employee === selectedPerson);
-        }
-
-        // Filter by date range
+        // 2. Filter by Date Range
         if (dateFrom) {
-            baseData = baseData.filter(d => new Date(d.date) >= new Date(dateFrom));
+            baseData = baseData.filter(d => d.date >= dateFrom);
         }
         if (dateTo) {
-            baseData = baseData.filter(d => new Date(d.date) <= new Date(dateTo));
+            baseData = baseData.filter(d => d.date <= dateTo);
         }
 
-        // Filter by search query
+        // 3. Filter by Search Query
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
             baseData = baseData.filter(d =>
                 d.employee?.toLowerCase().includes(query) ||
                 d.date.includes(query) ||
-                d.status.toLowerCase().includes(query)
+                d.status.toLowerCase().includes(query) ||
+                (d.notes || "").toLowerCase().includes(query)
             );
         }
 
+        // 4. Sort
         return baseData.sort((a, b) => {
             if (sortBy === "date") {
-                const dateA = new Date(a.date).getTime();
-                const dateB = new Date(b.date).getTime();
-                return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+                return sortOrder === "asc" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date);
             } else if (sortBy === "employee") {
                 const nameA = a.employee || "";
                 const nameB = b.employee || "";
@@ -477,8 +405,8 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             }
             return 0;
         });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [rawData, sessions, logs, sortBy, sortOrder, selectedPerson, dateFrom, dateTo, searchQuery, personalTeamView, currentMonth.getTime(), userName, profile?.id, profile?.department]);
+    }, [rawData, teamMembers, personalTeamView, selectedPerson, dateFrom, dateTo, searchQuery, sortBy, sortOrder]);
+
 
     useEffect(() => {
         const config = {
@@ -629,12 +557,12 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             // 3. Find "Ghost" Members: Users who have a record but are NOT in the validMembers list
             // (e.g. Raka, or new users not yet synchronized to profiles, or permission issues)
             const ghostMembersFromRecords = dayRecords.reduce((acc: any[], record) => {
-                const isInData = validMembers.some(m => m.id === record.userId || m.username === record.employee);
-                const isAlreadyAdded = acc.some(m => m.id === record.userId);
+                const mid = String(record.userId).toLowerCase().trim();
+                const isInData = validMembers.some(m => String(m.id).toLowerCase().trim() === mid || String(m.username).toLowerCase().trim() === String(record.employee).toLowerCase().trim());
+                const isAlreadyAdded = acc.some(m => String(m.id).toLowerCase().trim() === mid);
 
                 if (!isInData && !isAlreadyAdded) {
-                    // Check if user is excluded dynamically - only allow human + included
-                    const memberProfile = teamMembers.find(m => m.username === record.employee);
+                    const memberProfile = teamMembers.find(m => String(m.username).toLowerCase().trim() === String(record.employee).toLowerCase().trim());
                     const isNotHumanOrExcluded = memberProfile && (
                         memberProfile.include_in_performance === false
                     );
@@ -643,160 +571,56 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                         acc.push({
                             id: record.userId || `ghost-${record.employee}`,
                             username: record.employee || "Unknown User",
-                            avatar_url: record.avatar, // Use avatar from record if available
-                            department: record.userDepartment, // Use dept from record if available
-                            role: record.userRole || "staff"
+                            avatar_url: record.avatar, 
+                            department: (record as any).userDepartment, 
+                            role: (record as any).userRole || "staff"
                         });
                     }
                 }
                 return acc;
             }, []);
 
-            // 4. Find "Ghost" Members from Logs AND Sessions (Fallback)
-            const dayLogs = logs?.filter(l => {
-                if (l.type !== 'IN') return false;
-                const logDate = new Date(l.timestamp);
-                return format(logDate, "yyyy-MM-dd") === dateToShow;
-            }) || [];
-
-            const daySessions = sessions?.filter(s => s.date === dateToShow) || [];
-
-            const ghostMembersFromLogsAndSessions = [...dayLogs, ...daySessions].reduce((acc: any[], item: any) => {
-                // Determine ID based on item type (log vs session)
-                const userId = (item as any).userId || (item as any).employeeId; // Session logic might need adjustment if userId isn't direct
-                const itemUserId = userId || item.userId;
-
-                // Check redundancy
-                const hasRecord = dayRecords.some(r => r.userId === itemUserId);
-                const isInData = validMembers.some(m => m.id === itemUserId);
-                const isInGhostRecords = ghostMembersFromRecords.some(m => m.id === itemUserId);
-                const isAlreadyAdded = acc.some(m => m.id === itemUserId);
-
-                if (!hasRecord && !isAlreadyAdded && !isInData && !isInGhostRecords) {
-                    acc.push({
-                        id: itemUserId,
-                        username: item.userName || item.employeeName || "Unknown User",
-                        avatar_url: item.avatar || null,
-                        department: "Unknown",
-                        role: "staff"
-                    });
-                }
-                return acc;
-            }, []);
-
-            // Combine valid members and ghosts, ensuring uniqueness by ID
+            // 4. Combine members
             const allMembersToDisplay = Array.from(new Map(
-                [...validMembers, ...ghostMembersFromRecords, ...ghostMembersFromLogsAndSessions]
-                    .map(m => [m.id, m])
+                [...validMembers, ...ghostMembersFromRecords]
+                    .map(m => [String(m.id).toLowerCase().trim(), m])
             ).values());
 
-            const fullList = allMembersToDisplay.map(member => {
-                // strict match priority: if record has userId, it must match member.id
-                // otherwise fallback to name match only if record has no userId
-                let record = dayRecords.find(r => {
-                    if (r.userId) return r.userId === member.id;
-                    return r.employee === member.username;
-                });
+            const fullList: any[] = [];
+            
+            allMembersToDisplay.forEach(member => {
+                const mid = String(member.id).toLowerCase().trim();
+                const mName = String(member.username).toLowerCase().trim();
+                
+                // Find ALL records for this member on this day from useClockData
+                const recordsForMember = dayRecords.filter(r => 
+                    String(r.userId).toLowerCase().trim() === mid || 
+                    String(r.employee).toLowerCase().trim() === mName
+                );
 
-                // FALLBACK DATA SOURCES
-                const userSession = daySessions.find(s => s.userId === member.id);
-                const userLog = dayLogs.find(l => l.userId === member.id && l.type === 'IN');
-
-                // PATCHING: If record exists but is missing Clock In time, try to patch it from Session or Log
-                if (record) {
-                    const isMissingTime = !record.clockIn || record.clockIn === "-";
-                    if (isMissingTime) {
-                        if (userSession?.clockIn) {
-                            return {
-                                ...record,
-                                clockIn: format(new Date(userSession.clockIn), "HH:mm"),
-                                clockOut: userSession.clockOut ? format(new Date(userSession.clockOut), "HH:mm") : record.clockOut,
-                                // Patch location if missing in record but present in session
-                                checkInLocationCode: record.checkInLocationCode || userSession.locationCode,
-                                checkInLocationType: record.checkInLocationType || userSession.locationType,
-                                notes: record.notes || "Patched from Session"
-                            };
-                        }
-                        if (userLog?.timestamp) {
-                            return {
-                                ...record,
-                                clockIn: format(new Date(userLog.timestamp), "HH:mm"),
-                                // Patch location from log
-                                checkInLocationCode: record.checkInLocationCode || userLog.detectedLocationCode,
-                                checkInLatitude: record.checkInLatitude || userLog.latitude,
-                                checkInLongitude: record.checkInLongitude || userLog.longitude,
-                                notes: record.notes || "Patched from Log"
-                            };
-                        }
-                    }
-                    return record;
-                }
-
-                // FALLBACK 1: Check LOGS if no record exists
-                if (userLog) {
-                    return {
-                        id: `log-${member.id}-${dateToShow}`,
+                if (recordsForMember.length > 0) {
+                    // Add all session records for this member
+                    recordsForMember.forEach(r => fullList.push(r));
+                } else {
+                    // Add single mock "Absent" record
+                    fullList.push({
+                        id: `absent-${member.id}-${dateToShow}`,
                         date: dateToShow,
                         employee: member.username || "Unknown",
                         userId: member.id,
-                        clockIn: format(new Date(userLog.timestamp), "HH:mm"),
+                        clockIn: "-",
                         clockOut: "-",
-                        duration: "-",
-                        status: "intime" as any, // Visual indicator
+                        duration: "0h 0m",
+                        status: "absent" as any,
                         overtime: "-",
                         day: format(new Date(dateToShow), "EEE"),
-                        notes: "Raw Log (Record Missing)",
-                        // Add Location Data
-                        checkInLocationCode: userLog.detectedLocationCode,
-                        checkInLatitude: userLog.latitude,
-                        checkInLongitude: userLog.longitude,
-                        checkInLocationType: "office", // Assumption
-                        checkInLocationStatus: userLog.locationStatus
-                    };
+                    });
                 }
-
-                // FALLBACK 2: Check SESSIONS if no record AND no log exists
-                if (userSession) {
-                    return {
-                        id: `session-${member.id}-${dateToShow}`,
-                        date: dateToShow,
-                        employee: member.username || "Unknown",
-                        userId: member.id,
-                        clockIn: userSession.clockIn ? format(new Date(userSession.clockIn), "HH:mm") : "-",
-                        clockOut: userSession.clockOut ? format(new Date(userSession.clockOut), "HH:mm") : "-",
-                        duration: userSession.durationMinutes ? formatMinutes(userSession.durationMinutes) : "-",
-                        status: "intime" as any, // Visual indicator fallback
-                        overtime: "-",
-                        day: format(new Date(dateToShow), "EEE"),
-                        notes: "Raw Session (Record Missing)",
-                        // Add Location Data
-                        checkInLocationCode: userSession.locationCode,
-                        checkInLatitude: userSession.latitude,
-                        checkInLongitude: userSession.longitude,
-                        checkInLocationType: userSession.locationType,
-                        checkInLocationStatus: userSession.locationStatus,
-                        checkInRemoteMode: userSession.remoteMode
-                    };
-                }
-
-                // Create Mock Absent Record
-                return {
-                    id: `absent-${member.id}-${dateToShow}`,
-                    date: dateToShow,
-                    employee: member.username || "Unknown",
-                    userId: member.id,
-                    clockIn: "-",
-                    clockOut: "-",
-                    duration: "0h 0m",
-                    status: "absent" as any,
-                    overtime: "-",
-                    day: format(new Date(dateToShow), "EEE"),
-                };
             });
 
-            // 4. Sort by Clock-In Time (Ascending), then Name
+            // Handle Sorting: Latest Clock In first, then Name
             return fullList.sort((a, b) => {
-                const timeA = (a.clockIn && a.clockIn !== '-') ? a.clockIn : "23:59"; // Push absent to end
+                const timeA = (a.clockIn && a.clockIn !== '-') ? a.clockIn : "23:59";
                 const timeB = (b.clockIn && b.clockIn !== '-') ? b.clockIn : "23:59";
                 if (timeA !== timeB) return timeA.localeCompare(timeB);
                 return (a.employee || "").localeCompare(b.employee || "");
@@ -1178,55 +1002,128 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                         'bg-white border-neutral-200';
                                 return (
                                     <LiquidItemCard
-                                        key={`${row.id}-${row.date}-${row.userId}`}
+                                        key={`${(row as TimesheetRow).id}-${(row as TimesheetRow).date}-${row.userId}`}
                                         className={statusColor}
                                         leftAvatar={
                                             <div className="flex flex-col items-center justify-center w-[52px] h-[52px] rounded-full bg-neutral-100/80 border border-neutral-200/60 shrink-0">
                                                 <span className="text-base font-bold text-neutral-900 leading-none tracking-tight">
-                                                    {format(new Date(row.date), "dd")}
+                                                    {format(new Date((row as TimesheetRow).date), "dd")}
                                                 </span>
                                                 <span className="text-[9px] font-bold text-neutral-500 uppercase leading-none mt-0.5 tracking-wide">
-                                                    {format(new Date(row.date), "MMM")}
+                                                    {format(new Date((row as TimesheetRow).date), "MMM")}
                                                 </span>
                                             </div>
                                         }
                                         title={
                                             <div className="flex items-center gap-2">
                                                 <span className={clsx("text-sm font-bold text-neutral-900 leading-none", (personalTeamView === "team" && isManager) && "truncate max-w-[120px]")}>
-                                                    {(personalTeamView === "team" && isManager) ? row.employee : format(new Date(row.date), "EEEE")}
+                                                    {(personalTeamView === "team" && isManager) ? (row as TimesheetRow).employee : format(new Date((row as TimesheetRow).date), "EEEE")}
                                                 </span>
-                                                {row.checkInLocationCode && (
-                                                    <a
-                                                        href={(row as any).checkInLatitude ? `https://www.google.com/maps?q=${(row as any).checkInLatitude},${(row as any).checkInLongitude}` : "#"}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className={clsx(
-                                                            "text-[10px] font-medium px-1.5 py-0.5 rounded truncate max-w-[80px]",
-                                                            (row as any).checkInLatitude ? "text-blue-600 bg-blue-50 hover:bg-blue-100 hover:underline" : "text-neutral-500 bg-neutral-100"
-                                                        )}
-                                                        onClick={(e) => {
-                                                            if (!(row as any).checkInLatitude) e.preventDefault();
-                                                        }}
-                                                    >
-                                                        {row.checkInLocationCode}
-                                                    </a>
-                                                )}
+                                                {(() => {
+                                                    const r = row as any;
+                                                    const mode = r.checkInRemoteMode;
+                                                    const locType = r.checkInLocationType;
+                                                    const locCode = r.checkInLocationCode;
+                                                    
+                                                    let label = "-";
+                                                    let badgeColor = "text-neutral-500 bg-neutral-100 ring-neutral-200/50";
+                                                    
+                                                    if (locType === "office") { label = "WFO"; badgeColor = "text-blue-700 bg-blue-50 ring-blue-200/50 border-blue-100"; }
+                                                    else if (locType === "project" || locCode?.startsWith("PRJ")) { label = locCode && locCode !== "-" ? locCode : "Project"; badgeColor = "text-emerald-700 bg-emerald-50 ring-emerald-200/50 border-emerald-100"; }
+                                                    else if (mode === 'business_trip') { label = "BST"; badgeColor = "text-purple-700 bg-purple-50 ring-purple-200/50 border-purple-100"; }
+                                                    else if (mode && mode !== '-') { label = mode; badgeColor = "text-purple-700 bg-purple-50 ring-purple-200/50 border-purple-100"; }
+                                                    else if (locCode && locCode !== '-') { label = locType || 'LOC'; badgeColor = "text-neutral-700 bg-neutral-50 ring-neutral-200/50 border-neutral-200"; }
+
+                                                    if (label === "-" && (!locCode || locCode === '-')) return null;
+
+                                                    return (
+                                                        <a
+                                                            href={r.checkInLatitude ? `https://www.google.com/maps?q=${r.checkInLatitude},${r.checkInLongitude}` : "#"}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={clsx(
+                                                                "flex items-center gap-1 min-w-0 max-w-[120px]",
+                                                                "px-2 pl-1.5 py-0.5 rounded-md border ring-1 ring-inset shadow-sm",
+                                                                badgeColor,
+                                                                r.checkInLatitude && "hover:opacity-80 transition-opacity cursor-pointer"
+                                                            )}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (!r.checkInLatitude) e.preventDefault();
+                                                            }}
+                                                        >
+                                                            <MapPin className="w-3 h-3 shrink-0 opacity-70" />
+                                                            <div className="flex items-center gap-1.5 truncate">
+                                                                <span className="text-[10px] font-bold tracking-wide uppercase leading-none mt-0.5">{label}</span>
+                                                                {locCode && locCode !== '-' && locCode !== label && (
+                                                                    <>
+                                                                        <div className="w-0.5 h-2.5 bg-current opacity-30 shrink-0" />
+                                                                        <span className="text-[9px] font-medium opacity-90 truncate leading-none mt-0.5">{locCode}</span>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </a>
+                                                    );
+                                                })()}
                                             </div>
                                         }
                                         subtitle={
-                                            <div className="flex items-center gap-3 text-xs leading-none">
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-[10px] font-semibold text-neutral-400 uppercase">In</span>
-                                                    <span className="font-mono font-medium text-neutral-700">{row.clockIn}</span>
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center gap-3 text-xs leading-none">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-[10px] font-semibold text-neutral-400 uppercase">In</span>
+                                                        {(row as TimesheetRow).checkInPhotoUrl ? (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                     setPreviewPhoto({
+                                                                        url: (row as TimesheetRow).checkInPhotoUrl || "",
+                                                                        userName: (row as TimesheetRow).employee || userName || "",
+                                                                        date: format(new Date((row as TimesheetRow).date), "dd MMM yyyy")
+                                                                    });
+                                                                }}
+                                                                className="font-mono font-medium text-blue-600 hover:underline flex items-center gap-0.5"
+                                                            >
+                                                                {row.clockIn}
+                                                                <Camera className="w-2.5 h-2.5 opacity-50" />
+                                                            </button>
+                                                        ) : (
+                                                            <span className="font-mono font-medium text-neutral-700">{row.clockIn}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-[10px] font-semibold text-neutral-400 uppercase">Out</span>
+                                                        {(row as TimesheetRow).checkOutPhotoUrl ? (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setPreviewPhoto({
+                                                                        url: (row as TimesheetRow).checkOutPhotoUrl || "",
+                                                                        userName: (row as TimesheetRow).employee || userName || "",
+                                                                        date: format(new Date((row as TimesheetRow).date), "dd MMM yyyy")
+                                                                    });
+                                                                }}
+                                                                className="font-mono font-medium text-blue-600 hover:underline flex items-center gap-0.5"
+                                                            >
+                                                                {row.clockOut}
+                                                                <Camera className="w-2.5 h-2.5 opacity-50" />
+                                                            </button>
+                                                        ) : (
+                                                            <span className="font-mono font-medium text-neutral-700">{row.clockOut}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-[10px] font-semibold text-neutral-400 uppercase">Dur</span>
+                                                        <span className="font-mono font-medium text-neutral-500">{row.duration.replace('h ', 'h').replace('m', 'm')}</span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-[10px] font-semibold text-neutral-400 uppercase">Out</span>
-                                                    <span className="font-mono font-medium text-neutral-700">{row.clockOut}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-[10px] font-semibold text-neutral-400 uppercase">Dur</span>
-                                                    <span className="font-mono font-medium text-neutral-500">{row.duration.replace('h ', 'h').replace('m', 'm')}</span>
-                                                </div>
+                                                
+                                                {row.notes && row.notes !== "Active Session" && (
+                                                    <div className="text-[11px] text-neutral-500 mt-1 pt-1 italic line-clamp-2 leading-tight">
+                                                        <span className="font-semibold text-neutral-400 shrink-0 not-italic mr-1 uppercase tracking-widest text-[9px]">Note</span>
+                                                        {row.notes}
+                                                    </div>
+                                                )}
                                             </div>
                                         }
                                         rightTop={
@@ -1311,6 +1208,7 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock In</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Location</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Clock Out</th>
+                                            <th className="text-center px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Photos</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Duration</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Overtime</th>
                                             <th className="text-left px-6 py-4 text-xs font-semibold text-neutral-600 uppercase">Status</th>
@@ -1326,15 +1224,23 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                                 const locCode = r.checkInLocationCode;
                                                 const status = r.checkInLocationStatus;
 
-                                                if (status === "inside" && locType === "office") {
+                                                // 1. Office / WFO
+                                                if (locType === "office") {
                                                     return { label: `WFO`, code: locCode, color: "text-blue-600" };
                                                 }
-                                                if (status === "inside" && locType === "project") {
-                                                    return { label: `Project`, code: locCode, color: "text-emerald-600" };
+                                                // 2. Project
+                                                if (locType === "project" || locCode?.startsWith("PRJ")) {
+                                                    const prjLabel = locCode && locCode !== "-" ? locCode : "Project";
+                                                    return { label: prjLabel, code: null, color: "text-emerald-600" };
                                                 }
-                                                // Handle Remote / Other
+                                                // 3. Remote / BST / WFA
                                                 if (mode === 'business_trip') return { label: 'BST', code: null, color: "text-purple-600" };
                                                 if (mode && mode !== '-') return { label: mode, code: null, color: "text-purple-600" };
+
+                                                // 4. Fallback if we have a code but unknown type
+                                                if (locCode && locCode !== '-') {
+                                                    return { label: locType || 'LOC', code: locCode, color: "text-neutral-600" };
+                                                }
 
                                                 // Default fallback
                                                 return { label: "-", code: null, color: "text-neutral-400" };
@@ -1346,27 +1252,51 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                                 : "#";
 
                                             return (
-                                                <tr key={`${row.id}-${row.date}-${idx}`} className="group hover:bg-neutral-50 transition-colors">
+                                                <tr key={`${(row as TimesheetRow).id}-${(row as TimesheetRow).date}-${idx}`} className="group hover:bg-neutral-50 transition-colors">
                                                     {isManager && personalTeamView === "team" && (
                                                         <td className="px-6 py-4 whitespace-nowrap font-medium text-neutral-900">
                                                             <div className="flex items-center gap-3">
                                                                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white ring-2 ring-white shadow-sm">
-                                                                    {row.employee?.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
+                                                                    {(row as TimesheetRow).employee?.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
                                                                 </div>
                                                                 <div>
-                                                                    <div className="font-medium text-neutral-900">{row.employee}</div>
+                                                                    <div className="font-medium text-neutral-900">{(row as TimesheetRow).employee}</div>
                                                                 </div>
                                                             </div>
                                                         </td>
                                                     )}
-                                                    <td className="px-6 py-4 whitespace-nowrap text-neutral-500">{format(new Date(row.date), "EEE, dd MMM")}</td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockIn}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-neutral-500">{format(new Date((row as TimesheetRow).date), "EEE, dd MMM")}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if ((row as TimesheetRow).checkInPhotoUrl) {
+                                                                    setPreviewPhoto({
+                                                                        url: (row as TimesheetRow).checkInPhotoUrl || "",
+                                                                        userName: (row as TimesheetRow).employee || userName || "",
+                                                                        date: format(new Date((row as TimesheetRow).date), "dd MMM yyyy")
+                                                                    });
+                                                                } else {
+                                                                    toast.error("No photo and precise location data available for this record (possibly made before the mandatory update).");
+                                                                }
+                                                            }}
+                                                            className={clsx(
+                                                                "flex items-center gap-0.5 hover:underline transition-all group",
+                                                                (row as TimesheetRow).checkInPhotoUrl ? "text-blue-600 hover:text-blue-800" : "text-neutral-700 opacity-80 hover:opacity-100"
+                                                            )}
+                                                            title={(row as TimesheetRow).checkInPhotoUrl ? "View Check-In Photo" : "No photo available"}
+                                                        >
+                                                            {row.clockIn}
+                                                            {(row as TimesheetRow).checkInPhotoUrl && <Camera className="w-3 h-3 opacity-30 group-hover:opacity-100 transition-opacity ml-1" />}
+                                                        </button>
+                                                    </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="flex flex-col gap-1">
                                                             <a
                                                                 href={mapsUrl}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
                                                                 className={clsx("flex items-center gap-1.5 hover:underline decoration-neutral-300 underline-offset-2", locInfo.color)}
                                                             >
                                                                 {/* Icon: Map Pin */}
@@ -1385,7 +1315,92 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">{row.clockOut}</td>
+                                                     <td className="px-6 py-4 whitespace-nowrap text-neutral-900 font-mono text-xs">
+                                                         <button 
+                                                             onClick={(e) => {
+                                                                 e.stopPropagation();
+                                                                 if ((row as TimesheetRow).checkOutPhotoUrl) {
+                                                                     setPreviewPhoto({
+                                                                         url: (row as TimesheetRow).checkOutPhotoUrl || "",
+                                                                         userName: (row as TimesheetRow).employee || userName || "",
+                                                                         date: format(new Date((row as TimesheetRow).date), "dd MMM yyyy")
+                                                                     });
+                                                                 } else {
+                                                                     toast.error("No photo and precise location data available for this record (possibly made before the mandatory update).");
+                                                                 }
+                                                             }}
+                                                             className={clsx(
+                                                                 "flex items-center gap-0.5 hover:underline transition-all group",
+                                                                 (row as TimesheetRow).checkOutPhotoUrl ? "text-blue-600 hover:text-blue-800" : "text-neutral-700 opacity-80 hover:opacity-100"
+                                                             )}
+                                                             title={(row as TimesheetRow).checkOutPhotoUrl ? "View Check-Out Photo" : "No photo available"}
+                                                         >
+                                                             {row.clockOut}
+                                                             {(row as TimesheetRow).checkOutPhotoUrl && <Camera className="w-3 h-3 opacity-30 group-hover:opacity-100 transition-opacity ml-1" />}
+                                                         </button>
+                                                     </td>
+                                                     
+                                                     {/* NEW PHOTOS COLUMN */}
+                                                     <td className="px-6 py-4 whitespace-nowrap">
+                                                         <div className="flex items-center justify-center gap-3">
+                                                             {/* Check-In Photo */}
+                                                             <button
+                                                                 onClick={(e) => {
+                                                                     e.stopPropagation();
+                                                                     if ((row as TimesheetRow).checkInPhotoUrl) {
+                                                                         setPreviewPhoto({
+                                                                             url: (row as TimesheetRow).checkInPhotoUrl || "",
+                                                                             userName: (row as TimesheetRow).employee || userName || "",
+                                                                             date: format(new Date((row as TimesheetRow).date), "dd MMM yyyy")
+                                                                         });
+                                                                     } else {
+                                                                         toast.error("Check-in photo not available.");
+                                                                     }
+                                                                 }}
+                                                                 disabled={!(row as TimesheetRow).checkInPhotoUrl}
+                                                                 className={clsx(
+                                                                     "p-2 rounded-lg transition-all",
+                                                                     (row as TimesheetRow).checkInPhotoUrl 
+                                                                         ? "bg-blue-50 text-blue-600 hover:bg-blue-100 ring-1 ring-blue-100/50 shadow-sm" 
+                                                                         : "bg-neutral-50 text-neutral-300 cursor-not-allowed"
+                                                                 )}
+                                                                 title="Check-In Photo"
+                                                             >
+                                                                 <Camera className="w-4 h-4" />
+                                                             </button>
+
+                                                             {/* Check-Out Photo */}
+                                                             <button
+                                                                 onClick={(e) => {
+                                                                     e.stopPropagation();
+                                                                     if ((row as TimesheetRow).checkOutPhotoUrl) {
+                                                                         setPreviewPhoto({
+                                                                             url: (row as TimesheetRow).checkOutPhotoUrl || "",
+                                                                             userName: (row as TimesheetRow).employee || userName || "",
+                                                                             date: format(new Date((row as TimesheetRow).date), "dd MMM yyyy")
+                                                                         });
+                                                                     } else {
+                                                                         toast.error("Check-out photo not available.");
+                                                                     }
+                                                                 }}
+                                                                 disabled={!(row as TimesheetRow).checkOutPhotoUrl}
+                                                                 className={clsx(
+                                                                     "p-2 rounded-lg transition-all",
+                                                                     (row as TimesheetRow).checkOutPhotoUrl 
+                                                                         ? "bg-indigo-50 text-indigo-600 hover:bg-indigo-100 ring-1 ring-indigo-100/50 shadow-sm" 
+                                                                         : "bg-neutral-50 text-neutral-300 cursor-not-allowed"
+                                                                 )}
+                                                                 title="Check-Out Photo"
+                                                             >
+                                                                 <div className="relative">
+                                                                    <Camera className="w-4 h-4" />
+                                                                    {(row as TimesheetRow).checkOutPhotoUrl && (
+                                                                       <div className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-indigo-500 rounded-full border border-white" />
+                                                                    )}
+                                                                 </div>
+                                                             </button>
+                                                         </div>
+                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-neutral-500 text-xs">{row.duration}</td>
                                                     <td className="px-6 py-4">
                                                         {row.overtime !== "-" ? (
@@ -1443,6 +1458,15 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                     </>
                 )
             }
+
+            {/* Photo Preview Modal */}
+            <PhotoPreviewModal
+                isOpen={!!previewPhoto}
+                onClose={() => setPreviewPhoto(null)}
+                photoUrl={previewPhoto?.url || null}
+                userName={previewPhoto?.userName}
+                date={previewPhoto?.date}
+            />
 
 
 
@@ -1895,7 +1919,7 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                         ot_bonus_cap: rule?.overtime_max_bonus || 10,
                                         ot_target_value: rule?.ot_target_hours || 40
                                     };
-                                    const adidayaResult = calculateAdidayaScore(employeeRecords, config, currentMonth);
+                                    const adidayaResult = calculateAdidayaScore(employeeRecords as any, config, currentMonth);
                                     return {
                                         name: nickname,
                                         fullName: member.username,

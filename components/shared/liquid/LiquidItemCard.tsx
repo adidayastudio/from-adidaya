@@ -34,10 +34,10 @@ export function LiquidItemCard({
                 className
             )}
         >
-            <div className="flex items-start justify-between">
+            <div className="flex items-center justify-between">
 
                 {/* Left Section (Avatar + Title/Subtitle/Badges) */}
-                <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                     {leftAvatar && (
                         <div className="shrink-0">
                             {leftAvatar}

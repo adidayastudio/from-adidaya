@@ -64,6 +64,7 @@ import { FinanceItemCard } from "./FinanceItemCard";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { fetchReimburseRequests, updateReimburseStatus, deleteReimburseRequest, fetchFundingSources, fetchReimburseRequestById } from "@/lib/client/finance-api";
+import { FinanceToolbar } from "./FinanceToolbar";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { fetchTeamMembers } from "@/lib/api/clock_team";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
@@ -2332,7 +2333,7 @@ export default function ReimburseClient() {
                         </AnimatePresence>
 
                         {/* MOBILE CARD LIST */}
-                        <div className="mt-6 block lg:hidden space-y-3">
+                        <div className="mt-6 block md:hidden space-y-3">
                             {filteredItems.length === 0 ? (
                                 <div className="bg-white/40 dark:bg-neutral-900/60 backdrop-blur-md rounded-[24px] border border-white/50 dark:border-neutral-800 shadow-sm dark:shadow-none p-6 text-center">
                                     <Package className="w-10 h-10 text-neutral-400 dark:text-neutral-600 mx-auto mb-2" />
@@ -2446,8 +2447,26 @@ export default function ReimburseClient() {
                             )}
                         </div>
 
-                        {/* DESKTOP TABLE */}
-                        <div className="hidden lg:block bg-white/40 dark:bg-white/[0.03] backdrop-blur-md rounded-3xl border border-white/50 dark:border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.02)] dark:shadow-none overflow-hidden">
+                        {/* DESKTOP TOOLBAR & TABLE */}
+                        <div className="mt-3 hidden md:block">
+                            <FinanceToolbar
+                                currentMonth={currentMonth}
+                                onMonthChange={handleMonthChange}
+                                projects={projects}
+                                selectedProjects={selectedProjects}
+                                onProjectToggle={(id) => {
+                                    if (selectedProjects.includes(id)) {
+                                        setSelectedProjects(selectedProjects.filter(pid => pid !== id));
+                                    } else {
+                                        setSelectedProjects([...selectedProjects, id]);
+                                    }
+                                }}
+                                onClearProjects={() => setSelectedProjects([])}
+                                showAllMonths={showAllMonths}
+                                onToggleShowAll={() => setShowAllMonths(!showAllMonths)}
+                            />
+
+                            <div className="bg-white/40 dark:bg-white/[0.03] backdrop-blur-md rounded-3xl border border-white/50 dark:border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.02)] dark:shadow-none overflow-hidden">
                             <div className="overflow-x-auto scrollbar-hide">
                                 <table className="w-full text-left border-collapse table-auto">
                                     <thead>
@@ -2696,6 +2715,7 @@ export default function ReimburseClient() {
                                 </table>
                             </div>
                         </div>
+                    </div>
 
                         <Pagination
                             currentPage={currentPage}

@@ -1,7 +1,5 @@
-import { createClient } from "@/utils/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { FundingSource, FundingSourceType, BankProvider } from "@/lib/types/finance-types";
-
-const supabase = createClient();
 
 export interface BeneficiaryAccount {
     id: string;
@@ -33,6 +31,24 @@ export async function fetchFundingSources(workspaceId: string): Promise<FundingS
     return (data || []).map(mapDbToFundingSource);
 }
 
+export async function fetchPettyCashPools(workspaceId: string): Promise<FundingSource[]> {
+    const result = await (supabase
+        .from("funding_sources")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("type", "PETTY_CASH")
+        .order("name", { ascending: true }) as any);
+
+    const { data, error } = result;
+
+    if (error) {
+        console.error("Error fetching petty cash pools:", error);
+        return [];
+    }
+
+    return (data || []).map(mapDbToFundingSource);
+}
+
 // -- SAVING --
 
 export async function upsertFundingSource(source: Partial<FundingSource> & { workspace_id: string }): Promise<FundingSource | null> {
@@ -44,6 +60,7 @@ export async function upsertFundingSource(source: Partial<FundingSource> & { wor
         currency: source.currency || "IDR",
         balance: source.balance || 0,
         account_number: source.account_number,
+        project_id: source.project_id,
         position: source.position ?? 0,
         is_active: source.is_active ?? true,
         is_archived: source.is_archived ?? false,
@@ -215,12 +232,71 @@ function mapDbToFundingSource(row: any): FundingSource {
         currency: row.currency,
         balance: row.balance,
         account_number: row.account_number,
+        project_id: row.project_id,
         position: row.position,
         is_active: row.is_active,
         is_archived: row.is_archived,
         created_at: row.created_at,
         updated_at: row.updated_at
     };
+}
+
+// -- TRANSACTIONS --
+
+export async function fetchFundingSourceTransactions(sourceId: string): Promise<any[]> {
+    const { data, error } = await supabase
+        .from("funding_source_transactions")
+        .select("*")
+        .eq("funding_source_id", sourceId)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching funding source transactions:", error);
+        return [];
+    }
+
+    return data || [];
+}
+
+export async function recordFundingSourceTransaction(tx: {
+    funding_source_id: string;
+    type: "TOP_UP" | "WITHDRAWAL" | "ADJUSTMENT";
+    amount: number;
+    description?: string;
+    reference_type?: "PURCHASE" | "REIMBURSE" | "MANUAL";
+    reference_id?: string;
+    performed_by?: string;
+}): Promise<boolean> {
+    // 1. Record the transaction
+    const { error: txError } = await supabase
+        .from("funding_source_transactions")
+        .insert([tx]);
+
+    if (txError) {
+        console.error("Error recording funding source transaction:", txError);
+        return false;
+    }
+
+    // 2. Update the balance of the funding source
+    const balanceChange = tx.type === "TOP_UP" ? tx.amount : -tx.amount;
+    
+    // We fetch current balance first or use use RPC for atomicity if available.
+    // For now, let's use a simple update with calculated balance.
+    const { data: source } = await supabase
+        .from("funding_sources")
+        .select("balance")
+        .eq("id", tx.funding_source_id)
+        .single();
+    
+    if (source) {
+        const newBalance = (source.balance || 0) + balanceChange;
+        await supabase
+            .from("funding_sources")
+            .update({ balance: newBalance })
+            .eq("id", tx.funding_source_id);
+    }
+
+    return true;
 }
 
 // -- PURCHASING --

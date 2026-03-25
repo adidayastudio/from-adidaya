@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { FundingSource, BankProvider } from "@/lib/types/finance-types";
-import { Eye, EyeOff, Edit3, Trash2, MoreHorizontal, Archive, Power, RotateCcw, ArrowUp, ArrowDown } from "lucide-react";
+import { Eye, EyeOff, Edit3, Trash2, MoreHorizontal, Archive, Power, RotateCcw, ArrowUp, ArrowDown, Landmark } from "lucide-react";
 import clsx from "clsx";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface FundingSourceCardProps {
     source: FundingSource;
@@ -90,62 +91,72 @@ export default function FundingSourceCard({ source, isFirst, isLast, onEdit, onT
 
     return (
         <div className={clsx(
-            "relative w-full aspect-[1.586] rounded-2xl p-6 transition-all shadow-sm hover:shadow-xl hover:-translate-y-1 select-none group",
+            "relative w-full aspect-[1.586] rounded-[32px] p-7 transition-all duration-500 select-none group focus-within:ring-2 focus-within:ring-blue-400/50 outline-none",
             bgClass,
-            (isArchived || !isActive) && "grayscale opacity-90",
-            showActions ? "z-50" : "z-0" // Elevate card when menu is open
+            (isArchived || !isActive) && "grayscale-[0.5] opacity-80",
+            showActions ? "z-[60] scale-[1.02] shadow-2xl" : "z-0 shadow-sm hover:shadow-xl hover:-translate-y-1.5"
         )}>
+            {/* Glassy Overlay */}
+            <div className="absolute inset-0 bg-white/20 dark:bg-black/10 backdrop-blur-[2px] pointer-events-none rounded-[32px]" />
+            
             {/* Texture Overlay */}
-            <div className="absolute inset-0 opacity-40 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none rounded-2xl"></div>
+            <div className="absolute inset-0 opacity-[0.15] dark:opacity-[0.08] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none rounded-[32px]" />
 
-            {/* Subtle Inner Highlight */}
-            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/20 pointer-events-none"></div>
+            {/* Subtle Inner Glow/Border */}
+            <div className="absolute inset-0 rounded-[32px] ring-1 ring-inset ring-white/60 dark:ring-white/20 pointer-events-none" />
 
             {/* Status Indication (if inactive/archived) */}
             {(isArchived || !isActive) && (
-                <div className="absolute top-6 right-6 px-2 py-0.5 rounded-md bg-black/10 backdrop-blur-sm text-[9px] font-bold text-neutral-800/60 uppercase tracking-widest border border-black/5">
+                <div className="absolute top-7 right-7 px-3 py-1 rounded-full bg-black/10 dark:bg-white/10 backdrop-blur-md text-[9px] font-black text-neutral-800 dark:text-white/80 uppercase tracking-[0.15em] border border-white/20">
                     {isArchived ? "Archived" : "Inactive"}
                 </div>
             )}
 
-            <div className="relative z-10 flex flex-col justify-between h-full text-neutral-800">
+            <div className="relative z-10 flex flex-col justify-between h-full text-neutral-900 dark:text-neutral-900">
                 {/* HEAD */}
-                <div>
-                    <p className="text-[10px] font-bold tracking-widest opacity-60 uppercase mb-1">
-                        {source.type === "BANK" ? getProviderLabel(source.provider) : source.type.replace("_", " ")}
-                    </p>
-                    <h3 className="text-xl font-bold tracking-tight text-neutral-900 leading-none truncate pr-8">
-                        {source.name}
-                    </h3>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <p className="text-[10px] font-black tracking-[0.2em] opacity-40 uppercase mb-1.5 font-mono">
+                            {source.type === "BANK" ? getProviderLabel(source.provider) : source.type.replace("_", " ")}
+                        </p>
+                        <h3 className="text-2xl font-black tracking-tight leading-none truncate max-w-[200px]">
+                            {source.name}
+                        </h3>
+                    </div>
+                    
+                    {/* Chip Icon or Bank Logo would go here - Using Landmark as placeholder */}
+                    <div className="w-10 h-10 rounded-xl bg-black/5 dark:bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
+                        <Landmark className="w-5 h-5 opacity-40" />
+                    </div>
                 </div>
 
                 {/* MIDDLE: Account Number */}
-                <div className="flex items-center gap-3 mt-1">
-                    <span className="font-mono text-lg tracking-widest opacity-80 mix-blend-multiply">
+                <div className="flex items-center gap-4 mt-2">
+                    <span className="font-mono text-xl tracking-[0.15em] font-medium opacity-80 drop-shadow-sm">
                         {showNumber ? (source.account_number || fullNum) : `•••• •••• •••• ${source.account_number ? source.account_number.slice(-4) : last4}`}
                     </span>
                     <button
                         onClick={() => setShowNumber(!showNumber)}
-                        className="p-1 opacity-40 hover:opacity-100 transition-opacity"
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition-all active:scale-90"
                     >
-                        {showNumber ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        {showNumber ? <Eye className="w-3.5 h-3.5 opacity-60" /> : <EyeOff className="w-3.5 h-3.5 opacity-60" />}
                     </button>
                 </div>
 
                 {/* BOTTOM: Balance & Actions */}
                 <div className="mt-auto flex justify-between items-end">
                     <div>
-                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-50 mb-0.5">Total Balance</p>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold opacity-60">IDR</span>
-                            <span className="text-2xl font-bold tracking-tight text-neutral-900">
+                        <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 mb-1 font-mono">Current Balance</p>
+                        <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black opacity-30 mt-1">IDR</span>
+                            <span className="text-3xl font-black tracking-tighter">
                                 {showBalance ? formattedBalance : "••••••••"}
                             </span>
                             <button
                                 onClick={() => setShowBalance(!showBalance)}
-                                className="p-1 opacity-40 hover:opacity-100 transition-opacity"
+                                className="w-8 h-8 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition-all active:scale-90"
                             >
-                                {showBalance ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                {showBalance ? <Eye className="w-3.5 h-3.5 opacity-60" /> : <EyeOff className="w-3.5 h-3.5 opacity-60" />}
                             </button>
                         </div>
                     </div>
@@ -155,84 +166,93 @@ export default function FundingSourceCard({ source, isFirst, isLast, onEdit, onT
                         <div className="relative">
                             <button
                                 onClick={(e) => { e.stopPropagation(); setShowActions(!showActions); }}
-                                className="p-2 bg-white/20 hover:bg-white/40 rounded-full transition-colors backdrop-blur-md shadow-sm"
+                                className={clsx(
+                                    "w-12 h-12 flex items-center justify-center rounded-full transition-all duration-300 backdrop-blur-xl border shadow-sm active:scale-90",
+                                    showActions 
+                                        ? "bg-white/80 dark:bg-neutral-800/90 border-transparent rotate-90 scale-110" 
+                                        : "bg-white/30 dark:bg-white/20 border-white/40 hover:bg-white/50"
+                                )}
                             >
-                                <MoreHorizontal className="w-5 h-5 text-neutral-800" />
+                                <MoreHorizontal className={clsx("w-6 h-6 transition-colors", showActions ? "text-blue-600" : "text-neutral-900")} />
                             </button>
 
-                            {/* Menu - Glassy & Blurry as requested */}
-                            {showActions && (
-                                <div className="absolute bottom-full right-0 mb-2 w-40 bg-white/60 backdrop-blur-xl rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.12)] border border-white/50 py-1.5 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-bottom-right z-50">
-                                    {/* MOVE ACTIONS */}
-                                    {!isArchived && (
-                                        <>
-                                            {!isFirst && (
+                            {/* Menu - Liquid Glass style */}
+                            <AnimatePresence>
+                                {showActions && (
+                                    <motion.div
+                                        initial={{ opacity: 0, scale: 0.9, y: 10, filter: "blur(10px)" }}
+                                        animate={{ opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }}
+                                        exit={{ opacity: 0, scale: 0.9, y: 10, filter: "blur(10px)" }}
+                                        className="absolute bottom-full right-0 mb-4 w-48 bg-white/70 dark:bg-neutral-900/80 backdrop-blur-2xl rounded-[24px] shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)] border border-white/50 dark:border-white/10 p-2 z-[60] origin-bottom-right"
+                                    >
+                                        <div className="space-y-1">
+                                            {!isArchived && (
+                                                <>
+                                                    <div className="flex gap-1 mb-1">
+                                                        {!isFirst && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); onMoveUp?.(source.id); setShowActions(false); }}
+                                                                className="flex-1 py-3 bg-neutral-100/50 dark:bg-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-2xl flex items-center justify-center transition-all"
+                                                                title="Move Up"
+                                                            >
+                                                                <ArrowUp className="w-4 h-4 opacity-60" />
+                                                            </button>
+                                                        )}
+                                                        {!isLast && (
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); onMoveDown?.(source.id); setShowActions(false); }}
+                                                                className="flex-1 py-3 bg-neutral-100/50 dark:bg-white/5 hover:bg-neutral-100 dark:hover:bg-white/10 rounded-2xl flex items-center justify-center transition-all"
+                                                                title="Move Down"
+                                                            >
+                                                                <ArrowDown className="w-4 h-4 opacity-60" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            {!isArchived && (
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); onMoveUp?.(source.id); setShowActions(false); }}
-                                                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-neutral-700 hover:bg-black/5 flex items-center gap-2.5 transition-colors"
+                                                    onClick={(e) => { e.stopPropagation(); onEdit?.(source.id); setShowActions(false); }}
+                                                    className="w-full text-left px-4 py-3 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 hover:bg-blue-500 hover:text-white rounded-2xl flex items-center gap-3 transition-all group/item"
                                                 >
-                                                    <ArrowUp className="w-3.5 h-3.5 opacity-70" /> Move Up
+                                                    <Edit3 className="w-4 h-4 opacity-50 group-hover/item:opacity-100" /> Edit Source
                                                 </button>
                                             )}
-                                            {!isLast && (
+
+                                            {!isArchived && (
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); onMoveDown?.(source.id); setShowActions(false); }}
-                                                    className="w-full text-left px-4 py-2.5 text-xs font-medium text-neutral-700 hover:bg-black/5 flex items-center gap-2.5 transition-colors"
+                                                    onClick={(e) => { e.stopPropagation(); onToggle?.(source.id); setShowActions(false); }}
+                                                    className="w-full text-left px-4 py-3 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 hover:bg-blue-500 hover:text-white rounded-2xl flex items-center gap-3 transition-all group/item"
                                                 >
-                                                    <ArrowDown className="w-3.5 h-3.5 opacity-70" /> Move Down
+                                                    <Power className={clsx("w-4 h-4 opacity-50 group-hover/item:opacity-100", !isActive && "text-green-600")} /> 
+                                                    {isActive ? "Deactivate" : "Activate"}
                                                 </button>
                                             )}
-                                            {(!isFirst || !isLast) && <div className="h-px bg-neutral-200/50 my-1 mx-2" />}
-                                        </>
-                                    )}
 
-                                    {/* Edit - Disabled if archived */}
-                                    {!isArchived && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); onEdit?.(source.id); setShowActions(false); }}
-                                            className="w-full text-left px-4 py-2.5 text-xs font-medium text-neutral-700 hover:bg-black/5 flex items-center gap-2.5 transition-colors"
-                                        >
-                                            <Edit3 className="w-3.5 h-3.5 opacity-70" /> Edit
-                                        </button>
-                                    )}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onArchive?.(source.id); setShowActions(false); }}
+                                                className="w-full text-left px-4 py-3 text-[11px] font-bold text-neutral-700 dark:text-neutral-300 hover:bg-amber-500 hover:text-white rounded-2xl flex items-center gap-3 transition-all group/item"
+                                            >
+                                                {isArchived ? (
+                                                    <><RotateCcw className="w-4 h-4 opacity-50 group-hover/item:opacity-100" /> Restore Source</>
+                                                ) : (
+                                                    <><Archive className="w-4 h-4 opacity-50 group-hover/item:opacity-100" /> Archive Source</>
+                                                )}
+                                            </button>
 
-                                    {/* Deactivate/Activate - Only if not archived */}
-                                    {!isArchived && (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); onToggle?.(source.id); setShowActions(false); }}
-                                            className="w-full text-left px-4 py-2.5 text-xs font-medium text-neutral-700 hover:bg-black/5 flex items-center gap-2.5 transition-colors"
-                                        >
-                                            <Power className={clsx("w-3.5 h-3.5 opacity-70", !isActive && "text-green-600")} />
-                                            {isActive ? "Deactivate" : "Activate"}
-                                        </button>
-                                    )}
+                                            <div className="h-px bg-neutral-200/50 dark:bg-white/10 my-2 mx-2" />
 
-                                    {/* Archive/Restore */}
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onArchive?.(source.id); setShowActions(false); }}
-                                        className="w-full text-left px-4 py-2.5 text-xs font-medium text-neutral-700 hover:bg-black/5 flex items-center gap-2.5 transition-colors"
-                                    >
-                                        {isArchived ? (
-                                            <>
-                                                <RotateCcw className="w-3.5 h-3.5 opacity-70" /> Restore
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Archive className="w-3.5 h-3.5 opacity-70" /> Archive
-                                            </>
-                                        )}
-                                    </button>
-
-                                    <div className="h-px bg-neutral-200/50 my-1 mx-2" />
-
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onDelete?.(source.id); setShowActions(false); }}
-                                        className="w-full text-left px-4 py-2.5 text-xs font-medium text-red-600 hover:bg-red-50 flex items-center gap-2.5 transition-colors"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5 opacity-70" /> Delete
-                                    </button>
-                                </div>
-                            )}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onDelete?.(source.id); setShowActions(false); }}
+                                                className="w-full text-left px-4 py-3 text-[11px] font-bold text-red-600 hover:bg-red-500 hover:text-white rounded-2xl flex items-center gap-3 transition-all group/item"
+                                            >
+                                                <Trash2 className="w-4 h-4 opacity-50 group-hover/item:opacity-100" /> Delete Forever
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
                     )}
                 </div>

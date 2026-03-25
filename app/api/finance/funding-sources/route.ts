@@ -158,8 +158,9 @@ export async function PATCH(request: NextRequest) {
 
         const supabase = await createServerSupabase();
 
-        const updates = items.map((item: { id: string; position: number }) => ({
+        const updates = items.map((item: { id: string; position: number; workspace_id?: string }) => ({
             id: item.id,
+            workspace_id: item.workspace_id || body.workspace_id,
             position: item.position,
             updated_at: new Date().toISOString()
         }));

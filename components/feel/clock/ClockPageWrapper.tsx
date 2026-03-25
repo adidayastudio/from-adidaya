@@ -102,7 +102,8 @@ export default function ClockPageWrapper({
                     />
                 } isTransparent>
                     <div className="animate-in fade-in duration-500 space-y-8 w-full">
-                        <div className="lg:hidden flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 mb-2">
+                        {header}
+                        <div className="hidden items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-4 px-4 mb-2">
                             {filteredTabs.map((tab) => {
                                 const isActive = activeSection === tab.id;
                                 const Icon = tab.icon;
@@ -111,28 +112,18 @@ export default function ClockPageWrapper({
                                         key={tab.id}
                                         href={tab.href}
                                         className={clsx(
-                                            "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors flex-shrink-0",
+                                            "flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all flex-shrink-0",
                                             isActive
-                                                ? "text-neutral-900 dark:text-white font-semibold"
-                                                : "text-neutral-500 font-medium hover:text-neutral-700"
+                                                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.05] font-bold"
+                                                : "text-neutral-500 font-medium hover:bg-neutral-100 dark:hover:bg-neutral-900/40"
                                         )}
                                     >
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="activeTabBadgeClock"
-                                                className="absolute inset-0 rounded-full bg-white dark:bg-neutral-800 shadow-sm border border-black/[0.04] dark:border-white/[0.04]"
-                                                transition={{ type: "spring", stiffness: 500, damping: 35 }}
-                                            />
-                                        )}
-                                        <div className="relative z-10 flex items-center gap-2">
-                                            <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={isActive ? "text-neutral-900 dark:text-white" : "opacity-60"} />
-                                            <span className="text-[13px]">{tab.label}</span>
-                                        </div>
+                                        <Icon size={16} strokeWidth={isActive ? 2.5 : 2} className={clsx(isActive ? "text-neutral-900 dark:text-white" : "opacity-60")} />
+                                        <span className="text-[13px]">{tab.label}</span>
                                     </Link>
                                 );
                             })}
                         </div>
-                        {header}
                         {children}
                     </div>
                 </PageWrapper>

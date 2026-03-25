@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ClockPageWrapper from "@/components/feel/clock/ClockPageWrapper";
 import ClockSidebar, { ClockSection } from "@/components/feel/clock/ClockSidebar";
@@ -10,7 +10,7 @@ import { ClockLeaveRequests } from "@/components/feel/clock/ClockLeaveRequests";
 import { ClockOvertime } from "@/components/feel/clock/ClockOvertime";
 import { ClockApprovals } from "@/components/feel/clock/ClockApprovals";
 import { ClockBusinessTrips } from "@/components/feel/clock/ClockBusinessTrips";
-import { ClockViewToggle } from "@/components/feel/clock/ClockViewToggle";
+import { ClockViewToggle, ClockViewToggleUI } from "@/components/feel/clock/ClockViewToggle";
 import { ClockProvider, useClockContext } from "@/components/feel/clock/ClockContext";
 
 import useUserProfile from "@/hooks/useUserProfile";
@@ -20,11 +20,14 @@ import { ClockBusinessTripDrawer } from "@/components/feel/clock/ClockBusinessTr
 import ClockActionModal from "@/components/feel/clock/ClockActionModal";
 import { Play, Square, Plus, Clock as ClockIcon } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
+import { motion } from "framer-motion";
+import clsx from "clsx";
 import { useClock } from "@/hooks/useClock";
 import { useClockData } from "@/hooks/useClockData";
 import { LeaveRequest, OvertimeLog, BusinessTrip } from "@/lib/api/clock";
 import { PageHeader } from "@/shared/ui/headers/PageHeader";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
+import { useHeader } from "@/components/providers/HeaderProvider";
 
 const VALID_SECTIONS: ClockSection[] = ["overview", "timesheets", "leaves", "overtime", "business-trip", "approvals"];
 
@@ -56,7 +59,7 @@ function ClockPageContent() {
   const [isReadOnly, setIsReadOnly] = useState(false);
 
   // View state from context
-  const { viewMode, setViewMode } = useClockContext();
+  const { viewMode, setViewMode, canAccessTeam } = useClockContext();
 
   const [showOvertimeAlert, setShowOvertimeAlert] = useState(false);
   const [isClockModalOpen, setIsClockModalOpen] = useState(false);
@@ -217,6 +220,45 @@ function ClockPageContent() {
     }
   };
 
+  const headerConfig = useMemo(() => ({
+    hideGlobalActions: true,
+    right: (
+      <div className="flex items-center gap-2">
+        {/* 1. View Toggle Slider */}
+        {currentSection !== "approvals" && (
+          <ClockViewToggleUI 
+            key={viewMode}
+            viewMode={viewMode} 
+            setViewMode={(v) => window.dispatchEvent(new CustomEvent('clock:set-view-mode', { detail: v }))} 
+            canAccessTeam={canAccessTeam} 
+          />
+        )}
+
+        {/* 2. Clock In/Out Glassy Bubble */}
+        {(currentSection === "overview" || currentSection === "timesheets") && (
+          <div className={clsx(
+            "h-9 w-9 flex items-center justify-center rounded-full border shadow-sm pointer-events-auto active:scale-95 transition-all",
+            isCheckedIn 
+              ? "border-red-400/40 bg-red-600 dark:bg-red-500 text-red-50" 
+              : "border-blue-400/40 bg-blue-600 dark:bg-blue-500 text-blue-50"
+          )}>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={() => setIsClockModalOpen(true)}
+              className="h-7 w-7 flex items-center justify-center rounded-full hover:bg-black/10 transition-colors"
+              title={isCheckedIn ? "Clock Out" : "Clock In"}
+            >
+              {isCheckedIn ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
+            </motion.button>
+          </div>
+        )}
+      </div>
+    )
+  }), [currentSection, viewMode, canAccessTeam, isCheckedIn]);
+
+  useHeader(headerConfig, [currentSection, viewMode, canAccessTeam, isCheckedIn]);
+
   const header = (
     <PageHeader
       title={
@@ -236,11 +278,7 @@ function ClockPageContent() {
                 currentSection === "approvals" ? "Review and manage team requests." :
                   "Track work hours, leaves, and business trips."
       }
-      actions={
-        currentSection !== "approvals" && (
-          <ClockViewToggle />
-        )
-      }
+      actions={null}
     />
   );
 

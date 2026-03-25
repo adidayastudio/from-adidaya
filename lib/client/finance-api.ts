@@ -371,8 +371,8 @@ export async function upsertFundingSource(source: Partial<FundingSource> & { wor
     return data;
 }
 
-export async function updateFundingSourcePositions(items: { id: string; position: number }[]) {
-    const { data, error } = await apiPatch<any>("/api/finance/funding-sources", { items });
+export async function updateFundingSourcePositions(workspaceId: string, items: { id: string; position: number }[]) {
+    const { data, error } = await apiPatch<any>("/api/finance/funding-sources", { workspace_id: workspaceId, items });
 
     if (error) {
         console.error("Error updating positions:", error);

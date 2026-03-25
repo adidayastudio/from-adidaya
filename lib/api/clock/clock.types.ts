@@ -22,6 +22,8 @@ export interface AttendanceRecord {
     checkInRemoteMode?: string;
     checkInLocationStatus?: string;
     notes?: string; // Reason or Override Note
+    checkInPhotoUrl?: string;
+    checkOutPhotoUrl?: string;
 }
 
 export type LeaveType = "Annual Leave" | "Sick Leave" | "Permission" | "Unpaid Leave" | "Maternity Leave";
@@ -94,6 +96,8 @@ export interface AttendanceSession {
     locationStatus?: string;
     userName?: string; // from join
     avatar?: string; // from join
+    photoUrl?: string;
+    notes?: string;
 }
 
 export interface AttendanceLog {
@@ -108,6 +112,8 @@ export interface AttendanceLog {
     createdAt: string;
     userName?: string; // from join
     avatar?: string; // from join
+    photoUrl?: string;
+    notes?: string;
 }
 
 export interface ClockActionMetadata {
@@ -121,4 +127,5 @@ export interface ClockActionMetadata {
     locationStatus?: "inside" | "outside" | "unknown";
     overrideReason?: string;
     remoteMode?: string;
+    photoUrl?: string;
 }

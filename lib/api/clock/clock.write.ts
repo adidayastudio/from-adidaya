@@ -1,6 +1,7 @@
 
 import { createClient } from "@/utils/supabase/client";
 import { ClockActionMetadata, LeaveRequest, OvertimeLog, AttendanceStatus } from "./clock.types";
+import { clearClockCache } from "./clock.cache";
 
 const supabase = createClient();
 
@@ -26,7 +27,8 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
         distance_meters: metadata?.distanceMeters,
         location_status: metadata?.locationStatus || "unknown",
         override_reason: metadata?.overrideReason,
-        remote_mode: metadata?.remoteMode
+        remote_mode: metadata?.remoteMode,
+        photo_url: metadata?.photoUrl
     });
 
     // 2. Get existing sessions for today
@@ -66,7 +68,8 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
             location_code: metadata?.detectedLocationCode,
             location_type: metadata?.detectedLocationType,
             remote_mode: metadata?.remoteMode,
-            location_status: metadata?.locationStatus
+            location_status: metadata?.locationStatus,
+            photo_url: metadata?.photoUrl
         });
         criticalPromises.push(sessionPromise);
 
@@ -104,14 +107,26 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                     check_in_location_type: metadata?.detectedLocationType,
                     check_in_remote_mode: metadata?.remoteMode,
                     check_in_location_status: metadata?.locationStatus,
-                    check_in_notes: metadata?.overrideReason
+                    check_in_notes: metadata?.overrideReason,
+                    check_in_photo_url: metadata?.photoUrl
                 }, { onConflict: "user_id, date" });
             } else if (nextSessionNumber === 1) {
                 // Update existing record if needed
-                await (supabase.from("attendance_records") as any).update({
+                const updateData: any = {
                     clock_in: now.toISOString(),
-                    status: (now.getHours() < 9 || (now.getHours() === 9 && now.getMinutes() === 0)) ? "ontime" : (now.getHours() < 10 && now.getMinutes() < 16) ? "intime" : "late"
-                }).eq("user_id", userId).eq("date", dateStr);
+                    status: (now.getHours() < 9 || (now.getHours() === 9 && now.getMinutes() === 0)) ? "ontime" : (now.getHours() < 10 && now.getMinutes() < 16) ? "intime" : "late",
+                    check_in_latitude: metadata?.latitude,
+                    check_in_longitude: metadata?.longitude,
+                    check_in_location_code: metadata?.detectedLocationCode,
+                    check_in_location_type: metadata?.detectedLocationType,
+                    check_in_remote_mode: metadata?.remoteMode,
+                    check_in_location_status: metadata?.locationStatus,
+                    check_in_notes: metadata?.overrideReason,
+                };
+                if (metadata?.photoUrl) {
+                    updateData.check_in_photo_url = metadata.photoUrl;
+                }
+                await (supabase.from("attendance_records") as any).update(updateData).eq("user_id", userId).eq("date", dateStr);
             }
         })();
         criticalPromises.push(recordPromise);
@@ -136,7 +151,8 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
         const sessionPromise = supabase.from("attendance_sessions").update({
             clock_out: now.toISOString(),
             duration_minutes: sessionDuration,
-            updated_at: now.toISOString()
+            updated_at: now.toISOString(),
+            photo_url: metadata?.photoUrl // Store photo in session too for consistency
         }).eq("id", lastSession.id);
         criticalPromises.push(sessionPromise);
 
@@ -183,6 +199,13 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
             const firstSess = existingSessions[0] || lastSession;
             const checkInTime = new Date(firstSess.clock_in);
 
+            // Fetch existing record to preserve check-in data (photo, dots, etc.) and NOT overwrite with NULL
+            const { data: currentRecord } = await supabase.from("attendance_records")
+                .select("check_in_photo_url, check_in_latitude, check_in_longitude, check_in_location_code, check_in_location_type, check_in_remote_mode, check_in_location_status, check_in_notes")
+                .eq("user_id", userId)
+                .eq("date", dateStr)
+                .maybeSingle();
+
             // Recalculate status for safety
             const limitOnTime = new Date(checkInTime);
             limitOnTime.setHours(9, 1, 0, 0);
@@ -192,15 +215,29 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
             if (checkInTime < limitOnTime) status = "ontime";
             else if (checkInTime < limitInTime) status = "intime";
 
-            await (supabase.from("attendance_records") as any).upsert({
+            const upsertData: any = {
                 user_id: userId,
                 date: dateStr,
                 clock_in: checkInTime.toISOString(),
                 clock_out: now.toISOString(),
                 status: status,
                 total_minutes: totalRegularMinutes,
-                overtime_minutes: totalOvertimeMinutes
-            }, { onConflict: "user_id, date" });
+                overtime_minutes: totalOvertimeMinutes,
+                // Preserve check-in data
+                check_in_photo_url: currentRecord?.check_in_photo_url,
+                check_in_latitude: currentRecord?.check_in_latitude,
+                check_in_longitude: currentRecord?.check_in_longitude,
+                check_in_location_code: currentRecord?.check_in_location_code,
+                check_in_location_type: currentRecord?.check_in_location_type,
+                check_in_remote_mode: currentRecord?.check_in_remote_mode,
+                check_in_location_status: currentRecord?.check_in_location_status,
+                check_in_notes: currentRecord?.check_in_notes,
+            };
+            // Set check-out data only if photoUrl is present, otherwise keep previous (or null if none)
+            if (metadata?.photoUrl) {
+                upsertData.check_out_photo_url = metadata.photoUrl;
+            }
+            await (supabase.from("attendance_records") as any).upsert(upsertData, { onConflict: "user_id, date" });
 
             // If overtime detected, also log to overtime_logs for visibility
             if (totalOvertimeMinutes > 0) {
@@ -233,6 +270,9 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
     // Await all critical operations and the log
     // We prioritize session/record integrity, log is side effect but we await it so function doesn't return with error swallowed
     await Promise.all([logPromise, ...criticalPromises]);
+
+    // Clear cache to ensure next fetch gets latest data
+    clearClockCache();
 
     return { success: true };
 }

@@ -22,3 +22,7 @@ export function setClockCache(key: string, value: any, ttlSeconds: number) {
         expiredAt: Date.now() + ttlSeconds * 1000
     });
 }
+
+export function clearClockCache() {
+    CLOCK_CACHE.clear();
+}
