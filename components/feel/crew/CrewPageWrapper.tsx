@@ -63,7 +63,7 @@ export default function CrewPageWrapper({
         setIsMounted(true);
     }, []);
 
-    const canManage = !!(profile?.role && ["superadmin", "admin", "administrator", "supervisor", "hr", "pm", "management", "owner"].includes(profile.role.toLowerCase()));
+    const canManage = !!(profile?.role && ["superadmin", "admin", "administrator", "supervisor", "hr", "pm", "management", "owner", "staff"].includes(profile.role.toLowerCase()));
 
     const CREW_TABS = [
         { id: "directory", label: "Directory", icon: Users },

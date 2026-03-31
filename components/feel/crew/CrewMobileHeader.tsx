@@ -79,7 +79,7 @@ export default function CrewMobileHeader({
     const [showFilters, setShowFilters] = useState(false);
     const { profile } = useUserContext();
 
-    const canManage = !!(profile?.role && ["superadmin", "admin", "administrator", "supervisor", "hr", "pm", "management", "owner"].includes(profile.role.toLowerCase()));
+    const canManage = !!(profile?.role && ["superadmin", "admin", "administrator", "supervisor", "hr", "pm", "management", "owner", "staff"].includes(profile.role.toLowerCase()));
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
