@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { format, differenceInMinutes, isSaturday, isSunday, startOfMonth, eachDayOfInterval, endOfMonth, isSameDay } from "date-fns";
-import { formatMinutes } from "@/lib/clock-data-logic";
+import { calculateStats, formatMinutes, calculateMonthlySummaryMetrics } from "@/lib/clock-data-logic";
 import clsx from "clsx";
-import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, Briefcase, CheckCircle, List, Grid as GridIcon, XCircle, LogOut, CloudSun, CalendarDays, Key, Plane, ClipboardList, AlertTriangle, UserCheck, UserX, ArrowUpRight, ArrowDownRight, MapPin } from "lucide-react";
+import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, Briefcase, CheckCircle, List, Grid as GridIcon, XCircle, LogOut, CloudSun, CalendarDays, Key, Plane, ClipboardList, AlertTriangle, UserCheck, UserX, ArrowUpRight, ArrowDownRight, MapPin, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { UserRole } from "@/hooks/useUserProfile";
@@ -14,9 +14,12 @@ import useUserProfile from "@/hooks/useUserProfile";
 import { isOvertime as isOvertimeCheck, getShiftSchedule, getWorkHoursConfig, getStandardEndTime, formatTargetTime } from "@/lib/work-hours-utils";
 import { LiquidSummaryCard } from "@/components/shared/liquid/LiquidSummaryCard";
 import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
+import { fetchLeavePolicies } from "@/lib/api/employment";
+import { LeavePolicy } from "@/lib/types/organization";
 
 interface ClockOverviewProps {
-    userName: string;
+    full_name?: string;
+    nickname?: string;
     role?: UserRole;
     isCheckedIn?: boolean;
     startTime?: Date | null;
@@ -28,10 +31,9 @@ interface ClockOverviewProps {
     remoteMode?: string | null;
 }
 
-// Mock Team Data removed in favor of real database records
-
 export function ClockOverview({
-    userName,
+    full_name,
+    nickname,
     role,
     isCheckedIn = false,
     startTime = null,
@@ -47,6 +49,21 @@ export function ClockOverview({
     const [currentTime, setCurrentTime] = useState(new Date());
 
     const { attendance, leaves, overtime, loading, teamMembers } = useClockData(profile?.id, viewMode === "team");
+    
+    // --- Leave Policy Data ---
+    const [leavePolicy, setLeavePolicy] = useState<LeavePolicy | null>(null);
+    const [loadingPolicy, setLoadingPolicy] = useState(false);
+
+    useEffect(() => {
+        if (profile?.leave_policy_id) {
+            setLoadingPolicy(true);
+            fetchLeavePolicies().then(policies => {
+                const myPolicy = policies.find(p => p.id === profile.leave_policy_id);
+                if (myPolicy) setLeavePolicy(myPolicy);
+                setLoadingPolicy(false);
+            }).catch(() => setLoadingPolicy(false));
+        }
+    }, [profile?.leave_policy_id]);
 
     // Time Phase Logic (Synchronized with Dashboard)
     const getPhase = (date: Date) => {
@@ -206,11 +223,14 @@ export function ClockOverview({
     const getStatus = () => {
         if (!startTime) return null;
 
+        const config = getWorkHoursConfig(startTime);
+        const startHour = config.startHour; // Dynamic: 8 or 9
+
         const limitOnTime = new Date(startTime);
-        limitOnTime.setHours(9, 1, 0, 0);
+        limitOnTime.setHours(startHour, 1, 0, 0);
 
         const limitInTime = new Date(startTime);
-        limitInTime.setHours(9, 16, 0, 0);
+        limitInTime.setHours(startHour, 16, 0, 0); // 15 min tolerance
 
         const diffMsLate = startTime.getTime() - limitInTime.getTime();
         const isLate = startTime >= limitInTime;
@@ -221,40 +241,59 @@ export function ClockOverview({
         const lateMinutes = isLate ? Math.floor(diffMsLate / 60000) : 0;
 
         const now = new Date();
-        // Use dynamic overtime detection: Mon-Fri after 17:00 or startTime+8h, Sat after 14:00 or startTime+5h
         const isOvertime = isOvertimeCheck(now, startTime) && isCheckedIn;
 
-        return { isLate, isInTime, lateMinutes, isOvertime };
+        return { isLate, isInTime, lateMinutes, isOvertime, config };
     };
 
     const status = getStatus();
     const today = new Date();
-    const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-    const joinDateObj = joinDate ? new Date(joinDate) : new Date();
-    const hasAnnualLeave = joinDateObj <= oneYearAgo;
-
+    
     // Team Stats logic
-    const teamCheckedIn = attendance.filter(t => t.date === new Date().toISOString().split('T')[0] && t.clockIn && !t.clockOut).length;
+    const teamCheckedIn = attendance.filter(t => t.date === new Date().toISOString().split('T')[0] && t.clockIn && t.clockIn !== "-" && !t.clockOut || t.clockOut === "-").length;
     const teamLate = attendance.filter(t => t.date === new Date().toISOString().split('T')[0] && t.status === "late").length;
     const teamOnLeave = leaves.filter(l => {
         const now = new Date();
-        return l.status === "approved" && now >= new Date(l.startDate) && now <= new Date(l.endDate);
+        const dateStr = format(now, "yyyy-MM-dd");
+        return l.status === "approved" && dateStr >= l.startDate && dateStr <= l.endDate;
     }).length;
 
-    // Personal Stats logic
+    // Personal Stats logic enhanced with Monthly Summary Metrics
     const personalStats = useMemo(() => {
         const thisMonth = new Date().getMonth();
         const monthlyRecords = attendance.filter(r => new Date(r.date).getMonth() === thisMonth);
-        const totalWorkMinutes = monthlyRecords.reduce((acc, r) => acc + r.totalMinutes, 0);
+        
+        const summary = calculateMonthlySummaryMetrics(monthlyRecords as any, new Date());
+        
         const lateCount = monthlyRecords.filter(r => r.status === "late").length;
-        const approvedLeaves = leaves.filter(l => l.status === "approved").length;
+        const approvedLeaves = leaves.filter(l => l.status === "approved" && new Date(l.startDate).getMonth() === thisMonth).length;
+        
+        // Annual Leave Balance Calculation
+        // Need to count all approved annual leaves for the current YEAR
+        const currentYear = new Date().getFullYear();
+        const annualLeaveRecords = leaves.filter(l => 
+            l.status === 'approved' && 
+            (l.type?.toLowerCase().includes('annual') || l.type?.toLowerCase().includes('cuti tahunan')) &&
+            new Date(l.startDate).getFullYear() === currentYear
+        );
+        const usedAnnualLeave = annualLeaveRecords.length; // Assuming 1 record = 1 day for simplicity, or we should sum duration
+        
+        const quota = leavePolicy?.annual_leave_quota || (joinDate ? (new Date(joinDate) <= new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()) ? 12 : 0) : 0);
+        const balance = Math.max(0, quota - usedAnnualLeave);
 
         return {
-            workingHours: (totalWorkMinutes / 60).toFixed(1), // Display as decimal hours
+            workingHours: summary.actualAccumulatedHours.toFixed(1),
+            requiredHours: summary.totalRequiredHours.toFixed(1),
+            percentage: summary.completionPercentage.toFixed(0),
+            pacePercentage: summary.currentPacePercentage.toFixed(0),
+            difference: summary.difference.toFixed(1),
+            summaryStatus: summary.status,
             lateCount,
             approvedLeaves,
+            annualLeaveBalance: balance,
+            annualLeaveQuota: quota
         };
-    }, [attendance, leaves]);
+    }, [attendance, leaves, leavePolicy, joinDate]);
 
     return (
         <div className="space-y-8 w-full animate-in fade-in duration-500">
@@ -275,8 +314,9 @@ export function ClockOverview({
                                 <PhaseIcon className="w-6 h-6 md:w-8 md:h-8 opacity-90" strokeWidth={1.5} />
                             </div>
                             <div className="space-y-0.5">
-                                <h2 className={clsx("text-lg md:text-xl font-bold tracking-tight transition-colors duration-500", phase.color)}>
-                                    {phase.greeting}, {userName?.split(' ')[0]}
+                                <h2 className={clsx("text-lg sm:text-xl font-bold tracking-tight transition-colors duration-500", phase.color)}>
+                                    {phase.greeting}, <span className="hidden sm:inline">{profile?.full_name || full_name}</span>
+                                    <span className="sm:hidden">{profile?.nickname || nickname || full_name?.split(' ')[0]}</span>
                                 </h2>
                                 <div className="flex items-center gap-2 text-neutral-500 font-medium text-xs md:text-sm">
                                     {phase.message}
@@ -436,7 +476,7 @@ export function ClockOverview({
                                     icon={<AlertCircle className="w-5 h-5" />}
                                     iconBg={status?.isLate ? "bg-red-50 text-red-600" : status?.isInTime ? "bg-orange-50 text-orange-600" : "bg-emerald-50 text-emerald-600"}
                                     title="Arrival Status"
-                                    subtitle="Based on 09:00 entry"
+                                    subtitle={`Based on ${status?.config?.startHour?.toString().padStart(2, '0')}:00 entry`}
                                     value={startTime ? (status?.isLate ? "Late Arrival" : status?.isInTime ? "In Time" : "On Time") : "--"}
                                     valueClass={startTime ? (status?.isLate ? "bg-red-50 text-red-700" : status?.isInTime ? "bg-orange-50 text-orange-700" : "bg-emerald-50 text-emerald-700") : ""}
                                     extra={status?.isLate ? `${status.lateMinutes} mins late` : undefined}
@@ -450,21 +490,43 @@ export function ClockOverview({
                     </div>
 
                     <div className="space-y-4 pt-4">
-                        <h3 className="text-lg font-bold text-neutral-900">Monthly Summary <span className="text-neutral-400 font-normal text-sm ml-2">(January 2025)</span></h3>
+                        <h3 className="text-lg font-bold text-neutral-900">Monthly Summary <span className="text-neutral-400 font-normal text-sm ml-2">({format(new Date(), "MMMM yyyy")})</span></h3>
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             <LiquidSummaryCard
                                 icon={<Clock className="w-5 h-5 text-blue-600" />}
                                 iconBg="bg-blue-50"
                                 label="Working Hours"
-                                value={`${personalStats.workingHours}`}
-                                subtext="Total this month"
+                                value={`${personalStats.workingHours} / ${personalStats.requiredHours}`}
+                                subtext={
+                                    <div className="flex flex-col gap-1 mt-1">
+                                        <div className="flex items-center justify-between text-[10px] font-bold">
+                                            <span className="text-neutral-400 uppercase tracking-tighter">Progress</span>
+                                            <span className={`${parseFloat(personalStats.pacePercentage) >= 100 ? 'text-emerald-500' : 'text-neutral-500'}`}>{personalStats.percentage}%</span>
+                                        </div>
+                                        <div className="w-full h-1 bg-neutral-100 rounded-full overflow-hidden">
+                                            <div 
+                                                className={clsx(
+                                                    "h-full transition-all duration-1000",
+                                                    personalStats.summaryStatus === "ahead" ? "bg-emerald-500" : 
+                                                    personalStats.summaryStatus === "behind" ? "bg-amber-500" : "bg-blue-500"
+                                                )} 
+                                                style={{ width: `${Math.min(100, parseFloat(personalStats.percentage))}%` }} 
+                                            />
+                                        </div>
+                                        <div className="text-[10px] font-medium text-neutral-400 italic">
+                                            {personalStats.summaryStatus === "ahead" ? `+${personalStats.difference} hrs ahead` : 
+                                             personalStats.summaryStatus === "behind" ? `${personalStats.difference} hrs behind` : 
+                                             "On track with schedule"}
+                                        </div>
+                                    </div>
+                                }
                             />
                             <LiquidSummaryCard
                                 icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
                                 iconBg="bg-red-50"
                                 label="Late Arrivals"
                                 value={`${personalStats.lateCount}`}
-                                subtext="Month to date"
+                                subtext="Total this month"
                                 className={personalStats.lateCount > 0 ? "ring-2 ring-red-500 border-red-200 bg-red-50/10" : ""}
                             />
                             <LiquidSummaryCard
@@ -472,15 +534,15 @@ export function ClockOverview({
                                 iconBg="bg-purple-50"
                                 label="Leave History"
                                 value={`${personalStats.approvedLeaves}`}
-                                subtext="Total approved"
+                                subtext="Approved this month"
                             />
                             <LiquidSummaryCard
-                                icon={<Plane className="w-5 h-5 text-emerald-600" />}
+                                icon={loadingPolicy ? <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" /> : <Plane className="w-5 h-5 text-emerald-600" />}
                                 iconBg="bg-emerald-50"
                                 label="Annual Leave"
-                                value={hasAnnualLeave ? "12" : "0"}
-                                subtext={hasAnnualLeave ? "Available balance" : "No balance yet"}
-                                className={!hasAnnualLeave ? "ring-2 ring-orange-500 border-orange-200" : ""}
+                                value={`${personalStats.annualLeaveBalance}`}
+                                subtext={`${personalStats.annualLeaveQuota} days total quota`}
+                                className={personalStats.annualLeaveBalance <= 2 ? "ring-2 ring-orange-500 border-orange-200 bg-orange-50/5" : ""}
                             />
                         </div>
                     </div>

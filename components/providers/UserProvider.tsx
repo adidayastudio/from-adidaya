@@ -12,35 +12,40 @@ import React, {
 } from "react";
 import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
-export type UserRole = "superadmin" | "admin" | "administrator" | "supervisor" | "hr" | "pm" | "management" | "staff";
+
+// -- RECOVERY ROLES --
+export type UserRole = "superadmin" | "admin" | "administrator" | "supervisor" | "manager" | "hr" | "pm" | "management" | "ceo" | "owner" | "staff";
+const MANAGEMENT_ROLES: UserRole[] = ["superadmin", "admin", "administrator", "supervisor", "manager", "hr", "pm", "management", "ceo", "owner"];
 
 export interface UserProfile {
     id: string;
-    name: string;
+    full_name?: string;
+    nickname?: string;
+    username?: string;
     email: string;
     role: UserRole;
     avatarUrl?: string;
     department?: string;
     joinDate?: string;
+    leave_policy_id?: string;
+    work_schedule_id?: string;
+    // Survival fields for People module
+    permissions?: {
+        can_view_directory?: boolean;
+        can_manage_people?: boolean;
+    };
 }
 
 type AuthStatus = "unknown" | "authenticated" | "unauthenticated";
 type ProfileStatus = "idle" | "loading" | "ready" | "error";
 
 interface UserContextType {
-    // Auth
     authStatus: AuthStatus;
     isAuthenticated: boolean;
     user: User | null;
-
-    // Profile (DB)
     profileStatus: ProfileStatus;
     profile: UserProfile | null;
-
-    // Errors
     error: string | null;
-
-    // Actions
     refreshProfile: (opts?: { background?: boolean }) => Promise<void>;
     refreshAuth: () => Promise<void>;
     signOutLocal: () => void;
@@ -50,19 +55,16 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 /* --------------------------------- Config -------------------------------- */
 
-const PROFILE_CACHE_KEY = "adidaya:user_profile_cache:v3";
-
-/**
- * Keep this SELECT lean.
- * Avoid select('*') unless you really need everything.
- */
-const PROFILE_SELECT = "id,full_name,email,avatar_url,department,join_date";
+// BUMP CACHE TO V100 FOR TOTAL RECOVERY
+const PROFILE_CACHE_KEY = (uid?: string) => `adidaya:user_profile_cache:v115:${uid || 'anon'}`;
+const PROFILE_SELECT = "id,full_name,nickname,username,avatar_url";
 
 /* --------------------------------- Helpers -------------------------------- */
 
-function safeGetCachedProfile(): UserProfile | null {
+function safeGetCachedProfile(uid?: string): UserProfile | null {
     try {
-        const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+        const key = PROFILE_CACHE_KEY(uid);
+        const raw = localStorage.getItem(key);
         if (!raw) return null;
         const parsed = JSON.parse(raw);
         if (!parsed?.id) return null;
@@ -74,15 +76,17 @@ function safeGetCachedProfile(): UserProfile | null {
 
 function safeSetCachedProfile(p: UserProfile) {
     try {
-        localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(p));
+        const key = PROFILE_CACHE_KEY(p.id);
+        localStorage.setItem(key, JSON.stringify(p));
     } catch {
-        // ignore quota/private mode
+        // ignore
     }
 }
 
-function safeClearCachedProfile() {
+function safeClearCachedProfile(uid?: string) {
     try {
-        localStorage.removeItem(PROFILE_CACHE_KEY);
+        const key = PROFILE_CACHE_KEY(uid);
+        localStorage.removeItem(key);
     } catch {
         // ignore
     }
@@ -93,50 +97,31 @@ function safeClearCachedProfile() {
 export function UserProvider({ children }: { children: ReactNode }) {
     const supabase = useMemo(() => createClient(), []);
 
-    // Auth state
     const [authStatus, setAuthStatus] = useState<AuthStatus>("unknown");
     const [user, setUser] = useState<User | null>(null);
-
-    // Profile state
     const [profileStatus, setProfileStatus] = useState<ProfileStatus>("idle");
     const [profile, setProfile] = useState<UserProfile | null>(null);
-
-    // Error
     const [error, setError] = useState<string | null>(null);
 
-    // Refs to prevent overlap/races
     const didInitRef = useRef(false);
     const profileFetchIdRef = useRef(0);
     const authRefreshInFlightRef = useRef<Promise<void> | null>(null);
     const profileRef = useRef<UserProfile | null>(null);
 
-    // Keep profileRef in sync
     useEffect(() => {
         profileRef.current = profile;
     }, [profile]);
 
-    /* ----------------------------- Local actions ----------------------------- */
-
     const signOutLocal = useCallback(() => {
         setAuthStatus("unauthenticated");
         setUser(null);
-
         setProfileStatus("idle");
         setProfile(null);
-
         setError(null);
-        safeClearCachedProfile();
+        safeClearCachedProfile(user?.id);
     }, []);
 
-    /**
-     * ✅ Refresh auth state.
-     * In most cases, onAuthStateChange is enough, but this is useful on first mount
-     * or when you suspect hydration mismatch.
-     *
-     * IMPORTANT: This must be lightweight. No DB fetch here.
-     */
     const refreshAuth = useCallback(async () => {
-        // prevent multiple concurrent refreshAuth calls
         if (authRefreshInFlightRef.current) return authRefreshInFlightRef.current;
 
         const p = (async () => {
@@ -144,7 +129,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
             try {
                 const { data, error: sessionError } = await supabase.auth.getSession();
                 if (sessionError) throw sessionError;
-
                 const session = data?.session ?? null;
                 const nextUser = session?.user ?? null;
 
@@ -156,7 +140,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
                     setAuthStatus("unauthenticated");
                 }
             } catch (e: unknown) {
-                // If session fetch errors, don't freeze forever.
                 setError(e instanceof Error ? e.message : "Unknown auth error");
                 setAuthStatus((prev) => (prev === "unknown" ? "unauthenticated" : prev));
             } finally {
@@ -168,116 +151,92 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return p;
     }, [supabase]);
 
-    /**
-     * ✅ Build an optimistic profile from auth user metadata.
-     * This is intentionally SIMPLE and fast.
-     * It prevents dashboard looking empty while DB fetch is running.
-     */
     const buildOptimisticProfile = useCallback((u: User): UserProfile => {
+        const cached = safeGetCachedProfile(u.id);
+        if (cached) return cached;
+
         const email = u.email || "";
-        const name =
-            (u.user_metadata as any)?.full_name ||
-            (u.user_metadata as any)?.name ||
-            email.split("@")[0] ||
-            "User";
+        // Standardize Capitalization
+        const capitalize = (str: string) => str ? str.trim().split(' ').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ') : "";
+        const capitalizeWord = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-        const avatarUrl = (u.user_metadata as any)?.avatar_url as string | undefined;
-
-        // We avoid complicated role inference here; keep it safe.
-        // DB will overwrite it when ready.
-        const optimisticRole = ("staff" as unknown) as UserRole;
+        const emailPrefix = email.split("@")[0];
+        // FULL NAME fallback for optimistic ui
+        const rawFullName = (u.user_metadata as any)?.full_name || (u.user_metadata as any)?.name || emailPrefix || "User";
+        
+        const name = capitalize(rawFullName);
+        const nickname = capitalizeWord((u.user_metadata as any)?.nickname || name.split(' ')[0]);
+        const metaRole = (u.user_metadata?.role as string)?.toLowerCase();
+        const optimisticRole = (metaRole && MANAGEMENT_ROLES.includes(metaRole as UserRole) ? metaRole : "staff") as UserRole;
 
         return {
             id: u.id,
-            name,
+            full_name: name,
+            nickname: nickname,
+            username: (u.user_metadata as any)?.user_name || (u.user_metadata as any)?.username || emailPrefix,
             email,
             role: optimisticRole,
-            avatarUrl,
-            department: undefined,
-            joinDate: undefined,
+            avatarUrl: (u.user_metadata as any)?.avatar_url,
+            permissions: {
+                can_view_directory: MANAGEMENT_ROLES.includes(optimisticRole),
+                can_manage_people: ["admin", "superadmin", "administrator", "hr", "management", "supervisor", "manager", "pm"].includes(optimisticRole)
+            }
         };
     }, []);
 
-    /**
-     * ✅ Fetch profile from DB.
-     * - Runs only when authStatus === authenticated
-     * - Does NOT flip auth state on error
-     * - Uses fetchId to ignore stale responses (prevents races)
-     */
     const refreshProfile = useCallback(
         async (opts?: { background?: boolean }) => {
             const background = opts?.background ?? false;
-
             if (authStatus !== "authenticated" || !user) return;
 
             const fetchId = ++profileFetchIdRef.current;
-
-            // Avoid global blocking spinners:
-            // - If we already have profile, keep UI usable.
-            // - If no profile yet, set status loading.
-            setProfileStatus((prev) => {
-                if (prev === "loading") return prev;
-                if (background) return prev; 
-                // We use the 'profile' variable here, but we can't easily avoid it 
-                // without a ref or functional update that has access to both status and profile.
-                // However, we can use a ref for the profile to avoid dependency.
-                return profileRef.current ? prev : "loading";
-            });
-
+            setProfileStatus((prev) => (profileRef.current || background ? prev : "loading"));
             setError(null);
 
             try {
-                // Fetch profile and role in parallel
+                // Fetch from both tables to be extra safe
                 const [profileResult, roleResult] = await Promise.all([
-                    supabase
-                        .from("profiles")
-                        .select(PROFILE_SELECT)
-                        .eq("id", user.id)
-                        .single(),
-                    supabase
-                        .from("user_roles")
-                        .select("role")
-                        .eq("user_id", user.id)
-                        .single()
+                    supabase.from("profiles").select(PROFILE_SELECT).eq("id", user.id).maybeSingle(),
+                    supabase.from("user_roles").select("role").eq("user_id", user.id).maybeSingle()
                 ]);
 
-                const { data: profileData, error: profileError } = profileResult;
-                const { data: roleData, error: roleError } = roleResult;
-
-                // Ignore stale fetch result
                 if (fetchId !== profileFetchIdRef.current) return;
 
-                if (profileError) {
-                    // Common "no rows" code: PGRST116
-                    // In that case, keep optimistic profile (do NOT break app)
-                    if ((profileError as any).code !== "PGRST116") {
-                        throw profileError;
-                    }
+                const profileData = profileResult.data;
+                const roleData = roleResult.data;
 
-                    const fallback = buildOptimisticProfile(user);
-                    setProfile(fallback);
-                    safeSetCachedProfile(fallback);
-                    setProfileStatus("ready");
-                    return;
-                }
+                // Determine role: check user_roles -> profiles -> metadata -> staff
+                const rawRole = (roleData?.role || profileData?.role || (user.user_metadata?.role as string))?.toLowerCase();
+                const effectiveRole: UserRole = (rawRole && MANAGEMENT_ROLES.includes(rawRole as UserRole) ? rawRole : "staff") as UserRole;
 
-                // Determine effective role: user_roles > staff
-                // Note: user_roles.role might be lowercase, ensure we cast it correctly
-                let effectiveRole: UserRole = "staff";
+                // Determine name and nickname with proper capitalization
+                const capitalize = (str: string) => str ? str.trim().split(' ').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ') : "";
+                const capitalizeWord = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-                if (roleData?.role) {
-                    effectiveRole = roleData.role.toLowerCase() as UserRole;
-                }
+                // Web/iPad: Full Name strictly from 'full_name' column
+                const rawFullName = profileData?.full_name || user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "User";
+                const freshFullName = capitalize(rawFullName);
+                
+                // Mobile: Nickname fallback to Username
+                const rawNickname = profileData?.nickname || profileData?.username || user.user_metadata?.nickname || freshFullName.split(' ')[0] || "User";
+                const freshNickname = capitalizeWord(rawNickname);
 
-                // Map DB → UserProfile
                 const fresh: UserProfile = {
-                    id: profileData.id,
-                    name: profileData.full_name || profileData.name || user.email?.split("@")[0] || "User",
-                    email: profileData.email,
+                    id: user.id,
+                    full_name: freshFullName,
+                    nickname: freshNickname,
+                    username: profileData?.username,
+                    email: user.email || "",
                     role: effectiveRole,
-                    avatarUrl: profileData.avatar_url || undefined,
-                    department: profileData.department || undefined,
-                    joinDate: profileData.join_date || undefined,
+                    avatarUrl: profileData?.avatar_url || user.user_metadata?.avatar_url,
+                    department: (profileData as any)?.department,
+                    joinDate: (profileData as any)?.join_date,
+                    leave_policy_id: (profileData as any)?.leave_policy_id,
+                    work_schedule_id: (profileData as any)?.work_schedule_id,
+                    permissions: {
+                        can_view_directory: MANAGEMENT_ROLES.includes(effectiveRole),
+                        can_manage_people: ["admin", "superadmin", "administrator", "hr", "management", "supervisor", "manager", "pm"].includes(effectiveRole)
+                    }
                 };
 
                 setProfile(fresh);
@@ -285,50 +244,34 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 setProfileStatus("ready");
             } catch (e: unknown) {
                 if (fetchId !== profileFetchIdRef.current) return;
-
-                // Profile error should NOT kill auth state.
                 setError(e instanceof Error ? e.message : "Unknown profile error");
                 setProfileStatus("error");
-
-                // Keep any existing profile to avoid blank UI
                 setProfile((prev) => prev ?? buildOptimisticProfile(user));
             }
         },
         [authStatus, user, supabase, buildOptimisticProfile]
     );
 
-    /* ----------------------------- Initialization ----------------------------- */
-
     useEffect(() => {
         if (didInitRef.current) return;
         didInitRef.current = true;
 
-        // 1) Hydrate cached profile ASAP to avoid blank dashboard
         const cached = safeGetCachedProfile();
         if (cached) {
             setProfile(cached);
             setProfileStatus("ready");
         }
 
-        // 2) Determine auth state
         void refreshAuth();
 
-        // 3) Subscribe to auth changes (this is the PRIMARY source of truth)
         const { data } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
             const nextUser = session?.user ?? null;
-
             if (nextUser) {
-                // ✅ Auth becomes instant here
                 setUser(nextUser);
                 setAuthStatus("authenticated");
-
-                // ✅ Set optimistic profile immediately if we don't have one yet
                 setProfile((prev) => prev ?? buildOptimisticProfile(nextUser));
-
-                // ✅ Background verification of DB profile
                 void refreshProfile({ background: true });
             } else {
-                // signed out
                 signOutLocal();
             }
         });
@@ -338,30 +281,21 @@ export function UserProvider({ children }: { children: ReactNode }) {
         };
     }, [supabase, refreshAuth, refreshProfile, signOutLocal, buildOptimisticProfile]);
 
-    /* ----------------------------- When auth is ready ----------------------------- */
-
     useEffect(() => {
-        // When auth becomes authenticated (from refreshAuth), fetch profile in background.
         if (authStatus === "authenticated" && user) {
-            // If we don't have profile yet, set optimistic first
             setProfile((prev) => prev ?? buildOptimisticProfile(user));
             void refreshProfile({ background: true });
         }
     }, [authStatus, user, refreshProfile, buildOptimisticProfile]);
-
-    /* ------------------------------- Memoized value ------------------------------- */
 
     const value = useMemo<UserContextType>(() => {
         return {
             authStatus,
             isAuthenticated: authStatus === "authenticated",
             user,
-
             profileStatus,
             profile,
-
             error,
-
             refreshProfile,
             refreshAuth,
             signOutLocal,
@@ -370,8 +304,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
     return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
-
-/* --------------------------------- Hook --------------------------------- */
 
 export function useUserContext() {
     const context = useContext(UserContext);

@@ -353,7 +353,8 @@ function ClockPageContent() {
 
           {currentSection === "overview" && (
             <ClockOverview
-              userName={profile?.name || "User"}
+              full_name={profile?.full_name || "User"}
+              nickname={profile?.nickname || profile?.full_name?.split(' ')[0] || "User"}
               role={profile?.role}
               joinDate={profile?.joinDate}
               // Pass Clock State
@@ -369,14 +370,14 @@ function ClockPageContent() {
           {currentSection === "timesheets" && (
             <ClockTimesheets
               role={profile?.role}
-              userName={profile?.name}
+              userName={profile?.full_name}
               viewMode={viewMode}
             />
           )}
           {currentSection === "leaves" && (
             <ClockLeaveRequests
               role={profile?.role}
-              userName={profile?.name}
+              userName={profile?.full_name}
               viewMode={viewMode}
               onNewRequest={handleNewLeave}
               onEditRequest={handleEditLeave}
@@ -386,7 +387,7 @@ function ClockPageContent() {
           {currentSection === "overtime" && (
             <ClockOvertime
               role={profile?.role}
-              userName={profile?.name}
+              userName={profile?.full_name}
               viewMode={viewMode}
               onLogOvertime={handleNewOvertime}
               onEditLog={handleEditOvertime}
@@ -396,7 +397,7 @@ function ClockPageContent() {
           {currentSection === "business-trip" && (
             <ClockBusinessTrips
               role={profile?.role}
-              userName={profile?.name}
+              userName={profile?.full_name}
               viewMode={viewMode}
               onNewTrip={handleNewTrip}
               onEditTrip={handleEditTrip}
