@@ -205,7 +205,7 @@ export function PdfLayout({ meta, summary, sections, trendData, categoryData }: 
                 </div>
 
                 {/* SECTIONS */}
-                {sections.map((section, sI) => (
+                {sections?.map((section, sI) => (
                     <div key={sI} className="mb-10 last:mb-0">
                         <h3 className="text-lg font-bold text-neutral-800 mb-4 border-l-4 border-blue-500 pl-3">{section.title}</h3>
                         <table className="w-full text-sm text-left">
@@ -259,10 +259,23 @@ export function PdfLayout({ meta, summary, sections, trendData, categoryData }: 
                                                 );
                                             }
 
+                                            // Standard cell rendering
+                                            const isAdj = col.id === "adj";
+                                            const isTotal = col.id === "total";
+                                            const valNum = typeof val === "number" ? val : 0;
+                                            
+                                            let textColor = "text-neutral-800";
+                                            if (isAdj && typeof val === "number") {
+                                                if (val > 0) textColor = "text-blue-600";
+                                                else if (val < 0) textColor = "text-red-600";
+                                            } else if (isTotal) {
+                                                textColor = "text-emerald-600 font-bold";
+                                            }
+
                                             return (
-                                                <td key={col.id} className={`px-4 py-3 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'}`}>
+                                                <td key={col.id} className={`px-4 py-3 ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'} ${textColor}`}>
                                                     {col.format === "currency" ? (
-                                                        <span className="font-mono font-medium">
+                                                        <span className="font-mono">
                                                             <span className="currency-superscript mr-0.5">Rp</span>
                                                             {displayVal}
                                                         </span>

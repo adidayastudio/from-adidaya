@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { format } from "date-fns";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, ArrowUpDown, Plus, Minus, Edit2, FileDown, Users } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -378,12 +379,14 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
 
         try {
             // 1. Prepare Meta
-            const project = projects.find(p => p.code === selectedProject);
-            const projectCode = project
-                ? project.code.includes("-")
-                    ? project.code.replace("-", " · ").toUpperCase()
-                    : project.code.toUpperCase()
+            // Match project by full code (7-JPF) or suffix (JPF)
+            const project = projects.find(p => p.code === selectedProject || formatProjectCode(p.code) === selectedProject);
+            
+            // For display and filename, we only want the suffix (e.g., JPF)
+            const projectCode = selectedProject 
+                ? formatProjectCode(selectedProject)
                 : "ALL";
+                
             const projectName = project ? project.name : (selectedProject ? "Selected Project" : "All Projects");
 
             const startStr = formatDateShort(period.start);
@@ -436,19 +439,28 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                         generatedAt: new Date().toLocaleString("id-ID"),
                     },
                     summary: summaryCards,
-                    columns,
-                    data: rows
+                    sections: [
+                        {
+                            title: "Payroll Table",
+                            columns,
+                            data: rows
+                        }
+                    ]
                 })
             });
 
-            if (!response.ok) throw new Error("Export failed");
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.details || errorData.error || "Export failed");
+            }
 
             // 6. Download
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = `Payroll_${projectCode}_${period.start.toISOString().split("T")[0]}.pdf`;
+            const formattedDate = format(period.end, "yyyyMMdd");
+            a.download = `Payroll_${projectCode}_${formattedDate}.pdf`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);

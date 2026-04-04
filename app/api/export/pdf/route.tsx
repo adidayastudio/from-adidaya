@@ -74,8 +74,16 @@ export async function POST(req: NextRequest) {
             },
         });
 
-    } catch (error) {
-        console.error("PDF Generation Error:", error);
-        return NextResponse.json({ error: "Failed to generate PDF", details: error instanceof Error ? error.message : String(error) }, { status: 500 });
+    } catch (error: any) {
+        console.error("[PDF] Generation Error:", {
+            message: error.message,
+            stack: error.stack,
+            cause: error.cause
+        });
+        
+        return NextResponse.json({ 
+            error: "Failed to generate PDF", 
+            details: error.message || String(error)
+        }, { status: 500 });
     }
 }
