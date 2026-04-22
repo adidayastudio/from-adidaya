@@ -339,13 +339,31 @@ export async function createPurchasingRequest(payload: PurchasingRequestPayload)
     console.log("[DEBUG] createPurchasingRequest - User:", created_by);
     console.log("[DEBUG] createPurchasingRequest - Payload (without invoice_urls):", JSON.stringify(requestData, null, 2));
 
-    // 1. Create Request
+    // 1. Create Request - Explicitly whitelist fields to avoid "column does not exist" or other insertion errors
+    const insertData = {
+        project_id: requestData.project_id,
+        date: requestData.date,
+        vendor: requestData.vendor,
+        beneficiary_bank: requestData.beneficiary_bank,
+        beneficiary_number: requestData.beneficiary_number,
+        beneficiary_name: requestData.beneficiary_name,
+        target_date: requestData.target_date,
+        description: requestData.description,
+        priority: requestData.priority,
+        type: requestData.type,
+        subcategory: requestData.subcategory,
+        amount: requestData.amount,
+        purchase_stage: requestData.purchase_stage,
+        approval_status: requestData.approval_status || 'SUBMITTED',
+        financial_status: requestData.financial_status || 'UNPAID',
+        invoice_url: requestData.invoice_url,
+        notes: requestData.notes,
+        created_by
+    };
+
     const result = await (supabase
         .from("purchasing_requests")
-        .insert([{
-            ...requestData,
-            created_by
-        }])
+        .insert([insertData])
         .select()
         .single() as any);
 

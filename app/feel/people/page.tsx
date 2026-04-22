@@ -24,6 +24,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import PersonalGrowth from "@/components/feel/people/PersonalGrowth";
 import PersonalValues from "@/components/feel/people/PersonalValues";
 import TeamCulture from "@/components/feel/people/TeamCulture";
+import AddPersonModal from "@/components/feel/people/modals/AddPersonModal";
 
 export default function FeelPeoplePage() {
    const { profile, loading: profileLoading } = useUserProfile();
@@ -39,6 +40,7 @@ export default function FeelPeoplePage() {
    const currentSection: PeopleSection = (sectionParam as PeopleSection) || "personal-profile";
 
    // Trigger for Add People Drawer
+   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
    const [triggerAddPerson, setTriggerAddPerson] = useState(0);
 
    const loadDirectory = async () => {
@@ -118,7 +120,7 @@ export default function FeelPeoplePage() {
    };
 
    // FAB / Action Config
-   const onAddPerson = () => setTriggerAddPerson(prev => prev + 1);
+   const onAddPerson = () => setIsAddModalOpen(true);
 
    let header;
    if (currentSection === "setup") {
@@ -286,6 +288,15 @@ export default function FeelPeoplePage() {
                   </div>
                </div>
          )}
+
+         <AddPersonModal 
+            isOpen={isAddModalOpen} 
+            onClose={() => setIsAddModalOpen(false)} 
+            onSuccess={() => {
+                loadDirectory();
+                setTriggerAddPerson(prev => prev + 1);
+            }} 
+         />
       </PeoplePageWrapper>
    );
 }
