@@ -9,6 +9,7 @@ import clsx from "clsx";
 import { format, addDays, differenceInDays, isBefore, startOfToday } from "date-fns";
 import { submitLeaveRequest, LeaveType, LeaveRequest } from "@/lib/api/clock";
 import useUserProfile from "@/hooks/useUserProfile";
+import { toast } from "react-hot-toast";
 
 interface ClockLeaveRequestDrawerProps {
     open: boolean;
@@ -58,7 +59,7 @@ export function ClockLeaveRequestDrawer({ open, onClose, editData, readOnly }: C
                 setStartDate(editData.startDate || "");
                 setEndDate(editData.endDate || "");
                 setNotes(editData.reason || "");
-                setSubType(""); // TODO: If API supports subtype, map it here
+                setSubType(editData.subtype || ""); 
                 setFile(null);
             } else {
                 setCategory("annual");
@@ -116,13 +117,15 @@ export function ClockLeaveRequestDrawer({ open, onClose, editData, readOnly }: C
                 type: leaveType,
                 startDate,
                 endDate,
-                reason: notes
+                reason: notes,
+                subtype: category === "permission" ? subType : undefined
             });
 
+            toast.success("Leave request submitted successfully!");
             onClose();
         } catch (err) {
             console.error("Error submitting leave:", err);
-            alert("Failed to submit request");
+            toast.error("Failed to submit request. Please try again.");
         } finally {
             setIsSubmitting(false);
         }

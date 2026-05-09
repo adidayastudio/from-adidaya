@@ -5,17 +5,22 @@ import { AttendanceRecord, LeaveRequest, OvertimeLog, BusinessTrip, AttendanceSe
 const supabase = createClient();
 
 // Helper: Fetch all profiles and create a lookup map
-async function getProfilesMap(): Promise<Map<string, { full_name: string | null; username: string | null; nickname: string | null }>> {
+async function getProfilesMap(): Promise<Map<string, { full_name: string | null; username: string | null; nickname: string | null; work_schedules?: any }>> {
     const { data: profiles, error } = await supabase
         .from("profiles")
-        .select("id, full_name, username, nickname")
+        .select("id, full_name, username, nickname, work_schedules(start_time, end_time)")
         .limit(5000);
 
     if (error || !profiles) return new Map();
 
-    const map = new Map<string, { full_name: string | null; username: string | null; nickname: string | null }>();
+    const map = new Map<string, { full_name: string | null; username: string | null; nickname: string | null; work_schedules?: any }>();
     profiles.forEach((p: any) => {
-        if (p.id) map.set(p.id.toLowerCase(), { full_name: p.full_name, username: p.username, nickname: p.nickname });
+        if (p.id) map.set(p.id.toLowerCase(), { 
+            full_name: p.full_name, 
+            username: p.username, 
+            nickname: p.nickname,
+            work_schedules: p.work_schedules 
+        });
     });
     return map;
 }
@@ -95,6 +100,7 @@ export async function fetchLeaveRequests(userId?: string, startDate?: string, en
         reason: row.reason,
         rejectReason: row.reject_reason,
         fileUrl: row.file_url,
+        subtype: row.subtype,
         createdAt: row.created_at
     }));
 }

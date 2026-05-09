@@ -9,6 +9,7 @@ import clsx from "clsx";
 import { format, differenceInDays, startOfToday } from "date-fns";
 import { submitBusinessTrip, updateBusinessTrip, BusinessTrip } from "@/lib/api/clock";
 import useUserProfile from "@/hooks/useUserProfile";
+import { toast } from "react-hot-toast";
 
 interface ClockBusinessTripDrawerProps {
     open: boolean;
@@ -103,12 +104,12 @@ export function ClockBusinessTripDrawer({ open, onClose, editData, readOnly }: C
                 });
             }
 
+            toast.success(editData ? "Business trip updated!" : "Business trip request submitted!");
             onClose();
-            // Force refresh to update list
-            window.location.reload();
+            window.dispatchEvent(new CustomEvent("clock-action-success"));
         } catch (err) {
             console.error("Error submitting business trip:", err);
-            alert("Failed to submit request");
+            toast.error("Failed to submit request. Please try again.");
         } finally {
             setIsSubmitting(false);
         }

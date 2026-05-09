@@ -9,7 +9,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 import { Button } from "@/shared/ui/primitives/button/button";
 import { UserRole } from "@/hooks/useUserProfile";
 import { canViewTeamData } from "@/lib/auth-utils";
-import { calculateStats, formatMinutes, ClockStats, calculateAdidayaScore } from "@/lib/clock-data-logic";
+import { calculateStats, formatMinutes, ClockStats, calculateAdidayaScore, getWorkDaysPassed } from "@/lib/clock-data-logic";
 import { useClockData } from "@/hooks/useClockData";
 import useUserProfile from "@/hooks/useUserProfile";
 import { AttendanceRecord, AttendanceStatus, AttendanceSession } from "@/lib/api/clock/clock.types";
@@ -92,7 +92,7 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
     const [lastMonthStats, setLastMonthStats] = useState<any>(null);
 
     // -- DATA FETCHING --
-    const { attendance, leaves, overtime: otLogs, businessTrips: trips, teamMembers, sessions, logs, loading: loadingData, refresh } = useClockData(profile?.id, personalTeamView === "team", currentMonth);
+    const { attendance, leaves, overtime: otLogs, businessTrips: trips, teamMembers, schedules, sessions, logs, loading: loadingData, refresh } = useClockData(profile?.id, personalTeamView === "team", currentMonth);
 
     // Fetch Rule and Last Month Data
     useEffect(() => {
@@ -149,13 +149,16 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                                 clockInLogs: clockData.logs?.filter((l: any) => l.type === "clock_in").map((l: any) => l.timestamp?.substring(0, 10)) || []
                             });
 
-                            // Config
-                            const config = {
-                                late_penalty_per: activeRule?.scoring_params?.attendance?.late_penalty || 2,
-                                late_penalty_cap: activeRule?.scoring_params?.attendance?.max_late_penalty || 20,
-                                ot_bonus_cap: activeRule?.overtime_max_bonus || 10,
-                                ot_target_value: activeRule?.ot_target_hours || 40
-                            };
+                                // Config
+                                const workDaysInMonth = getWorkDaysPassed(prevMonthDate);
+                                const fallbackOTTarget = Math.max(20, workDaysInMonth * 1); // fallback 1h/day, min 20h
+
+                                const config = {
+                                    late_penalty_per: activeRule?.scoring_params?.attendance?.late_penalty || 2,
+                                    late_penalty_cap: activeRule?.scoring_params?.attendance?.max_late_penalty || 20,
+                                    ot_bonus_cap: activeRule?.overtime_max_bonus || 10,
+                                    ot_target_value: activeRule?.ot_target_hours || fallbackOTTarget
+                                };
 
                             // --- BUILD DENSE DATA FOR SCORING ---
                             // We must replicate the exact "dense" logic used in the main view
@@ -315,11 +318,15 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             const member = teamMembers.find(m => String(m.id).toLowerCase() === String(r.userId).toLowerCase());
             const employeeName = member?.username || (member as any)?.full_name || r.userName || "Unknown";
             
+            // Get schedule string
+            const schedule = schedules.find(s => s.id === member?.schedule_id);
+            const scheduleStr = schedule ? `${schedule.start_time.substring(0, 5)} - ${schedule.end_time.substring(0, 5)}` : "09:00 - 18:00";
+
             return {
                 ...r,
                 employee: employeeName,
                 day: r.date ? format(new Date(r.date), "EEE") : "-",
-                schedule: "-", 
+                schedule: scheduleStr, 
                 duration: r.totalMinutes ? formatMinutes(r.totalMinutes) : "-",
                 overtime: r.overtimeMinutes ? formatMinutes(r.overtimeMinutes) : "-",
                 clockIn: r.clockIn ? safeFormatTime(r.clockIn) : "-",
@@ -334,8 +341,8 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             } as TimesheetRow;
         });
 
-        return base;
-    }, [attendance, teamMembers]);
+        return base.filter(row => row.employee !== "Unknown");
+    }, [attendance, teamMembers, schedules]);
 
     // -- STATS CALCULATION --
     const [stats, setStats] = useState<ClockStats | null>(null);
@@ -409,11 +416,14 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
 
 
     useEffect(() => {
+        const workDaysInMonth = getWorkDaysPassed(currentMonth);
+        const fallbackOTTarget = Math.max(20, workDaysInMonth * 1); // fallback 1h/day, min 20h
+
         const config = {
             late_penalty_per: rule?.scoring_params?.attendance?.late_penalty || 2,
             late_penalty_cap: rule?.scoring_params?.attendance?.max_late_penalty || 20,
             ot_bonus_cap: rule?.overtime_max_bonus || 10,
-            ot_target_value: rule?.ot_target_hours || 40 // DYNAMIC TARGET FROM SETUP
+            ot_target_value: rule?.ot_target_hours || fallbackOTTarget // DYNAMIC TARGET FROM SETUP
         };
 
         import("@/lib/clock-data-logic").then(m => {
@@ -555,24 +565,33 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
             );
 
             // 3. Find "Ghost" Members: Users who have a record but are NOT in the validMembers list
-            // (e.g. Raka, or new users not yet synchronized to profiles, or permission issues)
+            // (e.g. users not yet synchronized to profiles, or users with permission issues)
             const ghostMembersFromRecords = dayRecords.reduce((acc: any[], record) => {
                 const mid = String(record.userId).toLowerCase().trim();
-                const isInData = validMembers.some(m => String(m.id).toLowerCase().trim() === mid || String(m.username).toLowerCase().trim() === String(record.employee).toLowerCase().trim());
+                const isInValidMembers = validMembers.some(m =>
+                    String(m.id).toLowerCase().trim() === mid ||
+                    String(m.username).toLowerCase().trim() === String(record.employee).toLowerCase().trim()
+                );
                 const isAlreadyAdded = acc.some(m => String(m.id).toLowerCase().trim() === mid);
 
-                if (!isInData && !isAlreadyAdded) {
-                    const memberProfile = teamMembers.find(m => String(m.username).toLowerCase().trim() === String(record.employee).toLowerCase().trim());
-                    const isNotHumanOrExcluded = memberProfile && (
-                        memberProfile.include_in_performance === false
+                if (!isInValidMembers && !isAlreadyAdded && record.employee && record.employee !== "Unknown") {
+                    // Look up in full teamMembers to check if this person should be excluded
+                    const memberProfile = teamMembers.find(m =>
+                        String(m.id).toLowerCase().trim() === mid ||
+                        String(m.username).toLowerCase().trim() === String(record.employee).toLowerCase().trim()
+                    );
+                    // Skip if explicitly excluded or non-human
+                    const shouldExclude = memberProfile && (
+                        memberProfile.include_in_performance === false ||
+                        memberProfile.account_type === 'system'
                     );
 
-                    if (!isNotHumanOrExcluded) {
+                    if (!shouldExclude) {
                         acc.push({
                             id: record.userId || `ghost-${record.employee}`,
-                            username: record.employee || "Unknown User",
-                            avatar_url: record.avatar, 
-                            department: (record as any).userDepartment, 
+                            username: record.employee,
+                            avatar_url: record.avatar,
+                            department: (record as any).userDepartment,
                             role: (record as any).userRole || "staff"
                         });
                     }
@@ -602,11 +621,13 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                     // Add all session records for this member
                     recordsForMember.forEach(r => fullList.push(r));
                 } else {
-                    // Add single mock "Absent" record
+                    // Add synthetic "Absent" record — only for real members with a known name
+                    const displayName = member.username || member.full_name;
+                    if (!displayName) return; // Skip ghost members with no name
                     fullList.push({
                         id: `absent-${member.id}-${dateToShow}`,
                         date: dateToShow,
-                        employee: member.username || "Unknown",
+                        employee: displayName,
                         userId: member.id,
                         clockIn: "-",
                         clockOut: "-",
@@ -614,6 +635,7 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                         status: "absent" as any,
                         overtime: "-",
                         day: format(new Date(dateToShow), "EEE"),
+                        avatar: member.avatar_url,
                     });
                 }
             });
@@ -717,7 +739,7 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
 
         } catch (error) {
             console.error("PDF Export Error:", error);
-            alert("Failed to export PDF. Please try again.");
+            toast.error("Failed to export PDF. Please try again.");
         } finally {
             setExporting(false);
         }

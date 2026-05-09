@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import * as clockApi from "@/lib/api/clock/index";
 import { fetchTeamMembers, TeamMemberProfile } from "@/lib/api/clock_team";
+import { fetchWorkSchedules } from "@/lib/api/employment";
 import { formatMinutes } from "@/lib/clock-data-logic";
 import { AttendanceRecord, LeaveRequest, OvertimeLog, AttendanceSession, BusinessTrip, AttendanceLog, RequestStatus, AttendanceStatus } from "@/lib/api/clock/clock.types";
 import { format, subMonths, eachDayOfInterval, startOfMonth, endOfMonth, isSunday } from "date-fns";
@@ -30,6 +31,7 @@ export function useClockData(userId: string | undefined, isTeam: boolean = false
     const [sessions, setSessions] = useState<AttendanceSession[]>([]);
     const [logs, setLogs] = useState<clockApi.AttendanceLog[]>([]);
     const [teamMembers, setTeamMembers] = useState<TeamMemberProfile[]>([]);
+    const [schedules, setSchedules] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Use ref to track if we've already fetched for this key
@@ -54,9 +56,10 @@ export function useClockData(userId: string | undefined, isTeam: boolean = false
             const members = isTeam ? await fetchTeamMembers() : [];
 
             // Fetch
-            const [bundleAll, bundleMe] = await Promise.all([
+            const [bundleAll, bundleMe, allSchedules] = await Promise.all([
                 clockApi.fetchClockBundle(targetId, startDate, endDate),
-                isTeam && userId ? clockApi.fetchClockBundle(userId, startDate, endDate) : Promise.resolve(null)
+                isTeam && userId ? clockApi.fetchClockBundle(userId, startDate, endDate) : Promise.resolve(null),
+                fetchWorkSchedules()
             ]);
 
             // Merge Personal data with Team data for current user consistency
@@ -100,7 +103,7 @@ export function useClockData(userId: string | undefined, isTeam: boolean = false
                     const matchedSession = bundle.sessions.find(s => 
                         String(s.userId).toLowerCase().trim() === String(r.userId).toLowerCase().trim() &&
                         toYYYYMMDD(s.date) === dateStr &&
-                        (s.clockIn === r.clockIn || Math.abs((s.durationMinutes || 0) - (r.totalMinutes || 0)) < 15)
+                        (s.clockIn === r.clockIn || Math.abs((s.durationMinutes || 0) - (r.totalMinutes || 0)) < 60) // Relaxed to 1 hour for historical data
                     );
                     
                     if (matchedSession) {
@@ -111,6 +114,26 @@ export function useClockData(userId: string | undefined, isTeam: boolean = false
                         checkInLocationStatus = checkInLocationStatus || matchedSession.locationStatus;
                         checkInRemoteMode = checkInRemoteMode || matchedSession.remoteMode;
                         notes = notes || matchedSession.notes;
+                    }
+
+                    // Log Fallback (Last Resort)
+                    if (!checkInPhotoUrl) {
+                        const matchedInLog = bundle.logs.find(l => 
+                            String(l.userId).toLowerCase().trim() === String(r.userId).toLowerCase().trim() && 
+                            toYYYYMMDD(l.timestamp) === dateStr && 
+                            (l.type === "clock_in" || l.type === "IN") &&
+                            (l.photoUrl || (l as any).photo_url)
+                        );
+                        if (matchedInLog) checkInPhotoUrl = matchedInLog.photoUrl || (matchedInLog as any).photo_url;
+                    }
+                    if (!checkOutPhotoUrl) {
+                        const matchedOutLog = bundle.logs.find(l => 
+                            String(l.userId).toLowerCase().trim() === String(r.userId).toLowerCase().trim() && 
+                            toYYYYMMDD(l.timestamp) === dateStr && 
+                            (l.type === "clock_out" || l.type === "OUT") &&
+                            (l.photoUrl || (l as any).photo_url)
+                        );
+                        if (matchedOutLog) checkOutPhotoUrl = matchedOutLog.photoUrl || (matchedOutLog as any).photo_url;
                     }
 
                     if (!notes) {
@@ -256,6 +279,7 @@ export function useClockData(userId: string | undefined, isTeam: boolean = false
             setBusinessTrips(bundle.trips);
             setSessions(bundle.sessions);
             setLogs(bundle.logs);
+            setSchedules(allSchedules);
             if (isTeam) setTeamMembers(members);
 
         } catch (error) {
@@ -284,7 +308,7 @@ export function useClockData(userId: string | undefined, isTeam: boolean = false
     }, [fetchData]);
 
     return {
-        attendance, leaves, overtime, businessTrips, sessions, logs, teamMembers, loading, refresh,
+        attendance, leaves, overtime, businessTrips, sessions, logs, teamMembers, schedules, loading, refresh,
         updateLeaveOptimistic: (id: string, s: RequestStatus) => setLeaves(pv => pv.map(i => i.id === id ? { ...i, status: s } : i)),
         updateOvertimeOptimistic: (id: string, s: RequestStatus) => setOvertime(pv => pv.map(i => i.id === id ? { ...i, status: s } : i)),
         updateBusinessTripOptimistic: (id: string, s: RequestStatus) => setBusinessTrips(pv => pv.map(i => i.id === id ? { ...i, status: s } : i)),

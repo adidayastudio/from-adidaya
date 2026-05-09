@@ -40,6 +40,7 @@ export interface LeaveRequest {
     reason: string;
     rejectReason?: string;
     fileUrl?: string;
+    subtype?: string;
     createdAt: string;
 }
 

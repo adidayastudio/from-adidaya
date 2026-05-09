@@ -12,12 +12,16 @@ export interface TeamMemberProfile {
     status?: string; // e.g. "active", "excluded", "terminated"
     account_type?: string; // e.g. "human", "system", "bot"
     include_in_performance?: boolean; // false = excluded from performance calculations
+    schedule_id?: string;
 }
 
 export async function fetchTeamMembers(): Promise<TeamMemberProfile[]> {
     // Parallel fetch for speed
     const [profilesResult, rolesResult] = await Promise.all([
-        supabase.from("profiles").select("id, username, full_name, nickname, avatar_url, department, status, account_type, include_in_performance"),
+        supabase.from("profiles")
+            .select("id, username, full_name, nickname, avatar_url, department, status, account_type, include_in_performance, schedule_id")
+            .eq("status", "Active")
+            .eq("account_type", "human_account"),
         supabase.from("user_roles").select("user_id, role")
     ]);
 
@@ -52,7 +56,8 @@ export async function fetchTeamMembers(): Promise<TeamMemberProfile[]> {
             status: p.status || "active",
             account_type: p.account_type || "human",
             role: roleMap.get(p.id) || "staff",
-            include_in_performance: p.include_in_performance !== false // default true if null/undefined
+            include_in_performance: p.include_in_performance !== false, // default true if null/undefined
+            schedule_id: p.schedule_id
         };
     });
 }

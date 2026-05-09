@@ -52,9 +52,6 @@ export function ClockConfirmationModal({
 
     if (!isOpen) return null;
 
-    // DEBUG
-    console.log("Modal Open. Props:", { initialStartTime, initialEndTime, enableCorrection });
-
     const handleConfirm = async () => {
         if (requireReason && !reason.trim()) return;
 

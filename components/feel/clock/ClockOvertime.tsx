@@ -364,7 +364,7 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
 
         } catch (error) {
             console.error("PDF Export Error:", error);
-            alert("Failed to export PDF. Please try again.");
+            toast.error("Failed to export PDF. Please try again.");
         } finally {
             setExporting(false);
         }

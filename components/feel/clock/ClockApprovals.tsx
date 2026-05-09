@@ -16,6 +16,7 @@ import { ClockLeaveRequestDrawer } from "./ClockLeaveRequestDrawer";
 import { ClockOvertimeLogDrawer } from "./ClockOvertimeLogDrawer";
 import { ClockBusinessTripDrawer } from "./ClockBusinessTripDrawer";
 import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
+import { toast } from "react-hot-toast";
 
 interface ClockApprovalsProps {
     role?: UserRole;
@@ -266,7 +267,7 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
 
         } catch (error) {
             console.error("PDF Export Error:", error);
-            alert("Failed to export PDF. Please try again.");
+            toast.error("Failed to export PDF. Please try again.");
         } finally {
             setExporting(false);
         }
@@ -284,7 +285,6 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
     }>({ isOpen: false, type: "approve" });
 
     const handleActionClick = (item: ApprovalItem, type: "approve" | "reject") => {
-        console.log("Action Click:", item); // DEBUG
         setModalConfig({
             isOpen: true,
             type,
@@ -310,10 +310,11 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
             // The modal ensures values are passed if fields were used.
 
             await updateRequestStatus(apiType, item.actualId, status, reason, correction);
+            toast.success(type === "approve" ? "Request approved successfully." : "Request rejected.");
             refresh();
         } catch (err) {
             console.error("Error updating status:", err);
-            alert("Failed to update status");
+            toast.error("Failed to update status. Please try again.");
         } finally {
             setActionLoading(null);
             setModalConfig(prev => ({ ...prev, isOpen: false }));

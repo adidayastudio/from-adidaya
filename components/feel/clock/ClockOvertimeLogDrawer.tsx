@@ -12,6 +12,7 @@ import useUserProfile from "@/hooks/useUserProfile";
 import { fetchProjectsByWorkspace } from "@/lib/api/projects";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { getOvertimeStart } from "@/lib/work-hours-utils";
+import { toast } from "react-hot-toast";
 
 interface ClockOvertimeLogDrawerProps {
     open: boolean;
@@ -143,10 +144,11 @@ export function ClockOvertimeLogDrawer({ open, onClose, editData, readOnly, atte
                 description,
                 projectId
             });
+            toast.success("Overtime log submitted!");
             onClose();
         } catch (err) {
             console.error("Error submitting overtime:", err);
-            alert("Failed to submit log");
+            toast.error("Failed to submit log. Please try again.");
         } finally {
             setIsSubmitting(false);
         }

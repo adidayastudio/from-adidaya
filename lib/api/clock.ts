@@ -29,6 +29,9 @@ export interface AttendanceRecord {
     checkInRemoteMode?: string;
     checkInLocationStatus?: string;
     notes?: string; // Reason or Override Note
+    // Photo URLs
+    checkInPhotoUrl?: string;
+    checkOutPhotoUrl?: string;
 }
 
 export type LeaveType = "Annual Leave" | "Sick Leave" | "Permission" | "Unpaid Leave" | "Maternity Leave";
@@ -45,6 +48,7 @@ export interface LeaveRequest {
     reason: string;
     rejectReason?: string;
     fileUrl?: string;
+    subtype?: string;
     createdAt: string;
 }
 
@@ -90,8 +94,19 @@ export interface BusinessTrip {
 
 export async function fetchAttendanceRecords(userId?: string, startDate?: string, endDate?: string): Promise<AttendanceRecord[]> {
     let query: any = supabase.from("attendance_records").select(`
-        *,
-        profiles:user_id (full_name, department, avatar_url)
+        id, user_id, date, clock_in, clock_out, status, total_minutes, overtime_minutes,
+        check_in_latitude, check_in_longitude, check_in_location_code, check_in_location_type,
+        check_in_remote_mode, check_in_location_status, check_in_notes,
+        check_in_photo_url, check_out_photo_url,
+        profiles:user_id (
+            full_name, 
+            department, 
+            avatar_url,
+            work_schedules (
+                start_time,
+                end_time
+            )
+        )
     `);
 
     if (userId) {
@@ -134,24 +149,29 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
     const roleMap = new Map<string, string>();
 
     return (data || []).map((row: any) => {
-        // Enforce 3-tier 09:00 rule for status consistency
+        // Enforce 3-tier rule for status consistency based on schedule
         let status = row.status as AttendanceStatus;
         if (row.clock_in && (status === 'ontime' || status === 'intime' || status === 'late')) {
             const ck = new Date(row.clock_in);
+            const schedule = row.profiles?.work_schedules;
+            
+            let lateH = 9, lateM = 1, inH = 9, inM = 16;
+            if (schedule && schedule.start_time) {
+                const [h, m] = schedule.start_time.split(':').map(Number);
+                lateH = h; lateM = m + 1;
+                inH = h; inM = m + 16;
+                if (lateM >= 60) { lateH++; lateM -= 60; }
+                if (inM >= 60) { inH++; inM -= 60; }
+            }
 
             const limitOnTime = new Date(ck);
-            limitOnTime.setHours(9, 1, 0, 0); // 09:01:00
-
+            limitOnTime.setHours(lateH, lateM, 0, 0);
             const limitInTime = new Date(ck);
-            limitInTime.setHours(9, 16, 0, 0); // 09:16:00
+            limitInTime.setHours(inH, inM, 0, 0);
 
-            if (ck < limitOnTime) {
-                status = "ontime";
-            } else if (ck < limitInTime) {
-                status = "intime";
-            } else {
-                status = "late";
-            }
+            if (ck < limitOnTime) status = "ontime";
+            else if (ck < limitInTime) status = "intime";
+            else status = "late";
         }
 
         return {
@@ -173,7 +193,9 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
             userRole: roleMap.get(row.user_id),
             userDepartment: row.profiles?.department,
             avatar: row.profiles?.avatar_url,
-            notes: row.check_in_notes // Map check_in_notes to notes
+            notes: row.check_in_notes,
+            checkInPhotoUrl: row.check_in_photo_url || undefined,
+            checkOutPhotoUrl: row.check_out_photo_url || undefined
         };
     });
 }
@@ -197,6 +219,8 @@ export interface AttendanceSession {
     locationType?: string;
     remoteMode?: string;
     locationStatus?: string;
+    photoUrl?: string; // Selfie photo URL for this session
+    notes?: string;
     userName?: string; // from join
     avatar?: string; // from join
 }
@@ -239,6 +263,7 @@ export async function fetchAttendanceSessions(userId?: string, startDate?: strin
         locationType: row.location_type,
         remoteMode: row.remote_mode,
         locationStatus: row.location_status,
+        photoUrl: row.photo_url || undefined,
         userName: row.profiles?.full_name,
         avatar: row.profiles?.avatar_url
     }));
@@ -257,6 +282,8 @@ export interface AttendanceLog {
     longitude?: number;
     detectedLocationCode?: string;
     locationStatus?: string;
+    photoUrl?: string; // Selfie photo URL captured at this log
+    notes?: string;
     createdAt: string;
     userName?: string; // from join
     avatar?: string; // from join
@@ -289,6 +316,8 @@ export async function fetchAttendanceLogs(userId?: string, startDate?: string, e
         longitude: row.longitude,
         detectedLocationCode: row.detected_location_code,
         locationStatus: row.location_status,
+        photoUrl: row.photo_url || undefined,
+        notes: row.override_reason || row.notes || undefined,
         createdAt: row.created_at,
         userName: row.profiles?.full_name,
         avatar: row.profiles?.avatar_url
@@ -306,17 +335,63 @@ export interface ClockActionMetadata {
     locationStatus?: "inside" | "outside" | "unknown";
     overrideReason?: string;
     remoteMode?: string;
+    photoUrl?: string;
 }
-
 export async function clockAction(userId: string, type: "IN" | "OUT", metadata?: ClockActionMetadata) {
     const now = new Date();
-    // Use local YYYY-MM-DD to avoid timezone shifting issues (UTC vs Local)
-    const dateStr = now.toLocaleDateString('en-CA');
+    const dateStr = now.toISOString().split("T")[0];
+
+    // --- DYNAMIC WORK RULES ---
+    // Fetch user profile and schedule
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select(`
+            id,
+            schedule_id,
+            work_schedules (
+                start_time,
+                end_time,
+                break_duration_minutes
+            )
+        `)
+        .eq("id", userId)
+        .single();
+
+    const schedule = profile?.work_schedules as any;
+    
+    // Default Fallbacks (Office Hours 09:00 - 18:00)
+    let regularWorkMinutes = 8 * 60;
+    let lateThresholdHour = 9;
+    let lateThresholdMinute = 1;
+    let intimeThresholdHour = 9;
+    let intimeThresholdMinute = 16;
+
+    if (schedule && schedule.start_time && schedule.end_time) {
+        const [hStart, mStart] = schedule.start_time.split(':').map(Number);
+        const [hEnd, mEnd] = schedule.end_time.split(':').map(Number);
+        
+        // Calculate daily regular minutes
+        const startMins = hStart * 60 + mStart;
+        let endMins = hEnd * 60 + mEnd;
+        if (endMins < startMins) endMins += 1440; // overnight
+        
+        regularWorkMinutes = (endMins - startMins) - (schedule.break_duration_minutes || 60);
+        
+        // Late thresholds relative to start time
+        lateThresholdHour = hStart;
+        lateThresholdMinute = mStart + 1;
+        intimeThresholdHour = hStart;
+        intimeThresholdMinute = mStart + 16;
+        
+        // Handle minute overflow
+        if (lateThresholdMinute >= 60) { lateThresholdHour++; lateThresholdMinute -= 60; }
+        if (intimeThresholdMinute >= 60) { intimeThresholdHour++; intimeThresholdMinute -= 60; }
+    }
+
     const currentHour = now.getHours();
     const OVERTIME_HOUR = 17;
-    const REGULAR_WORK_MINUTES = 8 * 60;
 
-    // 1. Start logging (Fire & Forget promise, we'll await it at the end to catch errors but not block logic start)
+    // 1. Start logging with photo URL
     const logPromise = supabase.from("attendance_logs").insert({
         user_id: userId,
         type: type,
@@ -330,7 +405,8 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
         distance_meters: metadata?.distanceMeters,
         location_status: metadata?.locationStatus || "unknown",
         override_reason: metadata?.overrideReason,
-        remote_mode: metadata?.remoteMode
+        remote_mode: metadata?.remoteMode,
+        photo_url: metadata?.photoUrl || null
     });
 
     // 2. Get existing sessions for today
@@ -358,7 +434,7 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
             return { error: "You must clock OUT before clocking IN again." };
         }
 
-        // Insert new session (Critical)
+        // Insert new session with photo URL (Critical)
         const sessionPromise = supabase.from("attendance_sessions").insert({
             user_id: userId,
             date: dateStr,
@@ -370,7 +446,8 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
             location_code: metadata?.detectedLocationCode,
             location_type: metadata?.detectedLocationType,
             remote_mode: metadata?.remoteMode,
-            location_status: metadata?.locationStatus
+            location_status: metadata?.locationStatus,
+            photo_url: metadata?.photoUrl || null
         });
         criticalPromises.push(sessionPromise);
 
@@ -389,9 +466,9 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                 const checkInTime = new Date(firstSess.clock_in);
 
                 const limitOnTime = new Date(checkInTime);
-                limitOnTime.setHours(9, 1, 0, 0);
+                limitOnTime.setHours(lateThresholdHour, lateThresholdMinute, 0, 0);
                 const limitInTime = new Date(checkInTime);
-                limitInTime.setHours(9, 16, 0, 0);
+                limitInTime.setHours(intimeThresholdHour, intimeThresholdMinute, 0, 0);
 
                 let status: AttendanceStatus = "late";
                 if (checkInTime < limitOnTime) status = "ontime";
@@ -408,13 +485,14 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                     check_in_location_type: metadata?.detectedLocationType,
                     check_in_remote_mode: metadata?.remoteMode,
                     check_in_location_status: metadata?.locationStatus,
-                    check_in_notes: metadata?.overrideReason
+                    check_in_notes: metadata?.overrideReason,
+                    check_in_photo_url: metadata?.photoUrl || null
                 }, { onConflict: "user_id, date" });
             } else if (nextSessionNumber === 1) {
                 // Update existing record if needed
                 await (supabase.from("attendance_records") as any).update({
                     clock_in: now.toISOString(),
-                    status: (now.getHours() < 9 || (now.getHours() === 9 && now.getMinutes() === 0)) ? "ontime" : (now.getHours() < 10 && now.getMinutes() < 16) ? "intime" : "late"
+                    status: (now.getHours() < lateThresholdHour || (now.getHours() === lateThresholdHour && now.getMinutes() < lateThresholdMinute)) ? "ontime" : (now.getHours() < intimeThresholdHour || (now.getHours() === intimeThresholdHour && now.getMinutes() < intimeThresholdMinute)) ? "intime" : "late"
                 }).eq("user_id", userId).eq("date", dateStr);
             }
         })();
@@ -436,7 +514,7 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
         // Calculate duration for this session
         const sessionDuration = Math.floor((now.getTime() - clockInTime.getTime()) / 60000);
 
-        // Update session (Critical)
+        // Update session with clock_out and optional checkout photo (Critical)
         const sessionPromise = supabase.from("attendance_sessions").update({
             clock_out: now.toISOString(),
             duration_minutes: sessionDuration,
@@ -446,12 +524,6 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
 
         // Update Aggregate record (Parallel Critical)
         const recordPromise = (async () => {
-            // Aggregate total duration (excluding gaps)
-            // Fetch ALL sessions to ensure we get the latest state including the one we just updated?
-            // Actually, we can calculate the current session contribution without fetching, but to be safe we might want to fetch.
-            // OPTIMIZATION: We already have `existingSessions`. We can sum them up and add the current session's new duration.
-            // This avoids a Fetch.
-
             let totalRegularMinutes = 0;
             let totalOvertimeMinutes = 0;
 
@@ -476,35 +548,57 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                 totalRegularMinutes += sessionDuration;
             }
 
-            // If regular exceeds 8 hours, move excess to overtime
-            if (totalRegularMinutes > REGULAR_WORK_MINUTES) {
-                const excess = totalRegularMinutes - REGULAR_WORK_MINUTES;
+            // If regular exceeds dynamic limit, move excess to overtime
+            if (totalRegularMinutes > regularWorkMinutes) {
+                const excess = totalRegularMinutes - regularWorkMinutes;
                 totalOvertimeMinutes += excess;
-                totalRegularMinutes = REGULAR_WORK_MINUTES;
+                totalRegularMinutes = regularWorkMinutes;
             }
 
             // Update / Upsert attendance_records
             const firstSess = existingSessions[0] || lastSession;
             const checkInTime = new Date(firstSess.clock_in);
 
-            // Recalculate status for safety
+            // Recalculate status for aggregate record
             const limitOnTime = new Date(checkInTime);
-            limitOnTime.setHours(9, 1, 0, 0);
+            limitOnTime.setHours(lateThresholdHour, lateThresholdMinute, 0, 0);
             const limitInTime = new Date(checkInTime);
-            limitInTime.setHours(9, 16, 0, 0);
+            limitInTime.setHours(intimeThresholdHour, intimeThresholdMinute, 0, 0);
             let status: AttendanceStatus = "late";
             if (checkInTime < limitOnTime) status = "ontime";
             else if (checkInTime < limitInTime) status = "intime";
 
-            await (supabase.from("attendance_records") as any).upsert({
+            // Fetch current record to preserve check-in data
+            const { data: currentRecord } = await supabase.from("attendance_records")
+                .select("check_in_photo_url, check_in_latitude, check_in_longitude, check_in_location_code, check_in_location_type, check_in_remote_mode, check_in_location_status, check_in_notes")
+                .eq("user_id", userId)
+                .eq("date", dateStr)
+                .maybeSingle();
+
+            const upsertData: any = {
                 user_id: userId,
                 date: dateStr,
                 clock_in: checkInTime.toISOString(),
                 clock_out: now.toISOString(),
                 status: status,
                 total_minutes: totalRegularMinutes,
-                overtime_minutes: totalOvertimeMinutes
-            }, { onConflict: "user_id, date" });
+                overtime_minutes: totalOvertimeMinutes,
+                // Preserve check-in data
+                check_in_photo_url: currentRecord?.check_in_photo_url || (firstSess.id === lastSession.id ? metadata?.photoUrl : null),
+                check_in_latitude: currentRecord?.check_in_latitude,
+                check_in_longitude: currentRecord?.check_in_longitude,
+                check_in_location_code: currentRecord?.check_in_location_code,
+                check_in_location_type: currentRecord?.check_in_location_type,
+                check_in_remote_mode: currentRecord?.check_in_remote_mode,
+                check_in_location_status: currentRecord?.check_in_location_status,
+                check_in_notes: currentRecord?.check_in_notes,
+            };
+
+            if (metadata?.photoUrl) {
+                upsertData.check_out_photo_url = metadata.photoUrl;
+            }
+
+            await (supabase.from("attendance_records") as any).upsert(upsertData, { onConflict: "user_id, date" });
 
             // If overtime detected, also log to overtime_logs for visibility
             if (totalOvertimeMinutes > 0) {
@@ -585,6 +679,7 @@ export async function fetchLeaveRequests(userId?: string, startDate?: string, en
         reason: row.reason,
         rejectReason: row.reject_reason,
         fileUrl: row.file_url,
+        subtype: row.subtype,
         createdAt: row.created_at
     }));
 }
@@ -596,6 +691,7 @@ export async function submitLeaveRequest(request: Omit<LeaveRequest, "id" | "sta
         start_date: request.startDate,
         end_date: request.endDate,
         reason: request.reason,
+        subtype: request.subtype,
         file_url: request.fileUrl,
         status: "pending"
     }).select().single();
@@ -611,6 +707,7 @@ export async function updateLeaveRequest(id: string, updates: Partial<Omit<Leave
     if (updates.startDate) updateData.start_date = updates.startDate;
     if (updates.endDate) updateData.end_date = updates.endDate;
     if (updates.reason !== undefined) updateData.reason = updates.reason;
+    if (updates.subtype !== undefined) updateData.subtype = updates.subtype;
     if (updates.fileUrl !== undefined) updateData.file_url = updates.fileUrl;
     if (updates.status) updateData.status = updates.status;
     if (updates.rejectReason !== undefined) updateData.reject_reason = updates.rejectReason;

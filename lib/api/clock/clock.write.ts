@@ -9,9 +9,57 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
     const now = new Date();
     // Use local YYYY-MM-DD to avoid timezone shifting issues (UTC vs Local)
     const dateStr = now.toLocaleDateString('en-CA');
+
+    // --- DYNAMIC WORK RULES ---
+    // Fetch user profile and schedule
+    const { data: profile } = await supabase
+        .from("profiles")
+        .select(`
+            id,
+            schedule_id,
+            work_schedules (
+                start_time,
+                end_time,
+                break_duration_minutes
+            )
+        `)
+        .eq("id", userId)
+        .single();
+
+    const schedule = profile?.work_schedules as any;
+    
+    // Default Fallbacks (Office Hours 09:00 - 18:00)
+    let regularWorkMinutes = 8 * 60;
+    let lateThresholdHour = 9;
+    let lateThresholdMinute = 1;
+    let intimeThresholdHour = 9;
+    let intimeThresholdMinute = 16;
+    let overtimeHourThreshold = 17;
+
+    if (schedule && schedule.start_time && schedule.end_time) {
+        const [hStart, mStart] = schedule.start_time.split(':').map(Number);
+        const [hEnd, mEnd] = schedule.end_time.split(':').map(Number);
+        
+        // Calculate daily regular minutes
+        const startMins = hStart * 60 + mStart;
+        let endMins = hEnd * 60 + mEnd;
+        if (endMins < startMins) endMins += 1440; // overnight
+        
+        regularWorkMinutes = (endMins - startMins) - (schedule.break_duration_minutes || 60);
+        overtimeHourThreshold = hEnd - 1; // Overtime usually starts around end of shift
+        
+        // Late thresholds relative to start time
+        lateThresholdHour = hStart;
+        lateThresholdMinute = mStart + 1;
+        intimeThresholdHour = hStart;
+        intimeThresholdMinute = mStart + 16;
+        
+        // Handle minute overflow
+        if (lateThresholdMinute >= 60) { lateThresholdHour++; lateThresholdMinute -= 60; }
+        if (intimeThresholdMinute >= 60) { intimeThresholdHour++; intimeThresholdMinute -= 60; }
+    }
+
     const currentHour = now.getHours();
-    const OVERTIME_HOUR = 17;
-    const REGULAR_WORK_MINUTES = 8 * 60;
 
     // 1. Start logging (Fire & Forget promise, we'll await it at the end to catch errors but not block logic start)
     const logPromise = supabase.from("attendance_logs").insert({
@@ -47,7 +95,7 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
 
     if (type === "IN") {
         // Determine if this is overtime or regular
-        const isOvertime = currentHour >= OVERTIME_HOUR;
+        const isOvertime = currentHour >= overtimeHourThreshold;
         const nextSessionNumber = existingSessions.length + 1;
 
         // Check if there's an unclosed session (Blocking check)
@@ -88,9 +136,9 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                 const checkInTime = new Date(firstSess.clock_in);
 
                 const limitOnTime = new Date(checkInTime);
-                limitOnTime.setHours(9, 1, 0, 0);
+                limitOnTime.setHours(lateThresholdHour, lateThresholdMinute, 0, 0);
                 const limitInTime = new Date(checkInTime);
-                limitInTime.setHours(9, 16, 0, 0);
+                limitInTime.setHours(intimeThresholdHour, intimeThresholdMinute, 0, 0);
 
                 let status: AttendanceStatus = "late";
                 if (checkInTime < limitOnTime) status = "ontime";
@@ -188,16 +236,19 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                 totalRegularMinutes += sessionDuration;
             }
 
-            // If regular exceeds 8 hours, move excess to overtime
-            if (totalRegularMinutes > REGULAR_WORK_MINUTES) {
-                const excess = totalRegularMinutes - REGULAR_WORK_MINUTES;
+            // If regular exceeds dynamic limit, move excess to overtime
+            if (totalRegularMinutes > regularWorkMinutes) {
+                const excess = totalRegularMinutes - regularWorkMinutes;
                 totalOvertimeMinutes += excess;
-                totalRegularMinutes = REGULAR_WORK_MINUTES;
+                totalRegularMinutes = regularWorkMinutes;
             }
 
             // Update / Upsert attendance_records
             const firstSess = existingSessions[0] || lastSession;
             const checkInTime = new Date(firstSess.clock_in);
+
+            if (checkInTime < limitOnTime) status = "ontime";
+            else if (checkInTime < limitInTime) status = "intime";
 
             // Fetch existing record to preserve check-in data (photo, dots, etc.) and NOT overwrite with NULL
             const { data: currentRecord } = await supabase.from("attendance_records")
@@ -205,15 +256,6 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                 .eq("user_id", userId)
                 .eq("date", dateStr)
                 .maybeSingle();
-
-            // Recalculate status for safety
-            const limitOnTime = new Date(checkInTime);
-            limitOnTime.setHours(9, 1, 0, 0);
-            const limitInTime = new Date(checkInTime);
-            limitInTime.setHours(9, 16, 0, 0);
-            let status: AttendanceStatus = "late";
-            if (checkInTime < limitOnTime) status = "ontime";
-            else if (checkInTime < limitInTime) status = "intime";
 
             const upsertData: any = {
                 user_id: userId,
@@ -224,7 +266,7 @@ export async function clockAction(userId: string, type: "IN" | "OUT", metadata?:
                 total_minutes: totalRegularMinutes,
                 overtime_minutes: totalOvertimeMinutes,
                 // Preserve check-in data
-                check_in_photo_url: currentRecord?.check_in_photo_url,
+                check_in_photo_url: currentRecord?.check_in_photo_url || (firstSess.id === lastSession.id ? metadata?.photoUrl : null),
                 check_in_latitude: currentRecord?.check_in_latitude,
                 check_in_longitude: currentRecord?.check_in_longitude,
                 check_in_location_code: currentRecord?.check_in_location_code,
@@ -284,6 +326,7 @@ export async function submitLeaveRequest(request: Omit<LeaveRequest, "id" | "sta
         start_date: request.startDate,
         end_date: request.endDate,
         reason: request.reason,
+        subtype: request.subtype,
         file_url: request.fileUrl,
         status: "pending"
     }).select().single();
@@ -299,6 +342,7 @@ export async function updateLeaveRequest(id: string, updates: Partial<Omit<Leave
     if (updates.startDate) updateData.start_date = updates.startDate;
     if (updates.endDate) updateData.end_date = updates.endDate;
     if (updates.reason !== undefined) updateData.reason = updates.reason;
+    if (updates.subtype !== undefined) updateData.subtype = updates.subtype;
     if (updates.fileUrl !== undefined) updateData.file_url = updates.fileUrl;
     if (updates.status) updateData.status = updates.status;
     if (updates.rejectReason !== undefined) updateData.reject_reason = updates.rejectReason;
