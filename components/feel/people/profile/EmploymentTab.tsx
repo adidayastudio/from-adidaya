@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import {
-    Briefcase, Building, BadgeCheck, FileClock, History, Clock,
-    Lock, Pencil, Check, X, Activity, MapPin, Calendar, Plus, Trash2
+    Briefcase, Building, BadgeCheck, FileClock, History, Clock, Star,
+    Lock, Pencil, Check, X, Activity, MapPin, Calendar, Plus, Trash2,
+    Plane, Heart
 } from "lucide-react";
 import { Input } from "@/shared/ui/primitives/input/input";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -28,7 +29,8 @@ import {
 import {
     fetchEmploymentTypes,
     fetchWorkStatuses,
-    fetchWorkSchedules
+    fetchWorkSchedules,
+    fetchLeavePolicies
 } from "@/lib/api/employment";
 import useUserProfile from "@/hooks/useUserProfile";
 
@@ -67,7 +69,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
     const [isSaving, setIsSaving] = useState(false);
 
     const { profile: currentUser } = useUserProfile();
-    const isViewerAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+    const isViewerAdmin = currentUser?.permissions?.can_manage_people === true;
 
     // --- SETUP DATA ---
     const [departments, setDepartments] = useState<any[]>([]);
@@ -76,6 +78,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
     const [employmentTypes, setEmploymentTypes] = useState<any[]>([]);
     const [workStatuses, setWorkStatuses] = useState<any[]>([]);
     const [workSchedules, setWorkSchedules] = useState<any[]>([]);
+    const [leavePolicies, setLeavePolicies] = useState<any[]>([]);
     const [takenSequences, setTakenSequences] = useState<string[]>([]);
 
     // --- FORM STATE ---
@@ -87,6 +90,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
     // Status Section
     const [employmentTypeId, setEmploymentTypeId] = useState(person.employment_type_id || "");
     const [workStatusId, setWorkStatusId] = useState(person.work_status_id || "");
+    const [leavePolicyId, setLeavePolicyId] = useState(person.leave_policy_id || "");
 
     // Identification Section
     const [idCode, setIdCode] = useState(person.id_code || person.display_id || "");
@@ -98,7 +102,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
     const [joinDate, setJoinDate] = useState(person.join_date || (person.joinedAt && !person.joinedAt.includes('Unknown') ? person.joinedAt : ""));
 
     // Schedule Section
-    const [scheduleId, setScheduleId] = useState(person.schedule_id || "");
+    const [scheduleId, setScheduleId] = useState(person.work_schedule_id || person.schedule_id || "");
     const [office, setOffice] = useState(person.office || "Jakarta HQ");
 
     // History Add State
@@ -154,13 +158,14 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
     }, []);
 
     const loadSetupData = async () => {
-        const [depts, pos, lvls, types, statuses, schedules] = await Promise.all([
+        const [depts, pos, lvls, types, statuses, schedules, policies] = await Promise.all([
             fetchDepartments(),
             fetchPositions(),
             fetchLevels(),
             fetchEmploymentTypes(),
             fetchWorkStatuses(),
-            fetchWorkSchedules()
+            fetchWorkSchedules(),
+            fetchLeavePolicies()
         ]);
         setDepartments(depts);
         setPositions(pos);
@@ -168,6 +173,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
         setEmploymentTypes(types);
         setWorkStatuses(statuses);
         setWorkSchedules(schedules);
+        setLeavePolicies(policies);
 
         // Fetch taken sequences from all employees
         const people = await fetchPeopleDirectory();
@@ -209,6 +215,7 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
             } else if (editingSection === "status") {
                 updates.employment_type_id = employmentTypeId;
                 updates.work_status_id = workStatusId;
+                updates.leave_policy_id = leavePolicyId;
                 updates.level_id = levelId;
                 // Automatically update IDs when level changes
                 updates.id_number = ids.idNumber;
@@ -217,7 +224,8 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                 updates.display_id = ids.idCode; // Always use calculated ID code
                 updates.id_number = ids.idNumber;
             } else if (editingSection === "schedule") {
-                updates.schedule_id = scheduleId; // Will need backend support if not already
+                updates.work_schedule_id = scheduleId;
+                updates.leave_policy_id = leavePolicyId; // Persist leave policy here now
                 updates.office = office;
             } else if (editingSection === "contract") {
                 updates.join_date = joinDate;
@@ -243,8 +251,9 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
         setLevelId(person.level_id || "");
         setEmploymentTypeId(person.employment_type_id || "");
         setWorkStatusId(person.work_status_id || "");
+        setLeavePolicyId(person.leave_policy_id || "");
         setIdCode(person.id_code || person.display_id || "");
-        setScheduleId(person.schedule_id || "");
+        setScheduleId(person.work_schedule_id || person.schedule_id || "");
         setJoinDate(person.join_date || (person.joinedAt && !person.joinedAt.includes('Unknown') ? person.joinedAt : ""));
         setContractEndDate(person.contract_end_date || "");
         setIsUnlimitedContract(!person.contract_end_date);
@@ -368,13 +377,6 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                         selectedValue={employmentTypeId}
                         onChange={(val: string) => {
                             setEmploymentTypeId(val);
-                            const newType = employmentTypes.find(t => t.id === val);
-                            const currentLvl = levels.find(l => l.id === levelId);
-                            if (newType && currentLvl) {
-                                if (currentLvl.level_code < (newType.min_level_code ?? 0) || currentLvl.level_code > (newType.max_level_code ?? 5)) {
-                                    setLevelId("");
-                                }
-                            }
                         }}
                     />
                     <InfoRow
@@ -598,9 +600,11 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
 
                                     {/* Weekly Summary (if applicable and not Flexible/Shift handled inside) */}
                                     {type === 'Fixed' && totalWeeklyHours > 0 && (
-                                        <div className="flex items-center gap-2 pt-2 border-t border-neutral-200/50">
-                                            <Activity className="w-4 h-4 text-blue-500" />
-                                            <span className="text-xs font-semibold text-blue-600">{totalWeeklyHours}h / week</span>
+                                        <div className="flex items-center justify-between pt-2 border-t border-neutral-200/50">
+                                            <div className="flex items-center gap-2">
+                                                <Activity className="w-4 h-4 text-blue-500" />
+                                                <span className="text-xs font-semibold text-blue-600">{totalWeeklyHours}h / week</span>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -615,6 +619,80 @@ export default function EmploymentTab({ person, isSystem, isMe, onUpdate }: { pe
                                     selectedValue={office}
                                     onChange={setOffice}
                                 />
+
+                                <div className="pt-2 border-t border-neutral-100">
+                                    <InfoRow
+                                        icon={Star}
+                                        label="Leave Policy"
+                                        value={leavePolicies.find(p => p.id === leavePolicyId)?.name || "Not Set"}
+                                        isEditing={editingSection === "schedule"}
+                                        type="select"
+                                        options={leavePolicies.map(p => ({ label: p.name, value: p.id }))}
+                                        selectedValue={leavePolicyId}
+                                        onChange={setLeavePolicyId}
+                                    />
+                                    {person.leave_policy && (
+                                        <div className="mt-3 flex flex-col gap-2">
+                                            {/* Annual Leave Row */}
+                                            <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100/50 flex flex-col gap-2">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <Plane className="w-4 h-4 text-blue-500" />
+                                                        <span className="text-xs font-bold text-blue-700/70 uppercase tracking-tight">Annual Quota</span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-sm font-bold text-blue-700 whitespace-nowrap">
+                                                            {person.remaining_leave ?? 0} <span className="opacity-60 font-normal">/ {person.leave_policy.annual_leave_quota}</span>
+                                                        </div>
+                                                        <div className="text-[10px] uppercase opacity-70 text-blue-700/70 font-bold tracking-tight">Days Left</div>
+                                                    </div>
+                                                </div>
+                                                <div className="w-full bg-blue-100/50 rounded-full h-1.5">
+                                                    <div 
+                                                        className="bg-blue-500 h-1.5 rounded-full transition-all duration-500" 
+                                                        style={{ width: `${Math.min(100, ((person.remaining_leave ?? 0) / (person.leave_policy.annual_leave_quota || 1)) * 100)}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Sick Leave Row */}
+                                            <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-100/50 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Heart className="w-4 h-4 text-rose-500" />
+                                                    <span className="text-xs font-bold text-rose-700/70 uppercase tracking-tight">Sick Quota</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-sm font-bold text-rose-700 whitespace-nowrap">
+                                                        {Math.max(0, (person.leave_policy.sick_leave_quota || 0) - (person.leave_policy.used_sick || 0))} <span className="opacity-60 font-normal">/ {person.leave_policy.sick_leave_quota}</span>
+                                                    </div>
+                                                    <div className="text-[10px] uppercase opacity-60 text-rose-700/70 font-bold tracking-tight">Days Left</div>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Permission Leave Row */}
+                                            <div className="p-3 bg-amber-50/50 rounded-xl border border-amber-100/50 flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <BadgeCheck className="w-4 h-4 text-amber-500" />
+                                                    <span className="text-xs font-bold text-amber-700/70 uppercase tracking-tight">Permission Quota</span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-sm font-bold text-amber-700 whitespace-nowrap">
+                                                        {Math.max(0, (person.leave_policy.permission_quota || 0) - (person.leave_policy.used_permission || 0))} <span className="opacity-60 font-normal">/ {person.leave_policy.permission_quota}</span>
+                                                    </div>
+                                                    <div className="text-[10px] uppercase opacity-60 text-amber-700/70 font-bold tracking-tight">Days Left</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Carry Over Row */}
+                                            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 flex items-center justify-between">
+                                                <span className="text-xs font-bold text-neutral-500 uppercase tracking-tight">Carry Over</span>
+                                                <span className="text-xs font-medium text-neutral-700">
+                                                    {person.leave_policy.carry_over_allowed ? 'Allowed' : 'Not Allowed'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         );
                     })()}

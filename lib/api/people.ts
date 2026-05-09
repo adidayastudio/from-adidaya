@@ -22,7 +22,6 @@ const supabase = createClient();
 export async function fetchPeopleDirectory(): Promise<Person[]> {
     console.log("Fetching People Directory...");
 
-    // 1. Fetch Profiles and related data in parallel to avoid relation issues and perform manual joins
     const [
         profilesResult,
         rolesResult,
@@ -31,7 +30,11 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
         levelsResult,
         empTypesResult,
         workStatusesResult,
-        workSchedulesResult
+        workSchedulesResult,
+        leavePoliciesResult,
+        attendanceResult,
+        performanceResult,
+        leaveRequestsResult
     ] = await Promise.all([
         supabase.from('profiles').select('*').order('full_name', { ascending: true }),
         supabase.from('user_roles').select('*'),
@@ -40,7 +43,11 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
         supabase.from('organization_levels').select('id, name, roman_code'),
         supabase.from('employment_types').select('id, name'),
         supabase.from('work_status').select('id, name'),
-        supabase.from('work_schedules').select('id, name')
+        supabase.from('work_schedules').select('*'),
+        supabase.from('leave_policies').select('*'),
+        supabase.from('attendance_records').select('user_id, status, overtime_minutes'),
+        supabase.from('people_performance_snapshots').select('*'),
+        supabase.from('leave_requests').select('user_id, status, start_date, end_date, type').eq('status', 'approved')
     ]);
 
     if (profilesResult.error) {
@@ -48,23 +55,18 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
         return [];
     }
 
-    const profiles = (profilesResult.data || []).filter(p => !!p);
-
-    // DEBUG: Check for the missing user
-    const missingId = "056164a2-3936-4e5e-ae1a-13c5bb83e158";
-    const found = profiles.find(p => p.id === missingId);
-    console.log(`[DEBUG] fetchPeopleDirectory: Total Profiles: ${profiles.length}. Missing ID ${missingId} found? ${found ? 'YES' : 'NO'}`);
-    if (!found) {
-        console.log(`[DEBUG] First 5 IDs:`, profiles.slice(0, 5).map(p => p.id));
-    }
-
-    const roles = (rolesResult.data || []).filter(r => !!r);
-    const departments = (deptsResult.data || []).filter(d => !!d);
-    const positions = (posResult.data || []).filter(p => !!p);
-    const levels = (levelsResult.data || []).filter(l => !!l);
-    const empTypes = (empTypesResult.data || []).filter(e => !!e);
-    const workStatuses = (workStatusesResult.data || []).filter(w => !!w);
-    const schedules = (workSchedulesResult.data || []).filter(s => !!s);
+    const profiles = (profilesResult.data || []).filter((p: any) => !!p);
+    const roles = (rolesResult.data || []).filter((r: any) => !!r);
+    const departments = (deptsResult.data || []).filter((d: any) => !!d);
+    const positions = (posResult.data || []).filter((p: any) => !!p);
+    const levels = (levelsResult.data || []).filter((l: any) => !!l);
+    const empTypes = (empTypesResult.data || []).filter((e: any) => !!e);
+    const workStatuses = (workStatusesResult.data || []).filter((w: any) => !!w);
+    const schedules = (workSchedulesResult.data || []).filter((s: any) => !!s);
+    const leavePolicies = (leavePoliciesResult.data || []).filter((lp: any) => !!lp);
+    const allAttendance = attendanceResult.data || [];
+    const allPerformance = performanceResult.data || [];
+    const allLeaveRequests = leaveRequestsResult.data || [];
 
     console.log(`Fetched ${profiles.length} profiles.`);
 
@@ -78,20 +80,29 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
         const levelObj = levels.find((l: any) => l.id === p.level_id);
         const empTypeObj = empTypes.find((et: any) => et.id === p.employment_type_id);
         const workStatusObj = workStatuses.find((ws: any) => ws.id === p.work_status_id);
-        const scheduleObj = schedules.find((s: any) => s.id === p.schedule_id);
+        const scheduleObj = schedules.find((s: any) => s.id === p.work_schedule_id || s.id === p.schedule_id);
+        const leavePolicyObj = leavePolicies.find((lp: any) => lp.id === p.leave_policy_id);
+
+        // --- NAMING LOGIC (Synced with UserProvider) ---
+        const capitalize = (str: string) => str ? str.trim().split(' ').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ') : "";
+        const capitalizeWord = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
+
+        const rawFullName = p.full_name || p.email?.split("@")[0] || "User";
+        const freshFullName = capitalize(rawFullName);
+        
+        const rawNickname = p.nickname || p.username || freshFullName.split(' ')[0] || "User";
+        const freshNickname = capitalizeWord(rawNickname);
 
         const person: Person = {
             id: p.id,
-            // New field names
             id_number: p.id_number || p.system_id || p.employee_id || '00000000',
             id_code: p.id_code || p.display_id || `ADY-0-STAFF-${new Date().getFullYear()}000`,
-            // Backward compatibility
             system_id: p.id_number || p.system_id || p.employee_id || '00000000',
             display_id: p.id_code || p.display_id || `ADY-0-STAFF-${new Date().getFullYear()}000`,
             account_type: p.account_type || 'human_account',
 
-            name: p.full_name || p.email?.split('@')[0] || 'Unknown',
-            nickname: (p.nickname || p.full_name?.split(' ')[0] || '').charAt(0).toUpperCase() + (p.nickname || p.full_name?.split(' ')[0] || '').slice(1),
+            name: freshFullName,
+            nickname: freshNickname,
             email: p.email || '',
 
             role: role as any,
@@ -115,8 +126,52 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
             level_id: p.level_id,
             employment_type_id: p.employment_type_id,
             work_status_id: p.work_status_id,
-            schedule_id: p.schedule_id,
+            leave_policy_id: p.leave_policy_id,
+            work_schedule_id: p.work_schedule_id || p.schedule_id,
+            schedule_id: p.work_schedule_id || p.schedule_id,
             schedule_name: scheduleObj?.name,
+            schedule_details: scheduleObj ? `${scheduleObj.start_time} - ${scheduleObj.end_time}` : undefined,
+            leave_policy_name: leavePolicyObj?.name,
+            remaining_leave: (() => {
+                if (!leavePolicyObj) return undefined;
+                const userLeaves = allLeaveRequests.filter((r: any) => r.user_id === p.id && (!r.type || r.type.toLowerCase().includes('annual')));
+                const usedDays = userLeaves.reduce((sum: number, r: any) => {
+                    const start = new Date(r.start_date);
+                    const end = new Date(r.end_date);
+                    const diffTime = Math.abs(end.getTime() - start.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                    return sum + diffDays;
+                }, 0);
+                return Math.max(0, (leavePolicyObj.annual_leave_quota || 0) - usedDays);
+            })(),
+            total_leave: leavePolicyObj?.annual_leave_quota,
+            leave_policy: (() => {
+                if (!leavePolicyObj) return undefined;
+                
+                const userLeaves = allLeaveRequests.filter((r: any) => r.user_id === p.id);
+                
+                const calcDays = (leaves: any[]) => leaves.reduce((sum, r) => {
+                    const start = new Date(r.start_date);
+                    const end = new Date(r.end_date);
+                    const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                    return sum + diffDays;
+                }, 0);
+
+                const annLeaves = userLeaves.filter((r: any) => !r.type || r.type.toLowerCase().includes('annual'));
+                const sickLeaves = userLeaves.filter((r: any) => r.type?.toLowerCase().includes('sick'));
+                const permLeaves = userLeaves.filter((r: any) => r.type?.toLowerCase().includes('permission') || r.type?.toLowerCase().includes('permit'));
+
+                return {
+                    annual_leave_quota: leavePolicyObj.annual_leave_quota,
+                    sick_leave_quota: leavePolicyObj.sick_leave_quota,
+                    permission_quota: leavePolicyObj.permission_quota,
+                    carry_over_allowed: leavePolicyObj.carry_over_allowed,
+                    accrual_type: leavePolicyObj.accrual_type,
+                    used_annual: calcDays(annLeaves),
+                    used_sick: calcDays(sickLeaves),
+                    used_permission: calcDays(permLeaves)
+                };
+            })(),
 
             // Contract
             contract_end_date: p.contract_end_date,
@@ -144,34 +199,48 @@ export async function fetchPeopleDirectory(): Promise<Person[]> {
             include_in_attendance: p.include_in_attendance !== false,
             include_in_people_analytics: p.include_in_people_analytics !== false,
 
-            attendance: {
-                attendanceRate: 0,
-                totalDays: 0,
-                lateDays: 0,
-                absentDays: 0,
-                overtimeHours: 0
-            },
-            performance: {
-                tasksCompleted: 0,
-                avgTaskCompletionTime: "N/A",
-                performanceScore: 0,
-                productivityTrend: "stable",
-                activeProjects: 0,
-                performanceStatus: "No Data"
-            },
-            kpi: {
-                projectInvolvement: 75,
-                presenceScore: 75,
-                engagementScore: 75,
-                peerReviewScore: 75,
-                qualityScore: 75,
-                taskCompletionScore: 75,
-                bonusScore: 0,
-                overallScore: 75
-            }
+            attendance: (() => {
+                const userAtt = allAttendance.filter((a: any) => a.user_id === p.id);
+                const totalDays = userAtt.length;
+                const lateDays = userAtt.filter((a: any) => a.status === 'late').length;
+                const overtimeMinutes = userAtt.reduce((sum: number, a: any) => sum + (a.overtime_minutes || 0), 0);
+                const attendanceRate = totalDays > 0 ? ((totalDays - lateDays) / totalDays) * 100 : 0;
+                
+                return {
+                    attendanceRate: Math.round(attendanceRate),
+                    totalDays,
+                    lateDays,
+                    absentDays: userAtt.filter((a: any) => a.status === 'absent').length,
+                    overtimeHours: Math.round(overtimeMinutes / 60)
+                };
+            })(),
+            performance: (() => {
+                const userPerf = allPerformance.find((s: any) => s.user_id === p.id);
+                return {
+                    tasksCompleted: userPerf?.tasks_completed || 0,
+                    avgTaskCompletionTime: userPerf?.avg_task_completion_time || "N/A",
+                    performanceScore: userPerf?.computed_index || 0,
+                    productivityTrend: (userPerf?.productivity_trend as any) || "stable",
+                    activeProjects: userPerf?.active_projects || 0,
+                    performanceStatus: userPerf ? (userPerf.computed_index > 80 ? "Top Performer" : userPerf.computed_index > 60 ? "Good" : "Requires Review") : "No Data"
+                };
+            })(),
+            kpi: (() => {
+                const userPerf = allPerformance.find((s: any) => s.user_id === p.id);
+                return {
+                    projectInvolvement: userPerf?.project_involvement_score || 75,
+                    presenceScore: userPerf?.attendance_score || 75,
+                    engagementScore: userPerf?.engagement_score || 75,
+                    peerReviewScore: userPerf?.peer_review_score || 75,
+                    qualityScore: userPerf?.quality_score || 75,
+                    taskCompletionScore: userPerf?.task_completion_score || 75,
+                    bonusScore: userPerf?.bonus_score || 0,
+                    overallScore: userPerf?.computed_index || 75
+                };
+            })()
         };
         return person;
-    }).filter(p => !!p);
+    }).filter((p: any) => !!p);
 }
 
 // On-demand fetch for detailed profile view
@@ -248,6 +317,8 @@ export async function updatePeopleProfile(userId: string, updates: {
     department_id?: string;
     position_id?: string;
     level_id?: string;
+    leave_policy_id?: string;
+    work_schedule_id?: string;
     employment_type_id?: string;
     work_status_id?: string;
     display_id?: string;
@@ -338,7 +409,9 @@ export async function updatePeopleProfile(userId: string, updates: {
     if (updates.display_id) dbUpdates.id_code = updates.display_id; // Map to new column name
     if (updates.id_number) dbUpdates.id_number = updates.id_number; // Map to new column name
     if (updates.join_date) dbUpdates.join_date = updates.join_date;
-    if (updates.schedule_id) dbUpdates.schedule_id = updates.schedule_id;
+    if (updates.schedule_id !== undefined) dbUpdates.schedule_id = updates.schedule_id;
+    if (updates.work_schedule_id !== undefined) dbUpdates.work_schedule_id = updates.work_schedule_id;
+    if (updates.leave_policy_id !== undefined) dbUpdates.leave_policy_id = updates.leave_policy_id;
     if (updates.office) dbUpdates.office = updates.office;
     if (updates.contract_end_date !== undefined) dbUpdates.contract_end_date = updates.contract_end_date; // Allow null
     if (updates.probation_status) dbUpdates.probation_status = updates.probation_status;

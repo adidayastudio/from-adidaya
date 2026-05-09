@@ -35,20 +35,30 @@ function isRamadanPeriod(date: Date): boolean {
     return false;
 }
 
+export const RAMADAN_2026_START = new Date(2026, 1, 19); // Feb 19
+export const RAMADAN_2026_END = new Date(2026, 2, 19);   // Mar 19
+export const NEW_SCHEDULE_DATE = new Date(2026, 3, 6);   // Apr 6
+
 /**
  * Get work hours configuration for a given date
+ * 
+ * CHANGE LOG (April 2026):
+ * - Before April 6, 2026: 09:00 - 17:00 (Mon-Fri), 09:00 - 14:00 (Sat)
+ * - On/After April 6, 2026: 08:00 - 17:00 (Mon-Fri), Sat & Sun Off
  */
 export function getWorkHoursConfig(date: Date | string): WorkHoursConfig {
     const d = typeof date === 'string' ? new Date(date) : date;
     const dayOfWeek = d.getDay(); // 0 = Sunday, 6 = Saturday
     const ramadan = isRamadanPeriod(d);
+    
+    const isNewSchedule = d >= NEW_SCHEDULE_DATE;
 
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-    // Sunday
+    // Sunday - Always Off
     if (dayOfWeek === 0) {
         return {
-            startHour: 9,
+            startHour: isNewSchedule ? 8 : 9,
             endHour: ramadan ? 16 : 17,
             workMinutes: 0,
             workHours: 0,
@@ -58,8 +68,20 @@ export function getWorkHoursConfig(date: Date | string): WorkHoursConfig {
         };
     }
 
-    // Saturday
+    // Saturday - Off on New Schedule, Half day on Old Schedule
     if (dayOfWeek === 6) {
+        if (isNewSchedule) {
+            return {
+                startHour: 8,
+                endHour: 17,
+                workMinutes: 0,
+                workHours: 0,
+                isWorkDay: false,
+                dayName: 'Saturday',
+                isRamadan: ramadan
+            };
+        }
+
         const endHour = ramadan ? 13 : 14;
         const workHours = ramadan ? 4 : 5;
         return {
@@ -74,10 +96,13 @@ export function getWorkHoursConfig(date: Date | string): WorkHoursConfig {
     }
 
     // Monday - Friday
+    const startHour = isNewSchedule ? 8 : 9;
     const endHour = ramadan ? 16 : 17;
-    const workHours = ramadan ? 7 : 8;
+    // User says "9 jam di clock (in-out)" for the new 08-17 schedule
+    const workHours = isNewSchedule ? 9 : (ramadan ? 7 : 8);
+    
     return {
-        startHour: 9,
+        startHour,
         endHour,
         workMinutes: workHours * 60,
         workHours,

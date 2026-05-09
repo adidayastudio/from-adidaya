@@ -8,6 +8,7 @@ import { SortableTable, Column } from "../components/SortableTable";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Pencil, Trash2, Star, Plus, AlertTriangle, X, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const getRoman = (n: number) => {
     if (n === 0) return '0';
@@ -83,7 +84,12 @@ export default function EmploymentTypesTable({ isLocked }: { isLocked?: boolean 
 
     const confirmDelete = async () => {
         if (!typeToDelete) return;
-        await deleteEmploymentType(typeToDelete.id);
+        const success = await deleteEmploymentType(typeToDelete.id);
+        if (success) {
+            toast.success("Employment type deleted successfully!");
+        } else {
+            toast.error("Failed to delete employment type.");
+        }
         setIsDeleteModalOpen(false);
         setTypeToDelete(null);
         loadData();
@@ -104,8 +110,11 @@ export default function EmploymentTypesTable({ isLocked }: { isLocked?: boolean 
 
             const result = await upsertEmploymentType(payload);
             if (result) {
+                toast.success("Employment type saved successfully!");
                 setIsModalOpen(false);
                 loadData();
+            } else {
+                toast.error("Failed to save employment type.");
             }
         } finally {
             setIsSaving(false);

@@ -1,9 +1,9 @@
 import { UserRole } from "@/hooks/useUserProfile";
 
-export const TEAM_VIEW_ROLES: (UserRole | string)[] = ["superadmin", "admin", "administrator", "supervisor", "pm", "management", "finance"];
+export const TEAM_VIEW_ROLES: (UserRole | string)[] = ["superadmin", "admin", "administrator", "supervisor", "pm", "management", "manager", "ceo", "owner", "finance"];
 
 // Finance-specific roles that can access finance team features
-export const FINANCE_ROLES: string[] = ["superadmin", "admin", "administrator", "finance", "supervisor", "pm", "management"];
+export const FINANCE_ROLES: string[] = ["superadmin", "admin", "administrator", "finance", "supervisor", "manager", "pm", "management", "ceo", "owner"];
 
 export function canViewTeamData(role: string | undefined): boolean {
     if (!role) return false;

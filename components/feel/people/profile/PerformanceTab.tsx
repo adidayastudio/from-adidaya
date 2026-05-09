@@ -9,7 +9,7 @@ import EditConfirmationModal from "../modals/EditConfirmationModal";
 import { fetchPeopleFeedback, fetchPeoplePerformance, fetchTeamBenchmark } from "@/lib/api/people";
 import { fetchCurrentPerformanceRule, calculateOverallIndex } from "@/lib/api/performance";
 import { fetchAttendanceRecords } from "@/lib/api/clock";
-import { calculateStats, calculateAdidayaScore } from "@/lib/clock-data-logic";
+import { calculateStats, calculateAdidayaScore, calculateMonthlySummaryMetrics } from "@/lib/clock-data-logic";
 import { SpiderChart, PerformanceLineChart } from "./PerformanceHistoryCharts";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import useUserProfile from "@/hooks/useUserProfile";
@@ -25,6 +25,7 @@ export default function PerformanceTab({ person, isSystem, isMe }: { person: Per
     const [benchmark, setBenchmark] = useState<any>(null);
     const [rule, setRule] = useState<any>(null);
     const [realtimeAttendance, setRealtimeAttendance] = useState<number | null>(null);
+    const [currentSummary, setCurrentSummary] = useState<any>(null);
     const [timeFilter, setTimeFilter] = useState("3m");
     const [isLoading, setIsLoading] = useState(true);
 
@@ -82,7 +83,8 @@ export default function PerformanceTab({ person, isSystem, isMe }: { person: Per
 
                 // Calculate Current Month (Running/Visual context)
                 if (currentMonthRecords.length > 0) {
-                    // Logic for current month display...
+                    const summary = calculateMonthlySummaryMetrics(currentMonthRecords as any, today);
+                    setCurrentSummary(summary);
                 }
             } catch (error) {
                 console.error("Error loading performance data:", error);
@@ -94,8 +96,8 @@ export default function PerformanceTab({ person, isSystem, isMe }: { person: Per
     }, [person.id, person.name, rule]);
 
     const realtimeOverallIndex = useMemo(() => {
-        // Fallback to static KPI if real-time calculation is impossible
-        const fallbackScore = person.kpi.presenceScore;
+        // Fallback to pre-calculated stats if real-time calculation is impossible
+        const fallbackScore = person.attendance.attendanceRate;
         const currentAtt = realtimeAttendance !== null ? realtimeAttendance : fallbackScore;
 
         if (!rule) return null;
@@ -103,7 +105,7 @@ export default function PerformanceTab({ person, isSystem, isMe }: { person: Per
         const latest = snapshots[0] || {};
         const components = {
             attendance: currentAtt,
-            taskCompletion: Number(latest.task_completion_score) || person.kpi.taskCompletionScore,
+            taskCompletion: Number(latest.task_completion_score) || person.performance.tasksCompleted,
             taskQuality: Number(latest.quality_score) || person.kpi.qualityScore,
             peerReview: Number(latest.peer_review_score) || person.kpi.peerReviewScore
         };
@@ -145,12 +147,11 @@ export default function PerformanceTab({ person, isSystem, isMe }: { person: Per
             return isNaN(n) ? fallback : n;
         };
 
-        const currentAttendance = realtimeAttendance !== null ? realtimeAttendance : safeNum(latest.attendance_score, person.kpi.presenceScore);
+        const currentAttendance = realtimeAttendance !== null ? realtimeAttendance : safeNum(latest.attendance_score, person.attendance.attendanceRate);
 
         return [
             // User requested 77% as the new KKM for Attendance
             { label: "Attendance", value: currentAttendance, benchmark: safeNum(avg.avg_attendance_rate, 77) },
-            { label: "Task Completion", value: safeNum(latest.task_completion_score, person.kpi.taskCompletionScore), benchmark: safeNum(avg.avg_task_completion_score, 75) },
             { label: "Project Involvement", value: safeNum(latest.project_involvement_score, person.kpi.projectInvolvement), benchmark: safeNum(avg.avg_project_involvement_score, 75) },
             { label: "Task Quality", value: safeNum(latest.quality_score, person.kpi.qualityScore), benchmark: safeNum(avg.avg_quality_score, 75) },
             { label: "Peer Review", value: safeNum(latest.peer_review_score, person.kpi.peerReviewScore), benchmark: safeNum(avg.avg_peer_review_score, 75) },
@@ -202,24 +203,24 @@ export default function PerformanceTab({ person, isSystem, isMe }: { person: Per
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <ScoreCard
                     title="Overall Score"
-                    value={realtimeOverallIndex !== null ? realtimeOverallIndex : person.kpi.overallScore}
+                    value={realtimeOverallIndex !== null ? realtimeOverallIndex : person.performance.performanceScore}
                     icon={Award}
                     trend={person.performance.productivityTrend}
                     main
                 />
                 <ScoreCard
                     title="Attendance"
-                    value={`${realtimeAttendance !== null ? realtimeAttendance : person.kpi.presenceScore}%`}
+                    value={`${realtimeAttendance !== null ? realtimeAttendance : person.attendance.attendanceRate}%`}
                     icon={Clock}
                 />
                 <ScoreCard
                     title="Task Completion"
-                    value={snapshots[0]?.task_completion_score || person.kpi.taskCompletionScore}
+                    value={snapshots[0]?.task_completion_score || person.performance.tasksCompleted}
                     icon={Target}
                 />
                 <ScoreCard
                     title="Project Inv."
-                    value={snapshots[0]?.project_involvement_score ? `${snapshots[0].project_involvement_score}%` : `${person.kpi.projectInvolvement}%`}
+                    value={snapshots[0]?.project_involvement_score ? `${snapshots[0].project_involvement_score}%` : `${person.performance.activeProjects} Active`}
                     icon={TrendingUp}
                 />
                 <ScoreCard
@@ -228,6 +229,71 @@ export default function PerformanceTab({ person, isSystem, isMe }: { person: Per
                     icon={Activity}
                 />
             </div>
+
+            {/* ATTENDANCE PULSE (CURRENT MONTH) */}
+            {currentSummary && (
+                <div className="bg-white rounded-2xl border border-neutral-200 p-6 flex flex-col md:flex-row items-center gap-8 animate-in fade-in duration-700">
+                    <div className="flex-1 space-y-4 w-full">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                                    <Clock className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-neutral-900">Attendance Pulse</h3>
+                                    <p className="text-xs text-neutral-500">Current month's working hours progress</p>
+                                </div>
+                            </div>
+                            <div className={clsx(
+                                "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                                currentSummary.status === "ahead" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                                currentSummary.status === "behind" ? "bg-red-50 text-red-600 border border-red-100" :
+                                "bg-blue-50 text-blue-600 border border-blue-100"
+                            )}>
+                                {currentSummary.status} pacing
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs font-medium">
+                                <span className="text-neutral-500">Completion</span>
+                                <span className="text-neutral-900 font-bold">{Math.round(currentSummary.completionPercentage)}%</span>
+                            </div>
+                            <div className="w-full h-2 bg-neutral-100 rounded-full overflow-hidden">
+                                <div 
+                                    className={clsx(
+                                        "h-full rounded-full transition-all duration-1000",
+                                        currentSummary.status === "ahead" ? "bg-emerald-500" :
+                                        currentSummary.status === "behind" ? "bg-red-500" :
+                                        "bg-blue-500"
+                                    )}
+                                    style={{ width: `${Math.min(100, currentSummary.completionPercentage)}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-8 border-l border-neutral-100 pl-8 hidden md:flex">
+                        <div className="text-center">
+                            <div className="text-[10px] uppercase font-bold text-neutral-400 mb-1">Accumulated</div>
+                            <div className="text-xl font-bold text-neutral-900">{Math.round(currentSummary.actualAccumulatedHours)}h</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-[10px] uppercase font-bold text-neutral-400 mb-1">Target</div>
+                            <div className="text-xl font-bold text-neutral-700">{Math.round(currentSummary.totalRequiredHours)}h</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="text-[10px] uppercase font-bold text-neutral-400 mb-1">Pace Dif.</div>
+                            <div className={clsx(
+                                "text-xl font-bold",
+                                currentSummary.difference > 0 ? "text-emerald-600" : "text-red-600"
+                            )}>
+                                {currentSummary.difference > 0 ? "+" : ""}{Math.round(currentSummary.difference)}h
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
 
             {/* PERFORMANCE CHARTS */}

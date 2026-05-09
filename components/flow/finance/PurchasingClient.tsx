@@ -2509,8 +2509,28 @@ export default function PurchasingClient() {
                             )}
                         </AnimatePresence>
 
+                        {/* SHARED TOOLBAR */}
+                        <div className="mt-2 md:mt-3">
+                            <FinanceToolbar
+                                currentMonth={currentMonth}
+                                onMonthChange={handleMonthChange}
+                                projects={projects}
+                                selectedProjects={selectedProjects}
+                                onProjectToggle={(id) => {
+                                    if (selectedProjects.includes(id)) {
+                                        setSelectedProjects(selectedProjects.filter(pid => pid !== id));
+                                    } else {
+                                        setSelectedProjects([...selectedProjects, id]);
+                                    }
+                                }}
+                                onClearProjects={() => setSelectedProjects([])}
+                                showAllMonths={showAllMonths}
+                                onToggleShowAll={() => setShowAllMonths(!showAllMonths)}
+                            />
+                        </div>
+
                         {/* MOBILE/TABLET CARD VIEW */}
-                        <div className="mt-6 block md:hidden space-y-3">
+                        <div className="block md:hidden space-y-3">
                             {filteredItems.length === 0 ? (
                                 <div className="bg-white/40 dark:bg-neutral-900/60 backdrop-blur-md rounded-[24px] border border-white/50 dark:border-neutral-800 shadow-sm dark:shadow-none p-6 text-center">
                                     <Package className="w-10 h-10 text-neutral-300 dark:text-neutral-600 mx-auto mb-2" />
@@ -2632,25 +2652,8 @@ export default function PurchasingClient() {
                             )}
                         </div>
 
-                        {/* DESKTOP TOOLBAR & TABLE VIEW */}
-                        <div className="mt-3 hidden md:block">
-                            <FinanceToolbar
-                                currentMonth={currentMonth}
-                                onMonthChange={handleMonthChange}
-                                projects={projects}
-                                selectedProjects={selectedProjects}
-                                onProjectToggle={(id) => {
-                                    if (selectedProjects.includes(id)) {
-                                        setSelectedProjects(selectedProjects.filter(pid => pid !== id));
-                                    } else {
-                                        setSelectedProjects([...selectedProjects, id]);
-                                    }
-                                }}
-                                onClearProjects={() => setSelectedProjects([])}
-                                showAllMonths={showAllMonths}
-                                onToggleShowAll={() => setShowAllMonths(!showAllMonths)}
-                            />
-
+                        {/* DESKTOP TABLE VIEW */}
+                        <div className="hidden md:block">
                             <div className="bg-white/40 dark:bg-white/[0.03] backdrop-blur-md rounded-3xl border border-white/50 dark:border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.02)] dark:shadow-none overflow-hidden">
                             <div className="overflow-x-auto scrollbar-hide">
                                 <table className="w-full text-left border-collapse table-auto">

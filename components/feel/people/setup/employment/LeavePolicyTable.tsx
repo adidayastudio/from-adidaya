@@ -11,6 +11,7 @@ import { SortableTable, Column } from "../components/SortableTable";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Pencil, Trash2, Plus, AlertTriangle, X, Heart, Plane, AlertCircle, Info } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LeavePolicyTable({ isLocked }: { isLocked?: boolean }) {
     const [policies, setPolicies] = useState<LeavePolicy[]>([]);
@@ -83,7 +84,12 @@ export default function LeavePolicyTable({ isLocked }: { isLocked?: boolean }) {
 
     const confirmDelete = async () => {
         if (!policyToDelete) return;
-        await deleteLeavePolicy(policyToDelete.id);
+        const success = await deleteLeavePolicy(policyToDelete.id);
+        if (success) {
+            toast.success("Leave policy deleted successfully!");
+        } else {
+            toast.error("Failed to delete leave policy.");
+        }
         setIsDeleteModalOpen(false);
         setPolicyToDelete(null);
         loadData();
@@ -102,8 +108,11 @@ export default function LeavePolicyTable({ isLocked }: { isLocked?: boolean }) {
 
             const result = await upsertLeavePolicy(payload);
             if (result) {
+                toast.success("Leave policy saved successfully!");
                 setIsModalOpen(false);
                 loadData();
+            } else {
+                toast.error("Failed to save leave policy.");
             }
         } finally {
             setIsSaving(false);

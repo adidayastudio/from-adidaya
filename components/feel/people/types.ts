@@ -69,6 +69,20 @@ export interface Person {
     office?: string;
     schedule_id?: string;
     schedule_name?: string;
+    schedule_details?: string;
+    leave_policy_name?: string;
+    remaining_leave?: number;
+    total_leave?: number;
+    leave_policy?: {
+        annual_leave_quota?: number;
+        sick_leave_quota?: number;
+        permission_quota?: number;
+        carry_over_allowed?: boolean;
+        accrual_type?: string;
+        used_annual?: number;
+        used_sick?: number;
+        used_permission?: number;
+    };
 
     // Contract
     contract_end_date?: string;
@@ -88,6 +102,8 @@ export interface Person {
     level_id?: string;
     employment_type_id?: string;
     work_status_id?: string;
+    leave_policy_id?: string;
+    work_schedule_id?: string;
 
     avatarUrl?: string;
     initials: string;

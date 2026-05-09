@@ -6,16 +6,17 @@ export type AttendanceStatus = "ontime" | "intime" | "late" | "absent" | "sick" 
 export interface AttendanceRecord {
     id: string;
     date: string;
-    day: string;
-    employee: string;
-    schedule: string;
-    clockIn: string;
-    clockOut: string;
-    duration: string;
-    overtime: string;
     status: AttendanceStatus;
-    totalMinutes: number; // For calculation
-    overtimeMinutes: number; // For calculation
+    totalMinutes: number; 
+    overtimeMinutes: number;
+    // Optional UI fields
+    day?: string;
+    employee?: string;
+    schedule?: string;
+    clockIn?: string;
+    clockOut?: string;
+    duration?: string;
+    overtime?: string;
 }
 
 export interface ClockStats {
@@ -41,25 +42,53 @@ export function formatMinutes(mins: number): string {
 
 
 
-// Calculate Total Work Days (W) in the current month (excluding Sundays, including Saturdays for now)
+// Calculate Total Work Days (W) in the current month
 function getWorkDaysInMonth(date: Date): number {
     const start = startOfMonth(date);
     const end = endOfMonth(date);
     const days = eachDayOfInterval({ start, end });
-    // Filter out Sundays (assuming Mon-Sat work week as per user request)
-    // Saturdays ARE included. Sundays are NOT.
-    return days.filter(d => !isSunday(d)).length;
+    
+    // NEW SCHEDULE START DATE: April 6, 2026
+    const newScheduleStartDate = new Date(2026, 3, 6);
+
+    return days.filter(d => {
+        if (isSunday(d)) return false;
+        
+        // After April 6, Saturdays are off
+        if (isSaturday(d) && d >= newScheduleStartDate) return false;
+        
+        // Exclude Holidays
+        const dateStr = format(d, "yyyy-MM-dd");
+        if (HOLIDAYS_2026.some(h => h.date === dateStr)) return false;
+        
+        return true;
+    }).length;
 }
 
-// Calculate Total Work Hours in Month (Mon-Fri 8h, Sat 5h)
+// Calculate Total Work Hours in Month
 function getTotalWorkHoursInMonth(date: Date): number {
     const start = startOfMonth(date);
     const end = endOfMonth(date);
     const days = eachDayOfInterval({ start, end });
+    
+    const newScheduleStartDate = new Date(2026, 3, 6);
+
     return days.reduce((acc, d) => {
         if (isSunday(d)) return acc;
-        if (isSaturday(d)) return acc + 5;
-        return acc + 8;
+        
+        // Exclude Holidays
+        const dateStr = format(d, "yyyy-MM-dd");
+        if (HOLIDAYS_2026.some(h => h.date === dateStr)) return acc;
+
+        if (d >= newScheduleStartDate) {
+            // New Schedule: Mon-Fri = 9 hours, Sat = 0
+            if (isSaturday(d)) return acc;
+            return acc + 9;
+        } else {
+            // Old Schedule: Mon-Fri = 8 hours, Sat = 5 hours
+            if (isSaturday(d)) return acc + 5;
+            return acc + 8;
+        }
     }, 0);
 }
 
@@ -95,45 +124,95 @@ export function getWorkDaysPassed(date: Date): number {
     const targetYear = date.getFullYear();
     const targetMonth = date.getMonth();
 
-    // Determine the last day to count
-    // If current month: count up to today
-    // If past month: count up to last day of that month
-    // Handle edge case where "now" is in same month
     const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth();
-
-    // Last day of the target month
     const daysInMonth = getDaysInMonth(date);
-
-    // Limit is today (if current) or end of month (if past)
     const limitDay = isCurrentMonth ? now.getDate() : daysInMonth;
+
+    const newScheduleStartDate = new Date(2026, 3, 6);
 
     let workDays = 0;
 
     for (let day = 1; day <= limitDay; day++) {
-        // Create date object for this specific day
-        // Note: Months are 0-indexed in JS Date
         const currentHook = new Date(targetYear, targetMonth, day);
 
-        // 1. Exclude Sundays (0)
-        if (currentHook.getDay() === 0) continue;
+        if (isSunday(currentHook)) continue;
+        
+        // After April 6, Saturdays are off
+        if (isSaturday(currentHook) && currentHook >= newScheduleStartDate) continue;
 
-        // 2. Exclude Holidays
         const dateStr = format(currentHook, "yyyy-MM-dd");
-        // Check if this date strings exists in HOLIDAYS_2026 array
         const isHoliday = HOLIDAYS_2026.some(h => h.date === dateStr);
-
         if (isHoliday) continue;
 
         workDays++;
     }
 
-    console.log("DEBUG getWorkDaysPassed (Iterative):", {
-        targetMonth: `${targetYear}-${targetMonth + 1}`,
-        limitDay,
-        finalWorkDays: workDays
-    });
-
     return workDays;
+}
+
+export interface MonthlySummaryMetrics {
+    totalRequiredHours: number;
+    hoursPassedSoFar: number;
+    actualAccumulatedHours: number;
+    completionPercentage: number;
+    currentPacePercentage: number; // Actual vs Required so far
+    difference: number; // actual - passedSoFar
+    status: "ahead" | "behind" | "on-track";
+}
+
+export function calculateMonthlySummaryMetrics(records: AttendanceRecord[], referenceDate: Date = new Date()): MonthlySummaryMetrics {
+    const totalRequiredHours = getTotalWorkHoursInMonth(referenceDate);
+    const actualAccumulatedMinutes = records.reduce((sum, r) => sum + (r.totalMinutes || 0), 0);
+    const actualAccumulatedHours = actualAccumulatedMinutes / 60;
+
+    // Calculate required hours passed so far up to today
+    const now = new Date();
+    const targetYear = referenceDate.getFullYear();
+    const targetMonth = referenceDate.getMonth();
+    const isCurrentMonth = targetYear === now.getFullYear() && targetMonth === now.getMonth();
+    
+    // If future month, hoursPassedSoFar = 0. If data is for a past month, hoursPassedSoFar = totalRequiredHours
+    let hoursPassedSoFar = 0;
+    if (targetYear < now.getFullYear() || (targetYear === now.getFullYear() && targetMonth < now.getMonth())) {
+        hoursPassedSoFar = totalRequiredHours;
+    } else if (isCurrentMonth) {
+        const limitDay = now.getDate();
+        const newScheduleStartDate = new Date(2026, 3, 6);
+        
+        let passedMinutes = 0;
+        for (let day = 1; day <= limitDay; day++) {
+            const d = new Date(targetYear, targetMonth, day);
+            if (isSunday(d)) continue;
+            
+            const dateStr = format(d, "yyyy-MM-dd");
+            if (HOLIDAYS_2026.some(h => h.date === dateStr)) continue;
+
+            if (d >= newScheduleStartDate) {
+                if (!isSaturday(d)) passedMinutes += (9 * 60);
+            } else {
+                passedMinutes += (isSaturday(d) ? 5 : 8) * 60;
+            }
+        }
+        hoursPassedSoFar = passedMinutes / 60;
+    }
+
+    const completionPercentage = totalRequiredHours > 0 ? (actualAccumulatedHours / totalRequiredHours) * 100 : 0;
+    const currentPacePercentage = hoursPassedSoFar > 0 ? (actualAccumulatedHours / hoursPassedSoFar) * 100 : 0;
+    const difference = actualAccumulatedHours - hoursPassedSoFar;
+
+    let status: MonthlySummaryMetrics["status"] = "on-track";
+    if (difference > 1) status = "ahead";
+    else if (difference < -1) status = "behind";
+
+    return {
+        totalRequiredHours,
+        hoursPassedSoFar,
+        actualAccumulatedHours,
+        completionPercentage,
+        currentPacePercentage,
+        difference,
+        status
+    };
 }
 
 export function getQualityCategory(rawScore: number): AdidayaScoreResult["attendance_quality_category"] {

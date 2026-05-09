@@ -199,9 +199,9 @@ export default function DashboardPage() {
   const PhaseIcon = phase.icon;
 
   const APPS = [
-    { label: "Website", href: "/frame/website", icon: Globe, color: "text-orange-500", bg: "bg-gradient-to-br from-orange-100/80 to-orange-50/40 border-orange-200/40", category: "FRAME" },
-    { label: "Social", href: "/frame/social", icon: Share2, color: "text-orange-500", bg: "bg-gradient-to-br from-orange-100/80 to-orange-50/40 border-orange-200/40", category: "FRAME" },
-    { label: "Learn", href: "/frame/learn", icon: GraduationCap, color: "text-orange-500", bg: "bg-gradient-to-br from-orange-100/80 to-orange-50/40 border-orange-200/40", category: "FRAME" },
+    // { label: "Website", href: "/frame/website", icon: Globe, color: "text-orange-500", bg: "bg-gradient-to-br from-orange-100/80 to-orange-50/40 border-orange-200/40", category: "FRAME" },
+    // { label: "Social", href: "/frame/social", icon: Share2, color: "text-orange-500", bg: "bg-gradient-to-br from-orange-100/80 to-orange-50/40 border-orange-200/40", category: "FRAME" },
+    // { label: "Learn", href: "/frame/learn", icon: GraduationCap, color: "text-orange-500", bg: "bg-gradient-to-br from-orange-100/80 to-orange-50/40 border-orange-200/40", category: "FRAME" },
     { label: "Projects", href: "/flow/projects", icon: FolderKanban, color: "text-red-500", bg: "bg-gradient-to-br from-red-100/80 to-red-50/40 border-red-200/40", category: "FLOW" },
     { label: "Finance", href: "/flow/finance", icon: Banknote, color: "text-red-500", bg: "bg-gradient-to-br from-red-100/80 to-red-50/40 border-red-200/40", category: "FLOW" },
     { label: "Resources", href: "/flow/resources", icon: Package, color: "text-red-500", bg: "bg-gradient-to-br from-red-100/80 to-red-50/40 border-red-200/40", category: "FLOW" },
@@ -234,7 +234,7 @@ export default function DashboardPage() {
           <div className="md:hidden">
             <DashboardHeader onOpenNotifications={() => setIsNotifSheetOpen(true)} />
             <ActivitySummaryCard />
-            <VibeCard />
+            {/* <VibeCard /> */}
             <WorkspaceGrid />
           </div>
 
@@ -253,9 +253,9 @@ export default function DashboardPage() {
 
             <div className="space-y-8">
               {/* Top Row: Activity and Vibe */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 relative z-10 overflow-visible">
+              <div className="grid grid-cols-1 gap-6 relative z-10 overflow-visible">
                 <ActivitySummaryCard />
-                <VibeCard />
+                {/* <VibeCard /> */}
               </div>
 
               {/* Bottom Row: Workspace Grid full width */}

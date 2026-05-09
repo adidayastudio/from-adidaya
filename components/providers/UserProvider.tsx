@@ -56,8 +56,8 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 /* --------------------------------- Config -------------------------------- */
 
 // BUMP CACHE TO V100 FOR TOTAL RECOVERY
-const PROFILE_CACHE_KEY = (uid?: string) => `adidaya:user_profile_cache:v115:${uid || 'anon'}`;
-const PROFILE_SELECT = "id,full_name,nickname,username,avatar_url";
+const PROFILE_CACHE_KEY = (uid?: string) => `adidaya:user_profile_cache:v116:${uid || 'anon'}`;
+const PROFILE_SELECT = "id,full_name,nickname,username,avatar_url,department,join_date,leave_policy_id,work_schedule_id";
 
 /* --------------------------------- Helpers -------------------------------- */
 

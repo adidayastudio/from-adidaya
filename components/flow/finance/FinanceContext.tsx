@@ -90,10 +90,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             const stored = sessionStorage.getItem(STORAGE_KEY) as ViewMode | null;
 
             if (canAccessTeam) {
-                // Determine target view: Priority: 1. URL parameter, 2. Stored preference, 3. Keep current (from lazy init)
+                // Determine target view: Priority: 1. URL parameter, 2. Stored preference, 3. Default to "team"
                 const targetView = (urlView === "personal" || urlView === "team")
                     ? urlView
-                    : (stored === "team" ? "team" : (stored === "personal" ? "personal" : viewMode));
+                    : (stored === "personal" ? "personal" : "team");
 
                 if (targetView !== viewMode) {
                     setViewModeState(targetView);

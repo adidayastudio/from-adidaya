@@ -42,7 +42,10 @@ export default function PeoplePageWrapper({
     fabAction
 }: PeoplePageWrapperProps) {
     const { profile } = useUserProfile();
-    const isGlobalView = profile?.role === "admin" || profile?.role === "supervisor" || profile?.role === "hr" || profile?.role === "superadmin";
+    // Recovery Fallback: ensure visibility even if permissions object is missing
+    const isManagementRole = profile?.role && ["superadmin", "admin", "administrator", "supervisor", "manager", "hr", "pm", "management", "ceo", "owner"].includes(profile.role);
+    const canViewDirectory = profile?.permissions?.can_view_directory === true || isManagementRole;
+    const canManagePeople = profile?.permissions?.can_manage_people === true || (isManagementRole && !["ceo", "owner"].includes(profile?.role || ""));
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const currentSection = searchParams.get("section") || "personal-profile";
@@ -54,7 +57,13 @@ export default function PeoplePageWrapper({
                 <LiquidMobileHeader
                     title="People"
                     backUrl="/dashboard"
-                    tabs={tabs}
+                    tabs={[
+                        { id: "personal-profile", label: "Profile", href: `${pathname}?section=personal-profile` },
+                        ...(canViewDirectory ? [
+                            { id: "directory", label: "Directory", href: `${pathname}?section=directory` },
+                            { id: "performance", label: "Index", href: `${pathname}?section=performance` }
+                        ] : [])
+                    ]}
                     actions={
                         fabAction && (
                             <button
@@ -84,11 +93,11 @@ export default function PeoplePageWrapper({
                                 { id: "personal-performance", label: "Performance", icon: Briefcase },
                                 { id: "personal-growth", label: "Growth", icon: BookOpen },
                                 { id: "personal-values", label: "Values", icon: Heart },
-                                ...(isGlobalView ? [
+                                ...(canViewDirectory ? [
                                     { id: "directory", label: "Directory", icon: Users },
                                     { id: "performance", label: "Index", icon: Target },
                                     { id: "team-culture", label: "Culture", icon: Sparkles },
-                                    { id: "setup", label: "Setup", icon: SettingsIcon }
+                                    ...(canManagePeople ? [{ id: "setup", label: "Setup", icon: SettingsIcon }] : [])
                                 ] : [])
                             ].map((tab) => {
                                 const isActive = currentSection === tab.id;

@@ -46,9 +46,10 @@ export default function PeopleSidebar({
 }: PeopleSidebarProps) {
 
   const { profile } = useUserProfile();
-  // In the new requirement, "TEAM SPACE (only for isManager/HR)"
-  // So Staff only sees MY SPACE.
-  const isGlobalView = profile?.role === "admin" || profile?.role === "supervisor" || profile?.role === "hr" || profile?.role === "superadmin";
+  // Recovery Fallback: ensure visibility even if permissions object is missing
+  const isManagementRole = profile?.role && ["superadmin", "admin", "administrator", "supervisor", "manager", "hr", "pm", "management", "ceo", "owner"].includes(profile.role);
+  const canViewTeam = profile?.permissions?.can_view_directory === true || isManagementRole;
+  const canManagePeople = profile?.permissions?.can_manage_people === true || (isManagementRole && !["ceo", "owner"].includes(profile?.role || ""));
 
   return (
     <>
@@ -65,13 +66,15 @@ export default function PeopleSidebar({
           </div>
 
           {/* TEAM SPACE (Manager/HR Only) */}
-          {isGlobalView && (
+          {canViewTeam && (
             <div className="space-y-0.5">
               <div className="text-[10px] font-bold text-neutral-400/80 uppercase tracking-widest px-3 mb-2 leading-none">Team Space</div>
               <NavItem label="Directory" active={activeSection === "directory"} onClick={() => onSectionChange("directory")} icon={<Users className="w-4 h-4" />} />
               <NavItem label="Performance Index" active={activeSection === "performance"} onClick={() => onSectionChange("performance")} icon={<Target className="w-4 h-4" />} />
               <NavItem label="Culture" active={activeSection === "team-culture"} onClick={() => onSectionChange("team-culture")} icon={<Sparkles className="w-4 h-4" />} />
-              <NavItem label="Setup" active={activeSection === "setup"} onClick={() => onSectionChange("setup")} icon={<Settings className="w-4 h-4" />} />
+              {canManagePeople && (
+                <NavItem label="Setup" active={activeSection === "setup"} onClick={() => onSectionChange("setup")} icon={<Settings className="w-4 h-4" />} />
+              )}
             </div>
           )}
         </div>

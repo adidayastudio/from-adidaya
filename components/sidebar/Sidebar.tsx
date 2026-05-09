@@ -63,9 +63,9 @@ const menuItems: MenuSection[] = [
       { label: "People", href: "/feel/people", icon: Users },
       { label: "Clock", href: "/feel/clock", icon: Clock },
       { label: "Crew", href: "/feel/crew", icon: HardHat },
-      { label: "Website", href: "/frame/website", icon: Globe },
-      { label: "Social", href: "/frame/social", icon: Share2 },
-      { label: "Learn", href: "/frame/learn", icon: GraduationCap },
+      // { label: "Website", href: "/frame/website", icon: Globe },
+      // { label: "Social", href: "/frame/social", icon: Share2 },
+      // { label: "Learn", href: "/frame/learn", icon: GraduationCap },
     ],
   },
 ];

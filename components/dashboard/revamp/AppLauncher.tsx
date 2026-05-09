@@ -28,9 +28,9 @@ const APPS = [
     { label: "People", href: "/feel/people", icon: Users, color: "text-purple-500 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10" },
     { label: "Clock", href: "/feel/clock", icon: Clock, color: "text-rose-500 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10" },
     { label: "Crew", href: "/feel/crew", icon: HardHat, color: "text-indigo-500 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
-    { label: "Website", href: "/frame/website", icon: Globe, color: "text-cyan-500 dark:text-cyan-400", bg: "bg-cyan-50 dark:bg-cyan-500/10" },
-    { label: "Social", href: "/feel/social", icon: Share2, color: "text-pink-500 dark:text-pink-400", bg: "bg-pink-50 dark:bg-pink-500/10" },
-    { label: "Learn", href: "/frame/learn", icon: GraduationCap, color: "text-orange-500 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-500/10" },
+    // { label: "Website", href: "/frame/website", icon: Globe, color: "text-cyan-500 dark:text-cyan-400", bg: "bg-cyan-50 dark:bg-cyan-500/10" },
+    // { label: "Social", href: "/feel/social", icon: Share2, color: "text-pink-500 dark:text-pink-400", bg: "bg-pink-50 dark:bg-pink-500/10" },
+    // { label: "Learn", href: "/frame/learn", icon: GraduationCap, color: "text-orange-500 dark:text-orange-400", bg: "bg-orange-50 dark:bg-orange-500/10" },
 ];
 
 export default function AppLauncher() {

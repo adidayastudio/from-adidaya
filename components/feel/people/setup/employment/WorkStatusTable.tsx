@@ -7,6 +7,7 @@ import { SortableTable, Column } from "../components/SortableTable";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Pencil, Trash2, Plus, AlertTriangle, X, Palette } from "lucide-react";
+import { toast } from "sonner";
 
 // Curated "nice" colors (Tailwind 500/600 shades that look good on UI)
 const PRESET_COLORS = [
@@ -80,7 +81,12 @@ export default function WorkStatusTable({ isLocked }: { isLocked?: boolean }) {
 
     const confirmDelete = async () => {
         if (!statusToDelete) return;
-        await deleteWorkStatus(statusToDelete.id);
+        const success = await deleteWorkStatus(statusToDelete.id);
+        if (success) {
+            toast.success("Work status deleted successfully!");
+        } else {
+            toast.error("Failed to delete work status.");
+        }
         setIsDeleteModalOpen(false);
         setStatusToDelete(null);
         loadData();
@@ -101,8 +107,11 @@ export default function WorkStatusTable({ isLocked }: { isLocked?: boolean }) {
 
             const result = await upsertWorkStatus(payload);
             if (result) {
+                toast.success("Work status saved successfully!");
                 setIsModalOpen(false);
                 loadData();
+            } else {
+                toast.error("Failed to save work status.");
             }
         } finally {
             setIsSaving(false);

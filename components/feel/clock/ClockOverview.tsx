@@ -16,6 +16,7 @@ import { LiquidSummaryCard } from "@/components/shared/liquid/LiquidSummaryCard"
 import { LiquidItemCard } from "@/components/shared/liquid/LiquidItemCard";
 import { fetchLeavePolicies } from "@/lib/api/employment";
 import { LeavePolicy } from "@/lib/types/organization";
+import { createClient } from "@/utils/supabase/client";
 
 interface ClockOverviewProps {
     full_name?: string;
@@ -64,6 +65,38 @@ export function ClockOverview({
             }).catch(() => setLoadingPolicy(false));
         }
     }, [profile?.leave_policy_id]);
+
+    const [yearlyUsedAnnualLeave, setYearlyUsedAnnualLeave] = useState(0);
+
+    useEffect(() => {
+        if (!profile?.id) return;
+        const currentYear = new Date().getFullYear();
+        const startOfYear = `${currentYear}-01-01`;
+        const endOfYear = `${currentYear}-12-31`;
+
+        const fetchYearlyLeaves = async () => {
+            const supabase = createClient();
+            const { data } = await supabase
+                .from('leave_requests')
+                .select('start_date, end_date, type')
+                .eq('user_id', profile.id)
+                .eq('status', 'approved')
+                .gte('end_date', startOfYear)
+                .lte('start_date', endOfYear);
+
+            if (data) {
+                const annual = data.filter((l: any) => !l.type || l.type.toLowerCase().includes('annual') || l.type.toLowerCase().includes('cuti tahunan'));
+                const used = annual.reduce((sum: number, r: any) => {
+                    const start = new Date(r.start_date);
+                    const end = new Date(r.end_date);
+                    const diffDays = Math.ceil(Math.abs(end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+                    return sum + diffDays;
+                }, 0);
+                setYearlyUsedAnnualLeave(used);
+            }
+        };
+        fetchYearlyLeaves();
+    }, [profile?.id]);
 
     // Time Phase Logic (Synchronized with Dashboard)
     const getPhase = (date: Date) => {
@@ -268,18 +301,8 @@ export function ClockOverview({
         const lateCount = monthlyRecords.filter(r => r.status === "late").length;
         const approvedLeaves = leaves.filter(l => l.status === "approved" && new Date(l.startDate).getMonth() === thisMonth).length;
         
-        // Annual Leave Balance Calculation
-        // Need to count all approved annual leaves for the current YEAR
-        const currentYear = new Date().getFullYear();
-        const annualLeaveRecords = leaves.filter(l => 
-            l.status === 'approved' && 
-            (l.type?.toLowerCase().includes('annual') || l.type?.toLowerCase().includes('cuti tahunan')) &&
-            new Date(l.startDate).getFullYear() === currentYear
-        );
-        const usedAnnualLeave = annualLeaveRecords.length; // Assuming 1 record = 1 day for simplicity, or we should sum duration
-        
-        const quota = leavePolicy?.annual_leave_quota || (joinDate ? (new Date(joinDate) <= new Date(today.getFullYear() - 1, today.getMonth(), today.getDate()) ? 12 : 0) : 0);
-        const balance = Math.max(0, quota - usedAnnualLeave);
+        const quota = leavePolicy?.annual_leave_quota || 0;
+        const balance = Math.max(0, quota - yearlyUsedAnnualLeave);
 
         return {
             workingHours: summary.actualAccumulatedHours.toFixed(1),
@@ -293,7 +316,7 @@ export function ClockOverview({
             annualLeaveBalance: balance,
             annualLeaveQuota: quota
         };
-    }, [attendance, leaves, leavePolicy, joinDate]);
+    }, [attendance, leaves, leavePolicy, joinDate, yearlyUsedAnnualLeave]);
 
     return (
         <div className="space-y-8 w-full animate-in fade-in duration-500">
@@ -540,8 +563,8 @@ export function ClockOverview({
                                 icon={loadingPolicy ? <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" /> : <Plane className="w-5 h-5 text-emerald-600" />}
                                 iconBg="bg-emerald-50"
                                 label="Annual Leave"
-                                value={`${personalStats.annualLeaveBalance}`}
-                                subtext={`${personalStats.annualLeaveQuota} days total quota`}
+                                value={personalStats.annualLeaveQuota > 0 ? `${personalStats.annualLeaveBalance} / ${personalStats.annualLeaveQuota}` : "0"}
+                                subtext="Days left"
                                 className={personalStats.annualLeaveBalance <= 2 ? "ring-2 ring-orange-500 border-orange-200 bg-orange-50/5" : ""}
                             />
                         </div>

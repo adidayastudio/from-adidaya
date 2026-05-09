@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import { EmploymentPolicy, EmploymentType } from "@/lib/types/organization";
 import { fetchEmploymentPolicies, upsertEmploymentPolicy, fetchEmploymentTypes } from "@/lib/api/employment";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Check } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
+import { toast } from "sonner";
 
 export default function EmploymentPolicyTable({ isLocked }: { isLocked?: boolean }) {
     const [policies, setPolicies] = useState<EmploymentPolicy[]>([]);
     const [types, setTypes] = useState<EmploymentType[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+    const [dirtyTypeIds, setDirtyTypeIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         loadData();
@@ -27,74 +29,60 @@ export default function EmploymentPolicyTable({ isLocked }: { isLocked?: boolean
         setIsLoading(false);
     };
 
-    const handleUpdate = async (typeId: string, field: keyof EmploymentPolicy, value: any) => {
-        // Find existing policy or create placeholder
+    const handleUpdate = (typeId: string, field: keyof EmploymentPolicy, value: any) => {
         const existingPolicy = policies.find(p => p.employment_type_id === typeId);
-
-        const payload: any = existingPolicy ? { ...existingPolicy } : {
-            employment_type_id: typeId,
-            default_working_hours: 40,
-            overtime_eligible: false,
-            benefits_eligible: false
-        };
-
-        payload[field] = value;
-
-        // Optimistic update locally
+        
+        const newPolicies = [...policies];
         if (existingPolicy) {
-            setPolicies(policies.map(p => p.id === existingPolicy.id ? { ...p, [field]: value } : p));
+            const index = newPolicies.findIndex(p => p.employment_type_id === typeId);
+            if (index >= 0) newPolicies[index] = { ...newPolicies[index], [field]: value };
+        } else {
+            const newPol: Partial<EmploymentPolicy> = {
+                employment_type_id: typeId,
+                default_working_hours: 40,
+                overtime_eligible: false,
+                benefits_eligible: false,
+                [field]: value
+            };
+            newPolicies.push(newPol as EmploymentPolicy);
         }
 
-        // Auto-save logic could go here, but for now we'll rely on explicit save or per-field save if needed.
-        // For boolean toggles, we usually save immediately.
-        if (field === 'overtime_eligible' || field === 'benefits_eligible') {
-            await savePolicy(payload);
-        } else {
-            // For text/number inputs, we might want to update local state and wait for blur or a save button
-            // For now, let's just update local state if it's not a boolean
-            if (!existingPolicy) {
-                // If it's a new policy being created via input, we need to track it differently or save it
-                // Let's defer saving text fields for a "Save" button or onBlur.
-                // To keep it simple, we'll implement a per-row Save button or auto-save on blur.
+        setPolicies(newPolicies);
+        setDirtyTypeIds(prev => new Set(prev).add(typeId));
+    };
+
+    const handleSaveAll = async () => {
+        if (dirtyTypeIds.size === 0) return;
+
+        // Set all dirty ids as saving
+        setSavingIds(dirtyTypeIds);
+        
+        let hasError = false;
+        
+        // Loop over dirty ids and save them
+        for (const typeId of Array.from(dirtyTypeIds)) {
+            const policy = policies.find(p => p.employment_type_id === typeId);
+            if (!policy) continue;
+            
+            const saved = await upsertEmploymentPolicy(policy);
+            if (!saved) {
+                hasError = true;
             }
         }
-    };
-
-    const handleBlur = async (typeId: string, field: keyof EmploymentPolicy, value: any) => {
-        const existingPolicy = policies.find(p => p.employment_type_id === typeId);
-        const payload: any = existingPolicy ? { ...existingPolicy } : {
-            employment_type_id: typeId,
-            default_working_hours: 40,
-            overtime_eligible: false,
-            benefits_eligible: false
-        };
-        payload[field] = value;
-        await savePolicy(payload);
-    };
-
-    const savePolicy = async (payload: Partial<EmploymentPolicy>) => {
-        const typeId = payload.employment_type_id;
-        if (!typeId) return;
-
-        setSavingIds(prev => new Set(prev).add(typeId));
-        const saved = await upsertEmploymentPolicy(payload);
-        setSavingIds(prev => {
-            const next = new Set(prev);
-            next.delete(typeId);
-            return next;
-        });
-
-        if (saved) {
-            setPolicies(prev => {
-                const index = prev.findIndex(p => p.employment_type_id === saved.employment_type_id);
-                if (index >= 0) {
-                    return prev.map((p, i) => i === index ? saved : p);
-                } else {
-                    return [...prev, saved];
-                }
-            });
+        
+        if (!hasError) {
+            toast.success("All changes saved successfully!");
+            setDirtyTypeIds(new Set()); // clear dirty states on full success
+            setSavingIds(new Set()); // clear saving state
+        } else {
+            toast.error("Some changes failed to save. Please try again.");
+            // We just clear the saving visual, keep them dirty if we wanted to be strict,
+            // but for simplicity let's just clear saving
+            setSavingIds(new Set());
         }
     };
+
+    // savePolicy removed due to batch saving via handleSaveAll
 
     if (isLoading) {
         return <div className="p-8 text-center text-neutral-500">Loading...</div>;
@@ -104,14 +92,16 @@ export default function EmploymentPolicyTable({ isLocked }: { isLocked?: boolean
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h2 className="text-lg font-bold text-neutral-900">Employment Policy</h2>
-                {/* 
-                  Since we have per-row/per-field auto-saving or implicit saving, 
-                  a global save button might be redundant or require a refactor to "batch mode".
-                  For now, we'll just show the header as requested. 
-                  If we wanted a visual "Save" button that just triggers a toast or is disabled, we could.
-                  But user just said "perlu ada header gak? sama tombol save??" -> implying they missed it.
-                  Let's stick to the consistent table header pattern.
-                */}
+                <Button 
+                    variant="primary" 
+                    size="sm" 
+                    icon={<Save className="w-4 h-4" />}
+                    onClick={handleSaveAll}
+                    disabled={isLocked || savingIds.size > 0 || dirtyTypeIds.size === 0}
+                    className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]"
+                >
+                    {savingIds.size > 0 ? "Saving..." : "Save Changes"}
+                </Button>
             </div>
 
             {/* Desktop Table View */}
@@ -148,7 +138,6 @@ export default function EmploymentPolicyTable({ isLocked }: { isLocked?: boolean
                                                 className="w-full px-2 py-1.5 border border-neutral-200 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none disabled:bg-neutral-50"
                                                 value={defaultHours}
                                                 onChange={(e) => handleUpdate(type.id, 'default_working_hours', parseFloat(e.target.value))}
-                                                onBlur={(e) => handleBlur(type.id, 'default_working_hours', parseFloat(e.target.value))}
                                                 disabled={isLocked}
                                             />
                                             <span className="absolute right-8 top-1.5 text-xs text-neutral-400 pointer-events-none">hrs</span>
@@ -188,7 +177,6 @@ export default function EmploymentPolicyTable({ isLocked }: { isLocked?: boolean
                                                 const val = e.target.value;
                                                 handleUpdate(type.id, 'notes', val);
                                             }}
-                                            onBlur={(e) => handleBlur(type.id, 'notes', e.target.value)}
                                             disabled={isLocked}
                                         />
                                     </td>
@@ -226,7 +214,6 @@ export default function EmploymentPolicyTable({ isLocked }: { isLocked?: boolean
                                         className="w-full pl-2 pr-7 py-1.5 border border-neutral-200 rounded-lg text-sm text-right focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-neutral-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none disabled:opacity-50"
                                         value={defaultHours}
                                         onChange={(e) => handleUpdate(type.id, 'default_working_hours', parseFloat(e.target.value))}
-                                        onBlur={(e) => handleBlur(type.id, 'default_working_hours', parseFloat(e.target.value))}
                                         disabled={isLocked}
                                     />
                                     <span className="absolute right-2 top-1.5 text-xs text-neutral-400 pointer-events-none">hrs</span>
@@ -270,7 +257,6 @@ export default function EmploymentPolicyTable({ isLocked }: { isLocked?: boolean
                                 placeholder="Add notes..."
                                 value={notes}
                                 onChange={(e) => handleUpdate(type.id, 'notes', e.target.value)}
-                                onBlur={(e) => handleBlur(type.id, 'notes', e.target.value)}
                                 disabled={isLocked}
                             />
                         </div>

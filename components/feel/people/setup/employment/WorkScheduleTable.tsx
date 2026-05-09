@@ -8,6 +8,7 @@ import { SortableTable, Column } from "../components/SortableTable";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Info, Pencil, Trash2, Plus, AlertTriangle, X, Clock, Calendar } from "lucide-react";
+import { toast } from "sonner";
 
 export default function WorkScheduleTable({ isLocked }: { isLocked?: boolean }) {
     const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
@@ -78,7 +79,12 @@ export default function WorkScheduleTable({ isLocked }: { isLocked?: boolean }) 
 
     const confirmDelete = async () => {
         if (!scheduleToDelete) return;
-        await deleteWorkSchedule(scheduleToDelete.id);
+        const success = await deleteWorkSchedule(scheduleToDelete.id);
+        if (success) {
+            toast.success("Schedule deleted successfully!");
+        } else {
+            toast.error("Failed to delete schedule.");
+        }
         setIsDeleteModalOpen(false);
         setScheduleToDelete(null);
         loadData();
@@ -97,8 +103,11 @@ export default function WorkScheduleTable({ isLocked }: { isLocked?: boolean }) 
 
             const result = await upsertWorkSchedule(payload);
             if (result) {
+                toast.success("Schedule saved successfully!");
                 setIsModalOpen(false);
                 loadData();
+            } else {
+                toast.error("Failed to save schedule.");
             }
         } finally {
             setIsSaving(false);

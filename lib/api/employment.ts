@@ -12,7 +12,7 @@ export async function fetchEmploymentTypes(): Promise<EmploymentType[]> {
         .order('order_index', { ascending: true });
 
     if (error) {
-        console.error("Error fetching employment types:", error);
+        console.error("Error fetching employment types:", error.message || error, error.code);
         return [];
     }
 
@@ -34,11 +34,20 @@ export async function upsertEmploymentType(type: Partial<EmploymentType>): Promi
         .from("employment_types")
         .upsert(type)
         .select()
-        .single();
+        .maybeSingle();
 
     if (error) {
-        console.error("Error upserting employment type:", error);
+        if (error.code === '42501') {
+            console.error("Error upserting employment type: 42501 Row Level Security (RLS) violation. Ensure your user has the correct permissions.");
+        } else {
+            console.error("Error upserting employment type:", error.message || error, error.code);
+        }
         return null;
+    }
+
+    if (!data && type.id) {
+        console.warn("Operation succeeded but no data field returned. Likely RLS restriction.");
+        return type as EmploymentType;
     }
 
     return data as EmploymentType;
@@ -51,7 +60,7 @@ export async function deleteEmploymentType(id: string): Promise<boolean> {
         .eq("id", id);
 
     if (error) {
-        console.error("Error deleting employment type:", error);
+        console.error("Error deleting employment type:", error.message || error, error.code);
         return false;
     }
     return true;
@@ -81,7 +90,7 @@ export async function fetchWorkStatuses(): Promise<WorkStatus[]> {
         .order('order_index', { ascending: true });
 
     if (error) {
-        console.error("Error fetching work statuses:", error);
+        console.error("Error fetching work statuses:", error.message || error, error.code);
         return [];
     }
     return data as WorkStatus[];
@@ -92,12 +101,19 @@ export async function upsertWorkStatus(status: Partial<WorkStatus>): Promise<Wor
         .from("work_status")
         .upsert(status)
         .select()
-        .single();
+        .maybeSingle();
 
     if (error) {
-        console.error("Error upserting work status:", error);
+        if (error.code === '42501') {
+            console.error("Error upserting work status: 42501 Row Level Security (RLS) violation.");
+        } else {
+            console.error("Error upserting work status:", error.message || error, error.code);
+        }
         return null;
     }
+
+    if (!data && status.id) return status as WorkStatus;
+    
     return data as WorkStatus;
 }
 
@@ -108,7 +124,7 @@ export async function deleteWorkStatus(id: string): Promise<boolean> {
         .eq("id", id);
 
     if (error) {
-        console.error("Error deleting work status:", error);
+        console.error("Error deleting work status:", error.message || error, error.code);
         return false;
     }
     return true;
@@ -132,7 +148,7 @@ export async function fetchEmploymentPolicies(): Promise<EmploymentPolicy[]> {
         .select("*");
 
     if (error) {
-        console.error("Error fetching policies:", error);
+        console.error("Error fetching policies:", error.message || error, error.code);
         return [];
     }
     return data as EmploymentPolicy[];
@@ -141,14 +157,21 @@ export async function fetchEmploymentPolicies(): Promise<EmploymentPolicy[]> {
 export async function upsertEmploymentPolicy(policy: Partial<EmploymentPolicy>): Promise<EmploymentPolicy | null> {
     const { data, error } = await supabase
         .from("employment_policies")
-        .upsert(policy)
+        .upsert(policy, { onConflict: 'employment_type_id' })
         .select()
-        .single();
+        .maybeSingle();
 
     if (error) {
-        console.error("Error upserting policy:", error);
+        if (error.code === '42501') {
+            console.error("Error upserting employment policy: 42501 Row Level Security (RLS) violation. Try running the provided SQL script.");
+        } else {
+            console.error("Error upserting employment policy:", error.message || error, error.code);
+        }
         return null;
     }
+    
+    if (!data && policy.employment_type_id) return policy as EmploymentPolicy;
+
     return data as EmploymentPolicy;
 }
 
@@ -161,7 +184,7 @@ export async function fetchWorkSchedules(): Promise<WorkSchedule[]> {
         .order("created_at", { ascending: false });
 
     if (error) {
-        console.error("Error fetching work schedules:", error);
+        console.error("Error fetching work schedules:", error.message || error, error.code);
         return [];
     }
     return data as WorkSchedule[];
@@ -172,12 +195,15 @@ export async function upsertWorkSchedule(schedule: Partial<WorkSchedule>): Promi
         .from("work_schedules")
         .upsert(schedule)
         .select()
-        .single();
+        .maybeSingle();
 
     if (error) {
-        console.error("Error upserting work schedule:", error);
+        if (error.code === '42501') console.error("Error upserting work schedule: 42501 Row Level Security (RLS) violation.");
+        else console.error("Error upserting work schedule:", error.message || error, error.code);
         return null;
     }
+    
+    if (!data && schedule.id) return schedule as WorkSchedule;
     return data as WorkSchedule;
 }
 
@@ -189,7 +215,7 @@ export async function deleteWorkSchedule(id: string): Promise<boolean> {
         .eq("id", id);
 
     if (error) {
-        console.error("Error deleting work schedule:", error);
+        console.error("Error deleting work schedule:", error.message || error, error.code);
         return false;
     }
     return true;
@@ -204,7 +230,7 @@ export async function fetchLeavePolicies(): Promise<LeavePolicy[]> {
         .order("created_at", { ascending: false });
 
     if (error) {
-        console.error("Error fetching leave policies:", error);
+        console.error("Error fetching leave policies:", error.message || error, error.code);
         return [];
     }
     return data as LeavePolicy[];
@@ -215,12 +241,14 @@ export async function upsertLeavePolicy(policy: Partial<LeavePolicy>): Promise<L
         .from("leave_policies")
         .upsert(policy)
         .select()
-        .single();
+        .maybeSingle();
 
     if (error) {
-        console.error("Error upserting leave policy:", error);
+        if (error.code === '42501') console.error("Error upserting leave policy: 42501 Row Level Security (RLS) violation.");
+        else console.error("Error upserting leave policy:", error.message || error, error.code);
         return null;
     }
+    if (!data && policy.id) return policy as LeavePolicy;
     return data as LeavePolicy;
 }
 
@@ -231,7 +259,7 @@ export async function deleteLeavePolicy(id: string): Promise<boolean> {
         .eq("id", id);
 
     if (error) {
-        console.error("Error deleting leave policy:", error);
+        console.error("Error deleting leave policy:", error.message || error, error.code);
         return false;
     }
     return true;
