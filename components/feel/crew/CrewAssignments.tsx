@@ -13,7 +13,8 @@ import {
     assignCrewToProject,
     fetchCrewProjectHistory,
     fetchCrewMembers,
-    fetchCrewMemberById
+    fetchCrewMemberById,
+    fetchCrewAssignments
 } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
@@ -38,7 +39,7 @@ interface Assignment {
     projectCode: string;
     startDate: string;
     endDate?: string;
-    status: "ACTIVE" | "COMPLETED";
+    status: "ACTIVE" | "COMPLETED" | "INACTIVE";
 }
 
 type FilterCard = "ALL" | "ACTIVE" | "COMPLETED";
@@ -170,27 +171,19 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
 
     // Load Assignments
     const loadAssignments = async () => {
-        // In a real app we would join tables, but for now let's fetch history + crew details
-        // This is a simplified fetch for demonstration. Ideally we have a joined view.
         try {
-            // const history = await fetchCrewProjectHistory(""); // Removed to prevent error
-
-            // Actually fetchCrewProjectHistory expects a crewMemberId. 
-            // We need a new API to fetch ALL history or use supabase directly here for the list
-            // For now, let's just fetch all crew members and map their 'currentProjectCode' as active assignment
-            const crew = await fetchCrewMembers();
-            const activeAssignments: Assignment[] = crew
-                .filter(c => c.currentProjectCode)
-                .map(c => ({
-                    id: c.id,
-                    crewId: c.id, // Map crew ID
-                    crewName: c.name,
-                    crewRole: c.role,
-                    projectCode: c.currentProjectCode!,
-                    startDate: new Date().toISOString(), // Fallback as we don't have joined history yet
-                    status: "ACTIVE"
-                }));
-            setAssignments(activeAssignments);
+            const history = await fetchCrewAssignments();
+            const mappedAssignments: Assignment[] = history.map(h => ({
+                id: h.id,
+                crewId: h.crewMemberId,
+                crewName: h.crewName,
+                crewRole: h.crewRole,
+                projectCode: h.projectCode,
+                startDate: h.startDate,
+                endDate: h.endDate || undefined,
+                status: h.crewStatus === "INACTIVE" ? "INACTIVE" : (h.status === "ongoing" ? "ACTIVE" : "COMPLETED")
+            }));
+            setAssignments(mappedAssignments);
         } catch (e) { console.error(e); }
     };
 
@@ -483,7 +476,9 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                                     </div>
                                     <span className={clsx(
                                         "px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
-                                        a.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-neutral-100 text-neutral-600 border border-neutral-200"
+                                        a.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : 
+                                        a.status === "INACTIVE" ? "bg-red-50 text-red-700 border border-red-100" :
+                                        "bg-neutral-100 text-neutral-600 border border-neutral-200"
                                     )}>
                                         {a.status}
                                     </span>
@@ -541,7 +536,14 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                                             <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(a.crewName)}</div><div><div className="font-medium text-neutral-900">{a.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[a.crewRole]?.en || a.crewRole}</div></div></div></td>
                                             <td className="px-4 py-3"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(a.projectCode)}</span></td>
                                             <td className="px-4 py-3 text-neutral-600 text-xs">{formatDate(a.startDate)} → {a.endDate ? formatDate(a.endDate) : "Present"}</td>
-                                            <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", a.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-50 text-neutral-600")}>{a.status === "ACTIVE" ? "Active" : "Done"}</span></td>
+                                            <td className="px-4 py-3"><span className={clsx(
+                                                "px-2 py-0.5 rounded-full text-xs font-medium",
+                                                a.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : 
+                                                a.status === "INACTIVE" ? "bg-red-50 text-red-700" :
+                                                "bg-neutral-50 text-neutral-600"
+                                            )}>
+                                                {a.status === "ACTIVE" ? "Active" : a.status === "INACTIVE" ? "Inactive" : "Done"}
+                                            </span></td>
                                             <td className="px-4 py-3 text-right"><div className="flex items-center justify-end gap-1"><button onClick={() => openEditDrawer(a)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600" title="Edit"><Edit2 className="w-3.5 h-3.5" /></button><button className="p-1.5 rounded-full hover:bg-blue-50 text-blue-500 hover:text-blue-600" title="Contract"><FileText className="w-3.5 h-3.5" /></button><button onClick={() => setDeleteConfirmId(a.id)} className="p-1.5 rounded-full hover:bg-red-50 text-neutral-400 hover:text-red-500" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button></div></td>
                                         </tr>
                                     ))}

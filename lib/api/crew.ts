@@ -240,6 +240,70 @@ export async function fetchCrewProjectHistory(crewMemberId: string): Promise<Cre
 }
 
 /**
+ * Fetch all project assignments with crew details joined
+ */
+export async function fetchCrewAssignments(status?: "ongoing" | "completed"): Promise<(CrewProjectHistory & { crewName: string, crewRole: CrewRole, crewStatus: CrewStatus })[]> {
+    let query = supabase
+        .from("crew_project_history")
+        .select(`
+            *,
+            crew:crew_member_id (name, role, status)
+        `);
+    
+    if (status) {
+        query = query.eq("status", status);
+    }
+
+    const { data, error } = await query.order("start_date", { ascending: false });
+
+    if (error) {
+        console.error("❌ Error fetching crew assignments:", error);
+        return [];
+    }
+
+    return (data || []).map((row: any) => ({
+        ...mapDbToProjectHistory(row),
+        crewName: row.crew?.name || "Unknown",
+        crewRole: row.crew?.role || "GENERAL",
+        crewStatus: row.crew?.status || "ACTIVE"
+    }));
+}
+
+/**
+ * Fetch crew members assigned to a project on a specific date
+ */
+export async function fetchCrewByAssignment(projectSuffix: string, date: string): Promise<CrewMember[]> {
+    // 1. Fetch history records matching project and date
+    const { data: history, error: historyError } = await supabase
+        .from("crew_project_history")
+        .select("crew_member_id")
+        .or(`project_code.eq.${projectSuffix},project_code.ilike.%-${projectSuffix}`)
+        .lte("start_date", date)
+        .or(`end_date.gte.${date},end_date.is.null`);
+
+    if (historyError) {
+        console.error("❌ Error fetching assignment history:", historyError);
+        return [];
+    }
+
+    const memberIds = Array.from(new Set(history.map(h => h.crew_member_id)));
+    if (memberIds.length === 0) return [];
+
+    // 2. Fetch member details
+    const { data: members, error: membersError } = await supabase
+        .from("crew_members")
+        .select("*")
+        .in("id", memberIds);
+
+    if (membersError) {
+        console.error("❌ Error fetching crew details for assignment:", membersError);
+        return [];
+    }
+
+    return (members || []).map(mapDbToCrewMember);
+}
+
+/**
  * Get crew statistics
  */
 export async function fetchCrewStats(workspaceId?: string): Promise<{
@@ -595,6 +659,7 @@ export interface CrewRequest {
     proofUrl?: string;
     status: RequestStatus;
     createdAt: string;
+    createdBy?: string;
 }
 
 export async function fetchRequests(workspaceId: string, projectId?: string): Promise<CrewRequest[]> {
@@ -631,7 +696,8 @@ export async function fetchRequests(workspaceId: string, projectId?: string): Pr
         reason: r.reason,
         proofUrl: r.proof_url,
         status: r.status,
-        createdAt: r.created_at
+        createdAt: r.created_at,
+        createdBy: r.created_by
     }));
 }
 
@@ -647,7 +713,8 @@ export async function createRequest(request: Partial<CrewRequest>) {
             end_date: request.endDate,
             reason: request.reason,
             proof_url: request.proofUrl,
-            status: "PENDING"
+            status: "PENDING",
+            created_by: request.createdBy
         })
         .select()
         .single();

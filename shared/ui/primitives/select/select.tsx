@@ -48,7 +48,7 @@ export function Select({
 
   // Styles
   const base =
-    "w-full appearance-none rounded-lg border bg-white text-neutral-900 transition-all duration-150 outline-none";
+    "w-full appearance-none rounded-full border bg-white text-neutral-900 transition-all duration-150 outline-none";
 
   const focusStyles = accentColor === "blue"
     ? "!focus:border-blue-500/20 !focus:ring-4 !focus:ring-blue-500/[0.08]"

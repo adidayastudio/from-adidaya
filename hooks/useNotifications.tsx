@@ -31,9 +31,10 @@ export function useNotifications() {
             timestamp: new Date(n.created_at).toLocaleString(),
             fullTimestamp: new Date(n.created_at),
             source: {
-                name: n.metadata?.actor || (n.category === 'finance' ? 'Finance' : n.category === 'projects' ? 'Projects' : "System"),
+                name: n.metadata?.actor || (n.category === 'finance' ? 'Finance' : n.category === 'projects' ? 'Projects' : n.category === 'crew' ? 'Crew' : "System"),
                 color: n.category === 'finance' ? 'bg-green-100 text-green-700' :
-                    n.category === 'projects' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600',
+                    n.category === 'projects' ? 'bg-blue-100 text-blue-700' : 
+                    n.category === 'crew' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600',
             },
             metadata: {
                 ...n.metadata,

@@ -13,6 +13,7 @@ const SEGMENTS: { id: NotificationSection; label: string }[] = [
     { id: "all", label: "All" },
     { id: "unread", label: "Unread" },
     { id: "finance", label: "Finance" },
+    { id: "crew", label: "Crew" },
     { id: "projects", label: "Projects" },
     { id: "system", label: "System" },
 ];

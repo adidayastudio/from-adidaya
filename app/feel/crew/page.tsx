@@ -15,6 +15,7 @@ import PageWrapper from "@/components/layout/PageWrapper";
 import { PageHeader } from "@/shared/ui/headers/PageHeader";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Plus } from "lucide-react";
+import { useUserContext } from "@/components/providers/UserProvider";
 
 export default function CrewPage() {
   const searchParams = useSearchParams();
@@ -30,7 +31,7 @@ export default function CrewPage() {
   const [selectedStatus, setSelectedStatus] = useState(searchParams.get("status") || "all");
   const [view, setView] = useState(searchParams.get("view") || "list");
 
-  // Sync state to URL
+  // 1. Sync Filters to URL (Stable dependencies)
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     if (searchQuery) params.set("search", searchQuery); else params.delete("search");
@@ -38,11 +39,24 @@ export default function CrewPage() {
     if (selectedStatus !== "all") params.set("status", selectedStatus); else params.delete("status");
     if (view !== "list") params.set("view", view); else params.delete("view");
 
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    const newUrl = `${pathname}?${params.toString()}`;
+    if (window.location.search !== `?${params.toString()}`) {
+      router.replace(newUrl, { scroll: false });
+    }
   }, [searchQuery, selectedRole, selectedStatus, view]);
 
+  // 2. Sync Tab to URL
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (params.get("tab") !== activeSection) {
+      params.set("tab", activeSection);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [activeSection]);
+
+  const { profile } = useUserContext();
   const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
-  const userRole = "admin";
+  const userRole = profile?.role || "staff";
 
   // Global drawer triggers from FAB
   const [triggerAddCrew, setTriggerAddCrew] = useState(0);

@@ -15,7 +15,7 @@ import { subscribeToPush } from "@/lib/api/push-registration";
 import Link from "next/link";
 import { useNotifications } from "@/hooks/useNotifications";
 
-export type NotificationSection = "all" | "unread" | "finance" | "projects" | "system";
+export type NotificationSection = "all" | "unread" | "finance" | "projects" | "crew" | "system";
 
 export default function NotificationsContent({ 
     section, 
@@ -79,6 +79,7 @@ export default function NotificationsContent({
         unread: notifications.filter(n => !n.isRead).length,
         finance: notifications.filter(n => getCategory(n) === "finance").length,
         projects: notifications.filter(n => getCategory(n) === "projects").length,
+        crew: notifications.filter(n => getCategory(n) === "crew").length,
         system: notifications.filter(n => getCategory(n) === "system").length,
     };
 
@@ -86,6 +87,7 @@ export default function NotificationsContent({
         { id: "all", label: "All", count: "", color: "neutral" },
         { id: "unread", label: "Unread", count: loading ? "-" : counts.unread, color: "blue" },
         { id: "finance", label: "Finance", count: "", color: "green" },
+        { id: "crew", label: "Crew", count: "", color: "purple" },
         { id: "projects", label: "Projects", count: "", color: "orange" },
         { id: "system", label: "System", count: "", color: "neutral" },
     ];
@@ -95,6 +97,7 @@ export default function NotificationsContent({
         switch (section) {
             case "unread": return !n.isRead;
             case "finance": return cat === "finance";
+            case "crew": return cat === "crew";
             case "projects": return cat === "projects";
             case "system": return cat === "system";
             case "all":

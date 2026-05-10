@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 
 export type NotificationType = "info" | "mention" | "approval" | "system" | "success" | "warning";
 
@@ -14,7 +14,6 @@ export interface Notification {
     created_at: string;
 }
 
-const supabase = createClient();
 
 export const fetchNotifications = async (userId?: string, limit: number = 50, offset: number = 0) => {
     console.log("🛠️ [API] fetchNotifications started", { userId, limit, offset });
@@ -22,14 +21,12 @@ export const fetchNotifications = async (userId?: string, limit: number = 50, of
         let currentUserId = userId;
 
         if (!currentUserId) {
-            const { data: { user } } = await supabase.auth.getUser();
-            console.log("🛠️ [API] Authenticated user:", user?.id);
-            currentUserId = user?.id;
+            const { data: { session } } = await supabase.auth.getSession();
+            currentUserId = session?.user?.id;
         }
 
         if (!currentUserId) return [];
 
-        // Cast to any to avoid type errors since 'notifications' isn't in generated types yet
         const { data, error } = await (supabase
             .from("notifications") as any)
             .select("*")
@@ -37,10 +34,77 @@ export const fetchNotifications = async (userId?: string, limit: number = 50, of
             .order("created_at", { ascending: false })
             .range(offset, offset + limit - 1);
 
-        if (error) throw error;
+        if (error) {
+            // Silently ignore AbortError - it's a normal browser behavior during navigation
+            if (error.name === 'AbortError' || (error.message && error.message.toLowerCase().includes('aborted'))) {
+                return [];
+            }
+
+            const errorDetails = {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code,
+                serialized: JSON.stringify(error, Object.getOwnPropertyNames(error))
+            };
+            console.error("❌ [Supabase] Notifications Query Error:", errorDetails);
+            return [];
+        }
         return data as Notification[];
-    } catch (error) {
-        console.error("Error fetching notifications:", error);
+    } catch (error: any) {
+        // Handle AbortError gracefully
+        if (error.name === 'AbortError' || error.message?.includes('aborted')) {
+            return [];
+        }
+        console.error("❌ [API] fetchNotifications exception:", error);
+        return [];
+    }
+};
+
+export const createNotification = async (notification: {
+    user_id: string;
+    type: NotificationType;
+    category: string;
+    title: string;
+    description: string;
+    link?: string;
+    metadata?: any;
+}) => {
+    try {
+        const { error } = await supabase
+            .from("notifications")
+            .insert([notification]);
+        if (error) throw error;
+        return true;
+    } catch (error: any) {
+        console.error("❌ Error creating notification:", {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            raw: error
+        });
+        return null;
+    }
+};
+
+export const fetchAdmins = async () => {
+    try {
+        const { data, error } = await supabase
+            .from("user_roles")
+            .select("user_id, role")
+            .in("role", ["admin", "superadmin", "super_admin", "administrator", "finance", "management", "supervisor", "owner", "ceo", "director", "manager", "hr", "pm"]);
+        if (error) throw error;
+        console.log("🔔 fetchAdmins found:", data?.length, "admins", data?.map(r => r.role));
+        return (data || []).map(r => r.user_id);
+    } catch (error: any) {
+        console.error("❌ Error fetching admins:", {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            raw: error
+        });
         return [];
     }
 };
@@ -53,7 +117,8 @@ export const markNotificationAsRead = async (id: string) => {
             .eq("id", id);
         if (error) throw error;
         return true;
-    } catch (error) {
+    } catch (error: any) {
+        if (error.name === 'AbortError' || error.message?.includes('aborted')) return false;
         console.error("Error marking notification as read:", error);
         return false;
     }

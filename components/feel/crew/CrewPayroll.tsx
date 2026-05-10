@@ -211,29 +211,14 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                 const wsId = await fetchDefaultWorkspaceId();
                 if (!wsId) return;
 
-                // 1. Fetch Crew
-                const members = await fetchCrewMembers(wsId);
-
-                // Filter by project if selected
-                const projectSuffix = selectedProject ? formatProjectCode(selectedProject) : undefined;
-                const relevantCrew = projectSuffix
-                    ? members.filter(m => m.currentProjectCode && (
-                        formatProjectCode(m.currentProjectCode) === projectSuffix ||
-                        m.currentProjectCode.includes(projectSuffix!)
-                    ))
-                    : members;
-
-                if (relevantCrew.length === 0) {
-                    setPayrollData([]);
-                    setLoading(false);
-                    return;
-                }
+                // 1. Fetch All Crew Members
+                const allMembers = await fetchCrewMembers(wsId);
 
                 // 2. Fetch Logs for Period
+                const projectSuffix = selectedProject ? formatProjectCode(selectedProject) : undefined;
                 const dates: string[] = [];
                 let d = new Date(period.start);
                 while (d <= period.end) {
-                    // Use local time to avoid timezone shift from toISOString()
                     const year = d.getFullYear();
                     const month = String(d.getMonth() + 1).padStart(2, '0');
                     const day = String(d.getDate()).padStart(2, '0');
@@ -241,10 +226,30 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                     d.setDate(d.getDate() + 1);
                 }
 
-                // Fetch logs for all days
+                // Fetch logs for all days in the project
                 const logsPromises = dates.map(date => fetchDailyLogs(wsId, projectSuffix, date));
                 const logsArrs = await Promise.all(logsPromises);
                 const allLogs = logsArrs.flat();
+
+                // 3. Identify relevant crew (those who have logs OR are currently assigned)
+                const crewIdsWithLogs = new Set(allLogs.map(l => l.crewId));
+                const currentlyAssigned = projectSuffix 
+                    ? allMembers.filter(m => m.currentProjectCode && (
+                        formatProjectCode(m.currentProjectCode) === projectSuffix ||
+                        m.currentProjectCode.includes(projectSuffix!)
+                    ))
+                    : allMembers;
+
+                const relevantCrew = allMembers.filter(m => 
+                    crewIdsWithLogs.has(m.id) || 
+                    (projectSuffix ? currentlyAssigned.some(ca => ca.id === m.id) : true)
+                );
+
+                if (relevantCrew.length === 0) {
+                    setPayrollData([]);
+                    setLoading(false);
+                    return;
+                }
 
                 // 3. Aggregate
                 const payrollMap = new Map<string, PayrollEntry>();

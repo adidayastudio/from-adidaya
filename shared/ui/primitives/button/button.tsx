@@ -10,6 +10,7 @@ type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   icon?: React.ReactNode;
   iconOnly?: React.ReactNode;
   loading?: boolean;
+  fullWidth?: boolean;
 };
 
 export function Button({
@@ -18,6 +19,7 @@ export function Button({
   icon,
   iconOnly,
   loading = false,
+  fullWidth = false,
   children,
   className,
   disabled,
@@ -26,7 +28,7 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const base =
-    "inline-flex items-center justify-center font-medium rounded-lg transition-all duration-150 whitespace-nowrap shrink-0";
+    "inline-flex items-center justify-center font-medium rounded-full transition-all duration-150 whitespace-nowrap shrink-0";
 
   // Standardized sizes - consistent height across all buttons
   const sizes: Record<ButtonSize, string> = {
@@ -72,6 +74,7 @@ export function Button({
         base,
         sizes[size],
         variants[variant],
+        fullWidth && "w-full",
         isDisabled && disabledStyle,
         className
       )}

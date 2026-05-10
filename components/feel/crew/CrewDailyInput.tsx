@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, Check, X, Download, ArrowUpDown, Edit2, Users, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, upsertDailyLog, deleteDailyLogEntry, DailyLog } from "@/lib/api/crew";
+import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, upsertDailyLog, deleteDailyLogEntry, DailyLog, fetchCrewByAssignment } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { isCrewPaidHolidayOrSunday } from "@/lib/holidays";
@@ -108,40 +108,38 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
             }
 
             try {
-                // In a real app, we would fetch from "DailyLog" table for this date + project
-                // For now, we seed the list with ALL crew assigned to this project
-                // And assume default status is empty or fetch existing log
                 const wsId = await fetchDefaultWorkspaceId();
                 if (wsId) {
-                    const members = await fetchCrewMembers(wsId);
-
-                    // Filter by project (normalize code for comparison)
                     const projectSuffix = formatProjectCode(selectedProject);
-
-                    console.log("DEBUG: Selected Project:", selectedProject);
-                    console.log("DEBUG: Project Suffix:", projectSuffix);
-                    console.log("DEBUG: All Members Sample:", members.slice(0, 3).map(m => ({ name: m.name, project: m.currentProjectCode, fmt: formatProjectCode(m.currentProjectCode) })));
-
-                    const assignedCrew = members.filter(m => m.currentProjectCode && (
-                        formatProjectCode(m.currentProjectCode) === projectSuffix ||
-                        m.currentProjectCode.includes(projectSuffix!)
-                    ));
-                    console.log("DEBUG: Assigned Crew Count:", assignedCrew.length);
-
-
-
-                    // Fetch existing logs for this date
-                    // Fix: Use local date string
+                    
+                    // Format date
                     const year = selectedDate.getFullYear();
                     const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
                     const day = String(selectedDate.getDate()).padStart(2, '0');
                     const dateStr = `${year}-${month}-${day}`;
 
+                    // 1. Fetch who WAS assigned on this date
+                    const assignedCrew = await fetchCrewByAssignment(projectSuffix, dateStr);
+                    
+                    // 2. Fetch existing logs
                     const existingLogs = await fetchDailyLogs(wsId, projectSuffix, dateStr);
                     const logsMap = new Map(existingLogs.map(l => [l.crewId, l]));
 
+                    // 3. Merge: Assigned crew + Anyone who already has a log (even if not assigned)
+                    const logIds = new Set(existingLogs.map(l => l.crewId));
+                    const assignedIds = new Set(assignedCrew.map(c => c.id));
+                    
+                    let finalCrew = [...assignedCrew];
+                    const extraIds = Array.from(logIds).filter(id => !assignedIds.has(id));
+                    
+                    if (extraIds.length > 0) {
+                        const allMembers = await fetchCrewMembers(wsId);
+                        const extras = allMembers.filter(m => extraIds.includes(m.id));
+                        finalCrew = [...finalCrew, ...extras];
+                    }
+
                     // Map to entries
-                    const newEntries: DailyEntry[] = assignedCrew.map(c => {
+                    const newEntries: DailyEntry[] = finalCrew.map(c => {
                         const log = logsMap.get(c.id);
                         return {
                             id: c.id,

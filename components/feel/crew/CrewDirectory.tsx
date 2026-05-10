@@ -505,8 +505,13 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                         generatedAt,
                     },
                     summary: summaryCards,
-                    columns,
-                    data: rows
+                    sections: [
+                        {
+                            title: "Crew List",
+                            columns,
+                            data: rows
+                        }
+                    ]
                 })
             });
 
@@ -586,22 +591,46 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             </SummaryCardsRow>
 
             {/* Search & Filters Bar */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-2 w-full">
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative flex-1 sm:flex-none"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" /><input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-full sm:w-40 transition-all" /></div>
-                    <button onClick={() => setShowFilterPopup(!showFilterPopup)} className={clsx("p-2.5 rounded-full border transition-colors flex items-center gap-1.5 flex-none", activeFiltersCount > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500")}><Filter className="w-4 h-4" />{activeFiltersCount > 0 && <span className="text-xs font-medium">{activeFiltersCount}</span>}</button>
+            <div className="flex items-center justify-between gap-2 w-full">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Search..." 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                        className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-full transition-all" 
+                    />
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <Button
-                        variant="secondary"
-                        className="!rounded-full !py-1.5 !px-3 flex-1 sm:flex-none justify-center"
-                        icon={exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-none">
+                    {/* Filter Button */}
+                    <button 
+                        onClick={() => setShowFilterPopup(!showFilterPopup)} 
+                        className={clsx(
+                            "p-2.5 rounded-full border transition-colors flex items-center gap-1.5", 
+                            activeFiltersCount > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500"
+                        )}
+                    >
+                        <Filter className="w-4 h-4" />
+                        {activeFiltersCount > 0 && <span className="text-xs font-medium">{activeFiltersCount}</span>}
+                    </button>
+
+                    {/* Export Button - Compact on Mobile */}
+                    <button
                         onClick={handleExport}
                         disabled={exporting || filteredCrew.length === 0}
+                        className={clsx(
+                            "p-2.5 rounded-full border transition-colors flex items-center gap-1.5",
+                            exporting ? "bg-neutral-50 text-neutral-400" : "bg-white text-neutral-500 border-neutral-200 hover:bg-neutral-50"
+                        )}
                     >
-                        {exporting ? "Exporting..." : "Export"}
-                    </Button>
-                    <div className="flex items-center bg-neutral-100 rounded-full p-1 flex-none">
+                        {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        <span className="hidden sm:inline text-xs font-medium">{exporting ? "Exporting..." : "Export"}</span>
+                    </button>
+
+                    {/* View Toggle - Hidden on Mobile */}
+                    <div className="hidden sm:flex items-center bg-neutral-100 rounded-full p-1">
                         <button onClick={() => setViewMode("list")} className={clsx("p-2 rounded-full transition-colors", viewMode === "list" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><List className="w-4 h-4" /></button>
                         <button onClick={() => setViewMode("board")} className={clsx("p-2 rounded-full transition-colors", viewMode === "board" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><LayoutGrid className="w-4 h-4" /></button>
                     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
 import useUserProfile from "@/hooks/useUserProfile";
 import { canAccessFinanceTeam } from "@/lib/auth-utils";
 import { useRouter, useSearchParams } from "next/navigation";
