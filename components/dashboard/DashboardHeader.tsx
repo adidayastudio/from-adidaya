@@ -7,7 +7,7 @@ import useUserProfile from "@/hooks/useUserProfile";
 
 export default function DashboardHeader() {
   const { profile } = useUserProfile();
-  const userName = profile?.nickname || profile?.full_name?.split(' ')[0] || "Team";
+  const userName = profile?.nickname || profile?.full_name?.split(' ')[0] || profile?.username || "Team";
   const [currentTime, setCurrentTime] = useState(new Date());
 
   // Time Phase Logic (Matched with FEEL/Clock)

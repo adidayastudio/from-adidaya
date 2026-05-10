@@ -74,7 +74,7 @@ export default function DashboardHeader({ onOpenNotifications }: DashboardHeader
   };
 
   const greeting = getGreeting(currentTime);
-  const firstName = profile?.nickname || profile?.full_name?.split(' ')[0] || "Team";
+  const firstName = profile?.nickname || profile?.full_name?.split(' ')[0] || profile?.username || "Team";
 
   return (
     <>

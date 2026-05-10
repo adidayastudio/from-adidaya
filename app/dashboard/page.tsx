@@ -241,7 +241,7 @@ export default function DashboardPage() {
           {/* DESKTOP DASHBOARD (macOS Style + Standard Pattern) */}
           <div className="hidden md:block">
             <StandardPageHeader
-              title={`${phase.greeting}, ${profile?.name?.split(' ')[0] || "Team"}`}
+              title={`${phase.greeting}, ${profile?.nickname || profile?.full_name?.split(' ')[0] || profile?.username || "Team"}`}
               subtitle={phase.message}
               hideDivider={true}
               action={
