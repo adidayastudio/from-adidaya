@@ -483,9 +483,10 @@ export interface FinanceDashboardData {
     };
 }
 
-export async function fetchFinanceDashboardData(workspaceId?: string): Promise<FinanceDashboardData | null> {
+export async function fetchFinanceDashboardData(workspaceId?: string, projectId?: string): Promise<FinanceDashboardData | null> {
     const params = new URLSearchParams();
     if (workspaceId) params.set("workspace_id", workspaceId);
+    if (projectId) params.set("project_id", projectId);
 
     const url = `/api/finance/dashboard${params.toString() ? `?${params}` : ""}`;
     const { data, error } = await apiGet<FinanceDashboardData>(url);

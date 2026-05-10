@@ -31,7 +31,7 @@ const formatCurrency = (amount: number) => {
 };
 
 export default function PettyCashClient() {
-    const { viewMode, setViewMode, canAccessTeam, isLoading: financeLoading, profile } = useFinance();
+    const { viewMode, setViewMode, canAccessTeam, isLoading: financeLoading, profile, allowedProjectCodes } = useFinance();
     const [projects, setProjects] = useState<Project[]>([]);
     const [fundingSources, setFundingSources] = useState<FundingSource[]>([]);
     const [isLoading, setIsLoading] = useState(false); // Start false, let useEffect trigger it
@@ -62,13 +62,19 @@ export default function PettyCashClient() {
         setIsLoading(true);
         try {
             const allProjects = await fetchAllProjects();
-            setProjects(allProjects || []);
+            const filteredProjects = (allProjects || []).filter(p => 
+                !allowedProjectCodes || allowedProjectCodes.includes(p.projectCode)
+            );
+            setProjects(filteredProjects);
 
             const workspaceId = profile?.workspace_id || allProjects[0]?.workspaceId || "f39364e8-1376-4ff7-a716-78277e8d25b3";
             console.log("[PettyCash] Loading data for workspace:", workspaceId);
             
             const pettyPools = await fetchPettyCashPools(workspaceId);
-            setFundingSources(pettyPools || []);
+            const filteredPools = (pettyPools || []).filter(source => 
+                !allowedProjectCodes || filteredProjects.some(p => p.id === source.project_id)
+            );
+            setFundingSources(filteredPools);
             setHasLoadedOnce(true);
         } catch (error) {
             console.error("[PettyCash] Load error:", error);

@@ -1754,7 +1754,8 @@ export default function PurchasingClient() {
         isInitialized,
         searchTerm,
         debouncedSearchTerm,
-        setSearchTerm
+        setSearchTerm,
+        allowedProjectCodes
     } = useFinance();
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -1845,7 +1846,9 @@ export default function PurchasingClient() {
                     limit: itemsPerPage,
                     offset: offset,
                     approval_status: statusFilter,
-                    project_id: selectedProjects.length > 0 ? selectedProjects : undefined,
+                    project_id: selectedProjects.length > 0 
+                        ? selectedProjects 
+                        : (isTeamView && allowedProjectCodes ? projects.map(p => p.id) : undefined),
                     start_date: showAllMonths ? undefined : format(startDate, "yyyy-MM-dd"),
                     end_date: showAllMonths ? undefined : format(endDate, "yyyy-MM-dd"),
                     type: categoryFilters.length > 0 ? categoryFilters : undefined,
@@ -1946,8 +1949,15 @@ export default function PurchasingClient() {
     };
 
     useEffect(() => {
-        fetchAllProjects().then(setProjects);
-    }, []);
+        fetchAllProjects().then(allProjects => {
+            if (allowedProjectCodes) {
+                const filtered = allProjects.filter(p => allowedProjectCodes.includes(p.projectCode));
+                setProjects(filtered);
+            } else {
+                setProjects(allProjects);
+            }
+        });
+    }, [allowedProjectCodes]);
 
     useEffect(() => {
         if (isInitialized) {

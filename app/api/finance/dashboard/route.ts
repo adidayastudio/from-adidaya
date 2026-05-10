@@ -56,11 +56,16 @@ export async function GET(request: NextRequest) {
             workspaceProjectIds = projects?.map(p => p.id) || [];
         }
 
-        // Base queries with optional project filtering
-        const purchasingBase = supabase.from('purchasing_requests');
-        const reimburseBase = supabase.from('reimbursement_requests');
+        // Additional project restriction from query params (e.g. for restricted finance roles)
+        const queryProjectIds = searchParams.get("project_id")?.split(",").filter(id => !!id) || [];
 
+        // Base queries with optional project filtering
         const applyProjectFilter = (query: any) => {
+            // Explicit project IDs take precedence (e.g. from restricted role)
+            if (queryProjectIds.length > 0) {
+                return query.in('project_id', queryProjectIds);
+            }
+            // Otherwise fallback to workspace-wide projects if workspace_id provided
             if (workspaceId && workspaceProjectIds.length > 0) {
                 return query.in('project_id', workspaceProjectIds);
             }

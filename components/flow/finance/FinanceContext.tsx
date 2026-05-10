@@ -19,6 +19,7 @@ interface FinanceContextType {
     userRole: string | undefined;
     userId: string | undefined;
     profile: any;
+    allowedProjectCodes: string[] | null;
     contextInstanceId?: string;
 }
 
@@ -78,6 +79,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             router.replace(newUrl, { scroll: false });
         }
     }, [debouncedSearchTerm, router, isInitialized]);
+
+    const allowedProjectCodes = useMemo(() => {
+        if (!profile) return null;
+        // Case-insensitive check for Cindi as requested by user
+        const name = (profile.nickname || profile.full_name || "").toLowerCase();
+        if (name.includes("cindi")) {
+            return ["JPF", "RBH"];
+        }
+        return null;
+    }, [profile]);
 
     const canAccessTeam = canAccessFinanceTeam(profile?.role);
 
@@ -192,6 +203,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                 userRole: profile?.role,
                 userId: profile?.id,
                 profile,
+                allowedProjectCodes,
                 contextInstanceId: instanceId
             }}
         >

@@ -193,7 +193,7 @@ function calculateReportStats(records: FinanceRecord[], options: {
 }
 
 export default function ReportsClient() {
-    const { isLoading: isAuthLoading, isInitialized, userId } = useFinance();
+    const { isLoading: isAuthLoading, isInitialized, userId, allowedProjectCodes } = useFinance();
     const [timeframe, setTimeframe] = useState<"WEEK" | "MONTH" | "3M" | "1Y" | "ALL" | "CUSTOM">("MONTH");
     const [projectId, setProjectId] = useState<string>("ALL");
     const [customStart, setCustomStart] = useState<string>(format(subMonths(new Date(), 1), "yyyy-MM-dd"));
@@ -252,7 +252,11 @@ export default function ReportsClient() {
                     fetchAllProjects()
                 ]);
 
-                setProjects(projectList.map(p => ({
+                const filteredProjects = projectList.filter(p => 
+                    !allowedProjectCodes || allowedProjectCodes.includes(p.projectCode)
+                );
+
+                setProjects(filteredProjects.map(p => ({
                     id: p.id,
                     code: p.projectCode || "N/A",
                     name: p.projectName,
@@ -288,7 +292,14 @@ export default function ReportsClient() {
                     status: r.status
                 }));
 
-                setRecords([...purchasingRecords, ...reimburseRecords]);
+                const filteredPurchasing = purchasingRecords.filter(r => 
+                    !allowedProjectCodes || filteredProjects.some(p => p.id === r.project_id)
+                );
+                const filteredReimburse = reimburseRecords.filter(r => 
+                    !allowedProjectCodes || filteredProjects.some(p => p.id === r.project_id)
+                );
+
+                setRecords([...filteredPurchasing, ...filteredReimburse]);
             } catch (e) {
                 console.error("Failed to load reports data:", e);
             } finally {

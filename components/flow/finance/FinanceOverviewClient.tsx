@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFinance } from "./FinanceContext";
+import { fetchAllProjects } from "@/lib/api/projects";
 import {
     formatShort,
     formatAmount,
@@ -33,7 +34,7 @@ import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 export default function FinanceOverviewClient() {
-    const { viewMode, setViewMode, canAccessTeam, isLoading: isAuthLoading, isInitialized } = useFinance();
+    const { viewMode, setViewMode, canAccessTeam, isLoading: isAuthLoading, isInitialized, allowedProjectCodes } = useFinance();
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [selectedType] = useState<RequestType>("PURCHASE");
     const [data, setData] = useState<any>(null);
@@ -56,8 +57,22 @@ export default function FinanceOverviewClient() {
         const loadWithWorkspace = async () => {
             setIsLoadingData(true);
             try {
-                const wsId = await fetchDefaultWorkspaceId();
-                const res = await fetchFinanceDashboardData(wsId || undefined);
+                const [wsId, allProjects] = await Promise.all([
+                    fetchDefaultWorkspaceId(),
+                    fetchAllProjects()
+                ]);
+
+                let projectIdsFilter: string | undefined = undefined;
+                if (allowedProjectCodes) {
+                    const filteredIds = allProjects
+                        .filter(p => allowedProjectCodes.includes(p.projectCode))
+                        .map(p => p.id);
+                    projectIdsFilter = filteredIds.join(",");
+                }
+
+                // We need to pass the project filter to the dashboard API
+                // Updating fetchFinanceDashboardData to accept it if it's not already
+                const res = await fetchFinanceDashboardData(wsId || undefined, projectIdsFilter);
                 setData(res);
             } catch (err) {
                 console.error("Failed to load dashboard data", err);

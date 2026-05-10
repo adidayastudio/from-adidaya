@@ -1715,7 +1715,8 @@ export default function ReimburseClient() {
         isInitialized,
         searchTerm,
         debouncedSearchTerm,
-        setSearchTerm
+        setSearchTerm,
+        allowedProjectCodes
     } = useFinance();
     const router = useRouter();
     const pathname = usePathname();
@@ -1822,7 +1823,9 @@ export default function ReimburseClient() {
                 fetchReimburseRequests({
                     limit: itemsPerPage,
                     offset: offset,
-                    project_id: selectedProjects.length > 0 ? selectedProjects : undefined,
+                    project_id: selectedProjects.length > 0 
+                        ? selectedProjects 
+                        : (isTeamView && allowedProjectCodes && projects.length > 0 ? projects.map(p => p.id) : undefined),
                     status: statusFilter !== "ALL" ? statusFilter : undefined,
                     category: categoryFilters.length > 0 ? categoryFilters : undefined,
                     start_date: showAllMonths ? undefined : format(startDate, "yyyy-MM-dd"),
@@ -1837,7 +1840,11 @@ export default function ReimburseClient() {
             setTotalItems(total || 0);
             setGlobalStats(stats);
             const profileMap = new Map((profiles || []).map(p => [p.id, p]));
-            setProjects(projectList || []);
+            
+            const filteredProjects = (projectList || []).filter(p => 
+                !allowedProjectCodes || allowedProjectCodes.includes(p.projectCode)
+            );
+            setProjects(filteredProjects);
 
             const mapped = (rawItems || []).map((req: any) => {
                 const creator = profileMap.get(req.created_by);
