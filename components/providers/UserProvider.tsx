@@ -14,8 +14,8 @@ import { createClient } from "@/utils/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
 // -- RECOVERY ROLES --
-export type UserRole = "superadmin" | "admin" | "administrator" | "supervisor" | "manager" | "hr" | "pm" | "management" | "ceo" | "owner" | "staff";
-const MANAGEMENT_ROLES: UserRole[] = ["superadmin", "admin", "administrator", "supervisor", "manager", "hr", "pm", "management", "ceo", "owner"];
+export type UserRole = "superadmin" | "admin" | "administrator" | "supervisor" | "manager" | "hr" | "pm" | "management" | "ceo" | "owner" | "staff" | "finance";
+const MANAGEMENT_ROLES: UserRole[] = ["superadmin", "admin", "administrator", "supervisor", "manager", "hr", "pm", "management", "ceo", "owner", "finance"];
 
 export interface UserProfile {
     id: string;
