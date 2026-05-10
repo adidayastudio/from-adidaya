@@ -1,26 +1,27 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
-import { Camera, RefreshCw, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Camera, RefreshCw, AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react";
 import { format } from "date-fns";
 
 interface CameraCaptureProps {
     onCapture: (blob: Blob) => void;
-    onSkip: () => void;
     locationText: string;
     userName: string;
 }
 
-export function CameraCapture({ onCapture, onSkip, locationText, userName }: CameraCaptureProps) {
+export function CameraCapture({ onCapture, locationText, userName }: CameraCaptureProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
+    const [retrying, setRetrying] = useState(false);
 
     const startCamera = async () => {
         setError(null);
+        setRetrying(true);
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: "user" },
@@ -38,8 +39,10 @@ export function CameraCapture({ onCapture, onSkip, locationText, userName }: Cam
         } catch (err: any) {
             if (err.name !== 'AbortError') {
                 console.error("Camera error:", err);
-                setError("Unable to access camera or camera not found. Please check permissions.");
+                setError("Unable to access camera. Please enable camera permission in your browser settings.");
             }
+        } finally {
+            setRetrying(false);
         }
     };
 
@@ -124,15 +127,24 @@ export function CameraCapture({ onCapture, onSkip, locationText, userName }: Cam
         <div className="flex flex-col gap-3">
             <div className="relative rounded-2xl overflow-hidden bg-neutral-900 border border-neutral-200/50 aspect-[4/3] flex items-center justify-center shadow-inner">
                 {error ? (
-                    <div className="text-center p-6 flex flex-col items-center">
-                        <AlertTriangle className="w-8 h-8 text-amber-500 mb-3" />
-                        <p className="text-sm text-neutral-300 font-medium">{error}</p>
+                    <div className="text-center p-6 flex flex-col items-center gap-3">
+                        <div className="w-14 h-14 rounded-full bg-red-500/20 flex items-center justify-center">
+                            <ShieldAlert className="w-7 h-7 text-red-400" />
+                        </div>
+                        <div className="space-y-1.5">
+                            <p className="text-sm text-white font-bold tracking-tight">Camera Required</p>
+                            <p className="text-xs text-neutral-400 leading-relaxed max-w-[260px]">
+                                If camera is not enabled, you will <span className="text-red-400 font-bold">not be marked as present</span>. Please allow camera access in your browser settings.
+                            </p>
+                        </div>
                         <button
                             type="button"
-                            onClick={onSkip}
-                            className="mt-4 px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white text-xs font-semibold rounded-full transition-colors border border-neutral-700/50"
+                            onClick={startCamera}
+                            disabled={retrying}
+                            className="mt-1 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white text-xs font-bold rounded-full transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/30 active:scale-95"
                         >
-                            Skip (Emergency Only)
+                            <RefreshCw className={`w-3.5 h-3.5 ${retrying ? 'animate-spin' : ''}`} />
+                            {retrying ? 'Retrying...' : 'Try Again'}
                         </button>
                     </div>
                 ) : previewUrl ? (
