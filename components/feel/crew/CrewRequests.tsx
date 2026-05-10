@@ -781,7 +781,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                                         Requested: {new Date(r.createdAt).toLocaleDateString("id-ID")}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                        {(role && ["admin", "superadmin", "administrator"].includes(role)) && r.status === "PENDING" && (
+                                        {(role && ["admin", "superadmin", "administrator", "supervisor"].includes(role)) && r.status === "PENDING" && (
                                             <>
                                                 <button onClick={(e) => { e.stopPropagation(); handleApprove(r); }} className="p-2.5 rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 active:scale-90 transition-all">
                                                     <Check className="w-4 h-4" />
@@ -867,7 +867,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                                             <td className="px-4 py-3 text-center">{getStatusBadge(r.status)}</td>
                                             <td className="px-4 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-1">
-                                                    {(role && ["admin", "superadmin", "administrator"].includes(role)) && r.status === "PENDING" && (
+                                                    {(role && ["admin", "superadmin", "administrator", "supervisor"].includes(role)) && r.status === "PENDING" && (
                                                         <>
                                                             <button onClick={(e) => { e.stopPropagation(); handleApprove(r); }} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200" title="Approve"><Check className="w-3.5 h-3.5" /></button>
                                                             <button onClick={(e) => { e.stopPropagation(); handleReject(r.id); }} className="p-1.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200" title="Reject"><X className="w-3.5 h-3.5" /></button>
@@ -1024,7 +1024,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                                             )}
                                         </div>
 
-                                        {(role && ["admin", "superadmin", "administrator"].includes(role)) && viewingRequest.status === "PENDING" && (
+                                        {(role && ["admin", "superadmin", "administrator", "supervisor"].includes(role)) && viewingRequest.status === "PENDING" && (
                                             <div className="grid grid-cols-2 gap-3 mt-1">
                                                 <button 
                                                     onClick={() => handleReject(viewingRequest.id)}
