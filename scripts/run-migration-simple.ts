@@ -4,8 +4,10 @@
 
 import * as fs from "fs";
 import * as dotenv from "dotenv";
+import * as path from "path";
 
-dotenv.config({ path: ".env.local" });
+const envPath = fs.existsSync(".env.local") ? ".env.local" : path.resolve(__dirname, "../.env.local");
+dotenv.config({ path: envPath });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;

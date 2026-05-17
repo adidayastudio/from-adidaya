@@ -22,14 +22,27 @@ import {
   Check,
   UploadCloud,
   ChevronDown,
+  ChevronRight,
   Search,
-  Filter
+  Filter,
+  Trash2,
+  Play,
+  Layers,
+  ArrowUp,
+  ArrowDown,
+  AlertCircle,
+  MapPin,
+  Wrench,
+  Loader2
 } from "lucide-react";
-import { fetchAllProjects, fetchProjectWBS } from "@/lib/api/projects";
-import { fetchAllTasks, createTask } from "@/lib/api/tasks";
+import { fetchAllProjects } from "@/lib/api/projects";
+import { fetchAllTasks, createTask, deleteTask, updateTaskStatus } from "@/lib/api/tasks";
 import { fetchPeopleDirectory } from "@/lib/api/people";
+import { uploadFinanceFileExact, getFinanceFileUrl } from "@/lib/api/storage";
+import { createNotification } from "@/lib/api/notifications";
+import { supabase } from "@/lib/supabaseClient";
 import { Person } from "@/components/feel/people/types";
-import { Project, WBSItem } from "@/types/project";
+import { Project } from "@/types/project";
 import { TaskStatus, TaskPriority } from "@/types/task";
 import { Select } from "@/shared/ui/primitives/select/select";
 import useUserProfile from "@/hooks/useUserProfile";
@@ -56,6 +69,11 @@ interface TaskItem {
   icon: "users" | "fileText" | "creditCard";
   avatars: string[];
   theme: "pink" | "orange" | "blue" | "green" | "gray";
+  createdBy?: string | null;
+  description?: string;
+  assignees?: string[];
+  assigneeNames?: string[];
+  attachmentUrls?: string | null;
 }
 
 const TABS = [
@@ -107,15 +125,15 @@ const getThemeStyles = (theme: TaskItem["theme"]) => {
 
 const getStatusStyles = (status: StatusType, priority: PriorityType) => {
   let statusBadge = "";
-  if (status === "TODO") statusBadge = "bg-white/60 text-gray-500 font-medium";
-  else if (status === "REVISION") statusBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
-  else if (status === "IN PROGRESS") statusBadge = "bg-[#d4e1f8] text-[#5485ea] font-bold";
-  else if (status === "DONE") statusBadge = "bg-[#cfead4] text-[#4cb05f] font-bold";
+  if (status === "todo") statusBadge = "bg-white/60 text-gray-500 font-medium";
+  else if (status === "revision") statusBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
+  else if (status === "in_progress") statusBadge = "bg-[#d4e1f8] text-[#5485ea] font-bold";
+  else if (status === "done") statusBadge = "bg-[#cfead4] text-[#4cb05f] font-bold";
 
   let priorityBadge = "";
-  if (priority === "URGENT") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
-  else if (priority === "HIGH") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold"; // Optional: can adjust specific red shade
-  else if (priority === "MEDIUM") priorityBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
+  if (priority === "urgent") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
+  else if (priority === "high") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold"; // Optional: can adjust specific red shade
+  else if (priority === "medium") priorityBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
   else priorityBadge = "bg-[#e4e4e7] text-[#71717a] font-bold";
 
   return { statusBadge, priorityBadge };
@@ -125,17 +143,63 @@ const TaskDetailModal = ({
   task,
   isOpen,
   onClose,
+  profile,
+  onDeleteTask,
+  onStatusUpdate,
 }: {
   task: TaskItem | null;
   isOpen: boolean;
   onClose: () => void;
+  profile: any;
+  onDeleteTask: (taskId: string) => Promise<void>;
+  onStatusUpdate: (taskId: string, newStatus: StatusType) => Promise<void>;
 }) => {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [signedUrls, setSignedUrls] = useState<{name: string, url: string}[]>([]);
+
+  useEffect(() => {
+    async function loadUrls() {
+      if (!task || !task.attachmentUrls) {
+        setSignedUrls([]);
+        return;
+      }
+      const paths = task.attachmentUrls.split(',').filter(Boolean);
+      const list = await Promise.all(paths.map(async (p) => {
+        try {
+          const signed = await getFinanceFileUrl(p);
+          const name = p.split('/').pop() || 'File';
+          return { name, url: signed || "" };
+        } catch (err) {
+          console.error("Error signing URL:", err);
+          return { name: 'File', url: '' };
+        }
+      }));
+      setSignedUrls(list.filter(item => item.url));
+    }
+    loadUrls();
+  }, [task?.id, task?.attachmentUrls]);
+
   if (!isOpen || !task) return null;
 
   const tStyles = getThemeStyles(task.theme);
   const { statusBadge, priorityBadge } = getStatusStyles(task.status, task.priority);
   const IconComponent =
     task.icon === "users" ? Users : task.icon === "fileText" ? FileText : CreditCard;
+
+  const userRole = (profile?.role || "").toLowerCase();
+  const canDelete =
+    ["superadmin", "admin", "administrator", "supervisor", "manager"].includes(userRole) ||
+    (task.createdBy && profile?.id && task.createdBy === profile.id);
+
+  const handleStatusChange = async (newStatus: StatusType) => {
+    if (!task) return;
+    setIsUpdating(true);
+    try {
+      await onStatusUpdate(task.id, newStatus);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <>
@@ -157,118 +221,246 @@ const TaskDetailModal = ({
         </div>
 
         {/* HEADER */}
-        <div className="flex items-center justify-between px-8 py-6 relative z-10">
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase ${statusBadge}`}>
-                {task.status}
-              </span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase ${priorityBadge}`}>
-                {task.priority}
-              </span>
-            </div>
-            <h3 className="text-[22px] font-bold text-neutral-900 tracking-tight mt-1">
-              Task Details
-            </h3>
+        <div className="flex items-center justify-between px-8 py-6 pb-2 relative z-10">
+          <h3 className="text-[22px] font-extrabold text-neutral-900 dark:text-white tracking-tight flex-1 mr-4">
+            {task.title}
+          </h3>
+          <div className="flex items-center gap-2.5 shrink-0">
+            {canDelete && (
+              <button
+                onClick={() => {
+                  if (confirm("Are you sure you want to delete this task?")) {
+                    onDeleteTask(task.id);
+                  }
+                }}
+                className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 hover:text-red-700 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/40 active:scale-95 transition-all flex items-center justify-center shadow-sm border border-red-100/50 dark:border-red-900/30"
+                title="Delete Task"
+              >
+                <Trash2 size={18} strokeWidth={2} />
+              </button>
+            )}
+            <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-xl border border-black/5 flex items-center justify-center text-neutral-400 hover:text-neutral-900 active:scale-95 transition-all shadow-sm">
+              <X size={20} strokeWidth={1.5} />
+            </button>
           </div>
-          <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-xl border border-black/5 flex items-center justify-center text-neutral-400 hover:text-neutral-900 active:scale-95 transition-all shadow-sm">
-            <X size={20} strokeWidth={1.5} />
-          </button>
         </div>
 
         {/* SCROLLABLE BODY */}
-        <div className="flex-1 overflow-y-auto px-8 py-2 pb-8 space-y-8 relative z-10">
-          {/* Main Info */}
-          <div className="flex gap-5">
-            <div className={`shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center shadow-inner ${tStyles.iconBg}`}>
-              <IconComponent size={32} className={tStyles.iconColor} />
-            </div>
-            <div className="flex-1 min-w-0">
-              {task.refId && (
-                <div className="text-[11px] font-bold text-orange-500 tracking-[0.2em] uppercase mb-1">
-                  {task.refId}
-                </div>
-              )}
-              <h2 className="text-[20px] font-bold text-neutral-900 leading-tight mb-2 truncate">
-                {task.title}
-              </h2>
+        <div className="flex-1 overflow-y-auto px-8 py-4 pb-8 space-y-6 relative z-10">
+          {/* Details Flat List */}
+          <div className="space-y-4">
+            {/* Project Row */}
+            <div className="flex items-center py-2 border-b border-black/[0.03] dark:border-white/[0.03]">
+              <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                Project
+              </span>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-blue-500 bg-blue-50/50 border border-blue-100 px-2 py-0.5 rounded-full shadow-sm tracking-wider">
+                <span className="text-[11px] font-bold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-100 dark:border-blue-900 px-2 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
                   {task.projectCode}
                 </span>
-                <span className="text-[14px] text-neutral-400 font-medium truncate">
+                <span className="text-[14px] text-neutral-800 dark:text-neutral-200 font-medium">
                   {task.projectName}
                 </span>
               </div>
             </div>
+
+            {/* Deadline Row */}
+            <div className="flex items-center py-2 border-b border-black/[0.03] dark:border-white/[0.03]">
+              <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                Deadline
+              </span>
+              <div className="flex items-center gap-2 text-neutral-800 dark:text-neutral-200 text-[14px] font-semibold">
+                <Calendar size={15} className="text-neutral-400" />
+                {task.date}
+              </div>
+            </div>
+
+            {/* Priority Row */}
+            <div className="flex items-center py-2 border-b border-black/[0.03] dark:border-white/[0.03]">
+              <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                Priority
+              </span>
+              <div className="flex">
+                {task.priority === "urgent" && (
+                  <span className="bg-red-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0 animate-pulse" /> Urgent
+                  </span>
+                )}
+                {task.priority === "high" && (
+                  <span className="bg-orange-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> High
+                  </span>
+                )}
+                {task.priority === "medium" && (
+                  <span className="bg-amber-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> Medium
+                  </span>
+                )}
+                {task.priority === "low" && (
+                  <span className="bg-neutral-400 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> Low
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Status Row */}
+            <div className="flex items-center py-2">
+              <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                Status
+              </span>
+              <div className="flex">
+                {task.status === "todo" && (
+                  <span className="bg-neutral-400 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 uppercase shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> TODO
+                  </span>
+                )}
+                {task.status === "in_progress" && (
+                  <span className="bg-blue-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 uppercase shadow-sm animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> IN PROGRESS
+                  </span>
+                )}
+                {task.status === "revision" && (
+                  <span className="bg-amber-600 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 uppercase shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> REVISION
+                  </span>
+                )}
+                {task.status === "done" && (
+                  <span className="bg-emerald-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 uppercase shadow-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> DONE
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Details Table-style Grid */}
-          <div className="bg-white/40 backdrop-blur-md rounded-[32px] border border-black/5 overflow-hidden">
-            <div className="px-6 py-5 flex items-center justify-between border-b border-black/[0.03]">
-              <div className="flex items-center gap-3 text-neutral-400 text-[13px] font-bold uppercase tracking-wider">
-                <Calendar size={16} strokeWidth={2} /> Date
-              </div>
-              <div className="text-[15px] font-bold text-neutral-800">{task.date}</div>
+          {/* Description Section */}
+          <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+            <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-2">
+              Description
+            </h4>
+            <p className="text-[14px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
+              {task.description || "No description provided."}
+            </p>
+          </div>
+
+          {/* Assignees Section */}
+          <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+            <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-3">
+              Assignees
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {task.assigneeNames && task.assigneeNames.length > 0 ? (
+                task.assigneeNames.map((name, idx) => {
+                  const initials = name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .substring(0, 2);
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 bg-neutral-100/80 dark:bg-neutral-800/80 px-3 py-1.5 rounded-full border border-black/5 shadow-sm"
+                    >
+                      <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-[10px] font-bold text-neutral-800 dark:text-neutral-200">
+                        {initials}
+                      </div>
+                      <span className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">
+                        {name}
+                      </span>
+                    </div>
+                  );
+                })
+              ) : (
+                <span className="text-[13px] text-neutral-400 font-medium italic">
+                  Unassigned
+                </span>
+              )}
             </div>
-            {task.time && (
-              <div className="px-6 py-5 flex items-center justify-between border-b border-black/[0.03]">
-                <div className="flex items-center gap-3 text-neutral-400 text-[13px] font-bold uppercase tracking-wider">
-                  <Clock size={16} strokeWidth={2} /> Time
-                </div>
-                <div className="text-[15px] font-bold text-neutral-800">{task.time}</div>
-              </div>
-            )}
-            <div className="px-6 py-5 flex items-center justify-between">
-              <div className="flex items-center gap-3 text-neutral-400 text-[13px] font-bold uppercase tracking-wider">
-                <Users size={16} strokeWidth={2} /> Assignees
-              </div>
-              <div className="flex items-center -space-x-2">
-                {task.avatars.map((av, idx) => (
+          </div>
+
+          {/* Attachments Section */}
+          {signedUrls.length > 0 && (
+            <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+              <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-3">
+                Attachments
+              </h4>
+              <div className="space-y-2">
+                {signedUrls.map((file, idx) => (
                   <div
                     key={idx}
-                    className={`w-[32px] h-[32px] rounded-full text-[11px] font-bold flex items-center justify-center border-2 border-white shadow-sm transition-transform hover:scale-110 relative z-[${10 - idx}] ${av.includes("+") ? "bg-neutral-100 text-neutral-600" : "bg-gradient-to-br from-white to-neutral-50 text-neutral-800"
-                      }`}
+                    className="flex items-center justify-between p-2.5 pl-3.5 bg-neutral-50 dark:bg-neutral-800/40 border border-black/5 dark:border-white/5 shadow-sm rounded-[16px] text-xs"
                   >
-                    {av}
+                    <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span className="text-neutral-700 dark:text-neutral-300 font-semibold truncate">
+                        {file.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.open(file.url, "_blank")}
+                      className="text-[10.5px] font-bold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors active:scale-95 duration-150 shrink-0"
+                    >
+                      View Document
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
-          </div>
-
-          {/* Description */}
-          <div className="px-2">
-            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] block mb-3">
-              Task Description
-            </label>
-            <div className="bg-white/40 backdrop-blur-md rounded-[32px] border border-black/5 p-6">
-              <p className="text-[15px] text-neutral-600 leading-[1.6] font-medium">
-                This task needs immediate attention. Please review the documents attached and proceed with the necessary approvals before the deadline to ensure project continuity.
-              </p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* FOOTER */}
         <div className="px-8 pb-10 pt-4 flex flex-col gap-3 relative z-10">
-          {task.status === "TODO" && (
-            <button className="w-full bg-neutral-900 text-white h-[64px] rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-black/10 border border-white/10">
-              Start Task
+          {task.status === "todo" && (
+            <button
+              onClick={() => handleStatusChange("in_progress")}
+              disabled={isUpdating}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/10 disabled:opacity-50"
+            >
+              {isUpdating ? (
+                "Starting..."
+              ) : (
+                <>
+                  <Play size={16} fill="currentColor" /> Start Task
+                </>
+              )}
             </button>
           )}
-          {task.status === "IN PROGRESS" && (
-            <button className="w-full bg-emerald-500 text-white h-[64px] rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-emerald-500/30 border border-white/20">
-              Submit for Review
+          {task.status === "in_progress" && (
+            <button
+              onClick={() => handleStatusChange("done")}
+              disabled={isUpdating}
+              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-emerald-500/10 disabled:opacity-50"
+            >
+              {isUpdating ? (
+                "Submitting..."
+              ) : (
+                <>
+                  <Send size={16} /> Submit for Review
+                </>
+              )}
             </button>
           )}
-          {(task.status === "REVISION" || task.status === "DONE") && (
+          {(task.status === "revision" || task.status === "done") && (
             <div className="flex gap-3">
-              <button className="flex-1 bg-white/50 backdrop-blur-xl border border-black/5 h-[64px] rounded-full font-bold text-[17px] text-neutral-700 active:scale-[0.98] transition-all">
+              <button className="flex-1 bg-white/50 backdrop-blur-xl border border-black/5 h-[56px] rounded-full font-bold text-[16px] text-neutral-700 active:scale-[0.98] transition-all">
                 Edit Form
               </button>
-              <button className="flex-1 bg-neutral-900 text-white h-[64px] rounded-full font-bold text-[17px] active:scale-[0.98] transition-all shadow-xl shadow-black/10 border border-white/10">
-                Resubmit
+              <button
+                onClick={() => handleStatusChange("done")}
+                disabled={isUpdating}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/10 disabled:opacity-50"
+              >
+                {isUpdating ? (
+                  "Resubmitting..."
+                ) : (
+                  <>
+                    <Undo2 size={16} /> Resubmit
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -347,10 +539,10 @@ const TaskCard = ({ task, onClick }: { task: TaskItem; onClick?: () => void }) =
 
         {/* Right Status Badges (Absolute positioned for top right corner style) */}
         <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
-          <span className={`text-[9px] px-2 py-0.5 rounded-full tracking-wider ${statusBadge}`}>
-            {task.status}
+          <span className={`text-[9px] px-2 py-0.5 rounded-full tracking-wider uppercase ${statusBadge}`}>
+            {task.status.replace("_", " ")}
           </span>
-          <span className={`text-[9px] px-2 py-0.5 rounded-full tracking-wider ${priorityBadge}`}>
+          <span className={`text-[9px] px-2 py-0.5 rounded-full tracking-wider uppercase ${priorityBadge}`}>
             {task.priority}
           </span>
         </div>
@@ -382,18 +574,64 @@ const TaskCard = ({ task, onClick }: { task: TaskItem; onClick?: () => void }) =
   );
 };
 
-const flattenWBS = (items: WBSItem[], level: number = 0): any[] => {
-  const result: any[] = [];
-  items.forEach(item => {
-    result.push({ ...item, displayTitle: item.title, level });
-    if (item.children && item.children.length > 0) {
-      result.push(...flattenWBS(item.children, level + 1));
-    }
-  });
-  return result;
-};
-
-
+const WBS_TEMPLATES = [
+  {
+    code: "S",
+    name: "Structure (Struktur)",
+    sections: [
+      { code: "S.1", name: "Preparation (Persiapan)" },
+      { code: "S.2", name: "Earthworks (Pekerjaan Tanah)" },
+      { code: "S.3", name: "Foundation (Pekerjaan Pondasi)" },
+      { code: "S.4", name: "Concrete Structure (Struktur Beton)" },
+      { code: "S.5", name: "Steel/Roof Structure (Struktur Atap)" },
+    ],
+  },
+  {
+    code: "A",
+    name: "Architecture (Arsitektur)",
+    sections: [
+      { code: "A.1", name: "Wall Masonry & Plaster (Dinding & Plesteran)" },
+      { code: "A.2", name: "Wall Finishes (Finishing Dinding)" },
+      { code: "A.3", name: "Floor Finishes (Finishing Lantai)" },
+      { code: "A.4", name: "Ceiling Works (Pekerjaan Plafond)" },
+      { code: "A.5", name: "Painting (Pengecatan)" },
+      { code: "A.6", name: "Doors & Windows (Kusen, Pintu & Jendela)" },
+      { code: "A.7", name: "Sanitary Ware (Sanitair)" },
+      { code: "A.8", name: "Facade & Cladding (Fasad)" },
+    ],
+  },
+  {
+    code: "M",
+    name: "MEP (Mechanical Electrical Plumbing)",
+    sections: [
+      { code: "M.1", name: "Electrical & Lighting (Elektrikal & Penerangan)" },
+      { code: "M.2", name: "Plumbing & Water Supply (Plumbing & Air)" },
+      { code: "M.3", name: "Air Conditioning & HVAC (AC & HVAC)" },
+      { code: "M.4", name: "Fire Fighting (Pemadam Kebakaran)" },
+      { code: "M.5", name: "Lightning Protection (Proteksi Petir)" },
+    ],
+  },
+  {
+    code: "I",
+    name: "Interior",
+    sections: [
+      { code: "I.1", name: "Built-in Furniture (Furnitur Custom)" },
+      { code: "I.2", name: "Loose Furniture (Furnitur Loose)" },
+      { code: "I.3", name: "Interior Wall Coverings (Finishing Interior)" },
+      { code: "I.4", name: "Special Lighting (Lampu Dekoratif)" },
+    ],
+  },
+  {
+    code: "L",
+    name: "Landscape (Lansekap)",
+    sections: [
+      { code: "L.1", name: "Hardscape (Pekerasan)" },
+      { code: "L.2", name: "Softscape (Tanaman)" },
+      { code: "L.3", name: "Drainage & Irrigation (Saluran Air)" },
+      { code: "L.4", name: "Garden Lighting (Lampu Taman)" },
+    ],
+  },
+];
 
 export default function TaskPage() {
   const { profile, loading: profileLoading } = useUserProfile();
@@ -401,14 +639,28 @@ export default function TaskPage() {
   // Add form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskProject, setNewTaskProject] = useState("PRG");
-  const [newTaskWBS, setNewTaskWBS] = useState("");
   const [newTaskDeadlineDate, setNewTaskDeadlineDate] = useState(new Date().toISOString().split('T')[0]);
   const [newTaskDeadlineTime, setNewTaskDeadlineTime] = useState("");
-  const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>("TODO");
-  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("MEDIUM");
+  const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>("todo");
+  const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("medium");
   const [newTaskAssignees, setNewTaskAssignees] = useState<string[]>([]);
   const [newTaskDescription, setNewTaskDescription] = useState("");
-  const [newTaskFile, setNewTaskFile] = useState<File | null>(null);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
+  const [isAddingTask, setIsAddingTask] = useState(false);
+
+  // WBS Step Picker States
+  const [wbsDiscipline, setWbsDiscipline] = useState<string>("A");
+  const [wbsSection, setWbsSection] = useState<string>("A.1");
+
+  // Assignee Search & Inline Subtask states
+  const [assigneeSearchQuery, setAssigneeSearchQuery] = useState("");
+  const [subtaskInputValue, setSubtaskInputValue] = useState("");
+
+  // Form Dropdowns & Custom layout alignment states
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+  const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
+  const [selectedModule, setSelectedModule] = useState<string | null>(null);
+  const [subtasks, setSubtasks] = useState<string[]>([]);
 
   // Other UI state
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -417,7 +669,6 @@ export default function TaskPage() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
   const [dbProjects, setDbProjects] = useState<Project[]>([]);
-  const [wbsList, setWbsList] = useState<WBSItem[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -459,6 +710,11 @@ export default function TaskPage() {
           return "U";
         }) || ["U"];
 
+        const tAssigneeNames = t.assignees?.map(uid => {
+          const p = includedPeople.find(person => person.id === uid);
+          return p?.name || "Unknown User";
+        }) || [];
+
         return {
           id: t.id,
           refId: t.wbsCode || t.wbsTitle || undefined,
@@ -472,6 +728,11 @@ export default function TaskPage() {
           icon: "fileText",
           avatars: tAvatars.length > 0 ? tAvatars : ["U"],
           theme: "pink",
+          createdBy: t.createdBy,
+          description: t.description || undefined,
+          assignees: t.assignees || [],
+          assigneeNames: tAssigneeNames,
+          attachmentUrls: t.attachmentUrls || null,
         };
       });
       setTasks(mappedTasks);
@@ -524,55 +785,185 @@ export default function TaskPage() {
     };
   }, []);
 
-  // Fetch WBS when project changes
-  useEffect(() => {
-    async function loadWBS() {
-      if (!newTaskProject) return;
-      const proj = dbProjects.find(p => p.projectCode === newTaskProject);
-      if (proj) {
-        const wbs = await fetchProjectWBS(proj.id);
-        const flatWbs = flattenWBS(wbs);
-        setWbsList(flatWbs);
-        if (flatWbs.length > 0) {
-          setNewTaskWBS(flatWbs[0].id || "");
-        } else {
-          setNewTaskWBS("");
-        }
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const success = await deleteTask(taskId);
+      if (success) {
+        setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
+        setSelectedTask(null);
+      } else {
+        alert("Failed to delete task. Please try again.");
       }
+    } catch (err) {
+      console.error("Error deleting task:", err);
+      alert("An error occurred while deleting the task.");
     }
-    loadWBS();
-  }, [newTaskProject, dbProjects]);
+  };
+
+  const handleStatusUpdate = async (taskId: string, newStatus: StatusType) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      const success = await updateTaskStatus(taskId, newStatus);
+      if (success) {
+        setTasks(prevTasks =>
+          prevTasks.map(t => (t.id === taskId ? { ...t, status: newStatus } : t))
+        );
+        setSelectedTask(prevSelected =>
+          prevSelected && prevSelected.id === taskId
+            ? { ...prevSelected, status: newStatus }
+            : prevSelected
+        );
+
+        // Asynchronously dispatch task status update notifications
+        if (task) {
+          (async () => {
+            try {
+              const changerName = profile?.name || "Adidaya Member";
+              const changerId = profile?.id;
+              const projCode = task.projectCode || "PRG";
+              
+              // Map newStatus to descriptive action
+              let actionPhrase = `updated status of "${task.title}" to ${newStatus}`;
+              if (newStatus === "in_progress") {
+                actionPhrase = `started the task of ${task.title}`;
+              } else if (newStatus === "completed" || newStatus === "done") {
+                actionPhrase = `completed the task of ${task.title}`;
+              } else if (newStatus === "todo" && (task.status === "in_progress" || task.status === "completed" || task.status === "done")) {
+                actionPhrase = `requested revision on the task of ${task.title}`;
+              } else if (newStatus === "todo") {
+                actionPhrase = `marked the task of ${task.title} as To Do`;
+              }
+
+              const description = `${changerName} ${actionPhrase} . ${projCode}`;
+
+              // Determine recipients: creator and all assignees (excluding the changer)
+              const recipientIds = new Set<string>();
+              if (task.createdBy && task.createdBy !== changerId) {
+                recipientIds.add(task.createdBy);
+              }
+              if (task.assignees) {
+                task.assignees.forEach(uid => {
+                  if (uid !== changerId) {
+                    recipientIds.add(uid);
+                  }
+                });
+              }
+
+              for (const recipientId of recipientIds) {
+                await createNotification({
+                  user_id: recipientId,
+                  type: "info",
+                  category: "task",
+                  title: "Task Status Updated",
+                  description,
+                  link: `/task?id=${task.id}`,
+                  metadata: { taskId: task.id, newStatus }
+                });
+              }
+            } catch (nErr) {
+              console.error("Failed to send status update notifications:", nErr);
+            }
+          })();
+        }
+      } else {
+        alert("Failed to update task status. Please try again.");
+      }
+    } catch (err) {
+      console.error("Error updating task status:", err);
+      alert("An error occurred while updating task status.");
+    }
+  };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     setIsScrolled(e.currentTarget.scrollTop > 20);
   };
 
   const handleAddTask = async () => {
-    if (!newTaskTitle.trim()) return;
+    if (!newTaskTitle.trim() || isAddingTask) return;
 
+    setIsAddingTask(true);
     try {
       const proj = dbProjects.find(p => p.projectCode === newTaskProject);
       if (!proj) {
         console.error("Project not found for code:", newTaskProject);
+        alert("Selected project not found.");
         return;
       }
 
       const currentUserId = profile?.id || null;
       if (!currentUserId) {
         console.error("Cannot create task: User profile not loaded.");
+        alert("User profile not loaded. Please log in.");
         return;
       }
 
+      // 1. Resolve or Create WBS Item dynamically
+      let matchedWbsId = null;
+      const constructedWbsCode = `${wbsDiscipline}.${wbsSection.split('.').pop()}`;
+      
+      const { data: wbsItems, error: wbsErr } = await supabase
+        .from("project_wbs_items")
+        .select("id")
+        .eq("project_id", proj.id)
+        .eq("wbs_code", constructedWbsCode);
+
+      if (wbsItems && wbsItems.length > 0) {
+        matchedWbsId = wbsItems[0].id;
+      } else {
+        // Automatically create WBS item since it is a template SAMEPIL
+        const title = WBS_TEMPLATES.find(d => d.code === wbsDiscipline)
+          ?.sections.find(s => s.code === wbsSection)?.name || "WBS Item";
+
+        const { data: newWbs, error: newWbsErr } = await supabase
+          .from("project_wbs_items")
+          .insert({
+            project_id: proj.id,
+            wbs_code: constructedWbsCode,
+            title: title,
+            level: 3,
+            is_leaf: true,
+            position: 0
+          })
+          .select()
+          .single();
+
+        if (newWbs) {
+          matchedWbsId = newWbs.id;
+        } else {
+          console.warn("WBS auto-creation returned null, proceeding without WBS link", newWbsErr);
+        }
+      }
+
+      // 2. Upload multiple selected files to Storage
+      let attachmentUrlsString = "";
+      if (proofFiles.length > 0) {
+        const uploadPromises = proofFiles.map(async (file) => {
+          const uniqueFolder = typeof crypto.randomUUID === 'function' 
+            ? crypto.randomUUID() 
+            : Math.random().toString(36).substring(2, 15);
+          const ext = file.name.split('.').pop() || "png";
+          const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+          const path = `tasks/${uniqueFolder}/${filename}`;
+          const uploadedPath = await uploadFinanceFileExact(file, path);
+          return uploadedPath;
+        });
+
+        const uploadedPaths = await Promise.all(uploadPromises);
+        attachmentUrlsString = uploadedPaths.filter(Boolean).join(',');
+      }
+
+      // 3. Assemble and Insert the new Task
       const newTaskDbPayload = {
         title: newTaskTitle,
         description: newTaskDescription,
         projectId: proj.id,
-        wbsId: newTaskWBS || null,
+        wbsId: matchedWbsId,
         deadlineDate: newTaskDeadlineDate,
         deadlineTime: newTaskDeadlineTime || null,
         status: newTaskStatus,
         priority: newTaskPriority,
-        createdBy: currentUserId
+        createdBy: currentUserId,
+        attachmentUrls: attachmentUrlsString || null
       };
 
       console.log("Creating task with payload:", newTaskDbPayload, "and assignees:", validAssignees);
@@ -588,9 +979,14 @@ export default function TaskPage() {
           return "U";
         });
 
+        const newTaskAssigneeNames = validAssignees.map(uid => {
+          const p = people.find(person => person.id === uid);
+          return p?.name || "Unknown User";
+        });
+
         const newTask: TaskItem = {
           id: createdTask.id,
-          refId: createdTask.wbsCode || createdTask.wbsTitle || undefined,
+          refId: createdTask.wbsCode || createdTask.wbsTitle || constructedWbsCode || undefined,
           title: createdTask.title,
           projectCode: createdTask.projectCode || proj.projectCode,
           projectName: createdTask.projectName || proj.projectName,
@@ -601,22 +997,73 @@ export default function TaskPage() {
           icon: "fileText",
           avatars: newTaskAvatars.length > 0 ? newTaskAvatars : ["U"],
           theme: "pink",
+          createdBy: createdTask.createdBy,
+          description: createdTask.description || undefined,
+          assignees: validAssignees,
+          assigneeNames: newTaskAssigneeNames,
+          attachmentUrls: createdTask.attachmentUrls || null
         };
 
         setTasks([newTask, ...tasks]);
 
-        // Reset form
+        // Asynchronously dispatch task assignment notifications
+        (async () => {
+          try {
+            const assignerName = profile?.name || "Adidaya Admin";
+            const projCode = createdTask.projectCode || proj?.code || proj?.projectCode || "PRG";
+            
+            for (const targetUserId of validAssignees) {
+              const otherAssigneesNames = validAssignees
+                .filter(id => id !== targetUserId)
+                .map(id => {
+                  const p = people.find(person => person.id === id);
+                  return p?.name ? p.name.trim().split(" ")[0] : null;
+                })
+                .filter(Boolean) as string[];
+
+              let assigneesPhrase = "you";
+              if (otherAssigneesNames.length === 1) {
+                assigneesPhrase = `you and ${otherAssigneesNames[0]}`;
+              } else if (otherAssigneesNames.length > 1) {
+                const last = otherAssigneesNames.pop();
+                assigneesPhrase = `you, ${otherAssigneesNames.join(", ")}, and ${last}`;
+              }
+
+              const description = `${assignerName} assigned ${assigneesPhrase} a task of ${createdTask.title} . ${projCode}`;
+
+              await createNotification({
+                user_id: targetUserId,
+                type: "mention",
+                category: "task",
+                title: "New Task Assigned",
+                description,
+                link: `/task?id=${createdTask.id}`,
+                metadata: { taskId: createdTask.id, projectId: proj?.id }
+              });
+            }
+          } catch (nErr) {
+            console.error("Failed to send task assignment notifications:", nErr);
+          }
+        })();
+
+        // Reset form completely
         setNewTaskTitle("");
         setNewTaskDescription("");
         setNewTaskAssignees([]);
-        setNewTaskFile(null);
+        setProofFiles([]);
         setNewTaskDeadlineTime("");
+        setSubtasks([]);
+        setSelectedModule(null);
         setIsAddOpen(false);
       } else {
         console.error("Task creation failed: createTask returned null");
+        alert("Failed to save task in the database.");
       }
     } catch (error) {
       console.error("Failed to create task in handleAddTask:", error);
+      alert("An unexpected error occurred while creating task.");
+    } finally {
+      setIsAddingTask(false);
     }
   };
 
@@ -624,9 +1071,9 @@ export default function TaskPage() {
     // 1. Tab Filter
     let tabMatch = false;
     if (activeTab === "all") tabMatch = true;
-    else if (activeTab === "revision" && t.status === "REVISION") tabMatch = true;
-    else if (activeTab === "active" && t.status === "IN PROGRESS") tabMatch = true;
-    else if (activeTab === "done" && t.status === "DONE") tabMatch = true;
+    else if (activeTab === "revision" && t.status === "revision") tabMatch = true;
+    else if (activeTab === "active" && t.status === "in_progress") tabMatch = true;
+    else if (activeTab === "done" && t.status === "done") tabMatch = true;
     // (Other tabs as needed...)
 
     // 2. Project Filter
@@ -757,6 +1204,9 @@ export default function TaskPage() {
         isOpen={!!selectedTask}
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
+        profile={profile}
+        onDeleteTask={handleDeleteTask}
+        onStatusUpdate={handleStatusUpdate}
       />
 
       {/* FILTER MODAL */}
@@ -871,13 +1321,13 @@ export default function TaskPage() {
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", damping: 30, stiffness: 300, mass: 0.8 }}
               className={clsx(
-                "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-3xl border border-white/60 dark:border-neutral-800 shadow-2xl rounded-[56px] overflow-hidden flex flex-col",
+                "absolute z-50 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-3xl border border-white/40 dark:border-neutral-800 shadow-2xl rounded-[40px] overflow-hidden flex flex-col",
                 "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
               )}
             >
               {/* STICKY HEADER */}
               <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent flex items-center justify-between">
-                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">Add New Task</h2>
+                <h2 className="text-[22px] font-extrabold text-neutral-900 dark:text-white tracking-tight">Add New Task</h2>
                 <button
                   onClick={() => setIsAddOpen(false)}
                   className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
@@ -888,156 +1338,493 @@ export default function TaskPage() {
 
               {/* SCROLLABLE CONTENT */}
               <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-                <div className="px-8 pb-32 space-y-8">
-                  {/* SECTION: BASIC INFO */}
-                  <section className="space-y-4 pt-4">
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-neutral-500" strokeWidth={2} /> Task Information
-                    </h3>
+                <div className="px-8 pb-32 space-y-6 pt-4">
+                  
+                  {/* Task Title Input */}
+                  <div>
+                    <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                      Task Title
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Wall Finishing"
+                      className="w-full h-12 px-5 text-sm border-0 rounded-[16px] bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Project Selector Trigger */}
+                  <div className="relative">
+                    <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                      Project
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+                      className="w-full h-12 px-5 flex items-center justify-between border-0 rounded-[16px] bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-700/50 transition-all text-left"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-[10px] font-extrabold text-white bg-blue-600 dark:bg-blue-500 px-2 py-0.5 rounded-full tracking-wider uppercase">
+                          {newTaskProject}
+                        </span>
+                        <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
+                          {dbProjects.find(p => p.projectCode === newTaskProject)?.projectName || "Select Project..."}
+                        </span>
+                      </div>
+                      <ChevronDown size={16} className="text-neutral-400" />
+                    </button>
                     
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Task Title *</label>
-                        <input
-                          type="text"
-                          placeholder="What needs to be done?"
-                          className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium placeholder:text-[11px]"
-                          value={newTaskTitle}
-                          onChange={(e) => setNewTaskTitle(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <Select
-                          label="Project *"
-                          value={newTaskProject}
-                          onChange={setNewTaskProject}
-                          options={[
-                            { label: "Internal Project", value: "INTERNAL" },
-                            ...dbProjects.map(p => ({ label: `${p.projectCode} - ${p.projectName}`, value: p.projectCode }))
-                          ]}
-                        />
-                        <Select
-                          label="WBS *"
-                          value={newTaskWBS}
-                          onChange={setNewTaskWBS}
-                          options={[
-                            { label: "None", value: "" },
-                            ...wbsList.map(w => ({ 
-                              label: `${"\u00A0".repeat((w.level || 0) * 2)}${w.wbsCode} - ${w.title}`, 
-                              value: w.id || "" 
-                            }))
-                          ]}
-                        />
-                      </div>
-
-                      <Select
-                        label="Assignee"
-                        value={newTaskAssignees[0] || ""}
-                        onChange={(val) => setNewTaskAssignees([val])}
-                        options={people.map(p => ({ label: p.name, value: p.id }))}
-                        placeholder="Select someone..."
-                      />
-                    </div>
-                  </section>
-
-                  {/* SECTION: DETAILS */}
-                  <section className="space-y-4">
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-neutral-500" strokeWidth={2} /> Priority & Deadline
-                    </h3>
-
-                    <div className="space-y-4">
-                      <Select
-                        label="Priority"
-                        value={newTaskPriority}
-                        onChange={(val) => setNewTaskPriority(val as PriorityType)}
-                        options={[
-                          { label: "Low", value: "LOW" },
-                          { label: "Medium", value: "MEDIUM" },
-                          { label: "High", value: "HIGH" },
-                          { label: "Urgent", value: "URGENT" }
-                        ]}
-                      />
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Deadline Date *</label>
-                          <input
-                            type="date"
-                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium"
-                            value={newTaskDeadlineDate}
-                            onChange={(e) => setNewTaskDeadlineDate(e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Deadline Time</label>
-                          <input
-                            type="time"
-                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium"
-                            value={newTaskDeadlineTime}
-                            onChange={(e) => setNewTaskDeadlineTime(e.target.value)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* SECTION: NOTES & ATTACHMENTS */}
-                  <section className="space-y-4">
-                    <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
-                      <History className="w-4 h-4 text-neutral-500" strokeWidth={2} /> Notes & Attachments
-                    </h3>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Notes</label>
-                        <textarea
-                          placeholder="Add some details..."
-                          className="w-full h-32 p-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-[32px] bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium placeholder:text-[11px] resize-none"
-                          value={newTaskDescription}
-                          onChange={(e) => setNewTaskDescription(e.target.value)}
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5 ml-1">Attachments</label>
-                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-[32px] bg-white/40 dark:bg-neutral-800/40 hover:bg-white/60 dark:hover:bg-neutral-800/60 transition-all cursor-pointer group">
-                          <div className="flex items-center gap-3">
-                            <UploadCloud className="w-5 h-5 text-neutral-400 group-hover:text-blue-500 transition-colors" />
-                            <span className="text-xs font-bold text-neutral-500 group-hover:text-neutral-700 dark:group-hover:text-neutral-300">
-                              {newTaskFile ? newTaskFile.name : "Tap to upload file"}
+                    {isProjectDropdownOpen && (
+                      <div className="absolute z-50 left-0 right-0 mt-2 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-[16px] shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+                        {dbProjects.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setNewTaskProject(p.projectCode);
+                              setIsProjectDropdownOpen(false);
+                            }}
+                            className="w-full h-11 px-4 flex items-center gap-3 hover:bg-neutral-50 dark:hover:bg-neutral-800/80 transition-colors text-left border-b border-neutral-100 last:border-0 dark:border-neutral-800/50"
+                          >
+                            <span className="text-[10px] font-extrabold text-white bg-blue-600 dark:bg-blue-500 px-2 py-0.5 rounded-full tracking-wider uppercase shrink-0">
+                              {p.projectCode}
                             </span>
-                          </div>
-                          <input type="file" className="hidden" onChange={(e) => setNewTaskFile(e.target.files?.[0] || null)} />
-                        </label>
+                            <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 truncate">
+                              {p.projectName}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* WBS STEP SELECTORS */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                        WBS - Discipline
+                      </label>
+                      <select
+                        value={wbsDiscipline}
+                        onChange={(e) => {
+                          const d = e.target.value;
+                          setWbsDiscipline(d);
+                          const defaultSec = WBS_TEMPLATES.find(t => t.code === d)?.sections[0]?.code || "";
+                          setWbsSection(defaultSec);
+                        }}
+                        className="w-full h-12 px-5 text-sm border-0 rounded-[16px] bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold cursor-pointer"
+                      >
+                        {WBS_TEMPLATES.map(t => (
+                          <option key={t.code} value={t.code}>{t.code} - {t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                        WBS - Section
+                      </label>
+                      <select
+                        value={wbsSection}
+                        onChange={(e) => setWbsSection(e.target.value)}
+                        className="w-full h-12 px-5 text-sm border-0 rounded-[16px] bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold cursor-pointer"
+                      >
+                        {WBS_TEMPLATES.find(t => t.code === wbsDiscipline)?.sections.map(s => (
+                          <option key={s.code} value={s.code}>{s.code} - {s.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Live preview of constructed WBS tag */}
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-wider">
+                        Dynamic WBS Code:
+                      </span>
+                      <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 px-3 py-1 rounded-full uppercase tracking-wider">
+                        {wbsDiscipline}.{wbsSection.split('.').pop()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Segmented Priority selector */}
+                  <div>
+                    <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                      Priority
+                    </label>
+                    <div className="flex bg-neutral-100 dark:bg-neutral-800 p-1.5 rounded-[16px] gap-1">
+                      {[
+                        { id: "urgent", label: "Urgent", icon: AlertCircle, color: "bg-red-500 text-white shadow-md border-red-500" },
+                        { id: "high", label: "High", icon: ArrowUp, color: "bg-orange-500 text-white shadow-md border-orange-500" },
+                        { id: "medium", label: "Medium", icon: Menu, color: "bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white border border-neutral-200 dark:border-neutral-600 shadow-sm" },
+                        { id: "low", label: "Low", icon: ArrowDown, color: "bg-white dark:bg-neutral-700 text-neutral-800 dark:text-white border border-neutral-200 dark:border-neutral-600 shadow-sm" }
+                      ].map((opt) => {
+                        const isSel = newTaskPriority === opt.id;
+                        const OptIcon = opt.icon;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => setNewTaskPriority(opt.id as TaskPriority)}
+                            className={clsx(
+                              "flex-1 h-9 rounded-[12px] flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
+                              isSel
+                                ? opt.color + " font-extrabold"
+                                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+                            )}
+                          >
+                            <OptIcon size={14} />
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Deadline date picker */}
+                  <div>
+                    <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                      Deadline (Date & Optional Time)
+                    </label>
+                    <div className="flex gap-4">
+                      <div className="flex-1 relative">
+                        <input
+                          type="date"
+                          className="w-full h-12 px-5 text-sm border-0 rounded-[16px] bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
+                          value={newTaskDeadlineDate}
+                          onChange={(e) => setNewTaskDeadlineDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex-1 relative">
+                        <input
+                          type="time"
+                          className="w-full h-12 px-5 text-sm border-0 rounded-[16px] bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold"
+                          value={newTaskDeadlineTime}
+                          onChange={(e) => setNewTaskDeadlineTime(e.target.value)}
+                        />
                       </div>
                     </div>
-                  </section>
+                  </div>
+
+                  {/* Assignees selection with search & badges */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                        Assignees
+                      </label>
+                      {newTaskAssignees.length > 0 && (
+                        <span className="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full">
+                          {newTaskAssignees.length} selected
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Selected Assignees Badges Above Search Input */}
+                    {newTaskAssignees.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 p-2.5 bg-neutral-50 dark:bg-neutral-900/30 rounded-[16px] border border-black/[0.03] dark:border-white/[0.03]">
+                        {newTaskAssignees.map(id => {
+                          const p = people.find(person => person.id === id);
+                          if (!p) return null;
+                          const initials = p.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                            .substring(0, 2);
+                          return (
+                            <div
+                              key={p.id}
+                              className="flex items-center gap-1.5 pl-2 pr-1.5 py-1 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full shadow-sm"
+                            >
+                              <div className="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-[9px] font-extrabold text-blue-600 dark:text-blue-400 shrink-0">
+                                {initials}
+                              </div>
+                              <span className="text-[11px] font-bold text-neutral-800 dark:text-neutral-200">
+                                {p.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setNewTaskAssignees(newTaskAssignees.filter(uid => uid !== p.id))}
+                                className="w-4 h-4 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 flex items-center justify-center text-neutral-400 hover:text-red-500 transition-colors"
+                              >
+                                <X size={10} strokeWidth={2.5} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Search Field */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Search team members..."
+                        value={assigneeSearchQuery}
+                        onChange={(e) => setAssigneeSearchQuery(e.target.value)}
+                        className="w-full h-11 px-4 pr-10 text-xs border-0 rounded-[16px] bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold placeholder:text-neutral-400"
+                      />
+                      <Search size={16} className="absolute right-3.5 top-3.5 text-neutral-400 pointer-events-none" />
+                    </div>
+
+                    {/* Filtered Search Results Grid */}
+                    <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1 no-scrollbar border border-black/[0.02] dark:border-white/[0.02] p-1.5 rounded-[16px]">
+                      {people.filter(p => p.name.toLowerCase().includes(assigneeSearchQuery.toLowerCase())).length > 0 ? (
+                        people
+                          .filter(p => p.name.toLowerCase().includes(assigneeSearchQuery.toLowerCase()))
+                          .map((p) => {
+                            const isAssigned = newTaskAssignees.includes(p.id);
+                            const initials = p.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .substring(0, 2);
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => {
+                                  if (isAssigned) {
+                                    setNewTaskAssignees(newTaskAssignees.filter(id => id !== p.id));
+                                  } else {
+                                    setNewTaskAssignees([...newTaskAssignees, p.id]);
+                                  }
+                                }}
+                                className={clsx(
+                                  "flex items-center gap-2 p-2 rounded-[14px] border text-left transition-all active:scale-[0.98]",
+                                  isAssigned
+                                    ? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-400 dark:border-blue-900 text-blue-600 dark:text-blue-400 font-bold"
+                                    : "bg-neutral-100/50 dark:bg-neutral-800/40 border-transparent hover:bg-neutral-100 text-neutral-700 dark:text-neutral-300"
+                                )}
+                              >
+                                <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-[9px] font-extrabold text-neutral-700 dark:text-neutral-300 shrink-0">
+                                  {initials}
+                                </div>
+                                <span className="text-xs font-semibold truncate leading-none">
+                                  {p.name}
+                                </span>
+                                {isAssigned && <Check size={12} strokeWidth={2.5} className="ml-auto shrink-0" />}
+                              </button>
+                            );
+                          })
+                      ) : (
+                        <div className="col-span-2 text-center py-4 text-xs font-semibold text-neutral-400 dark:text-neutral-500 italic">
+                          No matching team members found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Subtasks Section with Inline Input */}
+                  <div className="space-y-3">
+                    <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">
+                      Subtasks (Optional)
+                    </label>
+
+                    {/* Inline Input bar */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Add new subtask..."
+                        value={subtaskInputValue}
+                        onChange={(e) => setSubtaskInputValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (subtaskInputValue.trim()) {
+                              setSubtasks([...subtasks, subtaskInputValue.trim()]);
+                              setSubtaskInputValue("");
+                            }
+                          }
+                        }}
+                        className="flex-1 h-11 px-4 text-xs border-0 rounded-[16px] bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold placeholder:text-neutral-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (subtaskInputValue.trim()) {
+                            setSubtasks([...subtasks, subtaskInputValue.trim()]);
+                            setSubtaskInputValue("");
+                          }
+                        }}
+                        className="w-11 h-11 rounded-[16px] bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center active:scale-95 transition-transform shrink-0 shadow-md shadow-blue-500/25"
+                      >
+                        <Plus size={16} strokeWidth={2.5} />
+                      </button>
+                    </div>
+
+                    {/* Subtask list */}
+                    {subtasks.length > 0 && (
+                      <div className="space-y-2 bg-neutral-50 dark:bg-neutral-900/40 p-3 rounded-[16px] border border-black/5">
+                        {subtasks.map((st, sIdx) => (
+                          <div key={sIdx} className="flex items-center justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-300 px-1">
+                            <div className="flex items-center gap-2">
+                              <Check size={14} className="text-emerald-500 shrink-0" />
+                              <span className="truncate">{st}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSubtasks(subtasks.filter((_, i) => i !== sIdx))}
+                              className="text-neutral-400 hover:text-red-500 p-1 rounded-full transition-colors"
+                              title="Delete subtask"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Optional Module linking horizontal row */}
+                  <div>
+                    <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                      Link to Module (Optional)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: "finance", label: "Finance", icon: CreditCard },
+                        { id: "resource", label: "Resource", icon: Layers },
+                        { id: "people", label: "People", icon: Users },
+                        { id: "clock", label: "Clock", icon: Clock },
+                        { id: "crew", label: "Crew", icon: Wrench }
+                      ].map((mod) => {
+                        const isSel = selectedModule === mod.id;
+                        const ModIcon = mod.icon;
+                        return (
+                          <button
+                            key={mod.id}
+                            type="button"
+                            onClick={() => setSelectedModule(isSel ? null : mod.id)}
+                            className={clsx(
+                              "flex items-center gap-1.5 px-4 py-2 rounded-full border transition-all text-xs font-bold",
+                              isSel
+                                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                : "bg-neutral-100/80 dark:bg-neutral-800/80 border-black/5 hover:bg-neutral-200/50 text-neutral-700 dark:text-neutral-300"
+                            )}
+                          >
+                            <ModIcon size={14} />
+                            {mod.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Description Input textarea */}
+                  <div>
+                    <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      placeholder="Additional notes..."
+                      className="w-full h-24 p-4 text-sm border-0 rounded-[16px] bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold placeholder:text-neutral-400 placeholder:font-medium resize-none"
+                      value={newTaskDescription}
+                      onChange={(e) => setNewTaskDescription(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Attach Files (Placed strictly at the very end of the scrollable area as requested) */}
+                  <div>
+                    <label className="block text-[13px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider mb-2">
+                      Attach Files
+                    </label>
+                    
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-neutral-200 dark:border-neutral-700 rounded-[16px] bg-neutral-100/40 dark:bg-neutral-800/40 hover:bg-neutral-100/80 dark:hover:bg-neutral-800/80 transition-all cursor-pointer group mb-3">
+                      <div className="flex items-center gap-3">
+                        <UploadCloud className="w-5 h-5 text-neutral-400 group-hover:text-blue-500 transition-colors" />
+                        <span className="text-xs font-bold text-neutral-500 group-hover:text-neutral-700 dark:group-hover:text-neutral-300">
+                          Tap to upload multiple files
+                        </span>
+                      </div>
+                      <input 
+                        type="file" 
+                        multiple 
+                        className="hidden" 
+                        onChange={(e) => {
+                          if (e.target.files) {
+                            const selectedFiles = Array.from(e.target.files);
+                            setProofFiles(prev => [...prev, ...selectedFiles]);
+                          }
+                        }} 
+                      />
+                    </label>
+
+                    {proofFiles.length > 0 && (
+                      <div className="space-y-2">
+                        {proofFiles.map((file, fIdx) => (
+                          <div 
+                            key={fIdx} 
+                            className="flex items-center justify-between p-2.5 pl-3.5 bg-neutral-50 dark:bg-neutral-800/40 border border-black/5 dark:border-white/5 rounded-[16px] text-xs shadow-sm"
+                          >
+                            <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                              <span className="text-neutral-700 dark:text-neutral-300 font-semibold truncate">
+                                {file.name}
+                              </span>
+                              <span className="text-[10px] text-neutral-400 font-medium shrink-0">
+                                ({(file.size / 1024).toFixed(0)} KB)
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const blobUrl = URL.createObjectURL(file);
+                                  window.open(blobUrl, '_blank');
+                                }}
+                                className="text-[10.5px] font-bold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors active:scale-95 duration-150"
+                              >
+                                Preview
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setProofFiles(prev => prev.filter((_, idx) => idx !== fIdx))}
+                                className="w-6 h-6 rounded-md bg-red-50 dark:bg-red-950/20 text-red-500 hover:text-red-700 dark:hover:text-red-400 flex items-center justify-center transition-all active:scale-90"
+                                title="Remove file"
+                              >
+                                <X size={14} strokeWidth={2.5} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
 
               {/* STICKY GLASSY FOOTER */}
-              <div className="absolute bottom-0 left-0 right-0 w-full px-8 py-6 z-30 bg-transparent">
-                <div className="p-4 border-t border-gray-100 bg-gray-50/50 flex gap-3">
-                  <button
-                    onClick={() => setIsAddOpen(false)}
-                    className="flex-1 h-12 rounded-full border border-neutral-200 dark:border-neutral-700 text-sm font-bold text-neutral-600 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-all active:scale-95"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleAddTask}
-                    disabled={!newTaskTitle.trim() || validAssignees.length === 0 || !profile}
-                    className="flex-[2] h-12 rounded-full bg-[#0062ff] text-white text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 transition-all active:scale-95 disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
-                  >
-                    {!profile ? "Loading Profile..." : (
-                      <>
-                        <Check size={18} /> Create Task
-                      </>
-                    )}
-                  </button>
-                </div>
+              <div className="absolute bottom-0 left-0 right-0 w-full px-8 pb-8 pt-4 z-30 bg-transparent flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddOpen(false)}
+                  disabled={isAddingTask}
+                  className="flex-1 h-12 rounded-full bg-white/10 dark:bg-neutral-800/10 border border-black/5 dark:border-white/5 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-white/20 dark:hover:bg-neutral-800/20 transition-all active:scale-[0.97] flex items-center justify-center disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddTask}
+                  disabled={!newTaskTitle.trim() || validAssignees.length === 0 || !profile || isAddingTask}
+                  className="flex-[2] h-12 rounded-full bg-blue-600 dark:bg-blue-500 text-white text-sm font-bold hover:bg-blue-700 shadow-lg shadow-blue-600/20 dark:shadow-blue-500/15 transition-all active:scale-[0.97] disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2 border border-white/10"
+                >
+                  {isAddingTask ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" /> Saving Task...
+                    </>
+                  ) : !profile ? (
+                    "Loading Profile..."
+                  ) : (
+                    <>
+                      <Plus size={18} strokeWidth={2.5} /> Create Task
+                    </>
+                  )}
+                </button>
               </div>
             </motion.div>
           </div>

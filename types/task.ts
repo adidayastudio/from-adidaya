@@ -1,5 +1,5 @@
-export type TaskStatus = "TODO" | "IN PROGRESS" | "REVISION" | "DONE";
-export type TaskPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
+export type TaskStatus = "todo" | "in_progress" | "submitted" | "revision" | "done";
+export type TaskPriority = "urgent" | "high" | "medium" | "low";
 export type ActionStatus = "PENDING" | "APPROVED" | "REJECTED" | "REVISION" | "DISPUTE";
 export type ActionPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
 
@@ -16,6 +16,7 @@ export interface TaskModel {
     createdBy: string | null;
     createdAt: string;
     updatedAt: string;
+    attachmentUrls?: string | null;
 
     // Joins
     projectCode?: string;
