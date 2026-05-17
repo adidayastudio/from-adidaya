@@ -487,7 +487,7 @@ const TaskDetailModal = ({
                 <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
                   Task Number
                 </span>
-                <span className="text-[12px] font-extrabold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50 px-2.5 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
+                <span className="text-[12px] font-extrabold text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700/50 px-2.5 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
                   {task.taskNumber}
                 </span>
               </div>
@@ -1140,7 +1140,7 @@ const TaskCard = ({ task, onClick }: { task: TaskItem; onClick?: () => void }) =
           {(task.taskNumber || task.refId || subtaskIndicatorVal) && (
             <div className="flex items-center gap-2 mb-1">
               {task.taskNumber ? (
-                <span className="text-[11px] font-extrabold text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
+                <span className="text-[11px] font-extrabold text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700/50 px-2 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
                   {task.taskNumber}
                 </span>
               ) : task.refId ? (
