@@ -1289,7 +1289,7 @@ export default function TaskPage() {
   // Add form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskProject, setNewTaskProject] = useState("PRG");
-  const [newTaskDeadlineDate, setNewTaskDeadlineDate] = useState(new Date().toISOString().split('T')[0]);
+  const [newTaskDeadlineDate, setNewTaskDeadlineDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [newTaskDeadlineTime, setNewTaskDeadlineTime] = useState("");
   const [newTaskStatus, setNewTaskStatus] = useState<TaskStatus>("todo");
   const [newTaskPriority, setNewTaskPriority] = useState<TaskPriority>("medium");
