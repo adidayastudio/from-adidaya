@@ -88,3 +88,38 @@ function mapDbToAction(dbRow: any): ActionModel {
         reviewers: dbRow.action_reviewers ? dbRow.action_reviewers.map((ar: any) => ar.user_id) : []
     };
 }
+
+export async function updateActionStatus(actionId: string, newStatus: ActionStatus, sourceTaskId?: string | null): Promise<boolean> {
+    const { error: actionError } = await supabase
+        .from("actions")
+        .update({ status: newStatus })
+        .eq("id", actionId);
+    
+    if (actionError) {
+        console.error("Failed to update action status:", actionError);
+        return false;
+    }
+
+    if (sourceTaskId) {
+        let taskStatus = "";
+        if (newStatus === "APPROVED") {
+            taskStatus = "done";
+        } else if (newStatus === "REVISION" || newStatus === "REJECTED") {
+            taskStatus = "revision";
+        }
+        
+        if (taskStatus) {
+            const { error: taskError } = await supabase
+                .from("tasks")
+                .update({ status: taskStatus })
+                .eq("id", sourceTaskId);
+            
+            if (taskError) {
+                console.error("Failed to update task status:", taskError);
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}

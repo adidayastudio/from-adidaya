@@ -9,6 +9,7 @@ export interface TaskModel {
     description: string | null;
     projectId: string;
     wbsId: string | null;
+    taskNumber?: string | null;
     deadlineDate: string;
     deadlineTime: string | null;
     status: TaskStatus;
@@ -17,6 +18,8 @@ export interface TaskModel {
     createdAt: string;
     updatedAt: string;
     attachmentUrls?: string | null;
+    submissionNote?: string | null;
+    submissionUrls?: string | null;
 
     // Joins
     projectCode?: string;
@@ -45,4 +48,16 @@ export interface ActionModel {
     projectCode?: string;
     projectName?: string;
     reviewers?: string[];
+}
+
+export interface TaskCommentModel {
+    id: string;
+    taskId: string;
+    userId: string;
+    message: string;
+    createdAt: string;
+
+    // Joins
+    userName?: string;
+    userAvatar?: string;
 }

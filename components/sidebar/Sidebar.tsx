@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
 import { createClient } from "@/utils/supabase/client";
+import useUserProfile from "@/hooks/useUserProfile";
 
 import {
   LayoutDashboard,
@@ -95,6 +96,9 @@ export default function Sidebar({
   onToggle?: () => void;
   onWidthChange?: (w: number) => void
 }) {
+  const { profile } = useUserProfile();
+  const isStaff = profile?.role === "staff";
+
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -228,7 +232,7 @@ export default function Sidebar({
                       </p>
                     )}
 
-                    {group.items.map((item) => {
+                    {group.items.filter(item => !(isStaff && item.href === "/action")).map((item) => {
                       const Icon = item.icon;
 
                       const isActive =

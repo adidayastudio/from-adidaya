@@ -12,6 +12,7 @@ import styles from "./BottomTabBar.module.css";
 import FrostedGlassFilter from "./FrostedGlassFilter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
+import useUserProfile from "@/hooks/useUserProfile";
 
 export type TabKey = string;
 
@@ -23,6 +24,9 @@ interface TabConfig {
 }
 
 export default function MobileBottomBar() {
+    const { profile } = useUserProfile();
+    const isStaff = profile?.role === "staff";
+
     const pathname = usePathname();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -38,12 +42,15 @@ export default function MobileBottomBar() {
     const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
     const { resolvedTheme } = useTheme();
 
-    const globalTabs: TabConfig[] = [
-        { key: "home", label: "Home", icon: IoHome, path: "/dashboard" },
-        { key: "task", label: "Tasks", icon: FaBullseye, path: "/task" },
-        { key: "action", label: "Actions", icon: IoFlash, path: "/action" },
-        { key: "project", label: "Projects", icon: IoBriefcase, path: "/project" },
-    ];
+    const globalTabs: TabConfig[] = useMemo(() => {
+        const tabs = [
+            { key: "home", label: "Home", icon: IoHome, path: "/dashboard" },
+            { key: "task", label: "Tasks", icon: FaBullseye, path: "/task" },
+            { key: "action", label: "Actions", icon: IoFlash, path: "/action" },
+            { key: "project", label: "Projects", icon: IoBriefcase, path: "/project" },
+        ];
+        return isStaff ? tabs.filter(t => t.key !== "action") : tabs;
+    }, [isStaff]);
 
     const activeTabKey = useMemo(() => {
         if (pathname.startsWith("/project")) return "project";
@@ -177,7 +184,7 @@ export default function MobileBottomBar() {
                                         position: 'absolute',
                                         inset: '6px',
                                         display: 'grid',
-                                        gridTemplateColumns: 'repeat(4, 1fr)',
+                                        gridTemplateColumns: `repeat(${globalTabs.length}, 1fr)`,
                                         alignItems: 'center',
                                         zIndex: 10,
                                     }}

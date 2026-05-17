@@ -1,5 +1,5 @@
 import { supabase } from "../supabaseClient";
-import { TaskModel, TaskStatus, TaskPriority } from "@/types/task";
+import { TaskModel, TaskStatus, TaskPriority, TaskCommentModel } from "@/types/task";
 
 export async function fetchAllTasks(): Promise<TaskModel[]> {
     // We fetch tasks with their joined project data. Assignees need query on task_assignees.
@@ -80,6 +80,7 @@ function mapDbToTask(dbRow: any): TaskModel {
         description: dbRow.description,
         projectId: dbRow.project_id,
         wbsId: dbRow.wbs_id,
+        taskNumber: dbRow.task_number || null,
         deadlineDate: dbRow.deadline_date,
         deadlineTime: dbRow.deadline_time,
         status: dbRow.status,
@@ -88,6 +89,8 @@ function mapDbToTask(dbRow: any): TaskModel {
         createdAt: dbRow.created_at,
         updatedAt: dbRow.updated_at,
         attachmentUrls: dbRow.attachment_urls || null,
+        submissionNote: dbRow.submission_note || null,
+        submissionUrls: dbRow.submission_urls || null,
 
         projectCode: dbRow.projects?.project_code,
         projectName: dbRow.projects?.project_name,
@@ -132,4 +135,97 @@ export async function updateTaskStatus(taskId: string, status: string): Promise<
     }
 
     return true;
+}
+
+export async function submitTask(taskId: string, submissionNote: string, submissionUrls: string): Promise<boolean> {
+    const { error } = await supabase
+        .from("tasks")
+        .update({ 
+            status: "submitted",
+            submission_note: submissionNote || null,
+            submission_urls: submissionUrls || null
+        })
+        .eq("id", taskId);
+
+    if (error) {
+        console.error("Failed to submit task:", error);
+        return false;
+    }
+
+    // Insert an action for approval
+    try {
+        const { data: taskData } = await supabase.from("tasks").select("title, project_id, wbs_id, priority").eq("id", taskId).single();
+        if (taskData) {
+            // Check if action already exists
+            const { data: existingAction } = await supabase.from("actions").select("id").eq("source_task_id", taskId).single();
+            if (!existingAction) {
+                await supabase.from("actions").insert({
+                    title: "Approve Task: " + taskData.title,
+                    project_id: taskData.project_id,
+                    wbs_id: taskData.wbs_id,
+                    source_task_id: taskId,
+                    deadline_date: new Date().toISOString().split('T')[0],
+                    status: 'PENDING',
+                    priority: (taskData.priority || 'MEDIUM').toUpperCase()
+                });
+            } else {
+                // If exists but was returned, reset to PENDING
+                await supabase.from("actions").update({ status: 'PENDING', priority: (taskData.priority || 'MEDIUM').toUpperCase() }).eq("source_task_id", taskId);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to insert approval action:", e);
+    }
+
+    return true;
+}
+
+export async function fetchTaskComments(taskId: string): Promise<TaskCommentModel[]> {
+    const { data, error } = await supabase
+        .from("task_comments")
+        .select(`
+            id, task_id, user_id, message, created_at
+        `)
+        .eq("task_id", taskId)
+        .order("created_at", { ascending: true });
+
+    if (error || !data) {
+        console.error("Failed to fetch task comments:", error);
+        return [];
+    }
+
+    return data.map(row => ({
+        id: row.id,
+        taskId: row.task_id,
+        userId: row.user_id,
+        message: row.message,
+        createdAt: row.created_at
+    }));
+}
+
+export async function addTaskComment(taskId: string, userId: string, message: string): Promise<TaskCommentModel | null> {
+    const { data, error } = await supabase
+        .from("task_comments")
+        .insert({
+            task_id: taskId,
+            user_id: userId,
+            message: message
+        })
+        .select(`
+            id, task_id, user_id, message, created_at
+        `)
+        .single();
+
+    if (error || !data) {
+        console.error("Failed to add task comment:", error);
+        return null;
+    }
+
+    return {
+        id: data.id,
+        taskId: data.task_id,
+        userId: data.user_id,
+        message: data.message,
+        createdAt: data.created_at
+    };
 }

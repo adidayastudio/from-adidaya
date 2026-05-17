@@ -93,7 +93,7 @@ export const fetchAdmins = async () => {
         const { data, error } = await supabase
             .from("user_roles")
             .select("user_id, role")
-            .in("role", ["admin", "superadmin", "super_admin", "administrator", "finance", "management", "supervisor", "owner", "ceo", "director", "manager", "hr", "pm"]);
+            .in("role", ["admin", "superadmin", "super_admin", "administrator", "supervisor"]);
         if (error) throw error;
         console.log("🔔 fetchAdmins found:", data?.length, "admins", data?.map(r => r.role));
         return (data || []).map(r => r.user_id);

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     List,
@@ -21,14 +22,22 @@ import {
     ChevronDown,
     X,
     RotateCcw,
-    CheckSquare
+    CheckSquare,
+    FileText,
+    Send,
+    Loader2
 } from "lucide-react";
 import { useHeader } from "@/components/providers/HeaderProvider";
+import clsx from "clsx";
 import FrostedGlassFilter from "@/components/layout/FrostedGlassFilter";
 import { fetchAllProjects, fetchProjectWBS } from "@/lib/api/projects";
-import { fetchAllActions, createAction } from "@/lib/api/actions";
+import { fetchAllActions, createAction, updateActionStatus } from "@/lib/api/actions";
+import { fetchTaskComments, addTaskComment } from "@/lib/api/tasks";
+import { getFinanceFileUrl } from "@/lib/api/storage";
+import useUserProfile from "@/hooks/useUserProfile";
+import { supabase } from "@/lib/supabaseClient";
 import { Project, WBSItem } from "@/types/project";
-import { ActionStatus, ActionPriority } from "@/types/task";
+import { ActionStatus, ActionPriority, TaskCommentModel } from "@/types/task";
 
 // --- MOCK DATA & TYPES ---
 type StatusType = ActionStatus;
@@ -44,9 +53,11 @@ interface ActionItem {
     priority: PriorityType;
     icon: "target" | "creditCard" | "clock";
     avatars: string[];
+    assigneeNames?: string[];
     theme: "pink" | "orange" | "blue" | "gray";
     customAction?: string;
     customActionIcon?: React.ReactNode;
+    sourceTaskId?: string | null;
 }
 
 const TABS = [
@@ -90,16 +101,19 @@ const getThemeStyles = (theme: ActionItem["theme"]) => {
     }
 };
 
-const getStatusStyles = (status: StatusType, priority: PriorityType) => {
+const getStatusStyles = (status: string, priority: string) => {
+    const s = status?.toLowerCase() || "";
+    const p = priority?.toLowerCase() || "";
+
     let statusBadge = "";
-    if (status === "PENDING") statusBadge = "bg-[#d4e1f8] text-[#5485ea] font-bold";
-    else if (status === "APPROVED") statusBadge = "bg-[#cfead4] text-[#4cb05f] font-bold";
-    else if (status === "REJECTED") statusBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
+    if (s === "pending") statusBadge = "bg-[#d4e1f8] text-[#5485ea] font-bold";
+    else if (s === "approved") statusBadge = "bg-[#cfead4] text-[#4cb05f] font-bold";
+    else if (s === "rejected" || s === "revision") statusBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
 
     let priorityBadge = "";
-    if (priority === "URGENT") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
-    else if (priority === "HIGH") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
-    else if (priority === "MEDIUM") priorityBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
+    if (p === "urgent") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
+    else if (p === "high") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
+    else if (p === "medium") priorityBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
     else priorityBadge = "bg-[#e4e4e7] text-[#71717a] font-bold";
 
     return { statusBadge, priorityBadge };
@@ -109,142 +123,659 @@ const ActionDetailModal = ({
     action,
     isOpen,
     onClose,
+    onActionUpdate,
+    profiles = [],
 }: {
     action: ActionItem | null;
     isOpen: boolean;
     onClose: () => void;
+    onActionUpdate: (actionId: string, status: StatusType, sourceTaskId: string | null, revisionReason?: string) => Promise<void>;
+    profiles?: any[];
 }) => {
+    const { profile } = useUserProfile();
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [task, setTask] = useState<any | null>(null);
+
+    // States for task details
+    const [signedUrls, setSignedUrls] = useState<{ name: string; url: string }[]>([]);
+    const [submissionSignedUrls, setSubmissionSignedUrls] = useState<{ name: string; url: string }[]>([]);
+    const [comments, setComments] = useState<TaskCommentModel[]>([]);
+    const [newComment, setNewComment] = useState("");
+    const [isSendingComment, setIsSendingComment] = useState(false);
+    const [isChatOpen, setIsChatOpen] = useState(true);
+    const [showRevisionInput, setShowRevisionInput] = useState(false);
+    const [revisionReason, setRevisionReason] = useState("");
+
+    const chatEndRef = useRef<HTMLDivElement>(null);
+
+    // Reset revision form when drawer opens/closes
+    useEffect(() => {
+        if (!isOpen) {
+            setShowRevisionInput(false);
+            setRevisionReason("");
+        }
+    }, [isOpen]);
+
+    // Load original task data & signed attachments
+    useEffect(() => {
+        if (!isOpen || !action?.sourceTaskId) {
+            setTask(null);
+            setSignedUrls([]);
+            setSubmissionSignedUrls([]);
+            setComments([]);
+            return;
+        }
+
+        async function fetchOriginalTask() {
+            try {
+                const { data: dbTask, error } = await supabase
+                    .from("tasks")
+                    .select("*, projects(project_code), task_assignees(user_id)")
+                    .eq("id", action?.sourceTaskId)
+                    .single();
+
+                if (error || !dbTask) {
+                    console.error("Original task not found:", error);
+                    return;
+                }
+
+                const assigneeIds = dbTask.task_assignees ? dbTask.task_assignees.map((ta: any) => ta.user_id) : [];
+                const tAssigneeNames = assigneeIds.map((uid: string) => {
+                    const p = profiles.find(profile => profile.id === uid);
+                    return p ? p.full_name : "Unknown Member";
+                }).filter(Boolean);
+
+                setTask({
+                    id: dbTask.id,
+                    title: dbTask.title,
+                    description: dbTask.description,
+                    taskNumber: dbTask.task_number,
+                    attachmentUrls: dbTask.attachment_urls,
+                    submissionNote: dbTask.submission_note,
+                    submissionUrls: dbTask.submission_urls,
+                    status: dbTask.status,
+                    priority: dbTask.priority,
+                    assignees: assigneeIds,
+                    assigneeNames: tAssigneeNames,
+                    projectCode: dbTask.projects?.project_code
+                });
+
+                 // Load attachments
+                if (dbTask.attachment_urls) {
+                    const paths = dbTask.attachment_urls.split(',').filter(Boolean);
+                    const list = await Promise.all(paths.map(async (p: string) => {
+                        try {
+                            const signed = await getFinanceFileUrl(p);
+                            const name = p.split('/').pop() || 'Attachment';
+                            return { name, url: signed || "" };
+                        } catch (err) {
+                            return { name: 'Attachment', url: '' };
+                        }
+                    }));
+                    setSignedUrls(list.filter(item => item.url));
+                }
+
+                // Load submission proofs
+                if (dbTask.submission_urls) {
+                    const paths = dbTask.submission_urls.split(',').filter(Boolean);
+                    const list = await Promise.all(paths.map(async (p: string) => {
+                        try {
+                            const signed = await getFinanceFileUrl(p);
+                            const name = p.split('/').pop() || 'Proof';
+                            return { name, url: signed || "" };
+                        } catch (err) {
+                            return { name: 'Proof', url: '' };
+                        }
+                    }));
+                    setSubmissionSignedUrls(list.filter(item => item.url));
+                }
+
+                // Load comments
+                const comms = await fetchTaskComments(dbTask.id);
+                setComments(comms);
+            } catch (err) {
+                console.error("Error loading original task:", err);
+            }
+        }
+
+        fetchOriginalTask();
+    }, [isOpen, action?.sourceTaskId, profiles]);
+
+    // Scroll to bottom of chat
+    useEffect(() => {
+        if (chatEndRef.current) {
+            chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [comments, isChatOpen]);
+
+    const handleSendComment = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!action?.sourceTaskId || !newComment.trim() || !profile?.id) return;
+        setIsSendingComment(true);
+        const commentMsg = newComment.trim();
+        try {
+            const added = await addTaskComment(action.sourceTaskId, profile.id, commentMsg);
+            if (added) {
+                setComments(prev => [...prev, added]);
+                setNewComment("");
+
+                // Send notification to task creator and assignees
+                if (task) {
+                    const senderName = profile.full_name || "Someone";
+                    const projCode = task.projectCode || "UNK";
+                    const recipientIds = new Set<string>();
+                    
+                    if (task.createdBy && task.createdBy !== profile.id) {
+                        recipientIds.add(task.createdBy);
+                    }
+                    if (task.assignees) {
+                        task.assignees.forEach(uid => {
+                            if (uid !== profile.id) {
+                                recipientIds.add(uid);
+                            }
+                        });
+                    }
+
+                    const { fetchAdmins, createNotification } = await import("@/lib/api/notifications");
+                    const adminIds = await fetchAdmins();
+                    adminIds.forEach((adminId: string) => {
+                        if (adminId !== profile.id) {
+                            recipientIds.add(adminId);
+                        }
+                    });
+
+                    const isFirstComment = comments.length === 0;
+                    const title = isFirstComment ? "Discussion Started" : "New Comment on Task";
+                    const description = isFirstComment 
+                        ? `${senderName} started a discussion on "${task.title}" . ${projCode}`
+                        : `${senderName} replied: "${commentMsg.length > 50 ? commentMsg.slice(0, 50) + '...' : commentMsg}" on "${task.title}" . ${projCode}`;
+
+                    for (const recipientId of Array.from(recipientIds)) {
+                        await createNotification({
+                            user_id: recipientId,
+                            type: "mention",
+                            category: "task",
+                            title,
+                            description,
+                            link: `/task?id=${task.id}`,
+                            metadata: { taskId: task.id }
+                        });
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Failed to send comment:", err);
+        } finally {
+            setIsSendingComment(false);
+        }
+    };
+
     if (!isOpen || !action) return null;
 
     const tStyles = getThemeStyles(action.theme);
     const { statusBadge, priorityBadge } = getStatusStyles(action.status, action.priority);
     const IconComponent =
         action.icon === "target" ? Target : action.icon === "creditCard" ? CreditCard : Clock;
+    // Use task's actual taskNumber or fallback to Action WBS
+    const taskNumberStr = task?.taskNumber || action.projectCode;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center">
+        <>
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity"
+                className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-[90] transition-all duration-500"
                 onClick={onClose}
             />
 
-            {/* Modal Content */}
-            <div className="relative w-full sm:w-[500px] sm:right-6 sm:bottom-6 sm:rounded-[56px] bg-[#f8f9fa] rounded-t-[56px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-right flex flex-col max-h-[90dvh]">
-                {/* Grabber for Mobile */}
-                <div className="w-full flex justify-center pt-3 pb-1 sm:hidden">
-                    <div className="w-12 h-1.5 bg-black/10 rounded-full" />
+            {/* Bottom Floating Drawer */}
+            <div className="fixed z-[100] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px] bg-white/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/40 rounded-[56px] shadow-2xl animate-in slide-in-from-bottom sm:slide-in-from-right duration-500 overflow-hidden flex flex-col">
+
+                {/* Subtle Blue Glow */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-blue-400/15 blur-[100px] pointer-events-none" />
+
+                {/* Drag Handle Indicator */}
+                <div className="flex-shrink-0 pt-3 flex justify-center relative z-10">
+                    <div className="w-10 h-1.5 rounded-full bg-neutral-200/50" />
                 </div>
 
-                {/* Header */}
-                <div className="px-6 pt-4 pb-4 flex items-center justify-between border-b border-black/5">
-                    <div className="flex gap-2">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase ${statusBadge}`}>
-                            {action.status}
-                        </span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full tracking-wider uppercase ${priorityBadge}`}>
-                            {action.priority}
-                        </span>
+                {/* HEADER */}
+                <div className="flex items-center justify-between px-8 py-6 pb-2 relative z-10">
+                    <h3 className="text-[22px] font-extrabold text-neutral-900 dark:text-white tracking-tight flex-1 mr-4">
+                        Approval Task: {task?.title || action.title}
+                    </h3>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                        <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/50 backdrop-blur-xl border border-black/5 flex items-center justify-center text-neutral-400 hover:text-neutral-900 active:scale-95 transition-all shadow-sm">
+                            <X size={20} strokeWidth={1.5} />
+                        </button>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center hover:bg-black/10 transition-colors"
-                    >
-                        <X size={18} className="text-gray-500" />
-                    </button>
                 </div>
 
-                {/* Scrollable Body */}
-                <div className="px-6 py-6 overflow-y-auto">
-                    {/* Main Info */}
-                    <div className="flex gap-4 mb-8">
-                        <div className={`shrink-0 w-14 h-14 rounded-full flex items-center justify-center opacity-80 ${tStyles.iconBg}`}>
-                            <IconComponent size={28} className={`opacity-100 ${tStyles.iconColor}`} />
-                        </div>
-                        <div className="flex-1">
-                            <h2 className="text-[22px] font-bold text-gray-900 leading-tight mb-2">
-                                {action.title}
-                            </h2>
+                {/* SCROLLABLE BODY */}
+                <div className="flex-1 overflow-y-auto px-8 py-4 pb-8 space-y-6 relative z-10">
+                    {/* Details Flat List */}
+                    <div className="space-y-4">
+                        {/* Task Number Row */}
+                        {taskNumberStr && (
+                            <div className="flex items-center py-2 border-b border-black/[0.03] dark:border-white/[0.03]">
+                                <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                                    Task Number
+                                </span>
+                                <span className="text-[12px] font-extrabold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50 px-2.5 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
+                                    {taskNumberStr}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Project Row */}
+                        <div className="flex items-center py-2 border-b border-black/[0.03] dark:border-white/[0.03]">
+                            <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                                Project
+                            </span>
                             <div className="flex items-center gap-2">
-                                <span className="bg-black/5 text-gray-500 text-[11px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                <span className="text-[11px] font-bold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-100 dark:border-blue-900 px-2 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
                                     {action.projectCode}
                                 </span>
-                                <span className="text-[14px] text-gray-500 font-medium">
+                                <span className="text-[14px] text-neutral-800 dark:text-neutral-200 font-medium">
                                     {action.projectName}
                                 </span>
                             </div>
                         </div>
-                    </div>
 
-                    {/* Details Grid */}
-                    <div className="bg-white rounded-2xl p-4 border border-black/5 mb-6">
-                        <div className="grid border-b border-black/5 pb-4 mb-4 gap-4">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-gray-500 text-[13px] font-medium">
-                                    <Calendar size={16} /> Date Assigned
-                                </div>
-                                <div className="text-[14px] font-bold text-gray-900">{action.date}</div>
+                        {/* Deadline Row */}
+                        <div className="flex items-center py-2 border-b border-black/[0.03] dark:border-white/[0.03]">
+                            <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                                Deadline
+                            </span>
+                            <div className="flex items-center gap-2 text-neutral-800 dark:text-neutral-200 text-[14px] font-semibold">
+                                <Calendar size={15} className="text-neutral-400" />
+                                {action.date}
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-gray-500 text-[13px] font-medium">
-                                <Users size={16} /> Assignees
+                        {/* Priority Row */}
+                        <div className="flex items-center py-2 border-b border-black/[0.03] dark:border-white/[0.03]">
+                            <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                                Priority
+                            </span>
+                            <div className="flex">
+                                {(() => {
+                                    const p = (task?.priority || action.priority || "").toLowerCase();
+                                    if (p === "urgent") {
+                                        return (
+                                            <span className="bg-red-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 shadow-sm">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0 animate-pulse" /> Urgent
+                                            </span>
+                                        );
+                                    }
+                                    if (p === "high") {
+                                        return (
+                                            <span className="bg-orange-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 shadow-sm">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> High
+                                            </span>
+                                        );
+                                    }
+                                    if (p === "medium") {
+                                        return (
+                                            <span className="bg-amber-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 shadow-sm">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> Medium
+                                            </span>
+                                        );
+                                    }
+                                    return (
+                                        <span className="bg-neutral-400 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 shadow-sm">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> Low
+                                        </span>
+                                    );
+                                })()}
                             </div>
-                            <div className="flex items-center">
-                                {action.avatars.map((av, idx) => (
+                        </div>
+
+                        {/* Status Row */}
+                        <div className="flex items-center py-2">
+                            <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                                Status
+                            </span>
+                            <div className="flex">
+                                {action.status === "PENDING" && (
+                                    <span className="bg-blue-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 uppercase shadow-sm">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0 animate-pulse" /> AWAITING
+                                    </span>
+                                )}
+                                {action.status === "APPROVED" && (
+                                    <span className="bg-emerald-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 uppercase shadow-sm">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> APPROVED
+                                    </span>
+                                )}
+                                {((action.status as string) === "REJECTED" || (action.status as string) === "REVISION" || (action.status as string) === "revision") && (
+                                    <span className="bg-amber-600 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 uppercase shadow-sm">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> REVISION
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Assignees Section */}
+                    <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+                        <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-3">
+                            Assignees
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                            {(task?.assigneeNames || action.assigneeNames) && (task?.assigneeNames || action.assigneeNames).length > 0 ? (
+                                (task?.assigneeNames || action.assigneeNames).map((name: string, idx: number) => {
+                                    const initials = (name || "Member")
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                        .substring(0, 2);
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className="flex items-center gap-2 bg-neutral-100/80 dark:bg-neutral-800/80 px-3 py-1.5 rounded-full border border-black/5 shadow-sm"
+                                        >
+                                            <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-[10px] font-bold text-neutral-800 dark:text-neutral-200">
+                                                {initials}
+                                            </div>
+                                            <span className="text-[13px] font-semibold text-neutral-800 dark:text-neutral-200">
+                                                {name}
+                                            </span>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <span className="text-[13px] text-neutral-400 font-medium italic">
+                                    Unassigned
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Description Section */}
+                    <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+                        <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-2">
+                            Description
+                        </h4>
+                        <p className="text-[14px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
+                            {task?.description || "Please review the attached material and make the necessary decisions to proceed with the action item workflow."}
+                        </p>
+                    </div>
+
+                    {/* Attachments Section */}
+                    {signedUrls.length > 0 && (
+                        <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+                            <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-3">
+                                Attachments
+                            </h4>
+                            <div className="space-y-2">
+                                {signedUrls.map((file, idx) => (
                                     <div
                                         key={idx}
-                                        className={`w-[28px] h-[28px] rounded-full text-[11px] font-bold flex items-center justify-center border-2 border-white shadow-sm ${av.includes("+") ? "bg-gray-100 text-gray-600" : "bg-gradient-to-br from-white to-gray-100 text-gray-800"
-                                            } ${idx > 0 ? "-ml-2" : ""}`}
+                                        className="flex items-center justify-between p-2.5 pl-3.5 bg-white/40 dark:bg-neutral-800/40 border border-white/60 dark:border-neutral-700/40 shadow-sm rounded-[16px] text-xs"
                                     >
-                                        {av}
+                                        <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <span className="text-neutral-700 dark:text-neutral-300 font-semibold truncate">
+                                                {file.name}
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => window.open(file.url, "_blank")}
+                                            className="text-[10.5px] font-bold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors shrink-0 cursor-pointer"
+                                        >
+                                            View Document
+                                        </button>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Action Specific Info */}
-                    {action.customAction && (
-                        <div className="mb-6 bg-[#fcfcfd] rounded-2xl p-4 border border-blue-100 flex items-center justify-between">
-                            <div className="text-[13px] font-medium text-gray-600">Pending Action type</div>
-                            <div className="flex items-center gap-1.5 text-[14px] font-bold text-gray-900">
-                                {action.customActionIcon}
-                                {action.customAction}
+                    {/* Submitted Proofs Section */}
+                    {submissionSignedUrls.length > 0 && (
+                        <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+                            <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-3">
+                                Submitted Proofs
+                            </h4>
+                            {task?.submissionNote && (
+                                <div className="p-3 bg-white/40 dark:bg-neutral-800/40 border border-white/60 dark:border-neutral-700/40 rounded-[16px] text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-semibold italic mb-3">
+                                    "{task.submissionNote}"
+                                </div>
+                            )}
+                            <div className="space-y-2">
+                                {submissionSignedUrls.map((file, idx) => (
+                                    <div
+                                        key={idx}
+                                        className="flex items-center justify-between p-2.5 pl-3.5 bg-white/40 dark:bg-neutral-800/40 border border-white/60 dark:border-neutral-700/40 shadow-sm rounded-[16px] text-xs"
+                                    >
+                                        <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
+                                            <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" />
+                                            <span className="text-neutral-700 dark:text-neutral-300 font-semibold truncate">
+                                                {file.name}
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => window.open(file.url, "_blank")}
+                                            className="text-[10.5px] font-bold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors shrink-0 cursor-pointer"
+                                        >
+                                            View Document
+                                        </button>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
 
-                    {/* Description Placeholder */}
-                    <div className="mb-6">
-                        <h4 className="text-[15px] font-bold text-gray-900 mb-2">Instructions</h4>
-                        <p className="text-[14px] text-gray-500 leading-relaxed">
-                            Please review the attached material and make the necessary decisions to proceed with the action item workflow.
-                        </p>
-                    </div>
+                    {/* iOS-Style Discussion / Chat Section */}
+                    {action.sourceTaskId && (
+                        <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+                            {!isChatOpen && comments.length === 0 ? (
+                                <button
+                                    onClick={() => setIsChatOpen(true)}
+                                    className="w-full py-3 bg-neutral-100 hover:bg-neutral-200/80 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-[20px] font-bold text-xs transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                                >
+                                    <Send size={12} className="rotate-45" /> Start Discussion
+                                </button>
+                            ) : (
+                                <div className="border border-black/5 dark:border-white/5 rounded-[24px] bg-white/40 dark:bg-neutral-900/30 overflow-hidden shadow-inner">
+                                    {/* Chat Header */}
+                                    <div className="flex items-center justify-between px-4 py-3 bg-neutral-100/50 dark:bg-neutral-800/50 border-b border-black/[0.03] dark:border-white/[0.03]">
+                                        <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 font-sans">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                            Task Discussion
+                                        </span>
+                                        <button
+                                            onClick={() => setIsChatOpen(!isChatOpen)}
+                                            className="p-1 rounded-full hover:bg-neutral-200/50 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
+                                            title="Minimize Chat"
+                                        >
+                                            <ChevronDown size={16} strokeWidth={2.5} />
+                                        </button>
+                                    </div>
+
+                                    {/* Chat Bubbles */}
+                                    {isChatOpen && (
+                                        <>
+                                            <div className="max-h-60 overflow-y-auto p-4 space-y-3 scroll-smooth">
+                                                {comments.length === 0 ? (
+                                                    <div className="text-center py-6 text-xs text-neutral-400 font-semibold italic">
+                                                        No messages yet. Send a message to start discussion.
+                                                    </div>
+                                                ) : (
+                                                    comments.map((msg, mIdx) => {
+                                                        const isMe = msg.userId === profile?.id;
+                                                        // Fallback initials or name
+                                                        const senderProfile = profiles.find((p) => p.id === msg.userId);
+                                                        const name = isMe
+                                                            ? (profile?.full_name || "Manager")
+                                                            : (senderProfile?.full_name || "Member");
+                                                        const initials = name
+                                                            .split(" ")
+                                                            .map((n: string) => n[0])
+                                                            .join("")
+                                                            .toUpperCase()
+                                                            .substring(0, 2);
+
+                                                        const isRevision = msg.message.startsWith('[REVISION]');
+                                                         const displayMessage = isRevision 
+                                                             ? `Revision: ${msg.message.replace('[REVISION]', '').trim()}` 
+                                                             : msg.message;
+
+                                                         return (
+                                                             <div
+                                                                 key={msg.id || mIdx}
+                                                                 className={clsx(
+                                                                     "flex items-end gap-2 max-w-[85%]",
+                                                                     isMe ? "ml-auto flex-row-reverse" : "mr-auto"
+                                                                 )}
+                                                             >
+                                                                 {!isMe && (
+                                                                     <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-[9px] font-extrabold text-neutral-700 dark:text-neutral-300 shrink-0">
+                                                                         {initials}
+                                                                     </div>
+                                                                 )}
+                                                                 <div className="flex flex-col gap-0.5">
+                                                                     {!isMe && (
+                                                                         <span className="text-[10px] font-bold text-neutral-400 pl-1">
+                                                                             {name}
+                                                                         </span>
+                                                                     )}
+                                                                     <div
+                                                                         className={clsx(
+                                                                             "px-3.5 py-2 rounded-[20px] text-xs font-semibold shadow-sm leading-relaxed border",
+                                                                             isRevision
+                                                                                 ? "bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-100 border-amber-200 dark:border-amber-900/50 rounded-bl-[4px]"
+                                                                                 : isMe
+                                                                                     ? "bg-blue-600 text-white border-transparent rounded-br-[4px]"
+                                                                                     : "bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-transparent rounded-bl-[4px]"
+                                                                         )}
+                                                                     >
+                                                                         {displayMessage}
+                                                                     </div>
+                                                                 </div>
+                                                             </div>
+                                                          );
+                                                      })
+                                                 )}
+                                                <div ref={chatEndRef} />
+                                            </div>
+
+                                            {/* Chat Input */}
+                                            <form
+                                                onSubmit={handleSendComment}
+                                                className="p-3 border-t border-black/[0.03] dark:border-white/[0.03] flex gap-2"
+                                            >
+                                                <input
+                                                    type="text"
+                                                    placeholder="Type a message..."
+                                                    value={newComment}
+                                                    onChange={(e) => setNewComment(e.target.value)}
+                                                    className="flex-1 h-9 px-3.5 text-xs rounded-full border border-black/5 dark:border-white/10 bg-white/70 dark:bg-neutral-800/70 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-semibold placeholder:text-neutral-400 placeholder:font-medium"
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSendingComment || !newComment.trim()}
+                                                    className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 disabled:bg-neutral-200 dark:disabled:bg-neutral-800 text-white flex items-center justify-center transition-all active:scale-90 shrink-0 shadow-sm"
+                                                >
+                                                    {isSendingComment ? (
+                                                        <Loader2 size={14} className="animate-spin" />
+                                                    ) : (
+                                                        <Send size={14} strokeWidth={2.5} className="mr-0.5 mt-0.5 rotate-45" />
+                                                    )}
+                                                </button>
+                                            </form>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                 </div>
 
-                {/* Sticky Action Footer */}
-                <div className="p-4 bg-white/80 backdrop-blur-md border-t border-black/5 flex gap-3 pb-8 sm:pb-4">
+                {/* FOOTER */}
+                <div className="px-8 pb-10 pt-4 flex flex-col gap-3 relative z-10">
                     {action.status === "PENDING" && (
-                        <>
-                            <button className="flex-1 bg-[#fef1f2] hover:bg-[#fde8eb] text-[#e03131] rounded-full py-4 font-bold text-[15px] transition-colors border border-[#fae2e5]">
-                                Reject
-                            </button>
-                            <button className="flex-1 bg-gray-900 hover:bg-black text-white rounded-full py-4 font-bold text-[15px] transition-colors">
-                                Approve / Send
-                            </button>
-                        </>
-                    )}
-                    {action.status !== "PENDING" && (
-                        <button className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full py-4 font-bold text-[15px] transition-colors">
-                            View Log
-                        </button>
+                        <div className="flex flex-col gap-3">
+                            {showRevisionInput ? (
+                                <div className="flex flex-col gap-3 p-4 bg-amber-500/5 dark:bg-amber-500/10 rounded-2xl border border-amber-500/20">
+                                    <h4 className="text-xs font-bold text-amber-800 dark:text-amber-400 uppercase tracking-wider">
+                                        Revision Explanation
+                                    </h4>
+                                    <textarea
+                                        value={revisionReason}
+                                        onChange={(e) => setRevisionReason(e.target.value)}
+                                        placeholder="Please explain what needs to be fixed or updated..."
+                                        className="w-full min-h-[80px] p-3 text-xs font-semibold text-neutral-800 dark:text-neutral-200 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl focus:outline-none focus:border-amber-500 transition-colors resize-none leading-relaxed"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setShowRevisionInput(false);
+                                                setRevisionReason("");
+                                            }}
+                                            disabled={isUpdating}
+                                            className="flex-1 bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 h-[44px] rounded-full font-bold text-xs flex items-center justify-center gap-1 active:scale-[0.98] transition-all cursor-pointer"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={async () => {
+                                                if (!revisionReason.trim()) {
+                                                    alert("Please write a reason for the revision request.");
+                                                    return;
+                                                }
+                                                setIsUpdating(true);
+                                                await onActionUpdate(action.id, "REVISION", action.sourceTaskId || null, revisionReason);
+                                                setIsUpdating(false);
+                                            }}
+                                            disabled={isUpdating}
+                                            className="flex-1 bg-amber-500 hover:bg-amber-600 text-white h-[44px] rounded-full font-bold text-xs flex items-center justify-center gap-1 active:scale-[0.98] transition-all shadow-md shadow-amber-500/15 cursor-pointer"
+                                        >
+                                            {isUpdating ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <>
+                                                    <Send size={12} className="rotate-45" /> Send Request
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setShowRevisionInput(true)}
+                                        className="flex-1 bg-amber-500 hover:bg-amber-600 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-amber-500/10 cursor-pointer"
+                                    >
+                                        <Undo2 size={16} /> Request Revision
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            setIsUpdating(true);
+                                            await onActionUpdate(action.id, "APPROVED", action.sourceTaskId || null);
+                                            setIsUpdating(false);
+                                        }}
+                                        disabled={isUpdating}
+                                        className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-emerald-500/10 disabled:opacity-50 cursor-pointer"
+                                    >
+                                        {isUpdating ? (
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <CheckCircle2 size={16} /> Approve Work
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 
@@ -314,24 +845,23 @@ const ActionCard = ({ action }: { action: ActionItem }) => {
 
             {/* Avatars */}
             <div className="absolute bottom-4 right-4 flex items-center">
-                {action.avatars.map((av, idx) => (
-                    <div
-                        key={idx}
-                        className={`w-[26px] h-[26px] rounded-full text-[10px] font-bold flex items-center justify-center border-2 shadow-sm ${av.includes("+")
-                            ? "bg-gray-100 text-gray-600 border-white"
-                            : "bg-black/10 text-gray-800 border-transparent backdrop-blur-sm"
-                            } ${idx > 0 ? "-ml-2" : ""}`}
-                        style={
-                            !av.includes("+")
-                                ? {
-                                    // subtle gradient or plain bg depending on preference
-                                }
-                                : {}
-                        }
-                    >
-                        {av}
-                    </div>
-                ))}
+                {action.avatars && action.avatars.length > 0 ? (
+                    action.avatars.map((av, idx) => (
+                        <div
+                            key={idx}
+                            className={`w-[26px] h-[26px] rounded-full text-[10px] font-bold flex items-center justify-center border-2 shadow-sm ${av.includes("+")
+                                ? "bg-gray-100 text-gray-600 border-white"
+                                : "bg-black/10 text-gray-850 border-transparent backdrop-blur-sm bg-gray-250/20"
+                                } ${idx > 0 ? "-ml-2" : ""}`}
+                        >
+                            {av}
+                        </div>
+                    ))
+                ) : (
+                    <span className="text-[10.5px] text-neutral-400 font-bold italic tracking-wide">
+                        Unassigned
+                    </span>
+                )}
             </div>
         </div>
     );
@@ -339,40 +869,83 @@ const ActionCard = ({ action }: { action: ActionItem }) => {
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import TabSidebar, { TabItem } from "@/components/sidebar/TabSidebar";
-import clsx from "clsx";
 
 import ModuleMobileHeader from "@/components/layout/ModuleMobileHeader";
 
 export default function ActionPage() {
+    const { profile } = useUserProfile();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (profile && profile.role === "staff") {
+            router.replace("/task");
+        }
+    }, [profile, router]);
+
     const [actions, setActions] = useState<ActionItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("urgent");
     const [isScrolled, setIsScrolled] = useState(false);
     const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
 
+    interface ProfileItem {
+        id: string;
+        full_name: string;
+        avatar_url?: string;
+    }
+    const [profiles, setProfiles] = useState<ProfileItem[]>([]);
+
     // Database Projects
     const [dbProjects, setDbProjects] = useState<Project[]>([]);
 
     useEffect(() => {
         async function loadData() {
-            const [projectsData, actionsData] = await Promise.all([
+            const [projectsData, actionsData, profilesRes, tasksRes] = await Promise.all([
                 fetchAllProjects(),
-                fetchAllActions()
+                fetchAllActions(),
+                supabase.from('profiles').select('id, full_name, avatar_url'),
+                supabase.from('tasks').select('id, priority, task_assignees(user_id)')
             ]);
             setDbProjects(projectsData);
+            const profilesData = profilesRes.data || [];
+            const tasksData = tasksRes.data || [];
+            setProfiles(profilesData);
 
-            const mappedActions: ActionItem[] = actionsData.map(a => ({
-                id: a.id,
-                title: a.title,
-                projectCode: a.projectCode || "UNK",
-                projectName: a.projectName || "Unknown Project",
-                date: a.deadlineDate,
-                status: a.status as StatusType,
-                priority: a.priority as PriorityType,
-                icon: "target",
-                avatars: a.reviewers?.length ? a.reviewers : ["U"],
-                theme: "blue", // Setting default blue for connected items
-            }));
+            const mappedActions: ActionItem[] = actionsData.map(a => {
+                const connectedTask = tasksData.find(t => t.id === a.sourceTaskId);
+                const actualReviewerIds = (connectedTask && connectedTask.task_assignees && connectedTask.task_assignees.length > 0)
+                    ? connectedTask.task_assignees.map((ta: any) => ta.user_id)
+                    : (a.reviewers || []);
+
+                const reviewerNames: string[] = [];
+                const reviewerAvatars = actualReviewerIds.map(uid => {
+                    const p = profilesData.find(profile => profile.id === uid);
+                    if (p?.full_name) {
+                        reviewerNames.push(p.full_name);
+                        return p.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
+                    }
+                    return "U";
+                }).filter(Boolean) || [];
+
+                const priorityVal = (connectedTask?.priority 
+                    ? connectedTask.priority.toUpperCase() 
+                    : a.priority) as PriorityType;
+
+                return {
+                    id: a.id,
+                    title: a.title,
+                    projectCode: a.projectCode || "UNK",
+                    projectName: a.projectName || "Unknown Project",
+                    date: a.deadlineDate,
+                    status: a.status as StatusType,
+                    priority: priorityVal,
+                    icon: "target",
+                    avatars: reviewerAvatars,
+                    assigneeNames: reviewerNames,
+                    theme: "blue", // Setting default blue for connected items
+                    sourceTaskId: a.sourceTaskId,
+                };
+            });
             setActions(mappedActions);
             setIsLoading(false);
         }
@@ -421,6 +994,91 @@ export default function ActionPage() {
         loadWBS();
     }, [newActionProject, dbProjects]);
 
+    const handleActionUpdate = async (actionId: string, newStatus: StatusType, sourceTaskId: string | null, revisionReason?: string) => {
+        try {
+            const success = await updateActionStatus(actionId, newStatus, sourceTaskId);
+            if (success) {
+                // If revision is requested, insert system comment
+                if (newStatus === "REVISION" && sourceTaskId && revisionReason && profile?.id) {
+                    await addTaskComment(sourceTaskId, profile.id, `[REVISION] ${revisionReason}`);
+                }
+
+                // Send notification to task creator and assignees
+                if (sourceTaskId) {
+                    (async () => {
+                        try {
+                            const { data: dbTask, error: dbError } = await supabase
+                                .from("tasks")
+                                .select("*, projects(project_code), task_assignees(user_id)")
+                                .eq("id", sourceTaskId)
+                                .single();
+
+                            if (dbError) {
+                                console.error("❌ Failed to query task during handleActionUpdate:", dbError);
+                            }
+
+                            if (dbTask) {
+                                const changerId = profile?.id || "";
+                                const changerName = profile?.full_name || "Manager";
+                                const projCode = dbTask.projects?.project_code || "UNK";
+
+                                // Determine recipients: creator, all assignees, and admins/supervisors (excluding the changer)
+                                const recipientIds = new Set<string>();
+                                if (dbTask.created_by && dbTask.created_by !== changerId) {
+                                    recipientIds.add(dbTask.created_by);
+                                }
+                                if (dbTask.task_assignees) {
+                                    dbTask.task_assignees.forEach((ta: any) => {
+                                        if (ta.user_id !== changerId) {
+                                            recipientIds.add(ta.user_id);
+                                        }
+                                    });
+                                }
+
+                                const { fetchAdmins, createNotification } = await import("@/lib/api/notifications");
+                                const adminIds = await fetchAdmins();
+                                adminIds.forEach((adminId: string) => {
+                                    if (adminId !== changerId) {
+                                        recipientIds.add(adminId);
+                                    }
+                                });
+
+                                const isApproved = newStatus === "APPROVED";
+                                const isRevision = newStatus === "REVISION";
+
+                                if (isApproved || isRevision) {
+                                    const title = isApproved ? "Task Approved" : "Task Revision Required";
+                                    const actionWord = isApproved ? "approved" : "requested revision on";
+                                    const description = `${changerName} ${actionWord} the task of ${dbTask.title} . ${projCode}`;
+
+                                    for (const recipientId of Array.from(recipientIds)) {
+                                        await createNotification({
+                                            user_id: recipientId,
+                                            type: "info",
+                                            category: "task",
+                                            title,
+                                            description,
+                                            link: `/task?id=${dbTask.id}`,
+                                            metadata: { taskId: dbTask.id, newStatus: isApproved ? "done" : "revision" }
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (nErr) {
+                            console.error("Failed to send action update notifications:", nErr);
+                        }
+                    })();
+                }
+
+                // Update local state
+                setActions(prev => prev.map(a => a.id === actionId ? { ...a, status: newStatus } : a));
+                setSelectedAction(null);
+            }
+        } catch (err) {
+            console.error("Failed to update action", err);
+        }
+    };
+
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         setIsScrolled(e.currentTarget.scrollTop > 20);
     };
@@ -447,6 +1105,16 @@ export default function ActionPage() {
         const createdAction = await createAction(newActionDbPayload, newActionAssignees);
 
         if (createdAction) {
+            const reviewerNames: string[] = [];
+            const reviewerAvatars = newActionAssignees.map(uid => {
+                const p = profiles.find(profile => profile.id === uid);
+                if (p?.full_name) {
+                    reviewerNames.push(p.full_name);
+                    return p.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
+                }
+                return "U";
+            }).filter(Boolean) || [];
+
             const newAction: ActionItem = {
                 id: createdAction.id,
                 title: createdAction.title,
@@ -456,7 +1124,8 @@ export default function ActionPage() {
                 status: createdAction.status as StatusType,
                 priority: createdAction.priority as PriorityType,
                 icon: "target",
-                avatars: newActionAssignees.length > 0 ? newActionAssignees : ["U"],
+                avatars: reviewerAvatars,
+                assigneeNames: reviewerNames,
                 theme: "blue",
             };
 
@@ -471,12 +1140,14 @@ export default function ActionPage() {
     };
 
     const filteredActions = actions.filter((a) => {
+        const todayStr = new Date().toISOString().split('T')[0];
         // 1. Tab Filter
         let tabMatch = false;
         if (activeTab === "all") tabMatch = true;
         else if (activeTab === "pending" && a.status === "PENDING") tabMatch = true;
-        else if (activeTab === "urgent" && a.priority === "URGENT") tabMatch = true;
-        // (Other tabs as needed...)
+        else if (activeTab === "urgent" && (a.priority?.toUpperCase() === "URGENT" || a.priority?.toUpperCase() === "HIGH" || (a.date && a.date < todayStr))) tabMatch = true;
+        else if (activeTab === "returned" && a.status === "REVISION") tabMatch = true;
+        else if (activeTab === "done" && (a.status === "APPROVED" || a.status === "DONE")) tabMatch = true;
 
         // 2. Project Filter
         let projMatch = filterProject === "All" || a.projectCode === filterProject;
@@ -629,9 +1300,11 @@ export default function ActionPage() {
 
             {/* ACTION DETAIL MODAL */}
             <ActionDetailModal
-                isOpen={!!selectedAction}
                 action={selectedAction}
+                isOpen={!!selectedAction}
                 onClose={() => setSelectedAction(null)}
+                onActionUpdate={handleActionUpdate}
+                profiles={profiles}
             />
 
             {/* FILTER MODAL */}
@@ -815,26 +1488,40 @@ export default function ActionPage() {
                             {/* 7. Assignee */}
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Assignee <span className="text-red-500">*</span></label>
-                                <div className="flex flex-wrap gap-2">
-                                    {/* Mock simple avatar picker */}
-                                    {['MT', 'AR', 'S', 'B', 'T'].map(name => (
-                                        <div
-                                            key={name}
-                                            onClick={() => {
-                                                if (newActionAssignees.includes(name)) {
-                                                    setNewActionAssignees(newActionAssignees.filter(a => a !== name));
-                                                } else {
-                                                    setNewActionAssignees([...newActionAssignees, name]);
-                                                }
-                                            }}
-                                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm cursor-pointer transition-all ${newActionAssignees.includes(name)
-                                                ? "bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-2"
-                                                : "bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200"
+                                <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto p-1.5 border border-gray-100 rounded-xl bg-gray-50/50">
+                                    {profiles.map(p => {
+                                        const initials = p.full_name
+                                            .split(" ")
+                                            .map((n) => n[0])
+                                            .join("")
+                                            .toUpperCase()
+                                            .substring(0, 2);
+                                        const isSelected = newActionAssignees.includes(p.id);
+                                        return (
+                                            <div
+                                                key={p.id}
+                                                onClick={() => {
+                                                    if (isSelected) {
+                                                        setNewActionAssignees(newActionAssignees.filter(a => a !== p.id));
+                                                    } else {
+                                                        setNewActionAssignees([...newActionAssignees, p.id]);
+                                                    }
+                                                }}
+                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full border cursor-pointer transition-all ${
+                                                    isSelected
+                                                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                                                 }`}
-                                        >
-                                            {name}
-                                        </div>
-                                    ))}
+                                            >
+                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                                                    isSelected ? "bg-white/20 text-white" : "bg-gray-100 text-gray-650"
+                                                }`}>
+                                                    {initials}
+                                                </div>
+                                                <span className="text-xs font-semibold">{p.full_name}</span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 

@@ -36,20 +36,36 @@ import {
   Loader2
 } from "lucide-react";
 import { fetchAllProjects } from "@/lib/api/projects";
-import { fetchAllTasks, createTask, deleteTask, updateTaskStatus } from "@/lib/api/tasks";
+import { fetchAllTasks, createTask, deleteTask, updateTaskStatus, fetchTaskComments, addTaskComment } from "@/lib/api/tasks";
 import { fetchPeopleDirectory } from "@/lib/api/people";
 import { uploadFinanceFileExact, getFinanceFileUrl } from "@/lib/api/storage";
 import { createNotification } from "@/lib/api/notifications";
 import { supabase } from "@/lib/supabaseClient";
 import { Person } from "@/components/feel/people/types";
 import { Project } from "@/types/project";
-import { TaskStatus, TaskPriority } from "@/types/task";
+import { TaskStatus, TaskPriority, TaskCommentModel } from "@/types/task";
 import { Select } from "@/shared/ui/primitives/select/select";
 import useUserProfile from "@/hooks/useUserProfile";
 import PageWrapper from "@/components/layout/PageWrapper";
 import TabSidebar, { TabItem as SidebarTabItem } from "@/components/sidebar/TabSidebar";
 import { useHeader } from "@/components/providers/HeaderProvider";
 import ModuleMobileHeader from "@/components/layout/ModuleMobileHeader";
+// --- FILENAME SANITIZATION UTILITY ---
+const sanitizeFilename = (filename: string): string => {
+  const parts = filename.split('.');
+  const ext = (parts.pop() || '').toLowerCase();
+  const name = parts.join('.');
+  
+  // Clean special characters, convert spaces & underscores to single hyphens
+  const cleanName = name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-_]/g, '')
+    .trim()
+    .replace(/[\s_]+/g, '-');
+    
+  const nameBase = cleanName || "file";
+  return `${nameBase}.${ext}`;
+};
 
 // --- MOCK DATA & TYPES ---
 type StatusType = TaskStatus;
@@ -74,6 +90,9 @@ interface TaskItem {
   assignees?: string[];
   assigneeNames?: string[];
   attachmentUrls?: string | null;
+  taskNumber?: string | null;
+  submissionNote?: string | null;
+  submissionUrls?: string | null;
 }
 
 const TABS = [
@@ -123,17 +142,21 @@ const getThemeStyles = (theme: TaskItem["theme"]) => {
   }
 };
 
-const getStatusStyles = (status: StatusType, priority: PriorityType) => {
+const getStatusStyles = (status: string, priority: string) => {
+  const s = status?.toLowerCase() || "";
+  const p = priority?.toLowerCase() || "";
+
   let statusBadge = "";
-  if (status === "todo") statusBadge = "bg-white/60 text-gray-500 font-medium";
-  else if (status === "revision") statusBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
-  else if (status === "in_progress") statusBadge = "bg-[#d4e1f8] text-[#5485ea] font-bold";
-  else if (status === "done") statusBadge = "bg-[#cfead4] text-[#4cb05f] font-bold";
+  if (s === "todo") statusBadge = "bg-white/60 text-gray-500 font-semibold";
+  else if (s === "in_progress") statusBadge = "bg-[#d4e1f8] text-[#5485ea] font-bold";
+  else if (s === "submitted") statusBadge = "bg-[#e0e7ff] text-[#4f46e5] font-bold";
+  else if (s === "revision") statusBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
+  else if (s === "done" || s === "completed") statusBadge = "bg-[#cfead4] text-[#4cb05f] font-bold";
 
   let priorityBadge = "";
-  if (priority === "urgent") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
-  else if (priority === "high") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold"; // Optional: can adjust specific red shade
-  else if (priority === "medium") priorityBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
+  if (p === "urgent") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
+  else if (p === "high") priorityBadge = "bg-[#f7d4dc] text-[#eb5275] font-bold";
+  else if (p === "medium") priorityBadge = "bg-[#fde2c9] text-[#f29f4b] font-bold";
   else priorityBadge = "bg-[#e4e4e7] text-[#71717a] font-bold";
 
   return { statusBadge, priorityBadge };
@@ -144,19 +167,50 @@ const TaskDetailModal = ({
   isOpen,
   onClose,
   profile,
+  people,
   onDeleteTask,
   onStatusUpdate,
+  onSubmitTask,
 }: {
   task: TaskItem | null;
   isOpen: boolean;
   onClose: () => void;
   profile: any;
+  people: any[];
   onDeleteTask: (taskId: string) => Promise<void>;
   onStatusUpdate: (taskId: string, newStatus: StatusType) => Promise<void>;
+  onSubmitTask: (taskId: string, submissionNote: string, submissionFiles: File[], existingPaths?: string[]) => Promise<void>;
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [signedUrls, setSignedUrls] = useState<{name: string, url: string}[]>([]);
+  
+  // -- SUBMISSION STATE VARIABLES --
+  const [submissionSignedUrls, setSubmissionSignedUrls] = useState<{name: string, url: string}[]>([]);
+  const [submissionNote, setSubmissionNote] = useState("");
+  const [submissionFiles, setSubmissionFiles] = useState<File[]>([]);
+  const [isSubmitMode, setIsSubmitMode] = useState(false);
+  const [existingSubmissionPaths, setExistingSubmissionPaths] = useState<string[]>([]);
 
+  // Pre-populate proof submission form fields when entering submit/edit proof mode
+  useEffect(() => {
+    if (isSubmitMode && task) {
+      setSubmissionNote(task.submissionNote || "");
+      setExistingSubmissionPaths(task.submissionUrls ? task.submissionUrls.split(',').filter(Boolean) : []);
+    } else if (!isSubmitMode) {
+      setSubmissionNote("");
+      setSubmissionFiles([]);
+      setExistingSubmissionPaths([]);
+    }
+  }, [isSubmitMode, task?.id]);
+  
+  // -- DISCUSSION/CHAT STATE VARIABLES --
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [comments, setComments] = useState<TaskCommentModel[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [isSendingComment, setIsSendingComment] = useState(false);
+  const chatEndRef = React.useRef<HTMLDivElement>(null);
+
+  // Load task attachment URLs
   useEffect(() => {
     async function loadUrls() {
       if (!task || !task.attachmentUrls) {
@@ -179,6 +233,52 @@ const TaskDetailModal = ({
     loadUrls();
   }, [task?.id, task?.attachmentUrls]);
 
+  // Load task submission proof URLs
+  useEffect(() => {
+    async function loadSubmissionUrls() {
+      if (!task || !task.submissionUrls) {
+        setSubmissionSignedUrls([]);
+        return;
+      }
+      const paths = task.submissionUrls.split(',').filter(Boolean);
+      const list = await Promise.all(paths.map(async (p) => {
+        try {
+          const signed = await getFinanceFileUrl(p);
+          const name = p.split('/').pop() || 'File';
+          return { name, url: signed || "" };
+        } catch (err) {
+          console.error("Error signing URL:", err);
+          return { name: 'File', url: '' };
+        }
+      }));
+      setSubmissionSignedUrls(list.filter(item => item.url));
+    }
+    loadSubmissionUrls();
+  }, [task?.id, task?.submissionUrls]);
+
+  // Load comments
+  useEffect(() => {
+    async function loadComments() {
+      if (!task?.id) return;
+      try {
+        const list = await fetchTaskComments(task.id);
+        setComments(list);
+      } catch (err) {
+        console.error("Error loading comments:", err);
+      }
+    }
+    if (isOpen && task?.id) {
+      loadComments();
+    }
+  }, [task?.id, isOpen]);
+
+  // Scroll to bottom of chat
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [comments, isChatOpen]);
+
   if (!isOpen || !task) return null;
 
   const tStyles = getThemeStyles(task.theme);
@@ -191,11 +291,97 @@ const TaskDetailModal = ({
     ["superadmin", "admin", "administrator", "supervisor", "manager"].includes(userRole) ||
     (task.createdBy && profile?.id && task.createdBy === profile.id);
 
+  const isAssignee = task.assignees?.includes(profile?.id);
+  const isManagement = ["superadmin", "admin", "administrator", "supervisor", "manager"].includes(userRole);
+
   const handleStatusChange = async (newStatus: StatusType) => {
     if (!task) return;
     setIsUpdating(true);
     try {
       await onStatusUpdate(task.id, newStatus);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleSendComment = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!task || !newComment.trim() || !profile?.id) return;
+    setIsSendingComment(true);
+    try {
+      const added = await addTaskComment(task.id, profile.id, newComment.trim());
+      if (added) {
+        setComments(prev => [...prev, added]);
+        setNewComment("");
+        
+        // Broadcast notification asynchronously
+        (async () => {
+          try {
+            const senderName = profile?.full_name || "Adidaya Member";
+            const projCode = task.projectCode || "PRG";
+            const commentMsg = added.message;
+            
+            const recipientIds = new Set<string>();
+            if (task.createdBy && task.createdBy !== profile.id) {
+              recipientIds.add(task.createdBy);
+            }
+            if (task.assignees) {
+              task.assignees.forEach(uid => {
+                if (uid !== profile.id) {
+                  recipientIds.add(uid);
+                }
+              });
+            }
+
+            // Keep all supervisors and admins in the loop
+            people.forEach(p => {
+              const role = (p.role || "").toLowerCase();
+              if (["superadmin", "admin", "administrator", "supervisor"].includes(role) && p.id !== profile.id) {
+                recipientIds.add(p.id);
+              }
+            });
+
+            const isFirstComment = comments.length === 0;
+            const title = isFirstComment ? "Discussion Started" : "New Comment on Task";
+            const description = isFirstComment 
+              ? `${senderName} started a discussion on "${task.title}" . ${projCode}`
+              : `${senderName} replied: "${commentMsg.length > 50 ? commentMsg.slice(0, 50) + '...' : commentMsg}" on "${task.title}" . ${projCode}`;
+
+            for (const recipientId of Array.from(recipientIds)) {
+              await createNotification({
+                user_id: recipientId,
+                type: "mention",
+                category: "task",
+                title,
+                description,
+                link: `/task?id=${task.id}`,
+                metadata: { taskId: task.id }
+              });
+            }
+          } catch (nErr) {
+            console.error("Failed to broadcast chat notification:", nErr);
+          }
+        })();
+      }
+    } catch (err) {
+      console.error("Error sending comment:", err);
+    } finally {
+      setIsSendingComment(false);
+    }
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!task) return;
+    setIsUpdating(true);
+    try {
+      await onSubmitTask(task.id, submissionNote, submissionFiles, existingSubmissionPaths);
+      setIsSubmitMode(false);
+      setSubmissionNote("");
+      setSubmissionFiles([]);
+      setExistingSubmissionPaths([]);
+    } catch (e: any) {
+      console.error("Error in handleFinalSubmit:", e);
+      alert("Submission failed. Error: " + (e.message || e));
     } finally {
       setIsUpdating(false);
     }
@@ -249,6 +435,18 @@ const TaskDetailModal = ({
         <div className="flex-1 overflow-y-auto px-8 py-4 pb-8 space-y-6 relative z-10">
           {/* Details Flat List */}
           <div className="space-y-4">
+            {/* Task Number Row */}
+            {task.taskNumber && (
+              <div className="flex items-center py-2 border-b border-black/[0.03] dark:border-white/[0.03]">
+                <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
+                  Task Number
+                </span>
+                <span className="text-[12px] font-extrabold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50 px-2.5 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
+                  {task.taskNumber}
+                </span>
+              </div>
+            )}
+
             {/* Project Row */}
             <div className="flex items-center py-2 border-b border-black/[0.03] dark:border-white/[0.03]">
               <span className="text-neutral-400 dark:text-neutral-500 font-bold text-[13px] uppercase tracking-wider w-[120px]">
@@ -320,6 +518,11 @@ const TaskDetailModal = ({
                     <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> IN PROGRESS
                   </span>
                 )}
+                {task.status === "submitted" && (
+                  <span className="bg-blue-500 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 uppercase shadow-sm animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> AWAITING
+                  </span>
+                )}
                 {task.status === "revision" && (
                   <span className="bg-amber-600 text-white font-bold px-3 py-1 rounded-full text-[12px] flex items-center gap-1.5 uppercase shadow-sm">
                     <span className="w-1.5 h-1.5 rounded-full bg-white shrink-0" /> REVISION
@@ -332,16 +535,6 @@ const TaskDetailModal = ({
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Description Section */}
-          <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
-            <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-2">
-              Description
-            </h4>
-            <p className="text-[14px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
-              {task.description || "No description provided."}
-            </p>
           </div>
 
           {/* Assignees Section */}
@@ -380,6 +573,16 @@ const TaskDetailModal = ({
             </div>
           </div>
 
+          {/* Description Section */}
+          <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+            <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-2">
+              Description
+            </h4>
+            <p className="text-[14px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
+              {task.description || "No description provided."}
+            </p>
+          </div>
+
           {/* Attachments Section */}
           {signedUrls.length > 0 && (
             <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
@@ -410,59 +613,378 @@ const TaskDetailModal = ({
               </div>
             </div>
           )}
+
+          {/* Submit Work Proof Form */}
+          {isSubmitMode && (
+            <div className="pt-6 border-t border-blue-100 dark:border-blue-900/40 space-y-4 bg-blue-50/20 dark:bg-blue-950/5 p-5 rounded-[24px] border border-blue-500/10 shadow-inner">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[15px] font-extrabold text-blue-600 dark:text-blue-400">
+                  Submit Proof of Work
+                </h4>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 px-2 py-0.5 rounded-[6px]">
+                  Draft
+                </span>
+              </div>
+
+              {/* Note Textarea */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                  Submission Note
+                </label>
+                <textarea
+                  placeholder="Explain what you have completed..."
+                  value={submissionNote}
+                  onChange={(e) => setSubmissionNote(e.target.value)}
+                  className="w-full h-24 p-3.5 text-xs border border-black/5 dark:border-white/10 rounded-[16px] bg-white/70 dark:bg-neutral-800/70 text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-semibold resize-none"
+                />
+              </div>
+
+              {/* File Attachment Selector & List */}
+              <div className="space-y-2.5">
+                <label className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                  Proof Attachments
+                </label>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('submission-file-input')?.click()}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-bold text-xs transition-all active:scale-95 shadow-sm shadow-blue-500/15 cursor-pointer"
+                  >
+                    Choose Files
+                  </button>
+                  <span className="text-xs text-neutral-400 font-medium">
+                    {submissionFiles.length === 0 ? "No new files selected" : `${submissionFiles.length} new file(s) selected`}
+                  </span>
+                </div>
+                <input 
+                  id="submission-file-input"
+                  type="file" 
+                  multiple 
+                  className="hidden"
+                  onChange={e => {
+                    const files = Array.from(e.target.files || []) as File[];
+                    setSubmissionFiles(prev => [...prev, ...files]);
+                  }}
+                />
+
+                {/* Unified files list: Existing + Newly chosen */}
+                {(existingSubmissionPaths.length > 0 || submissionFiles.length > 0) && (
+                  <div className="space-y-2 pt-2">
+                    {/* Existing Files */}
+                    {existingSubmissionPaths.map((path, idx) => {
+                      const name = sanitizeFilename(path.split('/').pop() || 'File');
+                      return (
+                        <div 
+                          key={`exist-${idx}`} 
+                          className="flex items-center justify-between p-2.5 pl-3.5 bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/10 shadow-sm rounded-[16px] text-xs"
+                        >
+                          <div 
+                            className="flex items-center gap-2 overflow-hidden flex-1 mr-2 cursor-pointer group/item"
+                            onClick={async () => {
+                              const signed = await getFinanceFileUrl(path);
+                              if (signed) window.open(signed, "_blank");
+                            }}
+                            title="Click to view existing file"
+                          >
+                            <FileText className="w-4 h-4 text-amber-500 shrink-0 group-hover/item:scale-105 transition-transform" />
+                            <span className="text-neutral-700 dark:text-neutral-300 font-semibold truncate group-hover/item:text-amber-600 dark:group-hover/item:text-amber-400 group-hover/item:underline transition-colors">
+                              {name}
+                            </span>
+                          </div>
+                          <button 
+                            type="button" 
+                            onClick={() => setExistingSubmissionPaths(prev => prev.filter((_, i) => i !== idx))}
+                            className="text-[11px] font-bold text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 px-2.5 py-1 rounded-md transition-colors shrink-0 cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    {/* Newly Selected Files */}
+                    {submissionFiles.map((file, idx) => (
+                      <div 
+                        key={`new-${idx}`} 
+                        className="flex items-center justify-between p-2.5 pl-3.5 bg-white/85 dark:bg-neutral-800/85 border border-black/5 dark:border-white/5 shadow-sm rounded-[16px] text-xs"
+                      >
+                        <div 
+                          className="flex items-center gap-2 overflow-hidden flex-1 mr-2 cursor-pointer group/item"
+                          onClick={() => {
+                            const previewUrl = URL.createObjectURL(file);
+                            window.open(previewUrl, "_blank");
+                          }}
+                          title="Click to preview file"
+                        >
+                          <FileText className="w-4 h-4 text-blue-500 shrink-0 group-hover/item:scale-105 transition-transform" />
+                          <span className="text-neutral-700 dark:text-neutral-300 font-semibold truncate group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400 group-hover/item:underline transition-colors">
+                            {file.name}
+                          </span>
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => setSubmissionFiles(prev => prev.filter((_, i) => i !== idx))}
+                          className="text-[11px] font-bold text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 px-2.5 py-1 rounded-md transition-colors shrink-0 cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Submitted Proofs Section */}
+          {!isSubmitMode && submissionSignedUrls.length > 0 && (
+            <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+              <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200 mb-3">
+                Submitted Proofs
+              </h4>
+              {task.submissionNote && (
+                <div className="p-3 bg-neutral-50 dark:bg-neutral-800/40 border border-black/5 dark:border-white/5 rounded-[16px] text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-semibold italic mb-3">
+                  "{task.submissionNote}"
+                </div>
+              )}
+              <div className="space-y-2">
+                {submissionSignedUrls.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2.5 pl-3.5 bg-neutral-50 dark:bg-neutral-800/40 border border-black/5 dark:border-white/5 shadow-sm rounded-[16px] text-xs"
+                  >
+                    <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
+                      <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" />
+                      <span className="text-neutral-700 dark:text-neutral-300 font-semibold truncate">
+                        {file.name}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => window.open(file.url, "_blank")}
+                      className="text-[10.5px] font-bold text-blue-600 bg-blue-50/80 dark:bg-blue-950/40 dark:text-blue-400 hover:bg-blue-100 px-3 py-1.5 rounded-full transition-colors active:scale-95 duration-150 shrink-0"
+                    >
+                      View Document
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Discussion / Chat Section */}
+          {(task.status === "submitted" || task.status === "revision" || task.status === "done") && (
+            <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+              {!isChatOpen && comments.length === 0 ? (
+                <button
+                  onClick={() => setIsChatOpen(true)}
+                  className="w-full py-3 bg-neutral-100 hover:bg-neutral-200/80 dark:bg-neutral-800/80 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 rounded-[20px] font-bold text-xs transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                >
+                  <Send size={12} className="rotate-45" /> Start Discussion
+                </button>
+              ) : (
+                <div className="border border-black/5 dark:border-white/5 rounded-[24px] bg-white/40 dark:bg-neutral-900/30 overflow-hidden shadow-inner">
+                  {/* Chat Header */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-neutral-100/50 dark:bg-neutral-800/50 border-b border-black/[0.03] dark:border-white/[0.03]">
+                    <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 font-sans">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                      Task Discussion
+                    </span>
+                    <button
+                      onClick={() => setIsChatOpen(!isChatOpen)}
+                      className="p-1 rounded-full hover:bg-neutral-200/50 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors"
+                      title="Minimize Chat"
+                    >
+                      <ChevronDown size={16} strokeWidth={2.5} />
+                    </button>
+                  </div>
+
+                  {/* Chat Bubbles */}
+                  {isChatOpen && (
+                    <>
+                      <div className="max-h-60 overflow-y-auto p-4 space-y-3 scroll-smooth">
+                        {comments.length === 0 ? (
+                          <div className="text-center py-6 text-xs text-neutral-400 font-semibold italic">
+                            No messages yet. Send a message to start discussion.
+                          </div>
+                        ) : (
+                          comments.map((msg, mIdx) => {
+                            const isMe = msg.userId === profile?.id;
+                            const member = people.find(p => p.id === msg.userId);
+                            const name = member?.name || "Member";
+                            const initials = name
+                              .split(" ")
+                              .map((n: string) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .substring(0, 2);
+
+                            const isRevision = msg.message.startsWith('[REVISION]');
+                            const displayMessage = isRevision 
+                              ? `Revision: ${msg.message.replace('[REVISION]', '').trim()}` 
+                              : msg.message;
+
+                            return (
+                              <div
+                                key={msg.id || mIdx}
+                                className={clsx(
+                                  "flex items-end gap-2 max-w-[85%]",
+                                  isMe ? "ml-auto flex-row-reverse" : "mr-auto"
+                                )}
+                              >
+                                {!isMe && (
+                                  <div className="w-6 h-6 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center text-[9px] font-extrabold text-neutral-700 dark:text-neutral-300 shrink-0">
+                                    {initials}
+                                  </div>
+                                )}
+                                <div className="flex flex-col gap-0.5">
+                                  {!isMe && (
+                                    <span className="text-[10px] font-bold text-neutral-400 pl-1">
+                                      {name}
+                                    </span>
+                                  )}
+                                  <div
+                                    className={clsx(
+                                      "px-3.5 py-2 rounded-[20px] text-xs font-semibold shadow-sm leading-relaxed border",
+                                      isRevision
+                                        ? "bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-100 border-amber-200 dark:border-amber-900/50 rounded-bl-[4px]"
+                                        : isMe
+                                          ? "bg-blue-600 text-white border-transparent rounded-br-[4px]"
+                                          : "bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border-transparent rounded-bl-[4px]"
+                                    )}
+                                  >
+                                    {displayMessage}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                        <div ref={chatEndRef} />
+                      </div>
+
+                      {/* Chat Input */}
+                      <form
+                        onSubmit={handleSendComment}
+                        className="p-3 border-t border-black/[0.03] dark:border-white/[0.03] flex gap-2"
+                      >
+                        <input
+                          type="text"
+                          placeholder="Type a message..."
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          className="flex-1 h-9 px-3.5 text-xs rounded-full border border-black/5 dark:border-white/10 bg-white/70 dark:bg-neutral-800/70 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-semibold placeholder:text-neutral-400 placeholder:font-medium"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isSendingComment || !newComment.trim()}
+                          className="w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 disabled:bg-neutral-200 dark:disabled:bg-neutral-800 text-white flex items-center justify-center transition-all active:scale-90 shrink-0 shadow-sm"
+                        >
+                          {isSendingComment ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Send size={14} strokeWidth={2.5} className="mr-0.5 mt-0.5 rotate-45" />
+                          )}
+                        </button>
+                      </form>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* FOOTER */}
         <div className="px-8 pb-10 pt-4 flex flex-col gap-3 relative z-10">
-          {task.status === "todo" && (
-            <button
-              onClick={() => handleStatusChange("in_progress")}
-              disabled={isUpdating}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/10 disabled:opacity-50"
-            >
-              {isUpdating ? (
-                "Starting..."
-              ) : (
-                <>
-                  <Play size={16} fill="currentColor" /> Start Task
-                </>
-              )}
-            </button>
-          )}
-          {task.status === "in_progress" && (
-            <button
-              onClick={() => handleStatusChange("done")}
-              disabled={isUpdating}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-emerald-500/10 disabled:opacity-50"
-            >
-              {isUpdating ? (
-                "Submitting..."
-              ) : (
-                <>
-                  <Send size={16} /> Submit for Review
-                </>
-              )}
-            </button>
-          )}
-          {(task.status === "revision" || task.status === "done") && (
+          {/* Submit Mode Actions */}
+          {isSubmitMode ? (
             <div className="flex gap-3">
-              <button className="flex-1 bg-white/50 backdrop-blur-xl border border-black/5 h-[56px] rounded-full font-bold text-[16px] text-neutral-700 active:scale-[0.98] transition-all">
-                Edit Form
+              <button
+                type="button"
+                onClick={() => setIsSubmitMode(false)}
+                className="flex-1 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 h-[56px] rounded-full font-bold text-[16px] active:scale-[0.98] transition-all"
+              >
+                Cancel
               </button>
               <button
-                onClick={() => handleStatusChange("done")}
+                type="button"
+                onClick={handleFinalSubmit}
                 disabled={isUpdating}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/10 disabled:opacity-50"
               >
                 {isUpdating ? (
-                  "Resubmitting..."
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <>
-                    <Undo2 size={16} /> Resubmit
+                    <Check className="w-5 h-5" strokeWidth={3} /> Submit Proof
                   </>
                 )}
               </button>
             </div>
+          ) : (
+            <>
+              {/* Standard Task Mode Actions */}
+              {task.status === "todo" && (
+                <button
+                  onClick={() => handleStatusChange("in_progress")}
+                  disabled={isUpdating || (!isAssignee && !isManagement)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/10 disabled:opacity-50"
+                >
+                  {isUpdating ? (
+                    "Starting..."
+                  ) : (
+                    <>
+                      <Play size={16} fill="currentColor" /> Start Task
+                    </>
+                  )}
+                </button>
+              )}
+
+              {task.status === "in_progress" && (
+                isAssignee ? (
+                  <button
+                    onClick={() => setIsSubmitMode(true)}
+                    disabled={isUpdating}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-emerald-500/10 disabled:opacity-50"
+                  >
+                    <Send size={16} /> Submit Work Proof
+                  </button>
+                ) : (
+                  <div className="w-full py-4 text-center text-xs font-semibold text-neutral-400 bg-neutral-50 dark:bg-neutral-800/40 rounded-[20px] border border-black/[0.03]">
+                    Assignee is currently working on this task.
+                  </div>
+                )
+              )}
+
+              {task.status === "submitted" && (
+                <div className="w-full py-4 text-center text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/20 rounded-[20px] border border-blue-100/50 dark:border-blue-900/30">
+                  Awaiting Review & Approval
+                </div>
+              )}
+
+              {task.status === "revision" && (
+                isAssignee ? (
+                  <button
+                    onClick={() => setIsSubmitMode(true)}
+                    disabled={isUpdating}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/10 disabled:opacity-50"
+                  >
+                    <Undo2 size={16} /> Resubmit Proof
+                  </button>
+                ) : (
+                  <div className="w-full py-4 text-center text-xs font-semibold text-amber-500 bg-amber-50/50 dark:bg-amber-950/20 rounded-[20px] border border-amber-100/50 dark:border-amber-900/30">
+                    Task needs revision. Waiting for assignee to submit update.
+                  </div>
+                )
+              )}
+
+              {task.status === "done" && (
+                <div className="w-full py-4 text-center text-xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-[20px] border border-emerald-100/50 dark:border-emerald-900/30 flex items-center justify-center gap-1.5 uppercase tracking-wider">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" strokeWidth={2.5} /> Task completed successfully
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -491,13 +1013,17 @@ const TaskCard = ({ task, onClick }: { task: TaskItem; onClick?: () => void }) =
         {/* Content */}
         <div className="flex-1 min-w-0 pt-0.5">
           {/* Ref ID & Subtask Pill */}
-          {(task.refId || task.subtaskIndicator) && (
+          {(task.taskNumber || task.refId || task.subtaskIndicator) && (
             <div className="flex items-center gap-2 mb-1">
-              {task.refId && (
+              {task.taskNumber ? (
+                <span className="text-[11px] font-extrabold text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
+                  {task.taskNumber}
+                </span>
+              ) : task.refId ? (
                 <span className="text-[11px] font-bold text-gray-500 tracking-wide uppercase">
                   {task.refId}
                 </span>
-              )}
+              ) : null}
               {task.subtaskIndicator && (
                 <div className="flex items-center gap-1 bg-black/5 px-1.5 py-0.5 rounded text-[10px] font-semibold text-gray-600">
                   <ListTodo size={10} />
@@ -705,7 +1231,7 @@ export default function TaskPage() {
         const tAvatars = t.assignees?.map(uid => {
           const p = includedPeople.find(person => person.id === uid);
           if (p?.name) {
-            return p.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            return p.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2);
           }
           return "U";
         }) || ["U"];
@@ -733,6 +1259,9 @@ export default function TaskPage() {
           assignees: t.assignees || [],
           assigneeNames: tAssigneeNames,
           attachmentUrls: t.attachmentUrls || null,
+          taskNumber: t.taskNumber || null,
+          submissionNote: t.submissionNote || null,
+          submissionUrls: t.submissionUrls || null,
         };
       });
       setTasks(mappedTasks);
@@ -818,7 +1347,7 @@ export default function TaskPage() {
         if (task) {
           (async () => {
             try {
-              const changerName = profile?.name || "Adidaya Member";
+              const changerName = profile?.full_name || "Adidaya Member";
               const changerId = profile?.id;
               const projCode = task.projectCode || "PRG";
               
@@ -826,9 +1355,9 @@ export default function TaskPage() {
               let actionPhrase = `updated status of "${task.title}" to ${newStatus}`;
               if (newStatus === "in_progress") {
                 actionPhrase = `started the task of ${task.title}`;
-              } else if (newStatus === "completed" || newStatus === "done") {
+              } else if (newStatus === "done") {
                 actionPhrase = `completed the task of ${task.title}`;
-              } else if (newStatus === "todo" && (task.status === "in_progress" || task.status === "completed" || task.status === "done")) {
+              } else if (newStatus === "todo" && (task.status === "in_progress" || task.status === "done")) {
                 actionPhrase = `requested revision on the task of ${task.title}`;
               } else if (newStatus === "todo") {
                 actionPhrase = `marked the task of ${task.title} as To Do`;
@@ -836,7 +1365,7 @@ export default function TaskPage() {
 
               const description = `${changerName} ${actionPhrase} . ${projCode}`;
 
-              // Determine recipients: creator and all assignees (excluding the changer)
+              // Determine recipients: creator, all assignees, and all supervisors/admins (excluding the changer)
               const recipientIds = new Set<string>();
               if (task.createdBy && task.createdBy !== changerId) {
                 recipientIds.add(task.createdBy);
@@ -849,7 +1378,14 @@ export default function TaskPage() {
                 });
               }
 
-              for (const recipientId of recipientIds) {
+              people.forEach(p => {
+                const role = (p.role || "").toLowerCase();
+                if (["superadmin", "admin", "administrator", "supervisor"].includes(role) && p.id !== changerId) {
+                  recipientIds.add(p.id);
+                }
+              });
+
+              for (const recipientId of Array.from(recipientIds)) {
                 await createNotification({
                   user_id: recipientId,
                   type: "info",
@@ -871,6 +1407,98 @@ export default function TaskPage() {
     } catch (err) {
       console.error("Error updating task status:", err);
       alert("An error occurred while updating task status.");
+    }
+  };
+
+  const onSubmitTask = async (taskId: string, submissionNote: string, submissionFiles: File[], existingPaths: string[] = []) => {
+    // 1. Upload files if any
+    let submissionUrls = "";
+    if (submissionFiles.length > 0) {
+      const uploadPromises = submissionFiles.map(async (file) => {
+        const uniqueFolder = typeof crypto.randomUUID === 'function' 
+          ? crypto.randomUUID() 
+          : Math.random().toString(36).substring(2, 15);
+        const filename = sanitizeFilename(file.name);
+        const path = `task-submissions/${uniqueFolder}/${filename}`;
+        const uploadedPath = await uploadFinanceFileExact(file, path);
+        return uploadedPath;
+      });
+      const uploadedPaths = await Promise.all(uploadPromises);
+      const newUrls = uploadedPaths.filter(Boolean);
+      submissionUrls = [...existingPaths, ...newUrls].join(',');
+    } else {
+      submissionUrls = existingPaths.join(',');
+    }
+
+    // 2. Call submitTask API
+    const { submitTask } = await import("@/lib/api/tasks");
+    const success = await submitTask(taskId, submissionNote, submissionUrls);
+    if (!success) {
+      throw new Error("Failed to submit task to the server.");
+    }
+
+    // 3. Update tasks state
+    setTasks(prevTasks =>
+      prevTasks.map(t =>
+        t.id === taskId
+          ? {
+              ...t,
+              status: "submitted" as StatusType,
+              submissionNote,
+              submissionUrls
+            }
+          : t
+      )
+    );
+
+    // 4. Update selectedTask state
+    setSelectedTask(prevSelected =>
+      prevSelected && prevSelected.id === taskId
+        ? {
+            ...prevSelected,
+            status: "submitted" as StatusType,
+            submissionNote,
+            submissionUrls
+          }
+        : prevSelected
+    );
+
+    // 5. Send status update notifications
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        const changerName = profile?.full_name || "Adidaya Member";
+        const changerId = profile?.id;
+        const projCode = task.projectCode || "PRG";
+        
+        const description = `${changerName} submitted the task "${task.title}" for review . ${projCode}`;
+
+        const recipientIds = new Set<string>();
+        if (task.createdBy && task.createdBy !== changerId) {
+          recipientIds.add(task.createdBy);
+        }
+
+        people.forEach(p => {
+          const role = (p.role || "").toLowerCase();
+          if (["superadmin", "admin", "administrator", "supervisor"].includes(role) && p.id !== changerId) {
+            recipientIds.add(p.id);
+          }
+        });
+
+        for (const recipientId of Array.from(recipientIds)) {
+          await createNotification({
+            user_id: recipientId,
+            type: "info",
+            category: "task",
+            title: "Task Submitted for Review",
+            description,
+            link: `/task?id=${task.id}`,
+            metadata: { taskId: task.id, newStatus: "submitted" }
+          });
+        }
+      }
+    } catch (nErr) {
+      console.error("Failed to send submission notifications:", nErr);
     }
   };
 
@@ -941,8 +1569,7 @@ export default function TaskPage() {
           const uniqueFolder = typeof crypto.randomUUID === 'function' 
             ? crypto.randomUUID() 
             : Math.random().toString(36).substring(2, 15);
-          const ext = file.name.split('.').pop() || "png";
-          const filename = `${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+          const filename = sanitizeFilename(file.name);
           const path = `tasks/${uniqueFolder}/${filename}`;
           const uploadedPath = await uploadFinanceFileExact(file, path);
           return uploadedPath;
@@ -1001,7 +1628,10 @@ export default function TaskPage() {
           description: createdTask.description || undefined,
           assignees: validAssignees,
           assigneeNames: newTaskAssigneeNames,
-          attachmentUrls: createdTask.attachmentUrls || null
+          attachmentUrls: createdTask.attachmentUrls || null,
+          taskNumber: createdTask.taskNumber || null,
+          submissionNote: createdTask.submissionNote || null,
+          submissionUrls: createdTask.submissionUrls || null
         };
 
         setTasks([newTask, ...tasks]);
@@ -1009,8 +1639,8 @@ export default function TaskPage() {
         // Asynchronously dispatch task assignment notifications
         (async () => {
           try {
-            const assignerName = profile?.name || "Adidaya Admin";
-            const projCode = createdTask.projectCode || proj?.code || proj?.projectCode || "PRG";
+            const assignerName = profile?.full_name || "Adidaya Admin";
+            const projCode = createdTask.projectCode || proj?.projectCode || "PRG";
             
             for (const targetUserId of validAssignees) {
               const otherAssigneesNames = validAssignees
@@ -1205,8 +1835,10 @@ export default function TaskPage() {
         task={selectedTask}
         onClose={() => setSelectedTask(null)}
         profile={profile}
+        people={people}
         onDeleteTask={handleDeleteTask}
         onStatusUpdate={handleStatusUpdate}
+        onSubmitTask={onSubmitTask}
       />
 
       {/* FILTER MODAL */}
