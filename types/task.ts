@@ -3,6 +3,12 @@ export type TaskPriority = "urgent" | "high" | "medium" | "low";
 export type ActionStatus = "PENDING" | "APPROVED" | "REJECTED" | "REVISION" | "DISPUTE";
 export type ActionPriority = "URGENT" | "HIGH" | "MEDIUM" | "LOW";
 
+export interface SubtaskItem {
+    id: string;
+    label: string;
+    done: boolean;
+}
+
 export interface TaskModel {
     id: string;
     title: string;
@@ -20,6 +26,7 @@ export interface TaskModel {
     attachmentUrls?: string | null;
     submissionNote?: string | null;
     submissionUrls?: string | null;
+    subtasks?: SubtaskItem[] | null;
 
     // Joins
     projectCode?: string;

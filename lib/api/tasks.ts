@@ -39,7 +39,8 @@ export async function createTask(
             status: taskData.status,
             priority: taskData.priority,
             created_by: taskData.createdBy,
-            attachment_urls: taskData.attachmentUrls || null
+            attachment_urls: taskData.attachmentUrls || null,
+            subtasks: taskData.subtasks || []
         })
         .select(`
             *,
@@ -91,6 +92,7 @@ function mapDbToTask(dbRow: any): TaskModel {
         attachmentUrls: dbRow.attachment_urls || null,
         submissionNote: dbRow.submission_note || null,
         submissionUrls: dbRow.submission_urls || null,
+        subtasks: dbRow.subtasks || [],
 
         projectCode: dbRow.projects?.project_code,
         projectName: dbRow.projects?.project_name,
@@ -241,6 +243,20 @@ export async function saveTaskDraft(taskId: string, submissionNote: string, subm
 
     if (error) {
         console.error("Failed to save task draft:", error);
+        return false;
+    }
+
+    return true;
+}
+
+export async function updateTaskSubtasks(taskId: string, subtasks: any[]): Promise<boolean> {
+    const { error } = await supabase
+        .from("tasks")
+        .update({ subtasks })
+        .eq("id", taskId);
+
+    if (error) {
+        console.error("Failed to update task subtasks:", error);
         return false;
     }
 

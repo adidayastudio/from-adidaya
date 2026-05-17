@@ -37,7 +37,7 @@ import {
   Save
 } from "lucide-react";
 import { fetchAllProjects } from "@/lib/api/projects";
-import { fetchAllTasks, createTask, deleteTask, updateTaskStatus, fetchTaskComments, addTaskComment, saveTaskDraft } from "@/lib/api/tasks";
+import { fetchAllTasks, createTask, deleteTask, updateTaskStatus, fetchTaskComments, addTaskComment, saveTaskDraft, updateTaskSubtasks } from "@/lib/api/tasks";
 import { fetchPeopleDirectory } from "@/lib/api/people";
 import { uploadFinanceFileExact, getFinanceFileUrl } from "@/lib/api/storage";
 import { createNotification } from "@/lib/api/notifications";
@@ -94,6 +94,7 @@ interface TaskItem {
   taskNumber?: string | null;
   submissionNote?: string | null;
   submissionUrls?: string | null;
+  subtasks?: any[] | null;
 }
 
 const TABS = [
@@ -172,6 +173,7 @@ const TaskDetailModal = ({
   onDeleteTask,
   onStatusUpdate,
   onSubmitTask,
+  onSubtasksUpdate,
 }: {
   task: TaskItem | null;
   isOpen: boolean;
@@ -181,6 +183,7 @@ const TaskDetailModal = ({
   onDeleteTask: (taskId: string) => Promise<void>;
   onStatusUpdate: (taskId: string, newStatus: StatusType) => Promise<void>;
   onSubmitTask: (taskId: string, submissionNote: string, submissionFiles: File[], existingPaths?: string[], isDraft?: boolean) => Promise<string>;
+  onSubtasksUpdate: (taskId: string, updatedSubtasks: any[]) => Promise<void>;
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [signedUrls, setSignedUrls] = useState<{name: string, url: string}[]>([]);
@@ -404,6 +407,32 @@ const TaskDetailModal = ({
     }
   };
 
+  const handleToggleSubtask = async (subtaskId: string) => {
+    if (!task || isUpdating) return;
+    if (task.status === "todo") {
+      alert("Please start the task before toggling subtasks!");
+      return;
+    }
+    const currentSubtasks = task.subtasks || [];
+    const updatedSubtasks = currentSubtasks.map((st: any) =>
+      st.id === subtaskId ? { ...st, done: !st.done } : st
+    );
+
+    setIsUpdating(true);
+    try {
+      const success = await updateTaskSubtasks(task.id, updatedSubtasks);
+      if (success) {
+        await onSubtasksUpdate(task.id, updatedSubtasks);
+      } else {
+        alert("Failed to update subtask status in the database.");
+      }
+    } catch (e) {
+      console.error("Error toggling subtask:", e);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return (
     <>
       {/* Backdrop */}
@@ -598,6 +627,64 @@ const TaskDetailModal = ({
             <p className="text-[14px] text-neutral-500 dark:text-neutral-400 leading-relaxed font-medium">
               {task.description || "No description provided."}
             </p>
+          </div>
+
+          {/* Subtasks Section */}
+          <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-[15px] font-bold text-neutral-800 dark:text-neutral-200">
+                Subtasks
+              </h4>
+              {task.subtasks && task.subtasks.length > 0 && (
+                <span className="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-950/40 px-2 py-0.5 rounded-[6px] shadow-sm">
+                  {task.subtasks.filter((st: any) => st.done).length} / {task.subtasks.length} Done
+                </span>
+              )}
+            </div>
+            {task.subtasks && task.subtasks.length > 0 ? (
+              <div className="space-y-2.5">
+                {task.subtasks.map((st: any) => {
+                  const canToggle = isAssignee || isManagement;
+                  const isTaskTodo = task.status === "todo";
+                  return (
+                    <div
+                      key={st.id}
+                      onClick={() => canToggle && handleToggleSubtask(st.id)}
+                      className={`flex items-start gap-3 p-3 bg-neutral-50/50 dark:bg-neutral-800/20 border border-black/5 dark:border-white/5 rounded-[16px] shadow-sm transition-all duration-200 ${
+                        canToggle ? "cursor-pointer active:scale-[0.99]" : ""
+                      } ${
+                        isTaskTodo ? "opacity-60" : "hover:bg-neutral-50 dark:hover:bg-neutral-800/40 hover:scale-[1.01]"
+                      }`}
+                    >
+                      <div className="flex items-center h-5 shrink-0">
+                        <div
+                          className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${
+                            st.done
+                              ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
+                              : "border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900"
+                          }`}
+                        >
+                          {st.done && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[13.5px] font-medium leading-tight select-none transition-all ${
+                          st.done
+                            ? "text-neutral-400 line-through decoration-neutral-300"
+                            : "text-neutral-700 dark:text-neutral-300"
+                        }`}
+                      >
+                        {st.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <span className="text-[13px] text-neutral-400 font-medium italic">
+                No subtasks defined.
+              </span>
+            )}
           </div>
 
           {/* Attachments Section */}
@@ -1032,6 +1119,10 @@ const TaskCard = ({ task, onClick }: { task: TaskItem; onClick?: () => void }) =
   const IconComponent =
     task.icon === "users" ? Users : task.icon === "fileText" ? FileText : CreditCard;
 
+  const completedSubtasks = task.subtasks ? task.subtasks.filter((st: any) => st.done).length : 0;
+  const totalSubtasks = task.subtasks ? task.subtasks.length : 0;
+  const subtaskIndicatorVal = totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks}` : task.subtaskIndicator;
+
   return (
     <div className={`p-4 rounded-[20px] ${tStyles.bg} flex flex-col gap-3 relative shadow-sm mb-4`}>
       {/* Top row: Icon + Rest */}
@@ -1046,7 +1137,7 @@ const TaskCard = ({ task, onClick }: { task: TaskItem; onClick?: () => void }) =
         {/* Content */}
         <div className="flex-1 min-w-0 pt-0.5">
           {/* Ref ID & Subtask Pill */}
-          {(task.taskNumber || task.refId || task.subtaskIndicator) && (
+          {(task.taskNumber || task.refId || subtaskIndicatorVal) && (
             <div className="flex items-center gap-2 mb-1">
               {task.taskNumber ? (
                 <span className="text-[11px] font-extrabold text-blue-600 bg-blue-50/80 px-2 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
@@ -1057,10 +1148,10 @@ const TaskCard = ({ task, onClick }: { task: TaskItem; onClick?: () => void }) =
                   {task.refId}
                 </span>
               ) : null}
-              {task.subtaskIndicator && (
+              {subtaskIndicatorVal && (
                 <div className="flex items-center gap-1 bg-black/5 px-1.5 py-0.5 rounded text-[10px] font-semibold text-gray-600">
                   <ListTodo size={10} />
-                  <span>{task.subtaskIndicator}</span>
+                  <span>{subtaskIndicatorVal}</span>
                 </div>
               )}
             </div>
@@ -1295,6 +1386,7 @@ export default function TaskPage() {
           taskNumber: t.taskNumber || null,
           submissionNote: t.submissionNote || null,
           submissionUrls: t.submissionUrls || null,
+          subtasks: t.subtasks || [],
         };
       });
       setTasks(mappedTasks);
@@ -1441,6 +1533,19 @@ export default function TaskPage() {
       console.error("Error updating task status:", err);
       alert("An error occurred while updating task status.");
     }
+  };
+
+  const handleSubtasksUpdate = async (taskId: string, updatedSubtasks: any[]) => {
+    setTasks(prevTasks =>
+      prevTasks.map(t =>
+        t.id === taskId ? { ...t, subtasks: updatedSubtasks } : t
+      )
+    );
+    setSelectedTask(prevSelected =>
+      prevSelected && prevSelected.id === taskId
+        ? { ...prevSelected, subtasks: updatedSubtasks }
+        : prevSelected
+    );
   };
 
   const onSubmitTask = async (taskId: string, submissionNote: string, submissionFiles: File[], existingPaths: string[] = [], isDraft = false) => {
@@ -1662,7 +1767,12 @@ export default function TaskPage() {
         status: newTaskStatus,
         priority: newTaskPriority,
         createdBy: currentUserId,
-        attachmentUrls: attachmentUrlsString || null
+        attachmentUrls: attachmentUrlsString || null,
+        subtasks: subtasks.map((st, idx) => ({
+          id: `sub-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 7)}`,
+          label: st,
+          done: false
+        }))
       };
 
       console.log("Creating task with payload:", newTaskDbPayload, "and assignees:", validAssignees);
@@ -1703,7 +1813,8 @@ export default function TaskPage() {
           attachmentUrls: createdTask.attachmentUrls || null,
           taskNumber: createdTask.taskNumber || null,
           submissionNote: createdTask.submissionNote || null,
-          submissionUrls: createdTask.submissionUrls || null
+          submissionUrls: createdTask.submissionUrls || null,
+          subtasks: createdTask.subtasks || []
         };
 
         setTasks([newTask, ...tasks]);
@@ -1911,6 +2022,7 @@ export default function TaskPage() {
         onDeleteTask={handleDeleteTask}
         onStatusUpdate={handleStatusUpdate}
         onSubmitTask={onSubmitTask}
+        onSubtasksUpdate={handleSubtasksUpdate}
       />
 
       {/* FILTER MODAL */}

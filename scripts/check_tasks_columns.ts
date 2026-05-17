@@ -35,7 +35,7 @@ async function run() {
         // or try to fetch schema via rest endpoint
         const { data: colsData, error: colsError } = await supabase
             .from('tasks')
-            .select('id, title, description, project_id, wbs_id, deadline_date, deadline_time, status, priority, created_by, created_at, updated_at, attachment_urls')
+            .select('id, title, description, project_id, wbs_id, deadline_date, deadline_time, status, priority, created_by, created_at, updated_at, attachment_urls, subtasks')
             .limit(0);
         if (colsError) {
             console.log("❌ attachment_urls column does not exist or error:", colsError.message);
