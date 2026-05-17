@@ -229,3 +229,20 @@ export async function addTaskComment(taskId: string, userId: string, message: st
         createdAt: data.created_at
     };
 }
+
+export async function saveTaskDraft(taskId: string, submissionNote: string, submissionUrls: string): Promise<boolean> {
+    const { error } = await supabase
+        .from("tasks")
+        .update({ 
+            submission_note: submissionNote || null,
+            submission_urls: submissionUrls || null
+        })
+        .eq("id", taskId);
+
+    if (error) {
+        console.error("Failed to save task draft:", error);
+        return false;
+    }
+
+    return true;
+}

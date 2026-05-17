@@ -33,10 +33,11 @@ import {
   AlertCircle,
   MapPin,
   Wrench,
-  Loader2
+  Loader2,
+  Save
 } from "lucide-react";
 import { fetchAllProjects } from "@/lib/api/projects";
-import { fetchAllTasks, createTask, deleteTask, updateTaskStatus, fetchTaskComments, addTaskComment } from "@/lib/api/tasks";
+import { fetchAllTasks, createTask, deleteTask, updateTaskStatus, fetchTaskComments, addTaskComment, saveTaskDraft } from "@/lib/api/tasks";
 import { fetchPeopleDirectory } from "@/lib/api/people";
 import { uploadFinanceFileExact, getFinanceFileUrl } from "@/lib/api/storage";
 import { createNotification } from "@/lib/api/notifications";
@@ -179,7 +180,7 @@ const TaskDetailModal = ({
   people: any[];
   onDeleteTask: (taskId: string) => Promise<void>;
   onStatusUpdate: (taskId: string, newStatus: StatusType) => Promise<void>;
-  onSubmitTask: (taskId: string, submissionNote: string, submissionFiles: File[], existingPaths?: string[]) => Promise<void>;
+  onSubmitTask: (taskId: string, submissionNote: string, submissionFiles: File[], existingPaths?: string[], isDraft?: boolean) => Promise<string>;
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [signedUrls, setSignedUrls] = useState<{name: string, url: string}[]>([]);
@@ -367,6 +368,22 @@ const TaskDetailModal = ({
       console.error("Error sending comment:", err);
     } finally {
       setIsSendingComment(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!task) return;
+    setIsUpdating(true);
+    try {
+      const newUrls = await onSubmitTask(task.id, submissionNote, submissionFiles, existingSubmissionPaths, true);
+      setExistingSubmissionPaths(newUrls ? newUrls.split(',').filter(Boolean) : []);
+      setSubmissionFiles([]);
+      alert("Draft saved successfully!");
+    } catch (e: any) {
+      console.error("Error in handleSaveDraft:", e);
+      alert("Saving draft failed. Error: " + (e.message || e));
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -773,7 +790,7 @@ const TaskDetailModal = ({
           )}
 
           {/* Discussion / Chat Section */}
-          {(task.status === "submitted" || task.status === "revision" || task.status === "done") && (
+          {(task.status === "in_progress" || task.status === "submitted" || task.status === "revision" || task.status === "done") && (
             <div className="pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
               {!isChatOpen && comments.length === 0 ? (
                 <button
@@ -899,27 +916,43 @@ const TaskDetailModal = ({
         <div className="px-8 pb-10 pt-4 flex flex-col gap-3 relative z-10">
           {/* Submit Mode Actions */}
           {isSubmitMode ? (
-            <div className="flex gap-3">
+            <div className="flex flex-col gap-3 w-full animate-in fade-in duration-300">
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleSaveDraft}
+                  disabled={isUpdating}
+                  className="flex-1 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-300 h-[56px] rounded-full font-bold text-[15px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all border border-amber-200/50 dark:border-amber-900/30 disabled:opacity-50"
+                >
+                  {isUpdating ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" /> Save Draft
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFinalSubmit}
+                  disabled={isUpdating}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-[56px] rounded-full font-bold text-[15px] flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/10 disabled:opacity-50"
+                >
+                  {isUpdating ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" strokeWidth={3} /> Submit Proof
+                    </>
+                  )}
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsSubmitMode(false)}
-                className="flex-1 bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 h-[56px] rounded-full font-bold text-[16px] active:scale-[0.98] transition-all"
+                className="w-full bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 h-[48px] rounded-full font-bold text-[14px] active:scale-[0.98] transition-all"
               >
                 Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleFinalSubmit}
-                disabled={isUpdating}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/10 disabled:opacity-50"
-              >
-                {isUpdating ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" strokeWidth={3} /> Submit Proof
-                  </>
-                )}
               </button>
             </div>
           ) : (
@@ -928,7 +961,7 @@ const TaskDetailModal = ({
               {task.status === "todo" && (
                 <button
                   onClick={() => handleStatusChange("in_progress")}
-                  disabled={isUpdating || (!isAssignee && !isManagement)}
+                  disabled={isUpdating || !isAssignee}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white h-[56px] rounded-full font-bold text-[16px] flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-xl shadow-blue-500/10 disabled:opacity-50"
                 >
                   {isUpdating ? (
@@ -942,7 +975,7 @@ const TaskDetailModal = ({
               )}
 
               {task.status === "in_progress" && (
-                isAssignee ? (
+                (isAssignee || isManagement) ? (
                   <button
                     onClick={() => setIsSubmitMode(true)}
                     disabled={isUpdating}
@@ -964,7 +997,7 @@ const TaskDetailModal = ({
               )}
 
               {task.status === "revision" && (
-                isAssignee ? (
+                (isAssignee || isManagement) ? (
                   <button
                     onClick={() => setIsSubmitMode(true)}
                     disabled={isUpdating}
@@ -1410,7 +1443,7 @@ export default function TaskPage() {
     }
   };
 
-  const onSubmitTask = async (taskId: string, submissionNote: string, submissionFiles: File[], existingPaths: string[] = []) => {
+  const onSubmitTask = async (taskId: string, submissionNote: string, submissionFiles: File[], existingPaths: string[] = [], isDraft = false) => {
     // 1. Upload files if any
     let submissionUrls = "";
     if (submissionFiles.length > 0) {
@@ -1430,38 +1463,75 @@ export default function TaskPage() {
       submissionUrls = existingPaths.join(',');
     }
 
-    // 2. Call submitTask API
-    const { submitTask } = await import("@/lib/api/tasks");
-    const success = await submitTask(taskId, submissionNote, submissionUrls);
-    if (!success) {
-      throw new Error("Failed to submit task to the server.");
-    }
+    if (isDraft) {
+      const { saveTaskDraft } = await import("@/lib/api/tasks");
+      const success = await saveTaskDraft(taskId, submissionNote, submissionUrls);
+      if (!success) {
+        throw new Error("Failed to save draft to the server.");
+      }
 
-    // 3. Update tasks state
-    setTasks(prevTasks =>
-      prevTasks.map(t =>
-        t.id === taskId
+      // Update tasks state
+      setTasks(prevTasks =>
+        prevTasks.map(t =>
+          t.id === taskId
+            ? {
+                ...t,
+                submissionNote,
+                submissionUrls
+              }
+            : t
+        )
+      );
+
+      // Update selectedTask state
+      setSelectedTask(prevSelected =>
+        prevSelected && prevSelected.id === taskId
           ? {
-              ...t,
+              ...prevSelected,
+              submissionNote,
+              submissionUrls
+            }
+          : prevSelected
+      );
+    } else {
+      // 2. Call submitTask API
+      const { submitTask } = await import("@/lib/api/tasks");
+      const success = await submitTask(taskId, submissionNote, submissionUrls);
+      if (!success) {
+        throw new Error("Failed to submit task to the server.");
+      }
+
+      // 3. Update tasks state
+      setTasks(prevTasks =>
+        prevTasks.map(t =>
+          t.id === taskId
+            ? {
+                ...t,
+                status: "submitted" as StatusType,
+                submissionNote,
+                submissionUrls
+              }
+            : t
+        )
+      );
+
+      // 4. Update selectedTask state
+      setSelectedTask(prevSelected =>
+        prevSelected && prevSelected.id === taskId
+          ? {
+              ...prevSelected,
               status: "submitted" as StatusType,
               submissionNote,
               submissionUrls
             }
-          : t
-      )
-    );
+          : prevSelected
+      );
 
-    // 4. Update selectedTask state
-    setSelectedTask(prevSelected =>
-      prevSelected && prevSelected.id === taskId
-        ? {
-            ...prevSelected,
-            status: "submitted" as StatusType,
-            submissionNote,
-            submissionUrls
-          }
-        : prevSelected
-    );
+    }
+
+    if (isDraft) {
+      return submissionUrls;
+    }
 
     // 5. Send status update notifications
     try {
@@ -1500,6 +1570,8 @@ export default function TaskPage() {
     } catch (nErr) {
       console.error("Failed to send submission notifications:", nErr);
     }
+
+    return submissionUrls;
   };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
