@@ -2,7 +2,7 @@
 
 import { useState, Suspense, memo, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Search, ListFilter, X } from "lucide-react";
+import { Search, ListFilter, X, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import PageWrapper from "@/components/layout/PageWrapper";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
@@ -10,6 +10,9 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import NotificationsContent, { NotificationSection } from "@/components/dashboard/notifications/NotificationsContent";
 import { useHeader } from "@/components/providers/HeaderProvider";
 import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/utils/supabase/client";
+import { createNotification } from "@/lib/api/notifications";
+import { toast } from "react-hot-toast";
 
 // Stable component with URL state and expandable UI
 const NotificationHeaderActions = memo(() => {
@@ -19,6 +22,53 @@ const NotificationHeaderActions = memo(() => {
   const [isExpanded, setIsExpanded] = useState(!!searchParams.get("q"));
   const [localQuery, setLocalQuery] = useState(searchParams.get("q") || "");
   const inputRef = useRef<HTMLInputElement>(null);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setHasPermission(Notification.permission === "granted");
+      
+      const interval = setInterval(() => {
+        setHasPermission(Notification.permission === "granted");
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  const handleSendTestNotification = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error("You must be logged in to test notifications.");
+      return;
+    }
+
+    setIsTesting(true);
+    try {
+      const success = await createNotification({
+        user_id: user.id,
+        type: "success",
+        category: "system",
+        title: "Test Push System",
+        description: "If you see this, push notifications are working correctly! 🎉",
+        link: "/dashboard/notifications"
+      });
+      if (success) {
+        toast.success("Test notification sent!");
+      } else {
+        toast.error("Failed to send test notification.");
+      }
+    } catch (err) {
+      console.error("Test notification error:", err);
+      toast.error("An error occurred while sending.");
+    } finally {
+      setIsTesting(false);
+    }
+  };
 
   useEffect(() => {
     if (isExpanded && inputRef.current) {
@@ -54,6 +104,23 @@ const NotificationHeaderActions = memo(() => {
 
   return (
     <div className="flex items-center gap-2 pointer-events-auto">
+      {hasPermission && (
+        <button
+          onClick={handleSendTestNotification}
+          disabled={isTesting}
+          className="h-9 px-4 flex items-center gap-1.5 rounded-full border bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl hover:bg-white/20 dark:hover:bg-neutral-700/40 text-[11px] font-bold text-neutral-800 dark:text-neutral-200 transition-all active:scale-95 disabled:opacity-50 shadow-sm shrink-0"
+        >
+          {isTesting ? (
+            <span className="flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Sending...
+            </span>
+          ) : (
+            "Send Notif."
+          )}
+        </button>
+      )}
+
       {/* Search Bubble */}
       <div 
         onClick={toggleExpand}

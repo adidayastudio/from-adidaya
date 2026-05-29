@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import { Check, X, ArrowRight, Info, AlertTriangle, FileText, AtSign, Settings } from "lucide-react";
+import { Check } from "lucide-react";
 import { Notification } from "./data";
 
 interface NotificationItemProps {
@@ -9,12 +9,12 @@ interface NotificationItemProps {
     onMarkAsRead?: (id: string) => void;
 }
 
-export default function NotificationItem({ item }: NotificationItemProps) {
+export default function NotificationItem({ item, onMarkAsRead }: NotificationItemProps) {
     const isUnread = !item.isRead;
 
     const getStatusColor = (text: string) => {
         const lower = text.toLowerCase();
-        if (lower.includes("rejected") || lower.includes("denied") || lower.includes("cancelled") || lower.includes("revision") || lower.includes("rejected")) return "text-red-600 dark:text-red-400 font-medium";
+        if (lower.includes("rejected") || lower.includes("denied") || lower.includes("cancelled") || lower.includes("revision")) return "text-red-600 dark:text-red-400 font-medium";
         if (lower.includes("approved") || lower.includes("accepted") || lower.includes("paid") || lower.includes("success")) return "text-emerald-600 dark:text-emerald-400 font-medium";
         if (lower.includes("submitted") || lower.includes("pending") || lower.includes("requested") || lower.includes("draft")) return "text-blue-600 dark:text-blue-400 font-medium";
         return "";
@@ -22,7 +22,7 @@ export default function NotificationItem({ item }: NotificationItemProps) {
 
     return (
         <div className={clsx(
-            "group relative p-4 rounded-2xl transition-all duration-300 touch-manipulation border mb-3 flex gap-4 items-start",
+            "group relative p-4 rounded-2xl transition-all duration-300 touch-manipulation border mb-3 flex gap-4 items-start cursor-pointer",
             isUnread
                 ? "bg-white dark:bg-white/10 shadow-sm border-neutral-200 dark:border-white/10"
                 : "bg-neutral-50/50 dark:bg-black/20 border-transparent opacity-60 hover:opacity-100"
@@ -80,10 +80,29 @@ export default function NotificationItem({ item }: NotificationItemProps) {
                 </div>
             </div>
 
-            {/* Unread Indicator */}
-            {isUnread && (
-                <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-2 shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
-            )}
+            {/* Unread / Mark Read Controls */}
+            <div className="flex items-center justify-end shrink-0 self-center min-w-[28px]">
+                {isUnread ? (
+                    <>
+                        {/* Checkmark Button on Hover */}
+                        {onMarkAsRead && (
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    onMarkAsRead(item.id);
+                                }}
+                                className="hidden group-hover:flex items-center justify-center w-7 h-7 rounded-full bg-white dark:bg-neutral-800 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/20 dark:hover:text-emerald-400 text-neutral-400 dark:text-neutral-500 transition-all shadow-sm border border-neutral-200 dark:border-white/10 hover:border-emerald-200 dark:hover:border-emerald-500/30"
+                                title="Mark as read"
+                            >
+                                <Check className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                        {/* Default blue dot when not hovered */}
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0 group-hover:hidden shadow-[0_0_8px_rgba(59,130,246,0.4)]" />
+                    </>
+                ) : null}
+            </div>
         </div>
     );
 }

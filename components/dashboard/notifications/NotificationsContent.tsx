@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import clsx from "clsx";
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, AlertTriangle, Sparkles } from "lucide-react";
 import { SummaryFilterCards, FilterItem } from "@/components/dashboard/shared/SummaryFilterCards";
 import { MobileNotificationTabs } from "./MobileNotificationTabs";
 import { isToday, isYesterday, differenceInHours, isAfter, subDays } from "date-fns";
 import NotificationItem from "./NotificationItem";
-import { markNotificationAsRead } from "@/lib/api/notifications";
+import { createNotification } from "@/lib/api/notifications";
 import { Notification as UiNotification } from "./data";
-import { createClient } from "@/utils/supabase/client";
 import { subscribeToPush } from "@/lib/api/push-registration";
 import Link from "next/link";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -33,26 +32,21 @@ export default function NotificationsContent({
     const { notifications, loading, error, refresh, markAsRead, loadMore, hasMore, currentUserId } = useNotifications();
     const [localSearchQuery, setLocalSearchQuery] = useState("");
     const [permission, setPermission] = useState<NotificationPermission>("default");
-    const supabase = createClient();
     
     // Direct read from URL if in page context, otherwise use local/prop
     const searchQuery = (isEmbedded ? (externalSearchQuery || localSearchQuery) : (searchParams.get("q") || externalSearchQuery || "")) || "";
     const setSearchQuery = onSearchChange || setLocalSearchQuery;
 
-    const [debugState, setDebugState] = useState({
-        auth: "Checking...",
-        realtime: "Subscribed (Hook)",
-        push: "Checking...",
-        lastSync: "Auto"
-    });
-
     // Permission Sync
     useEffect(() => {
-        if ("Notification" in window) {
-            setPermission(Notification.permission);
-            setDebugState(prev => ({ ...prev, push: Notification.permission }));
+        if (typeof window !== "undefined" && "Notification" in window) {
+            const current = Notification.permission;
+            const timer = setTimeout(() => {
+                setPermission(prev => prev !== current ? current : prev);
+            }, 0);
+            return () => clearTimeout(timer);
         }
-    }, [permission]);
+    }, []);
 
     const requestPermission = async () => {
         if (!("Notification" in window)) return;
@@ -62,16 +56,16 @@ export default function NotificationsContent({
             setPermission(result);
 
             if (result === "granted") {
-                const ok = await subscribeToPush();
-                setDebugState(prev => ({ ...prev, push: ok ? "granted (Synced)" : "granted (Sync Failed)" }));
+                await subscribeToPush();
             }
         } catch (error) {
             console.error("Error requesting notification permission:", error);
         }
     };
 
+
     // Counts
-    const getCategory = (n: UiNotification) => (n.metadata as any)?.category ||
+    const getCategory = (n: UiNotification) => (n.metadata as { category?: string })?.category ||
         (n.type === 'approval' ? 'finance' : n.type === 'mention' ? 'projects' : 'system');
 
     const counts = {
@@ -160,6 +154,54 @@ export default function NotificationsContent({
         return groups;
     };
 
+    const renderPermissionBanner = () => {
+        if (typeof window === "undefined" || !("Notification" in window)) return null;
+
+        if (permission === "default") {
+            return (
+                <div className="mb-6 p-5 rounded-3xl border border-blue-100 dark:border-blue-500/25 bg-gradient-to-br from-blue-50/60 to-indigo-50/40 dark:from-blue-950/20 dark:to-indigo-950/15 backdrop-blur-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm relative overflow-hidden group/banner">
+                    <div className="flex gap-4 items-start relative z-10">
+                        <div className="p-3 rounded-2xl bg-blue-100/80 dark:bg-blue-500/25 text-blue-600 dark:text-blue-400 shrink-0 shadow-inner">
+                            <Sparkles className="w-5 h-5 animate-pulse" />
+                        </div>
+                        <div className="space-y-1">
+                            <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Enable Push Notifications</h4>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-[380px]">
+                                Stay updated on finance requests, project mentions, and crew assignments in real-time.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={requestPermission}
+                        className="self-start sm:self-center px-5 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400 rounded-full transition-all active:scale-[0.97] hover:shadow-lg hover:shadow-blue-500/20 dark:hover:shadow-none whitespace-nowrap shrink-0 relative z-10"
+                    >
+                        Enable Notif.
+                    </button>
+                </div>
+            );
+        }
+
+        if (permission === "denied") {
+            return (
+                <div className="mb-6 p-5 rounded-3xl border border-red-100 dark:border-red-500/25 bg-gradient-to-br from-red-50/60 to-rose-50/40 dark:from-red-950/15 dark:to-rose-950/10 backdrop-blur-xl flex flex-col sm:flex-row sm:items-start justify-between gap-4 shadow-sm relative overflow-hidden">
+                    <div className="flex gap-4 items-start relative z-10">
+                        <div className="p-3 rounded-2xl bg-red-100/80 dark:bg-red-500/25 text-red-600 dark:text-red-400 shrink-0 shadow-inner">
+                            <AlertTriangle className="w-5 h-5 animate-bounce" />
+                        </div>
+                        <div className="space-y-1">
+                            <h4 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Notifications Blocked</h4>
+                            <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed max-w-[420px]">
+                                Real-time alerts are blocked in browser settings. Please click the site settings lock icon in your URL bar and reset the notification permission to &quot;Allow&quot; to receive updates.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        return null;
+    };
+
     const grouped = groupNotifications(filteredNotifications);
     const hasAnyNotification = filteredNotifications.length > 0;
 
@@ -231,6 +273,7 @@ export default function NotificationsContent({
             )}
 
             <div className="space-y-4 pb-24 lg:pb-0">
+                {renderPermissionBanner()}
                 {loading ? (
                     <div className="text-center py-20 animate-pulse">
                         <Bell className="w-8 h-8 mx-auto mb-3 text-neutral-200" />
@@ -249,7 +292,7 @@ export default function NotificationsContent({
                         <div className="w-16 h-16 mb-4 rounded-full bg-neutral-100 dark:bg-white/5 flex items-center justify-center border border-neutral-200/50 dark:border-white/10 shadow-sm">
                             <span className="text-3xl">🎉</span>
                         </div>
-                        <h3 className="text-lg font-medium text-neutral-900 dark:text-white mb-1">You're all set!</h3>
+                        <h3 className="text-lg font-medium text-neutral-900 dark:text-white mb-1">You&apos;re all set!</h3>
                         <p className="text-sm text-neutral-500 dark:text-neutral-400 max-w-[200px]">
                             {section === "all"
                                 ? "You don't have any notifications right now."
@@ -299,14 +342,16 @@ export default function NotificationsContent({
 function NotificationWrapper({ item, handleMarkAsRead }: { item: UiNotification, handleMarkAsRead: (id: string) => void }) {
     if (item.metadata?.link) {
         return (
-            <Link href={item.metadata.link} className="block group transition-all active:scale-[0.98]" onClick={() => !item.isRead && handleMarkAsRead(item.id)}>
-                <NotificationItem item={item} />
-            </Link>
+            <div className="relative group/wrapper">
+                <Link href={item.metadata.link} className="block group transition-all active:scale-[0.98]" onClick={() => !item.isRead && handleMarkAsRead(item.id)}>
+                    <NotificationItem item={item} onMarkAsRead={handleMarkAsRead} />
+                </Link>
+            </div>
         );
     }
     return (
-        <div onClick={() => !item.isRead && handleMarkAsRead(item.id)} className="transition-all active:scale-[0.98] cursor-pointer">
-            <NotificationItem item={item} />
+        <div onClick={() => !item.isRead && handleMarkAsRead(item.id)} className="transition-all active:scale-[0.98] cursor-pointer relative group/wrapper">
+            <NotificationItem item={item} onMarkAsRead={handleMarkAsRead} />
         </div>
     );
 }

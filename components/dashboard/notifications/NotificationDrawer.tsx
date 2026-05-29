@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import BottomSheet from "@/components/shared/BottomSheet";
 import { useTheme } from "next-themes";
 import NotificationsContent, { NotificationSection } from "@/components/dashboard/notifications/NotificationsContent";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { clsx } from "clsx";
+import { createClient } from "@/utils/supabase/client";
+import { createNotification } from "@/lib/api/notifications";
+import { toast } from "react-hot-toast";
 
 const SEGMENTS: { id: NotificationSection; label: string }[] = [
     { id: "all", label: "All" },
@@ -29,6 +32,53 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
     const { theme } = useTheme();
     const [mounted, setMounted] = useState(false);
     const [isDesktop, setIsDesktop] = useState(false);
+    const [hasPermission, setHasPermission] = useState(false);
+    const [isTesting, setIsTesting] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== "undefined" && "Notification" in window) {
+            setHasPermission(Notification.permission === "granted");
+            
+            const interval = setInterval(() => {
+                setHasPermission(Notification.permission === "granted");
+            }, 2000);
+            return () => clearInterval(interval);
+        }
+    }, []);
+
+    const handleSendTestNotification = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+            toast.error("You must be logged in to test notifications.");
+            return;
+        }
+
+        setIsTesting(true);
+        try {
+            const success = await createNotification({
+                user_id: user.id,
+                type: "success",
+                category: "system",
+                title: "Test Push System",
+                description: "If you see this, push notifications are working correctly! 🎉",
+                link: "/dashboard/notifications"
+            });
+            if (success) {
+                toast.success("Test notification sent!");
+            } else {
+                toast.error("Failed to send test notification.");
+            }
+        } catch (err) {
+            console.error("Test notification error:", err);
+            toast.error("An error occurred while sending.");
+        } finally {
+            setIsTesting(false);
+        }
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -81,6 +131,22 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
                                         Notifications
                                     </h2>
                                     <div className="flex items-center gap-2">
+                                        {hasPermission && (
+                                            <button
+                                                onClick={handleSendTestNotification}
+                                                disabled={isTesting}
+                                                className="h-[32px] px-4 flex items-center gap-1.5 rounded-full text-[11px] font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-100/80 dark:bg-white/10 border border-neutral-200/50 dark:border-white/10 hover:bg-neutral-200/80 dark:hover:bg-white/20 transition-all active:scale-95 disabled:opacity-50 shrink-0"
+                                            >
+                                                {isTesting ? (
+                                                    <span className="flex items-center gap-1">
+                                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                                        Sending...
+                                                    </span>
+                                                ) : (
+                                                    "Send Notif."
+                                                )}
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => {
                                                 onClose();
@@ -156,6 +222,22 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
 
                     {/* Header Actions */}
                     <div className="flex items-center gap-2">
+                        {hasPermission && (
+                            <button
+                                onClick={handleSendTestNotification}
+                                disabled={isTesting}
+                                className="h-[28px] px-3 flex items-center gap-1 rounded-full text-[10px] font-bold text-neutral-600 dark:text-neutral-300 bg-neutral-100/80 dark:bg-white/10 border border-neutral-200/50 dark:border-white/10 hover:bg-neutral-200/80 dark:hover:bg-white/20 transition-all active:scale-95 disabled:opacity-50 shrink-0"
+                            >
+                                {isTesting ? (
+                                    <span className="flex items-center gap-1">
+                                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                        Sending...
+                                    </span>
+                                ) : (
+                                    "Send Notif."
+                                )}
+                            </button>
+                        )}
                         <button
                             onClick={() => {
                                 onClose();
