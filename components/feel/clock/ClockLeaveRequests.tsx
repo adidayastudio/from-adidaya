@@ -309,7 +309,7 @@ export function ClockLeaveRequests({ role, userName = "Staff Member", viewMode, 
                 body: JSON.stringify({
                     meta: {
                         projectCode: "LEAVES",
-                        projectName: "Adidaya Clock Leaves",
+                        projectName: "Adidaya Studio (PT Mahardika Adidaya) - Clock Leaves",
                         documentName,
                         periodText,
                         generatedAt,

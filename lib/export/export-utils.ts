@@ -344,7 +344,7 @@ export const generateExport = async (
         // Footer
         ctx.fillStyle = meta.isDark ? '#404040' : '#a3a3a3';
         ctx.font = '500 11px system-ui';
-        const footerText = `Adidaya · ${meta.date}`;
+        const footerText = `Adidaya Studio (PT Mahardika Adidaya) · ${meta.date}`;
         const footerW = ctx.measureText(footerText).width;
         ctx.fillText(footerText, (canvasW - footerW) / 2, totalH - padding);
 

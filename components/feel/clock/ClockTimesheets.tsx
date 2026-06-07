@@ -714,7 +714,7 @@ export function ClockTimesheets({ role, userName = "Staff Member", viewMode: per
                 body: JSON.stringify({
                     meta: {
                         projectCode: "TIMESHEETS",
-                        projectName: "Adidaya Clock Timesheets",
+                        projectName: "Adidaya Studio (PT Mahardika Adidaya) - Clock Timesheets",
                         documentName,
                         periodText,
                         generatedAt,

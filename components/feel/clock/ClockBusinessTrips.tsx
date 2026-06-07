@@ -309,7 +309,7 @@ export function ClockBusinessTrips({ role, userName = "Staff Member", viewMode, 
                 body: JSON.stringify({
                     meta: {
                         projectCode: "TRIPS",
-                        projectName: "Adidaya Clock Business Trips",
+                        projectName: "Adidaya Studio (PT Mahardika Adidaya) - Clock Business Trips",
                         documentName,
                         periodText,
                         generatedAt,

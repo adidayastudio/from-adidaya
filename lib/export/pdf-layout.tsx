@@ -158,6 +158,7 @@ export function PdfLayout({ meta, summary, sections, trendData, categoryData }: 
                         <h1 className="text-3xl font-bold text-neutral-900 tracking-tight">{meta.projectName}</h1>
                     </div>
                     <div className="text-right">
+                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Adidaya Studio (PT Mahardika Adidaya)</div>
                         <h2 className="text-xl font-semibold text-neutral-900">{meta.documentName}</h2>
                         <p className="text-sm font-medium text-neutral-500 mt-1">{meta.periodText}</p>
                         <p className="text-xs text-neutral-400 mt-1">Generated: {meta.generatedAt}</p>

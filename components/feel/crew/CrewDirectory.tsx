@@ -499,7 +499,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 body: JSON.stringify({
                     meta: {
                         projectCode: "CREW",
-                        projectName: "Adidaya Crew Directory",
+                        projectName: "Adidaya Studio (PT Mahardika Adidaya) - Crew Directory",
                         documentName,
                         periodText,
                         generatedAt,

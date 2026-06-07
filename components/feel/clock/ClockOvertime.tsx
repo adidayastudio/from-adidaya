@@ -339,7 +339,7 @@ export function ClockOvertime({ role, userName = "Staff Member", viewMode, onLog
                 body: JSON.stringify({
                     meta: {
                         projectCode: "OVERTIME",
-                        projectName: "Adidaya Clock Overtime",
+                        projectName: "Adidaya Studio (PT Mahardika Adidaya) - Clock Overtime",
                         documentName,
                         periodText,
                         generatedAt,

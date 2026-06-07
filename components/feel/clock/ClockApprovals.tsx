@@ -242,7 +242,7 @@ export function ClockApprovals({ role }: ClockApprovalsProps) {
                 body: JSON.stringify({
                     meta: {
                         projectCode: "APPROVALS",
-                        projectName: "Adidaya Clock Approvals",
+                        projectName: "Adidaya Studio (PT Mahardika Adidaya) - Clock Approvals",
                         documentName,
                         periodText,
                         generatedAt,

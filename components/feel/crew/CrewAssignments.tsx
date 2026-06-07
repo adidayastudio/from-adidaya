@@ -347,7 +347,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                 body: JSON.stringify({
                     meta: {
                         projectCode: "ASSIGN",
-                        projectName: "Adidaya Crew Assignments",
+                        projectName: "Adidaya Studio (PT Mahardika Adidaya) - Crew Assignments",
                         documentName,
                         periodText,
                         generatedAt,

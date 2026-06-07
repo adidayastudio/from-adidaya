@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { format, differenceInMinutes, isSaturday, isSunday, startOfMonth, eachDayOfInterval, endOfMonth, isSameDay } from "date-fns";
 import { calculateStats, formatMinutes, calculateMonthlySummaryMetrics } from "@/lib/clock-data-logic";
 import clsx from "clsx";
-import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, Briefcase, CheckCircle, List, Grid as GridIcon, XCircle, LogOut, CloudSun, CalendarDays, Key, Plane, ClipboardList, AlertTriangle, UserCheck, UserX, ArrowUpRight, ArrowDownRight, MapPin, Loader2 } from "lucide-react";
+import { Play, Square, Clock, AlertCircle, CheckCircle2, Calendar, Users, User, Sun, Moon, Sunrise, Sunset, Briefcase, CheckCircle, List, Grid as GridIcon, XCircle, LogOut, CloudSun, CalendarDays, Key, Plane, ClipboardList, AlertTriangle, UserCheck, UserX, ArrowUpRight, ArrowDownRight, MapPin, Loader2, Download } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { UserRole } from "@/hooks/useUserProfile";
@@ -241,6 +241,82 @@ export function ClockOverview({
             return true;
         }).sort((a, b) => (a.username || "").localeCompare(b.username || ""));
     }, [teamMembers, attendance, leaves]);
+
+    const [exporting, setExporting] = useState(false);
+    const handleExport = async () => {
+        if (combinedTeam.length === 0) return;
+        setExporting(true);
+
+        try {
+            const documentName = "Today's Presence";
+            const generatedAt = new Date().toLocaleString("id-ID");
+            const periodText = new Date().toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            const summaryCards = [
+                { label: "Total Team", value: combinedTeam.length, format: "number" as const },
+                { label: "Checked In", value: teamCheckedIn, format: "number" as const, color: "green" as const },
+                { label: "Late Today", value: teamLate, format: "number" as const, color: "orange" as const },
+                { label: "On Leave", value: teamOnLeave, format: "number" as const, color: "blue" as const },
+            ];
+
+            const columns = [
+                { id: "employee", label: "Employee", align: "left" as const },
+                { id: "clockIn", label: "Clock In", align: "center" as const },
+                { id: "clockOut", label: "Clock Out", align: "center" as const },
+                { id: "status", label: "Status", align: "center" as const },
+            ];
+
+            const rows = combinedTeam.map(member => {
+                const clockInTime = member.clockIn ? new Date(member.clockIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-";
+                const clockOutTime = member.clockOut ? new Date(member.clockOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "-";
+                
+                let displayStatus = member.status;
+                if (member.status === "on-leave") displayStatus = "On Leave";
+                else if (member.status === "not-in") displayStatus = "Not In";
+
+                return {
+                    employee: member.username,
+                    clockIn: clockInTime,
+                    clockOut: clockOutTime,
+                    status: displayStatus
+                };
+            });
+
+            const response = await fetch("/api/export/pdf", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    meta: {
+                        projectCode: "CLOCK",
+                        projectName: "Adidaya Studio (PT Mahardika Adidaya) - Clock",
+                        documentName,
+                        periodText,
+                        generatedAt,
+                    },
+                    summary: summaryCards,
+                    columns,
+                    data: rows
+                })
+            });
+
+            if (!response.ok) throw new Error("Export failed");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Todays_Presence_${format(new Date(), "yyyy_MM_dd")}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+        } catch (error) {
+            console.error("PDF Export Error:", error);
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const formatTime = (seconds: number) => {
         const h = Math.floor(seconds / 3600);
@@ -610,7 +686,12 @@ export function ClockOverview({
 
                     {/* TEAM LIST */}
                     <div className="mt-8 space-y-4">
-                        <h4 className="font-semibold text-neutral-900 px-1">Today's Activity</h4>
+                        <div className="flex items-center justify-between px-1">
+                            <h4 className="font-semibold text-neutral-900">Today's Activity</h4>
+                            <Button variant="secondary" onClick={handleExport} disabled={exporting} className="!rounded-full !py-1.5 !px-3" icon={exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}>
+                                {exporting ? "Exporting..." : "Export"}
+                            </Button>
+                        </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10 pb-10">
                             {combinedTeam.map((member, idx) => {
                                 const statusText = getStatusText(member);
