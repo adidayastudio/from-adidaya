@@ -1579,7 +1579,8 @@ function ViewModal({
 
                         const canApprove = isPending && isTeamView;
                         const canPay = isApprovedNotPaid && isTeamView;
-                        const canEdit = (isDraftOrRevise || isPending) && !isTeamView;
+                        const canEdit = (!isTeamView && (isDraftOrRevise || (isPending && isAdmin))) || 
+                                        (isTeamView && isAdmin && (isPending || isApprovedNotPaid));
                         const canDelete = isTeamView ? isAdmin : true; // Owner can always delete their own draft/pending/revision requests
 
                         const showOwnerWaiting = !isTeamView && statusVal === "PENDING";
@@ -1599,6 +1600,11 @@ function ViewModal({
                                                 <button onClick={onReject} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Reject">
                                                     <Ban size={20} />
                                                 </button>
+                                                {canEdit && (
+                                                    <button onClick={onEdit} className="flex-1 h-12 flex items-center justify-center gap-2 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all font-bold text-sm">
+                                                        <Pencil size={18} /> Edit
+                                                    </button>
+                                                )}
                                                 <button onClick={onRevise} className="flex-1 h-12 flex items-center justify-center gap-2 rounded-full bg-orange-50 dark:bg-orange-500/10 text-orange-600 border border-orange-200 dark:border-orange-500/20 active:scale-95 transition-all font-bold text-sm">
                                                     <RotateCcw size={18} /> Revise
                                                 </button>
@@ -1614,12 +1620,12 @@ function ViewModal({
                                             <button onClick={onDelete} className="w-12 h-12 flex items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 active:scale-95 transition-all" title="Delete">
                                                 <Trash2 size={20} />
                                             </button>
-                                            <button onClick={onEdit} className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all" title="Edit">
-                                                <Pencil size={20} />
+                                            <button onClick={onEdit} className="h-[52px] px-6 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0" title="Edit">
+                                                <Pencil size={20} /> Edit
                                             </button>
                                             <button
                                                 onClick={onPay}
-                                                disabled={!item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
+                                                disabled={(!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number}
                                                 className="flex-1 h-14 text-base font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-lg shadow-blue-200/50 flex items-center justify-center gap-2 disabled:opacity-50"
                                             >
                                                 <CreditCard className="w-[18px] h-[18px]" /> Pay Now
@@ -1933,12 +1939,7 @@ export default function ReimburseClient() {
         if (requestId && !viewingItem && !editingItem && requestId !== lastHandledRequestId.current) {
             const openDrawer = (item: ReimburseRequest) => {
                 lastHandledRequestId.current = requestId;
-                if (isTeamView) {
-                    setViewingItem(item);
-                } else {
-                    setEditingItem(item);
-                    setIsDrawerOpen(true);
-                }
+                setViewingItem(item);
             };
 
             const existingItem = items.find(i => i.id === requestId);
@@ -2400,6 +2401,11 @@ export default function ReimburseClient() {
                                                     )}
                                                     {isPending && (
                                                         <>
+                                                            {isAdmin && (
+                                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 flex-shrink-0 active:scale-95 transition-all" title="Edit">
+                                                                    <Pencil className="w-[18px] h-[18px]" />
+                                                                </button>
+                                                            )}
                                                             <button onClick={(e) => { e.stopPropagation(); setRejectingItem(item); }} className="p-2.5 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-100 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Reject">
                                                                 <Ban className="w-[18px] h-[18px]" />
                                                             </button>
@@ -2412,9 +2418,18 @@ export default function ReimburseClient() {
                                                         </>
                                                     )}
                                                     {isApprovedNotPaid && (
-                                                        <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50">
-                                                            <CreditCard className="w-[18px] h-[18px]" /> Pay Now
-                                                        </button>
+                                                        <>
+                                                            <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-2.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700 flex-shrink-0 active:scale-95 transition-all" title="Edit">
+                                                                <Pencil className="w-[18px] h-[18px]" />
+                                                            </button>
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
+                                                                disabled={(!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number}
+                                                                className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50 disabled:opacity-50"
+                                                            >
+                                                                <CreditCard className="w-[18px] h-[18px]" /> {((!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number) ? "Missing Data" : "Pay Now"}
+                                                            </button>
+                                                        </>
                                                     )}
                                                 </>
                                             ) : (
@@ -2422,7 +2437,7 @@ export default function ReimburseClient() {
                                                     <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-2 rounded-xl bg-rose-500/10 dark:bg-rose-500/10 text-rose-500 border border-rose-200/50 dark:border-rose-500/20 flex-shrink-0 active:scale-95 transition-all" title="Delete">
                                                         <Trash2 className="w-[18px] h-[18px]" />
                                                     </button>
-                                                    {(isDraftOrRevise) && (
+                                                    {(isDraftOrRevise || (isPending && isAdmin)) && (
                                                         <button onClick={(e) => {
                                                             e.stopPropagation();
                                                             const editPayload: any = { ...item };
@@ -2670,6 +2685,11 @@ export default function ReimburseClient() {
                                                                 <>
                                                                     {item.status === 'PENDING' && (
                                                                         <>
+                                                                            {["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                                                <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Edit Request">
+                                                                                    <Pencil className="w-4 h-4" strokeWidth={2} />
+                                                                                </button>
+                                                                            )}
                                                                             <button onClick={(e) => { e.stopPropagation(); setApprovingItem(item); }} className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-full transition-all" title="Approve">
                                                                                 <CheckCircle2 className="w-4 h-4" strokeWidth={2} />
                                                                             </button>
@@ -2682,9 +2702,24 @@ export default function ReimburseClient() {
                                                                         </>
                                                                     )}
                                                                     {item.status === 'APPROVED' && (
-                                                                        <button onClick={(e) => { e.stopPropagation(); setPayingItem(item); }} className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all" title="Mark as Paid">
-                                                                            <CreditCard className="w-4 h-4" strokeWidth={2} />
-                                                                        </button>
+                                                                        <>
+                                                                            <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }} className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all" title="Add Missing Details">
+                                                                                <Pencil className="w-4 h-4" strokeWidth={2} />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
+                                                                                disabled={(!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number}
+                                                                                className={clsx(
+                                                                                    "p-1.5 rounded-full transition-all",
+                                                                                    ((!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number)
+                                                                                        ? "text-neutral-200 cursor-not-allowed"
+                                                                                        : "text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                                                                                )}
+                                                                                title={((!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number) ? "Invoice & Beneficiary required" : "Mark as Paid"}
+                                                                            >
+                                                                                <CreditCard className="w-4 h-4" strokeWidth={2} />
+                                                                            </button>
+                                                                        </>
                                                                     )}
                                                                     {["admin", "superadmin", "supervisor"].includes(userRole || "") && (
                                                                         <button onClick={(e) => { e.stopPropagation(); setDeletingItem(item); }} className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-full transition-all" title="Delete Request">
@@ -2696,7 +2731,7 @@ export default function ReimburseClient() {
                                                                 <>
                                                                     {(["DRAFT", "PENDING", "NEED_REVISION", "REJECTED"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
                                                                         <>
-                                                                            {(["DRAFT", "PENDING", "NEED_REVISION"].includes(item.status) || ["admin", "superadmin", "supervisor"].includes(userRole || "")) && (
+                                                                            {(["DRAFT", "NEED_REVISION"].includes(item.status) || (item.status === 'PENDING' && ["admin", "superadmin", "supervisor"].includes(userRole || ""))) && (
                                                                                 <button
                                                                                     onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsDrawerOpen(true); }}
                                                                                     className="p-1.5 text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 rounded-full transition-all"

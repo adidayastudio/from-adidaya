@@ -80,9 +80,9 @@ export function ReimburseRequestForm({
     const [savedAccounts, setSavedAccounts] = useState<BeneficiaryAccount[]>([]);
     const [saveToSaved, setSaveToSaved] = useState(false);
 
-    const isReadOnly = initialData && ["APPROVED", "PAID", "REJECTED", "CANCELLED"].includes(initialData.status);
+    const isReadOnly = initialData?.status === "PAID";
     const isEditMode = !!initialData;
-    const canEdit = !isReadOnly || (initialData?.status === "DRAFT" || initialData?.status === "NEED_REVISION");
+    const canEdit = !isReadOnly;
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
@@ -446,12 +446,14 @@ export function ReimburseRequestForm({
                         <h3 className="text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2">
                             <Package className="w-4 h-4" strokeWidth={2} /> Item Details
                         </h3>
-                        <button
-                            onClick={addItem}
-                            className="text-[11px] font-bold text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 px-4 py-2 rounded-full transition-all flex items-center gap-1.5 shadow-lg shadow-blue-500/25 border border-white/10"
-                        >
-                            <Plus className="w-3.5 h-3.5" /> Add Item
-                        </button>
+                        {canEdit && (
+                            <button
+                                onClick={addItem}
+                                className="text-[11px] font-bold text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 px-4 py-2 rounded-full transition-all flex items-center gap-1.5 shadow-lg shadow-blue-500/25 border border-white/10"
+                            >
+                                <Plus className="w-3.5 h-3.5" /> Add Item
+                            </button>
+                        )}
                     </div>
 
                     {/* Trip Details (Context for the request) */}
@@ -540,7 +542,7 @@ export function ReimburseRequestForm({
                                             disabled={!canEdit}
                                         />
                                     </div>
-                                    {items.length > 1 && (
+                                    {items.length > 1 && canEdit && (
                                         <button
                                             onClick={() => removeItem(item.id)}
                                             className="mt-7 p-2 text-neutral-400 dark:text-neutral-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-full transition-all"
@@ -557,7 +559,11 @@ export function ReimburseRequestForm({
                                             type="number"
                                             value={item.qty}
                                             onChange={e => updateItem(item.id, { qty: parseFloat(e.target.value) || 0 })}
-                                            className="w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium"
+                                            disabled={!canEdit}
+                                            className={clsx(
+                                                "w-full h-11 px-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium",
+                                                !canEdit && "opacity-60 cursor-not-allowed"
+                                            )}
                                         />
                                     </div>
                                     <div className="col-span-3">
@@ -565,7 +571,11 @@ export function ReimburseRequestForm({
                                         <select
                                             value={item.unit}
                                             onChange={e => updateItem(item.id, { unit: e.target.value })}
-                                            className="w-full h-11 px-4 text-xs border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium appearance-none cursor-pointer"
+                                            disabled={!canEdit}
+                                            className={clsx(
+                                                "w-full h-11 px-4 text-xs border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-medium appearance-none cursor-pointer",
+                                                !canEdit && "opacity-60 cursor-not-allowed"
+                                            )}
                                         >
                                             {UNIT_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                         </select>
@@ -578,7 +588,11 @@ export function ReimburseRequestForm({
                                                 type="number"
                                                 value={item.unitPrice}
                                                 onChange={e => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                                                className="w-full h-11 pl-11 pr-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-bold text-neutral-900 dark:text-white"
+                                                disabled={!canEdit}
+                                                className={clsx(
+                                                    "w-full h-11 pl-11 pr-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-bold text-neutral-900 dark:text-white",
+                                                    !canEdit && "opacity-60 cursor-not-allowed"
+                                                )}
                                             />
                                         </div>
                                     </div>

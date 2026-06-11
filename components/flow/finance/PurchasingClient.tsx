@@ -2162,12 +2162,7 @@ export default function PurchasingClient() {
         if (requestId && !viewingItem && !editingItem && requestId !== lastHandledRequestId.current) {
             const openDrawer = (item: PurchasingItem) => {
                 lastHandledRequestId.current = requestId;
-                if (isTeamView) {
-                    setViewingItem(item);
-                } else {
-                    setEditingItem(item);
-                    setIsDrawerOpen(true);
-                }
+                setViewingItem(item);
             };
 
             const existingItem = items.find(i => i.id === requestId);
