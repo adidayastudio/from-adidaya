@@ -20,6 +20,12 @@ type WBSItemLocal = {
 // Reuse WBSList component
 import WBSList from "@/components/flow/projects/project-detail/setup/wbs/WBSList";
 
+// API for WBS seed baseline
+import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
+import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-estimates";
+import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-inherit";
+import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
+
 // API for Disciplines sync
 import { fetchDisciplines, createDiscipline, type Discipline } from "@/lib/api/templates";
 
@@ -496,18 +502,62 @@ export default function BallparkTab({ workspaceId, projectTypeId, headerContent 
     }, []);
 
     const handleReset = async () => {
-        if (confirm("Reset to baseline? This will DELETE all current WBS items and re-seed.")) {
-            // 1. Delete all
+        if (confirm("Reset to baseline? This will DELETE all current WBS items and re-seed from the default template.")) {
             setLoading(true);
-            await supabase.from('work_breakdown_structure').delete().eq('workspace_id', workspaceId);
+            try {
+                // 1. Delete all
+                const { error: deleteError } = await supabase.from('work_breakdown_structure').delete().eq('workspace_id', workspaceId);
+                if (deleteError) throw deleteError;
 
-            // 2. Trigger seed (Simulation: we can call an API or just reload page if backend handles it?)
-            // Or we can just leave it empty and let user use "Add Discipline".
-            // Actually reseed_wbs_discipline.ts does this.
-            // Maybe just clear for now.
-            setWbsItems([]);
-            setLoading(false);
-            alert("WBS Cleared. Please run seed script or add disciplines manually.");
+                // 2. Generate baseline WBS tree
+                const estimatesTree = buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA);
+                const detailTree = buildDetailFromEstimates(estimatesTree);
+
+                // Recursive insert function
+                const insertNode = async (item: any, parentDbId: string | null = null, indentLevel: number = 0) => {
+                    let currentLevel = "structure";
+                    if (indentLevel === 0) currentLevel = "structure";
+                    else if (indentLevel === 1) currentLevel = "summary";
+                    else if (indentLevel === 2) currentLevel = "estimate";
+                    else if (indentLevel >= 3) currentLevel = "detail";
+
+                    const code = item.code || item.wbsCode || "NO-CODE";
+                    const name = item.nameEn || item.titleEn || item.name || item.title || "Unnamed";
+                    const description = item.nameId || item.name || item.title || "";
+
+                    const { data, error } = await supabase.from("work_breakdown_structure").insert({
+                        workspace_id: workspaceId,
+                        code: code,
+                        name: name,
+                        level: currentLevel,
+                        indent_level: indentLevel,
+                        parent_id: parentDbId,
+                        description: description
+                    }).select('id').single();
+
+                    if (error) throw error;
+
+                    const newDbId = data.id;
+                    const children = item.children || item.items || [];
+                    if (children && children.length > 0) {
+                        for (const child of children) {
+                            await insertNode(child, newDbId, indentLevel + 1);
+                        }
+                    }
+                };
+
+                // Seed WBS roots
+                for (const root of detailTree) {
+                    await insertNode(root);
+                }
+
+                alert("✅ Baseline WBS seeded successfully!");
+                loadData();
+            } catch (err: any) {
+                console.error("Error seeding WBS:", err);
+                alert("❌ Failed to seed WBS: " + err.message);
+                loadData();
+            }
         }
     };
 
@@ -539,15 +589,26 @@ export default function BallparkTab({ workspaceId, projectTypeId, headerContent 
                         </button>
                     </div>
                 </div>
-                <Button
-                    onClick={loadData}
-                    disabled={loading}
-                    variant="outline"
-                    icon={<RotateCcw className="w-4 h-4" />}
-                    className="rounded-full px-6 shrink-0"
-                >
-                    Refresh
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        onClick={handleReset}
+                        disabled={loading}
+                        variant="outline"
+                        icon={<RotateCcw className="w-4 h-4 text-red-500" />}
+                        className="rounded-full px-6 shrink-0 border border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                        Reset to Baseline
+                    </Button>
+                    <Button
+                        onClick={loadData}
+                        disabled={loading}
+                        variant="outline"
+                        icon={<RotateCcw className="w-4 h-4" />}
+                        className="rounded-full px-6 shrink-0"
+                    >
+                        Refresh
+                    </Button>
+                </div>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -572,6 +633,17 @@ export default function BallparkTab({ workspaceId, projectTypeId, headerContent 
 
             {loading ? (
                 <div className="h-64 flex items-center justify-center text-neutral-400 text-sm">Loading Ballpark WBS...</div>
+            ) : wbsItems.length === 0 ? (
+                <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center space-y-4">
+                    <p className="text-sm text-neutral-500">No WBS items configured for this workspace yet.</p>
+                    <Button
+                        onClick={handleReset}
+                        variant="primary"
+                        className="rounded-full px-8 bg-neutral-900 text-white hover:bg-neutral-800"
+                    >
+                        Seed Default WBS Baseline
+                    </Button>
+                </div>
             ) : (
                 <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
                     <WBSList
