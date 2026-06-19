@@ -1489,17 +1489,19 @@ function ViewModal({
                                         onClick={() => onPreview('invoice')}
                                         className={clsx(
                                             "p-4 rounded-3xl border transition-all flex flex-col gap-2 text-left relative overflow-hidden group",
-                                            item.existingInvoices?.length > 0
+                                            (item.existingInvoices?.length > 0 || item.invoice_url)
                                                 ? "bg-white/60 dark:bg-neutral-800/60 border-neutral-100 dark:border-neutral-700/40 hover:border-blue-200 dark:hover:border-blue-500/30"
                                                 : "bg-neutral-50/50 dark:bg-neutral-900/30 border-dashed border-neutral-200 dark:border-neutral-800 opacity-60"
                                         )}
                                     >
                                         <div className="flex items-center justify-between relative z-10">
                                             <span className="text-[10px] font-bold text-neutral-400">Receipt</span>
-                                            <FileText size={14} className={clsx(item.existingInvoices?.length > 0 ? "text-red-500" : "text-neutral-300")} />
+                                            <FileText size={14} className={clsx((item.existingInvoices?.length > 0 || item.invoice_url) ? "text-red-500" : "text-neutral-300")} />
                                         </div>
                                         <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
-                                            {item.existingInvoices?.length > 0 ? `${item.existingInvoices.length} File${item.existingInvoices.length > 1 ? 's' : ''}` : "No Receipt"}
+                                            {item.existingInvoices?.length > 0 
+                                                ? `${item.existingInvoices.length} File${item.existingInvoices.length > 1 ? 's' : ''}` 
+                                                : (item.invoice_url ? "1 File" : "No Receipt")}
                                         </div>
                                         <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
                                             <FileText size={48} />
@@ -1625,7 +1627,7 @@ function ViewModal({
                                             </button>
                                             <button
                                                 onClick={onPay}
-                                                disabled={(!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number}
+                                                disabled={(!item.invoice_url && (!item.existingInvoices || item.existingInvoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number}
                                                 className="flex-1 h-14 text-base font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-lg shadow-blue-200/50 flex items-center justify-center gap-2 disabled:opacity-50"
                                             >
                                                 <CreditCard className="w-[18px] h-[18px]" /> Pay Now
@@ -2424,10 +2426,10 @@ export default function ReimburseClient() {
                                                             </button>
                                                             <button
                                                                 onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
-                                                                disabled={(!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number}
+                                                                disabled={(!item.invoice_url && (!item.existingInvoices || item.existingInvoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number}
                                                                 className="flex-1 py-2.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-md shadow-blue-200/50 disabled:opacity-50"
                                                             >
-                                                                <CreditCard className="w-[18px] h-[18px]" /> {((!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number) ? "Missing Data" : "Pay Now"}
+                                                                <CreditCard className="w-[18px] h-[18px]" /> {((!item.invoice_url && (!item.existingInvoices || item.existingInvoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number) ? "Missing Data" : "Pay Now"}
                                                             </button>
                                                         </>
                                                     )}
@@ -2708,14 +2710,14 @@ export default function ReimburseClient() {
                                                                             </button>
                                                                             <button
                                                                                 onClick={(e) => { e.stopPropagation(); setPayingItem(item); }}
-                                                                                disabled={(!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number}
+                                                                                disabled={(!item.invoice_url && (!item.existingInvoices || item.existingInvoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number}
                                                                                 className={clsx(
                                                                                     "p-1.5 rounded-full transition-all",
-                                                                                    ((!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number)
+                                                                                    ((!item.invoice_url && (!item.existingInvoices || item.existingInvoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number)
                                                                                         ? "text-neutral-200 cursor-not-allowed"
                                                                                         : "text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10"
                                                                                 )}
-                                                                                title={((!item.invoice_url && (!item.invoices || item.invoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number) ? "Invoice & Beneficiary required" : "Mark as Paid"}
+                                                                                title={((!item.invoice_url && (!item.existingInvoices || item.existingInvoices.length === 0)) || !item.beneficiary_bank || !item.beneficiary_number) ? "Invoice & Beneficiary required" : "Mark as Paid"}
                                                                             >
                                                                                 <CreditCard className="w-4 h-4" strokeWidth={2} />
                                                                             </button>

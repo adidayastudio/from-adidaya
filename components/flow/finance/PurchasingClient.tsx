@@ -673,7 +673,7 @@ function ViewModal({
     setShowSuccess: (success: { title: string, message: string } | null) => void;
 }) {
     const [invoiceUrls, setInvoiceUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
-    const [proofUrl, setProofUrl] = useState<string | null>(null);
+    const [proofUrls, setProofUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
     const [isExporting, setIsExporting] = useState(false);
     const [docDrawerType, setDocDrawerType] = useState<'invoice' | 'proof'>('invoice');
     const contentRef = useRef<HTMLDivElement>(null);
@@ -717,11 +717,11 @@ function ViewModal({
                 });
             }
             // Payment proof
-            if (proofUrl) {
+            for (const proof of proofUrls) {
                 attachments.push({
-                    url: proofUrl,
-                    name: 'Payment Proof',
-                    originalPath: item.payment_proof_url || '',
+                    url: proof.url,
+                    name: proof.name,
+                    originalPath: proof.originalPath,
                     label: 'Payment Proof'
                 });
             }
@@ -774,8 +774,21 @@ function ViewModal({
             setInvoiceUrls(urls);
 
             if (item.payment_proof_url) {
-                const url = await getFinanceFileUrl(item.payment_proof_url);
-                setProofUrl(url);
+                const paths = item.payment_proof_url.split(',').map((p: string) => p.trim()).filter(Boolean);
+                const urls: { url: string; name: string; originalPath: string }[] = [];
+                for (let i = 0; i < paths.length; i++) {
+                    const url = await getFinanceFileUrl(paths[i]);
+                    if (url) {
+                        urls.push({
+                            url,
+                            name: `Transfer Proof ${i + 1}`,
+                            originalPath: paths[i]
+                        });
+                    }
+                }
+                setProofUrls(urls);
+            } else {
+                setProofUrls([]);
             }
         };
         fetchUrls();
@@ -1297,7 +1310,7 @@ function ViewModal({
                                             <CheckCircle2 size={14} className={clsx(item.payment_proof_url ? "text-emerald-500" : "text-neutral-300")} />
                                         </div>
                                         <div className="text-[11px] font-bold text-neutral-700 dark:text-neutral-300 relative z-10">
-                                            {item.payment_proof_url ? "1 File" : "No Proof"}
+                                            {item.payment_proof_url ? `${item.payment_proof_url.split(',').length} File${item.payment_proof_url.split(',').length > 1 ? 's' : ''}` : "No Proof"}
                                         </div>
                                         <div className="absolute -bottom-2 -right-2 opacity-[0.03] group-hover:scale-110 transition-transform duration-500">
                                             <CheckCircle2 size={48} />
@@ -1490,7 +1503,7 @@ function DocumentDrawer({
 }) {
     const [activeTab, setActiveTab] = useState<'invoice' | 'proof'>(initialTab);
     const [invoiceUrls, setInvoiceUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
-    const [proofUrl, setProofUrl] = useState<string | null>(null);
+    const [proofUrls, setProofUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDownloading, setIsDownloading] = useState<string | null>(null); // path or 'bulk'
 
@@ -1513,8 +1526,15 @@ function DocumentDrawer({
 
             // Proof
             if (item.payment_proof_url) {
-                const url = await getFinanceFileUrl(item.payment_proof_url);
-                setProofUrl(url);
+                const paths = item.payment_proof_url.split(',').map((p: string) => p.trim()).filter(Boolean);
+                const pUrls: { url: string; name: string; originalPath: string }[] = [];
+                for (let i = 0; i < paths.length; i++) {
+                    const url = await getFinanceFileUrl(paths[i]);
+                    if (url) pUrls.push({ url, name: `Transfer Proof ${i + 1}`, originalPath: paths[i] });
+                }
+                setProofUrls(pUrls);
+            } else {
+                setProofUrls([]);
             }
             setIsLoading(false);
         };
@@ -1584,7 +1604,7 @@ function DocumentDrawer({
 
     const handleBulkDownload = async () => {
         setIsDownloading('bulk');
-        const docs = activeTab === 'invoice' ? invoiceUrls : (proofUrl ? [{ url: proofUrl, originalPath: item.payment_proof_url!, name: 'Proof' }] : []);
+        const docs = activeTab === 'invoice' ? invoiceUrls : proofUrls;
         for (let i = 0; i < docs.length; i++) {
             const doc = docs[i];
             await handleDownload(doc.url, doc.originalPath, doc.name, i, docs.length);
@@ -1596,7 +1616,7 @@ function DocumentDrawer({
         setIsDownloading(null);
     };
 
-    const currentDocs = activeTab === 'invoice' ? invoiceUrls : (proofUrl ? [{ url: proofUrl, originalPath: item.payment_proof_url!, name: 'Proof' }] : []);
+    const currentDocs = activeTab === 'invoice' ? invoiceUrls : proofUrls;
 
     const [zoom, setZoom] = useState(1);
     const toggleZoom = () => setZoom(prev => prev === 1 ? 2 : 1);
