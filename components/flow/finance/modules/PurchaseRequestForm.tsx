@@ -17,7 +17,7 @@ interface LineItem {
     name: string;
     qty: number;
     unit: string;
-    unitPrice: number;
+    unitPrice: number | string;
     total: number;
     subcategory?: string;
     group_name?: string;
@@ -134,7 +134,8 @@ export function PurchaseRequestForm({
             if (i.id === id) {
                 const updated = { ...i, ...updates };
                 if ('qty' in updates || 'unitPrice' in updates) {
-                    updated.total = (updated.qty || 0) * (updated.unitPrice || 0);
+                    const price = typeof updated.unitPrice === 'string' ? parseFloat(updated.unitPrice) || 0 : updated.unitPrice || 0;
+                    updated.total = (updated.qty || 0) * price;
                 }
                 return updated;
             }
@@ -182,7 +183,7 @@ export function PurchaseRequestForm({
     const isValid = useMemo(() => {
         if (!projectCode) return false;
         if (!category || !subcategory) return false;
-        if (items.some(i => !i.name || i.qty <= 0)) return false; // qty must be > 0
+        if (items.some(i => !i.name || i.qty <= 0 || (typeof i.unitPrice === 'string' && isNaN(parseFloat(i.unitPrice))))) return false; // qty must be > 0
 
         // Invoiced or Received stages MUST have an invoice if not just a draft or already approved
         // Actually, as per request: "INTINYA semuanya baru bisa dibayar klo udah ada invoice yahh"
@@ -253,7 +254,7 @@ export function PurchaseRequestForm({
                     name: i.name,
                     qty: i.qty,
                     unit: i.unit,
-                    unitPrice: i.unitPrice,
+                    unitPrice: typeof i.unitPrice === 'string' ? parseFloat(i.unitPrice) || 0 : i.unitPrice || 0,
                     total: i.total
                 }))
             };
@@ -508,7 +509,7 @@ export function PurchaseRequestForm({
                                             <input
                                                 type="number"
                                                 value={item.unitPrice}
-                                                onChange={e => updateItem(item.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                                                onChange={e => updateItem(item.id, { unitPrice: e.target.value })}
                                                 className="w-full h-11 pl-11 pr-5 text-sm border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-blue-500/[0.08] focus:border-blue-500/20 transition-all font-bold text-neutral-900 dark:text-white"
                                             />
                                         </div>
