@@ -17,7 +17,7 @@ async function run() {
 
     try {
         await client.connect();
-        const sqlPath = path.join(process.cwd(), 'supabase', 'migrations', '20260228_create_tasks_and_actions.sql');
+        const sqlPath = path.join(process.cwd(), 'supabase', 'migrations', '20260630_vendor_sharing.sql');
         const sql = fs.readFileSync(sqlPath, 'utf8');
 
         console.log('Running SQL...');

@@ -182,7 +182,7 @@ export default function FinancePageWrapper({
                             whileHover={{ scale: 1.05 }}
                             onClick={() => window.dispatchEvent(new CustomEvent('export-finance'))}
                             className="h-7 w-7 flex items-center justify-center rounded-full text-neutral-800 dark:text-neutral-200 transition-colors duration-200 hover:bg-white/10 dark:hover:bg-neutral-800/40"
-                            title="Export"
+                            title="Export & Share"
                         >
                             <Download size={18} strokeWidth={1.5} />
                         </motion.button>

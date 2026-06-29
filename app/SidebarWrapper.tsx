@@ -163,7 +163,8 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
   }, []);
 
   const pathname = usePathname();
-  const isPublicPage = pathname === "/" || pathname === "/login";
+  const isPublicPage = pathname === "/" || pathname === "/login" || pathname?.startsWith("/flow/finance/purchasing/share");
+
 
   if (isPublicPage) {
     return (

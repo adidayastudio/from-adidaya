@@ -48,12 +48,13 @@ import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { FinanceSummaryCard, FinanceSummaryCardsRow } from "./FinanceSummaryCard";
 import { FinanceItemCard } from "./FinanceItemCard";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { fetchPurchasingRequests, fetchFundingSources, updatePurchasingStatus, deletePurchasingRequest, fetchPurchasingRequestById } from "@/lib/client/finance-api";
+import { fetchPurchasingRequests, fetchFundingSources, updatePurchasingStatus, deletePurchasingRequest, fetchPurchasingRequestById, fetchVendorPortals, createVendorPortal, linkRequestsToVendorPortal, deleteVendorPortal } from "@/lib/client/finance-api";
 import { FinanceToolbar } from "./FinanceToolbar";
 import { fetchAllProjects } from "@/lib/api/projects";
 import { fetchTeamMembers } from "@/lib/api/clock_team";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { NewRequestDrawer } from "./modules/NewRequestDrawer";
+import { toast } from "react-hot-toast";
 
 // Status Badge Helper
 function StatusBadge({ status, textOnly }: { status: any, textOnly?: boolean }) {
@@ -286,6 +287,409 @@ function SuccessModal({ title, message, onClose }: { title: string, message: str
     );
 }
 
+function ManageVendorLinksDrawer({
+    onClose
+}: {
+    onClose: () => void;
+}) {
+    const [portals, setPortals] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
+    const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+    const loadPortals = async () => {
+        setIsLoading(true);
+        try {
+            const data = await fetchVendorPortals();
+            setPortals(data || []);
+        } catch (err) {
+            console.error("Failed to fetch portals:", err);
+            toast.error("Failed to load active links");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadPortals();
+    }, []);
+
+    const handleDelete = async (id: string) => {
+        if (!confirm("Are you sure you want to disable this link? This will revoke access for the vendor and unlink all associated requests. Existing uploaded invoices will not be deleted.")) {
+            return;
+        }
+
+        setIsDeletingId(id);
+        try {
+            const success = await deleteVendorPortal(id);
+            if (success) {
+                toast.success("Vendor link deleted and access disabled.");
+                loadPortals();
+            } else {
+                toast.error("Failed to delete vendor link");
+            }
+        } catch (err) {
+            console.error("Delete portal error:", err);
+            toast.error("An error occurred");
+        } finally {
+            setIsDeletingId(null);
+        }
+    };
+
+    const handleCopy = (token: string) => {
+        const origin = window.location.origin;
+        const url = `${origin}/flow/finance/purchasing/share/${token}`;
+        navigator.clipboard.writeText(url);
+        setCopiedToken(token);
+        toast.success("Link copied!");
+        setTimeout(() => setCopiedToken(null), 2000);
+    };
+
+    return (
+        <div className="fixed inset-0 z-[200] isolate">
+            <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={onClose} />
+            <motion.div
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className={clsx(
+                    "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-300 rounded-[56px] overflow-hidden flex flex-col",
+                    "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+                )}
+            >
+                <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                            <Share2 className="w-5 h-5 text-blue-600" />
+                            Manage Vendor Links
+                        </h3>
+                        <button onClick={onClose} className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform">
+                            <X size={20} className="text-neutral-500" strokeWidth={1.5} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="shrink min-h-0 overflow-y-auto px-8 pb-8 flex-1 custom-scrollbar">
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center py-20 gap-3">
+                            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                            <span className="text-sm font-medium text-neutral-500">Loading active links...</span>
+                        </div>
+                    ) : portals.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-center gap-4">
+                            <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                                <Share2 className="w-8 h-8 text-neutral-400" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-neutral-900 dark:text-white">No active links</h4>
+                                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 max-w-xs leading-relaxed">
+                                    You haven't generated any vendor sharing portals yet. Generate one by selecting purchase orders and clicking "Share Link".
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {portals.map((portal) => (
+                                <div 
+                                    key={portal.id}
+                                    className="p-4 rounded-3xl bg-white/60 dark:bg-neutral-800/60 border border-neutral-100 dark:border-neutral-800 space-y-3 shadow-sm"
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="min-w-0">
+                                            <h4 className="text-sm font-black text-neutral-900 dark:text-white truncate" title={portal.vendor_name}>
+                                                {portal.vendor_name}
+                                            </h4>
+                                            <p className="text-[10px] text-neutral-400 font-medium mt-0.5">
+                                                Created: {format(new Date(portal.created_at), "dd MMM yyyy HH:mm")}
+                                            </p>
+                                        </div>
+
+                                        <button 
+                                            onClick={() => handleDelete(portal.id)}
+                                            disabled={isDeletingId === portal.id}
+                                            className="p-2 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 text-neutral-400 rounded-xl transition-all"
+                                            title="Delete / Revoke Link"
+                                        >
+                                            {isDeletingId === portal.id ? (
+                                                <Loader2 className="w-4 h-4 animate-spin text-rose-600" />
+                                            ) : (
+                                                <Trash2 size={16} />
+                                            )}
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-3 bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 rounded-2xl p-2.5">
+                                        <span className="text-[10px] font-mono text-neutral-500 truncate flex-1 pl-1">
+                                            .../share/{portal.token.slice(0, 8)}...
+                                        </span>
+                                        
+                                        <div className="flex items-center gap-2">
+                                            <a 
+                                                href={`/flow/finance/purchasing/share/${portal.token}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-500 rounded-xl transition-all"
+                                                title="Open Link"
+                                            >
+                                                <ExternalLink size={14} />
+                                            </a>
+                                            <button
+                                                onClick={() => handleCopy(portal.token)}
+                                                className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-300 rounded-xl transition-all"
+                                                title="Copy Link"
+                                            >
+                                                {copiedToken === portal.token ? (
+                                                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                                ) : (
+                                                    <Copy className="w-3.5 h-3.5" />
+                                                )}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    );
+}
+
+function ShareVendorPortalDrawer({
+    requestIds,
+    items,
+    onClose,
+    onSuccess
+}: {
+    requestIds: string[];
+    items: PurchasingItem[];
+    onClose: () => void;
+    onSuccess: () => void;
+}) {
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [vendorName, setVendorName] = useState("");
+    const [existingPortals, setExistingPortals] = useState<any[]>([]);
+    const [selectedPortalId, setSelectedPortalId] = useState<string | null>(null);
+    const [shareUrl, setShareUrl] = useState("");
+    const [copied, setCopied] = useState(false);
+    const [hasConflict, setHasConflict] = useState(false);
+
+    // Extract requests matching the requestIds
+    const selectedRequests = useMemo(() => {
+        return items.filter(item => requestIds.includes(item.id));
+    }, [items, requestIds]);
+
+    // Check if requests belong to the same vendor
+    useEffect(() => {
+        if (selectedRequests.length === 0) return;
+
+        const vendors = Array.from(new Set(selectedRequests.map(r => r.vendor?.trim()).filter(Boolean)));
+        if (vendors.length > 1) {
+            setHasConflict(true);
+            setVendorName("");
+            setIsLoading(false);
+            return;
+        }
+
+        setHasConflict(false);
+        const detectedVendor = vendors[0] || "Unknown Vendor";
+        setVendorName(detectedVendor);
+
+        // Search for existing portal for this vendor
+        const loadPortals = async () => {
+            setIsLoading(true);
+            try {
+                const portals = await fetchVendorPortals({ vendor_name: detectedVendor });
+                setExistingPortals(portals);
+                if (portals.length > 0) {
+                    // Set default to first existing portal
+                    setSelectedPortalId(portals[0].id);
+                    const origin = window.location.origin;
+                    setShareUrl(`${origin}/flow/finance/purchasing/share/${portals[0].token}`);
+                } else {
+                    setSelectedPortalId(null);
+                    setShareUrl("");
+                }
+            } catch (err) {
+                console.error("Failed to load vendor portals:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadPortals();
+    }, [selectedRequests]);
+
+    const handleShare = async (useExisting: boolean) => {
+        setIsSubmitting(true);
+        try {
+            let portal = null;
+            if (useExisting && selectedPortalId) {
+                portal = existingPortals.find(p => p.id === selectedPortalId);
+            } else {
+                // Create a new vendor portal
+                portal = await createVendorPortal(vendorName);
+            }
+
+            if (!portal) {
+                throw new Error("Failed to resolve vendor portal");
+            }
+
+            // Link requests to this portal
+            const success = await linkRequestsToVendorPortal(portal.id, requestIds);
+            if (success) {
+                const origin = window.location.origin;
+                const url = `${origin}/flow/finance/purchasing/share/${portal.token}`;
+                setShareUrl(url);
+                navigator.clipboard.writeText(url);
+                setCopied(true);
+                toast.success("Vendor Link generated and copied to clipboard!");
+                setTimeout(() => setCopied(false), 3000);
+                onSuccess();
+            } else {
+                toast.error("Failed to link requests to vendor portal");
+            }
+        } catch (err) {
+            console.error("Share action failed:", err);
+            toast.error("An error occurred during link generation");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[200] isolate">
+            <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={onClose} />
+            <motion.div
+                initial={{ y: "100%", opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className={clsx(
+                    "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-300 rounded-[56px] overflow-hidden flex flex-col",
+                    "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+                )}
+            >
+                <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                            <Share2 className="w-5 h-5 text-blue-600" />
+                            Share Vendor Link
+                        </h3>
+                        <button onClick={onClose} className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform">
+                            <X size={20} className="text-neutral-500" strokeWidth={1.5} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="shrink min-h-0 overflow-y-auto px-8 pb-4 space-y-6 flex-1">
+                    {hasConflict ? (
+                        <div className="p-4 rounded-3xl bg-rose-50 border border-rose-100 flex gap-3">
+                            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="text-[11px] font-bold text-rose-700 mb-1">Vendor Conflict</h4>
+                                <p className="text-[11px] text-rose-600 font-medium tracking-tight">
+                                    The selected requests belong to different vendors. Please select requests belonging to the same vendor to share them under a single portal link.
+                                </p>
+                            </div>
+                        </div>
+                    ) : isLoading ? (
+                        <div className="flex flex-col items-center justify-center py-16 gap-3">
+                            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                            <span className="text-sm font-medium text-neutral-500">Checking existing portals...</span>
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            <div className="p-4 rounded-3xl bg-neutral-50 border border-neutral-100 space-y-2">
+                                <div className="text-[10px] font-bold text-neutral-400 uppercase">Vendor Name</div>
+                                <input
+                                    type="text"
+                                    value={vendorName}
+                                    onChange={(e) => setVendorName(e.target.value)}
+                                    placeholder="Enter vendor name..."
+                                    className="w-full h-11 px-4 text-sm border border-neutral-200 rounded-full bg-white font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                                />
+                                <p className="text-[10px] text-neutral-400 font-medium italic pl-1">
+                                    {selectedRequests.length} request(s) will be associated with this vendor portal.
+                                </p>
+                            </div>
+
+                            {existingPortals.length > 0 ? (
+                                <div className="space-y-4">
+                                    <div className="p-4 rounded-3xl bg-blue-50/80 border border-blue-100 flex gap-3">
+                                        <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                                        <div>
+                                            <h4 className="text-xs font-bold text-blue-800 mb-1">Existing Link Found</h4>
+                                            <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
+                                                An active portal link already exists for <strong>{vendorName}</strong>. 
+                                                You can add these requests to the existing link so the vendor sees everything in one place.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3">
+                                        <button
+                                            onClick={() => handleShare(true)}
+                                            disabled={isSubmitting}
+                                            className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+                                        >
+                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                            Add to Existing Portal & Copy Link
+                                        </button>
+                                        
+                                        <button
+                                            onClick={() => handleShare(false)}
+                                            disabled={isSubmitting}
+                                            className="w-full py-3.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                            Create New Separate Link
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="p-4 rounded-3xl bg-neutral-50 border border-neutral-100">
+                                        <p className="text-xs text-neutral-500 font-medium leading-relaxed">
+                                            No existing portal found for <strong>{vendorName}</strong>. A new portal and token will be created, and a public link will be generated.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        onClick={() => handleShare(false)}
+                                        disabled={!vendorName.trim() || isSubmitting}
+                                        className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+                                    >
+                                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+                                        Generate & Copy Vendor Link
+                                    </button>
+                                </div>
+                            )}
+
+                            {shareUrl && (
+                                <div className="p-4 rounded-3xl bg-emerald-50/50 border border-emerald-100 space-y-3">
+                                    <div className="text-[10px] font-bold text-emerald-800 uppercase">Generated Share Link</div>
+                                    <div className="flex items-center justify-between gap-3 bg-white border border-emerald-200/50 rounded-2xl p-3 pr-2.5">
+                                        <span className="text-[11px] font-mono text-neutral-600 truncate flex-1">{shareUrl}</span>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(shareUrl);
+                                                setCopied(true);
+                                                toast.success("Link copied!");
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }}
+                                            className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition-all"
+                                        >
+                                            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+        </div>
+    );
+}
 // Revert to Draft Confirmation Modal
 function RevertConfirmModal({
     item,
@@ -653,7 +1057,8 @@ function ViewModal({
     isDeleted,
     setRevertingItem,
     loadData,
-    setShowSuccess
+    setShowSuccess,
+    onShare
 }: {
     item: PurchasingItem;
     onClose: () => void;
@@ -671,6 +1076,7 @@ function ViewModal({
     isDeleted?: boolean;
     loadData: () => void;
     setShowSuccess: (success: { title: string, message: string } | null) => void;
+    onShare?: () => void;
 }) {
     const [invoiceUrls, setInvoiceUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
     const [proofUrls, setProofUrls] = useState<{ url: string; name: string; originalPath: string }[]>([]);
@@ -857,6 +1263,16 @@ function ViewModal({
                                     <span className="text-[10px] font-bold tracking-tight">PDF</span>
                                 </button>
                             </div>
+
+                            {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                <button
+                                    onClick={onShare}
+                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform text-neutral-600 dark:text-neutral-400 hover:text-blue-600"
+                                    title="Share to Vendor"
+                                >
+                                    <Share2 size={18} />
+                                </button>
+                            )}
 
                             <button
                                 onClick={onClose}
@@ -1848,6 +2264,13 @@ export default function PurchasingClient() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
 
+    // Vendor Sharing states
+    const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
+    const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
+    const [shareRequestIds, setShareRequestIds] = useState<string[]>([]);
+    const [isManageLinksDrawerOpen, setIsManageLinksDrawerOpen] = useState(false);
+
+
     useEffect(() => {
         const handleExportRequest = () => setShowExportMenu(true);
         window.addEventListener('export-finance', handleExportRequest);
@@ -1945,6 +2368,7 @@ export default function PurchasingClient() {
                     return [...prev, ...uniqueNew];
                 });
             }
+            setSelectedRequestIds([]); // Clear selection when data reloads
         } catch (e) {
             console.error("Failed to load purchasing requests:", e);
         } finally {
@@ -2513,7 +2937,7 @@ export default function PurchasingClient() {
                                         className="relative w-full max-w-xs bg-white dark:bg-neutral-900 rounded-[32px] shadow-2xl border border-white/20 dark:border-neutral-800 p-2 overflow-hidden"
                                     >
                                         <div className="p-4 border-b border-neutral-100 dark:border-neutral-800">
-                                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Export Options</h3>
+                                            <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Export & Share</h3>
                                         </div>
                                         <div className="py-1">
                                             <button onClick={() => { handleExport(); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
@@ -2522,6 +2946,17 @@ export default function PurchasingClient() {
                                             <button onClick={() => { handleExportExcel(); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
                                                 <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to XLS
                                             </button>
+                                            {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                <button 
+                                                    onClick={() => { 
+                                                        setIsManageLinksDrawerOpen(true); 
+                                                        setShowExportMenu(false); 
+                                                    }} 
+                                                    className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors border-t border-neutral-100 dark:border-neutral-800"
+                                                >
+                                                    <Share2 className="w-4 h-4 text-blue-500" /> Manage Vendor Links
+                                                </button>
+                                            )}
                                         </div>
                                         <button
                                             onClick={() => setShowExportMenu(false)}
@@ -2664,6 +3099,9 @@ export default function PurchasingClient() {
                                         );
                                     };
 
+                                    const isSelectable = isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "");
+                                    const isSelected = selectedRequestIds.includes(item.id);
+
                                     return (
                                         <FinanceItemCard
                                             key={item.id}
@@ -2671,6 +3109,15 @@ export default function PurchasingClient() {
                                             status={statusToUse}
                                             onClick={() => setViewingItem(item)}
                                             actions={statusToUse !== 'Paid' ? renderMobileActions() : undefined}
+                                            selectable={isSelectable}
+                                            selected={isSelected}
+                                            onSelect={(selected) => {
+                                                if (selected) {
+                                                    setSelectedRequestIds([...selectedRequestIds, item.id]);
+                                                } else {
+                                                    setSelectedRequestIds(selectedRequestIds.filter(id => id !== item.id));
+                                                }
+                                            }}
                                         />
                                     );
                                 })
@@ -2684,6 +3131,22 @@ export default function PurchasingClient() {
                                 <table className="w-full text-left border-collapse table-auto">
                                     <thead>
                                         <tr className="border-b border-neutral-100 dark:border-white/[0.06] bg-neutral-50/50 dark:bg-white/[0.02]">
+                                            {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                <th className="px-6 py-4 w-12 text-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={filteredItems.length > 0 && selectedRequestIds.length === filteredItems.length}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedRequestIds(filteredItems.map(item => item.id));
+                                                            } else {
+                                                                setSelectedRequestIds([]);
+                                                            }
+                                                        }}
+                                                        className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                    />
+                                                </th>
+                                            )}
                                             <th
                                                 className="px-6 py-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 cursor-pointer hover:text-neutral-600 dark:hover:text-neutral-300 transition-colors hidden xl:table-cell"
                                                 onClick={() => handleSort('date')}
@@ -2758,7 +3221,7 @@ export default function PurchasingClient() {
                                     <tbody className="divide-y divide-neutral-50 dark:divide-white/[0.04]">
                                         {filteredItems.length === 0 ? (
                                             <tr>
-                                                <td colSpan={isTeamView ? 7 : 6} className="py-16 text-center">
+                                                <td colSpan={isTeamView ? (["admin", "superadmin", "supervisor"].includes(userRole || "") ? 8 : 7) : 6} className="py-16 text-center">
                                                     <div className="flex flex-col items-center gap-4">
                                                         <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
                                                             <Package className="w-8 h-8 text-neutral-400" />
@@ -2803,6 +3266,22 @@ export default function PurchasingClient() {
                                                             setViewingItem(item);
                                                         }}
                                                     >
+                                                        {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                            <td className="px-6 py-4 text-center w-12" onClick={(e) => e.stopPropagation()}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedRequestIds.includes(item.id)}
+                                                                    onChange={(e) => {
+                                                                        if (e.target.checked) {
+                                                                            setSelectedRequestIds([...selectedRequestIds, item.id]);
+                                                                        } else {
+                                                                            setSelectedRequestIds(selectedRequestIds.filter(id => id !== item.id));
+                                                                        }
+                                                                    }}
+                                                                    className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                                />
+                                                            </td>
+                                                        )}
                                                         <td className="px-6 py-4 whitespace-nowrap hidden xl:table-cell">
                                                             <div className="flex flex-col gap-1">
                                                                 {/* Row 1: Primary Date (S/I or I) */}
@@ -3112,6 +3591,10 @@ export default function PurchasingClient() {
                         setRevertingItem={setRevertingItem}
                         loadData={loadData}
                         setShowSuccess={setShowSuccess}
+                        onShare={() => {
+                            setShareRequestIds([viewingItem.id]);
+                            setIsShareDrawerOpen(true);
+                        }}
                     />
                 )
             }
@@ -3591,6 +4074,62 @@ export default function PurchasingClient() {
                         </button>
                     </motion.div>
                 </div>
+            )}
+            {/* Bulk Selection Floating Action Bar */}
+            {selectedRequestIds.length > 0 && (
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-32px)] max-w-xl animate-in fade-in slide-in-from-bottom-8 duration-300">
+                    <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl border border-white/60 dark:border-neutral-800 rounded-full px-6 py-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xs font-bold font-mono">
+                                {selectedRequestIds.length}
+                            </div>
+                            <span className="text-sm font-bold text-neutral-800 dark:text-white">
+                                Requests selected
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setSelectedRequestIds([])}
+                                className="px-4 py-2 rounded-full text-xs font-bold text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                            >
+                                Clear
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setShareRequestIds(selectedRequestIds);
+                                    setIsShareDrawerOpen(true);
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-blue-500/25"
+                            >
+                                <Share2 className="w-4 h-4" /> Share Link
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Manage Vendor Links Drawer */}
+            {isManageLinksDrawerOpen && (
+                <ManageVendorLinksDrawer
+                    onClose={() => setIsManageLinksDrawerOpen(false)}
+                />
+            )}
+
+            {isShareDrawerOpen && (
+                <ShareVendorPortalDrawer
+                    requestIds={shareRequestIds}
+                    items={items}
+                    onClose={() => {
+                        setIsShareDrawerOpen(false);
+                        setShareRequestIds([]);
+                    }}
+                    onSuccess={() => {
+                        setIsShareDrawerOpen(false);
+                        setSelectedRequestIds([]);
+                        setShareRequestIds([]);
+                        loadData();
+                    }}
+                />
             )}
 
         </FinancePageWrapper >

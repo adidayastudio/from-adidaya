@@ -513,3 +513,95 @@ export async function fetchMyProfile() {
 
     return data;
 }
+
+// =============================================
+// VENDOR PORTAL (VENDOR LINK)
+// =============================================
+
+export interface VendorPortal {
+    id: string;
+    vendor_name: string;
+    token: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export async function fetchVendorPortals(options?: { vendor_name?: string }): Promise<VendorPortal[]> {
+    const params = new URLSearchParams();
+    if (options?.vendor_name) params.set("vendor_name", options.vendor_name);
+
+    const url = `/api/finance/vendor-portal${params.toString() ? `?${params}` : ""}`;
+    const { data, error } = await apiGet<VendorPortal[]>(url);
+
+    if (error) {
+        console.error("Error fetching vendor portals:", error);
+        return [];
+    }
+
+    return data || [];
+}
+
+export async function createVendorPortal(vendorName: string): Promise<VendorPortal | null> {
+    const { data, error } = await apiPost<VendorPortal>("/api/finance/vendor-portal", { vendor_name: vendorName });
+
+    if (error) {
+        console.error("Error creating vendor portal:", error);
+        return null;
+    }
+
+    return data;
+}
+
+export async function linkRequestsToVendorPortal(portalId: string | null, requestIds: string[]): Promise<boolean> {
+    const { data, error } = await apiPost<any>("/api/finance/vendor-portal/link", {
+        portal_id: portalId,
+        request_ids: requestIds
+    });
+
+    if (error) {
+        console.error("Error linking requests to vendor portal:", error);
+        return false;
+    }
+
+    return true;
+}
+
+export async function fetchVendorPortalByToken(token: string): Promise<{ portal: VendorPortal; requests: any[] } | null> {
+    const { data, error } = await apiGet<any>(`/api/finance/vendor-portal/by-token?token=${token}`);
+
+    if (error) {
+        console.error("Error fetching vendor portal by token:", error);
+        return null;
+    }
+
+    return data;
+}
+
+export async function uploadVendorPortalInvoice(payload: {
+    token: string;
+    request_id: string;
+    invoice_url: string;
+    invoice_name: string;
+}): Promise<boolean> {
+    const { data, error } = await apiPost<any>("/api/finance/vendor-portal/upload-invoice", payload);
+
+    if (error) {
+        console.error("Error uploading vendor portal invoice:", error);
+        return false;
+    }
+
+    return true;
+}
+
+export async function deleteVendorPortal(id: string): Promise<boolean> {
+    const { data, error } = await apiDelete<any>(`/api/finance/vendor-portal?id=${id}`);
+
+    if (error) {
+        console.error("Error deleting vendor portal:", error);
+        return false;
+    }
+
+    return true;
+}
+
+

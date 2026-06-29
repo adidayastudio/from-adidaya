@@ -142,7 +142,7 @@ export default function FinanceMobileHeader({
                                         <button
                                             onClick={() => window.dispatchEvent(new CustomEvent('export-finance'))}
                                             className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-neutral-800 active:scale-90 transition-all duration-200 pointer-events-auto relative text-neutral-600 dark:text-neutral-300"
-                                            title="Export"
+                                            title="Export & Share"
                                         >
                                             <Download className="w-5 h-5 text-gray-700 dark:text-white" strokeWidth={1.5} />
                                         </button>
