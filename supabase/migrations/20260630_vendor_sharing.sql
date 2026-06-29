@@ -52,3 +52,24 @@ CREATE POLICY "Enable anon read access for purchasing_invoices"
 ON purchasing_invoices FOR SELECT
 TO anon
 USING (true);
+
+-- Policies for purchasing_requests to allow public select
+DROP POLICY IF EXISTS "Enable anon read access for purchasing_requests_portal" ON purchasing_requests;
+CREATE POLICY "Enable anon read access for purchasing_requests_portal"
+ON purchasing_requests FOR SELECT
+TO anon
+USING (true);
+
+-- Policies for purchasing_items to allow public select
+DROP POLICY IF EXISTS "Enable anon read access for purchasing_items_portal" ON purchasing_items;
+CREATE POLICY "Enable anon read access for purchasing_items_portal"
+ON purchasing_items FOR SELECT
+TO anon
+USING (true);
+
+-- Policies for projects to allow public select
+DROP POLICY IF EXISTS "Enable anon read access for projects_portal" ON projects;
+CREATE POLICY "Enable anon read access for projects_portal"
+ON projects FOR SELECT
+TO anon
+USING (true);
