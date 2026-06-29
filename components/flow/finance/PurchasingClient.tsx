@@ -2345,9 +2345,11 @@ export default function PurchasingClient() {
 
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showExportMenu, setShowExportMenu] = useState(false);
+    const [exportModalConfig, setExportModalConfig] = useState<{ defaultFormat: "pdf" | "xlsx" } | null>(null);
 
     // Vendor Sharing states
     const [selectedRequestIds, setSelectedRequestIds] = useState<string[]>([]);
+    const [isSelectMode, setIsSelectMode] = useState(false);
     const [isShareDrawerOpen, setIsShareDrawerOpen] = useState(false);
     const [shareRequestIds, setShareRequestIds] = useState<string[]>([]);
     const [isManageLinksDrawerOpen, setIsManageLinksDrawerOpen] = useState(false);
@@ -2636,6 +2638,167 @@ export default function PurchasingClient() {
         } catch (error) {
             console.error("Excel Export Error:", error);
             alert("Failed to export Excel.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleExportCustom = async (selectedCols: string[], formatType: "pdf" | "xlsx") => {
+        if (filteredItems.length === 0) return;
+        setIsExporting(true);
+
+        try {
+            // 1. Prepare Meta
+            const projectCount = selectedProjects.length;
+            const project = projectCount === 1 ? projects.find(p => p.id === selectedProjects[0]) : null;
+            const projectCode = project ? (project.projectCode || "PRG") : (projectCount === 0 ? "ALL" : "MULTIPLE");
+            const projectName = project ? project.projectName : (projectCount === 0 ? "All Projects" : `${projectCount} Selected Projects`);
+            const documentName = isTeamView ? "Team Purchasing Report" : "My Purchasing Report";
+            const generatedAt = new Date().toLocaleString("id-ID");
+
+            const startStr = format(startDate, "dd MMM");
+            const endStr = format(endDate, "dd MMM yyyy");
+            const periodText = `Report (${startStr} – ${endStr})`;
+
+            // 2. Prepare Columns list based on selection
+            const columnsListDef = [
+                { id: "date", label: "Submission Date", align: "left" as const, width: "120px" },
+                { id: "po_number", label: "PO Number", align: "left" as const, width: "120px" },
+                { id: "project", label: "Project", align: "left" as const, width: "120px" },
+                { id: "items", label: "Item Breakdown", align: "left" as const, width: "200px" },
+                { id: "amount", label: "Amount", align: "right" as const, format: "currency" as const, width: "120px" },
+                { id: "invoice_date", label: "Invoice Date", align: "left" as const, width: "120px" },
+                { id: "due_date", label: "Target / Due Date", align: "left" as const, width: "120px" },
+                { id: "payment_date", label: "Payment Date", align: "left" as const, width: "120px" },
+                { id: "submitter", label: "Submitter", align: "left" as const, width: "150px" },
+                { id: "description", label: "Description", align: "left" as const, width: "200px" },
+                { id: "status", label: "Status", align: "center" as const, width: "100px" },
+                { id: "vendor", label: "Vendor", align: "left" as const, width: "120px" },
+                { id: "notes", label: "Notes", align: "left" as const, width: "150px" },
+                { id: "subcategory", label: "Subcategory", align: "left" as const, width: "100px" },
+                { id: "type", label: "Type", align: "left" as const, width: "100px" },
+                { id: "beneficiary", label: "Beneficiary Account", align: "left" as const, width: "200px" },
+            ];
+
+            const activeColumns = columnsListDef.filter(col => selectedCols.includes(col.id));
+
+            // 3. Map Rows
+            const rows = filteredItems.map(item => {
+                const rowData: Record<string, any> = {};
+                if (selectedCols.includes("date")) {
+                    rowData.date = format(new Date(item.created_at || item.date), "dd MMM yyyy");
+                }
+                if (selectedCols.includes("po_number")) {
+                    rowData.po_number = formatStructuredId("PO", item.project?.project_number || item.project_number, item.request_number, item.project?.project_code || item.project_code) || `PO-${item.id.slice(0, 8).toUpperCase()}`;
+                }
+                if (selectedCols.includes("project")) {
+                    rowData.project = `[${item.project_code || "GEN"}] ${cleanEntityName(item.project_name || "General")}`;
+                }
+                if (selectedCols.includes("items")) {
+                    rowData.items = formatItemTitle(item.items || []);
+                }
+                if (selectedCols.includes("amount")) {
+                    rowData.amount = item.amount;
+                }
+                if (selectedCols.includes("invoice_date")) {
+                    rowData.invoice_date = item.date ? format(new Date(item.date), "dd MMM yyyy") : "-";
+                }
+                if (selectedCols.includes("due_date")) {
+                    rowData.due_date = item.target_date ? format(new Date(item.target_date), "dd MMM yyyy") : "-";
+                }
+                if (selectedCols.includes("payment_date")) {
+                    rowData.payment_date = item.payment_date ? format(new Date(item.payment_date), "dd MMM yyyy") : "-";
+                }
+                if (selectedCols.includes("submitter")) {
+                    rowData.submitter = item.submitted_by_name || item.created_by_name || "-";
+                }
+                if (selectedCols.includes("description")) {
+                    rowData.description = item.description || "";
+                }
+                if (selectedCols.includes("status")) {
+                    rowData.status = formatStatus(getPrimaryStatus(item.approval_status, item.purchase_stage, item.financial_status));
+                }
+                if (selectedCols.includes("vendor")) {
+                    rowData.vendor = item.vendor || "";
+                }
+                if (selectedCols.includes("notes")) {
+                    rowData.notes = item.notes || "";
+                }
+                if (selectedCols.includes("subcategory")) {
+                    rowData.subcategory = item.subcategory || "";
+                }
+                if (selectedCols.includes("type")) {
+                    rowData.type = item.type || "";
+                }
+                if (selectedCols.includes("beneficiary")) {
+                    rowData.beneficiary = item.beneficiary_bank ? `${item.beneficiary_bank} - ${item.beneficiary_number} (${item.beneficiary_name})` : "";
+                }
+                return rowData;
+            });
+
+            if (formatType === "pdf") {
+                // Export as PDF
+                const totalAmount = filteredItems.reduce((acc, i) => acc + (i.amount || 0), 0);
+                const paidAmount = filteredItems.filter(i => i.financial_status === 'PAID').reduce((acc, i) => acc + (i.amount || 0), 0);
+                const unpaidAmount = filteredItems.filter(i => i.financial_status !== 'PAID').reduce((acc, i) => acc + (i.amount || 0), 0);
+
+                const summaryCards = [
+                    { label: "Total Request", value: totalAmount, format: "currency" as const, color: "blue" as const },
+                    { label: "Paid", value: paidAmount, format: "currency" as const, color: "green" as const },
+                    { label: "Outstanding", value: unpaidAmount, format: "currency" as const, color: "red" as const },
+                    { label: "Total Items", value: filteredItems.length, format: "text" as const }
+                ];
+
+                const response = await fetch("/api/export/pdf", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        meta: {
+                            projectCode,
+                            projectName,
+                            documentName,
+                            periodText,
+                            generatedAt,
+                        },
+                        summary: summaryCards,
+                        columns: activeColumns,
+                        data: rows
+                    })
+                });
+
+                if (!response.ok) throw new Error("Failed to generate PDF");
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `Report_${projectCode}_${format(new Date(), "yyyyMMdd")}.pdf`;
+                link.click();
+            } else {
+                // Export as Excel (XLSX)
+                const dateSuffix = format(new Date(), "yyyyMMdd");
+                const filename = `Purchasing_${projectCode}_${dateSuffix}.xlsx`;
+
+                const excelData = rows.map(row => {
+                    const formattedRow: Record<string, any> = {};
+                    activeColumns.forEach(col => {
+                        formattedRow[col.label] = row[col.id];
+                    });
+                    return formattedRow;
+                });
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(excelData);
+
+                const wscols = activeColumns.map(col => ({ wch: Math.max(15, col.label.length + 5) }));
+                ws['!cols'] = wscols;
+
+                XLSX.utils.book_append_sheet(wb, ws, "Purchasing Data");
+                XLSX.writeFile(wb, filename);
+            }
+        } catch (error) {
+            console.error("Export Error:", error);
+            alert("Export failed. Please try again.");
         } finally {
             setIsExporting(false);
         }
@@ -3022,10 +3185,10 @@ export default function PurchasingClient() {
                                             <h3 className="text-sm font-bold text-neutral-900 dark:text-white">Export & Share</h3>
                                         </div>
                                         <div className="py-1">
-                                            <button onClick={() => { handleExport(); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                            <button onClick={() => { setExportModalConfig({ defaultFormat: "pdf" }); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
                                                 <FileText className="w-4 h-4 text-red-500" /> Export to PDF
                                             </button>
-                                            <button onClick={() => { handleExportExcel(); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
+                                            <button onClick={() => { setExportModalConfig({ defaultFormat: "xlsx" }); setShowExportMenu(false); }} className="w-full px-4 py-3 flex items-center gap-3 text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">
                                                 <FileSpreadsheet className="w-4 h-4 text-emerald-500" /> Export to XLS
                                             </button>
                                             {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
@@ -3052,7 +3215,7 @@ export default function PurchasingClient() {
                         </AnimatePresence>
 
                         {/* SHARED TOOLBAR */}
-                        <div className="mt-2 md:mt-3">
+                        <div className="mt-2 md:mt-3 flex items-center justify-between flex-wrap gap-3">
                             <FinanceToolbar
                                 currentMonth={currentMonth}
                                 onMonthChange={handleMonthChange}
@@ -3069,6 +3232,28 @@ export default function PurchasingClient() {
                                 showAllMonths={showAllMonths}
                                 onToggleShowAll={() => setShowAllMonths(!showAllMonths)}
                             />
+
+                            {/* Bulk Share Select Mode Action */}
+                            {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                <button
+                                    onClick={() => {
+                                        const newMode = !isSelectMode;
+                                        setIsSelectMode(newMode);
+                                        if (!newMode) {
+                                            setSelectedRequestIds([]);
+                                        }
+                                    }}
+                                    className={clsx(
+                                        "flex items-center gap-2 h-10 px-5 rounded-full border transition-all active:scale-[0.98] font-bold text-[13px] backdrop-blur-md shadow-sm",
+                                        isSelectMode
+                                            ? "bg-rose-500 text-white border-rose-600 hover:bg-rose-600 shadow-md shadow-rose-200/50 dark:shadow-none"
+                                            : "bg-white/40 border-white/50 text-neutral-600 dark:bg-white/[0.03] dark:border-white/[0.06] dark:text-neutral-400 hover:border-neutral-300 dark:hover:border-white/20"
+                                    )}
+                                >
+                                    <Share2 className="w-4 h-4" />
+                                    <span>{isSelectMode ? "Cancel Share Selection" : "Bulk Share Links"}</span>
+                                </button>
+                            )}
                         </div>
 
                         {/* MOBILE/TABLET CARD VIEW */}
@@ -3181,7 +3366,7 @@ export default function PurchasingClient() {
                                         );
                                     };
 
-                                    const isSelectable = isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "");
+                                    const isSelectable = isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && isSelectMode;
                                     const isSelected = selectedRequestIds.includes(item.id);
 
                                     return (
@@ -3213,7 +3398,7 @@ export default function PurchasingClient() {
                                 <table className="w-full text-left border-collapse table-auto">
                                     <thead>
                                         <tr className="border-b border-neutral-100 dark:border-white/[0.06] bg-neutral-50/50 dark:bg-white/[0.02]">
-                                            {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                            {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && isSelectMode && (
                                                 <th className="px-6 py-4 w-12 text-center">
                                                     <input
                                                         type="checkbox"
@@ -3303,7 +3488,7 @@ export default function PurchasingClient() {
                                     <tbody className="divide-y divide-neutral-50 dark:divide-white/[0.04]">
                                         {filteredItems.length === 0 ? (
                                             <tr>
-                                                <td colSpan={isTeamView ? (["admin", "superadmin", "supervisor"].includes(userRole || "") ? 8 : 7) : 6} className="py-16 text-center">
+                                                <td colSpan={isTeamView ? (["admin", "superadmin", "supervisor"].includes(userRole || "") ? (isSelectMode ? 8 : 7) : 7) : 6} className="py-16 text-center">
                                                     <div className="flex flex-col items-center gap-4">
                                                         <div className="w-16 h-16 rounded-full bg-neutral-100 flex items-center justify-center">
                                                             <Package className="w-8 h-8 text-neutral-400" />
@@ -3348,7 +3533,7 @@ export default function PurchasingClient() {
                                                             setViewingItem(item);
                                                         }}
                                                     >
-                                                        {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && (
+                                                        {isTeamView && ["admin", "superadmin", "supervisor"].includes(userRole || "") && isSelectMode && (
                                                             <td className="px-6 py-4 text-center w-12" onClick={(e) => e.stopPropagation()}>
                                                                 <input
                                                                     type="checkbox"
@@ -4224,12 +4409,168 @@ export default function PurchasingClient() {
                     onSuccess={() => {
                         setIsShareDrawerOpen(false);
                         setSelectedRequestIds([]);
+                        setIsSelectMode(false);
                         setShareRequestIds([]);
                         loadData();
                     }}
                 />
             )}
 
+            {exportModalConfig && (
+                <ExportColumnsModal
+                    defaultFormat={exportModalConfig.defaultFormat}
+                    onClose={() => setExportModalConfig(null)}
+                    onConfirm={async (selectedCols, formatType) => {
+                        await handleExportCustom(selectedCols, formatType);
+                        setExportModalConfig(null);
+                    }}
+                />
+            )}
+
         </FinancePageWrapper >
+    );
+}
+
+function ExportColumnsModal({ defaultFormat, onClose, onConfirm }: {
+    defaultFormat: "pdf" | "xlsx";
+    onClose: () => void;
+    onConfirm: (selectedColumns: string[], format: "pdf" | "xlsx") => Promise<void>;
+}) {
+    const [formatType, setFormatType] = useState<"pdf" | "xlsx">(defaultFormat);
+    const [selectedCols, setSelectedCols] = useState<string[]>([
+        "date", "po_number", "project", "items", "amount", // required
+        "invoice_date", "due_date", "payment_date", "submitter", "description", "status", "vendor" // optional default-checked
+    ]);
+
+    const columnsList = [
+        { id: "date", label: "Submission Date (Tanggal Pengajuan)", required: true },
+        { id: "po_number", label: "PO Number (Nomor PO)", required: true },
+        { id: "project", label: "Project (Proyek)", required: true },
+        { id: "items", label: "Item Breakdown (Item)", required: true },
+        { id: "amount", label: "Amount (Nominal)", required: true },
+        { id: "invoice_date", label: "Invoice Date (Tanggal Invoice)", required: false },
+        { id: "due_date", label: "Target / Due Date (Target Jatuh Tempo)", required: false },
+        { id: "payment_date", label: "Payment Date (Tanggal Bayar)", required: false },
+        { id: "submitter", label: "Submitter (Yang Mengajukan)", required: false },
+        { id: "description", label: "Description (Deskripsi)", required: false },
+        { id: "status", label: "Status (Status)", required: false },
+        { id: "vendor", label: "Vendor (Vendor)", required: false },
+        { id: "notes", label: "Notes (Catatan)", required: false },
+        { id: "subcategory", label: "Subcategory (Subkategori)", required: false },
+        { id: "type", label: "Type (Tipe)", required: false },
+        { id: "beneficiary", label: "Beneficiary Account (Rekening Penerima)", required: false },
+    ];
+
+    const toggleColumn = (id: string) => {
+        if (selectedCols.includes(id)) {
+            setSelectedCols(selectedCols.filter(c => c !== id));
+        } else {
+            setSelectedCols([...selectedCols, id]);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={onClose} />
+            <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="relative w-full max-w-lg bg-white/90 dark:bg-neutral-950/90 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl rounded-[36px] p-6 overflow-hidden space-y-6"
+            >
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Custom Export Columns</h3>
+                        <p className="text-[11px] text-neutral-500 font-medium">Select columns to include in your report</p>
+                    </div>
+                    <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 flex items-center justify-center text-neutral-400">
+                        <X size={18} />
+                    </button>
+                </div>
+
+                {/* Format Toggle */}
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Export Format</label>
+                    <div className="flex bg-neutral-100 dark:bg-neutral-800/80 p-1 rounded-full w-fit">
+                        <button
+                            onClick={() => setFormatType("pdf")}
+                            className={clsx(
+                                "px-6 py-2 rounded-full text-xs font-bold transition-all",
+                                formatType === "pdf"
+                                    ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
+                                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                            )}
+                        >
+                            PDF Document
+                        </button>
+                        <button
+                            onClick={() => setFormatType("xlsx")}
+                            className={clsx(
+                                "px-6 py-2 rounded-full text-xs font-bold transition-all",
+                                formatType === "xlsx"
+                                    ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm"
+                                    : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                            )}
+                        >
+                            Excel Spreadsheet
+                        </button>
+                    </div>
+                </div>
+
+                {/* Columns Selection Grid */}
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-neutral-400 uppercase tracking-widest pl-1">Columns</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
+                        {columnsList.map((col) => {
+                            const isChecked = selectedCols.includes(col.id);
+                            return (
+                                <label
+                                    key={col.id}
+                                    className={clsx(
+                                        "flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer",
+                                        col.required
+                                            ? "bg-neutral-50/50 dark:bg-neutral-900/40 border-neutral-100 dark:border-neutral-800 cursor-not-allowed opacity-70"
+                                            : isChecked
+                                                ? "bg-blue-50/30 border-blue-100 dark:bg-blue-500/5 dark:border-blue-500/10"
+                                                : "bg-white/40 border-neutral-200/50 hover:bg-neutral-50 dark:bg-transparent dark:border-neutral-800 dark:hover:bg-neutral-800/20"
+                                    )}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        disabled={col.required}
+                                        onChange={() => !col.required && toggleColumn(col.id)}
+                                        className="w-4 h-4 rounded text-blue-600 border-neutral-300 dark:border-neutral-700 focus:ring-blue-500"
+                                    />
+                                    <div className="min-w-0">
+                                        <div className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200">
+                                            {col.label}
+                                        </div>
+                                        {col.required && (
+                                            <div className="text-[9px] text-blue-500 font-bold uppercase tracking-wider mt-0.5">Required</div>
+                                        )}
+                                    </div>
+                                </label>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="flex gap-3 pt-2">
+                    <button
+                        onClick={onClose}
+                        className="w-1/3 py-3 text-xs font-bold bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-600 rounded-full transition-all"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={() => onConfirm(selectedCols, formatType)}
+                        className="w-2/3 py-3 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5"
+                    >
+                        <span>Export Report</span>
+                    </button>
+                </div>
+            </motion.div>
+        </div>
     );
 }

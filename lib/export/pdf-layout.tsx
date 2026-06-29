@@ -2,10 +2,12 @@ import React from "react";
 import { PdfExportPayload } from "./types";
 
 // This layout is rendered on the server to string and passed to Puppeteer
-export function PdfLayout({ meta, summary, sections, trendData, categoryData }: PdfExportPayload) {
+export function PdfLayout({ meta, summary, sections, trendData, categoryData, columns, data }: PdfExportPayload & { columns?: any[]; data?: any[] }) {
     const formatCurrency = (val: number) => {
         return new Intl.NumberFormat("id-ID").format(val);
     };
+
+    const activeSections = sections || (columns && data ? [{ title: "Records", columns, data }] : []);
 
     const renderTrendChart = () => {
         if (!trendData || trendData.length === 0) return null;
@@ -206,7 +208,7 @@ export function PdfLayout({ meta, summary, sections, trendData, categoryData }: 
                 </div>
 
                 {/* SECTIONS */}
-                {sections?.map((section, sI) => (
+                {activeSections.map((section, sI) => (
                     <div key={sI} className="mb-10 last:mb-0">
                         <h3 className="text-lg font-bold text-neutral-800 mb-4 border-l-4 border-blue-500 pl-3">{section.title}</h3>
                         <table className="w-full text-sm text-left">

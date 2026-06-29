@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/server/supabase";
+import { createServiceClient } from "@/lib/server/supabase";
 
 // Columns we safely expose to the public vendor page
 const PUBLIC_PURCHASING_COLUMNS = `
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: "Missing token" }, { status: 400 });
         }
 
-        const supabase = await createServerSupabase();
+        const supabase = createServiceClient();
 
         // 1. Fetch portal by token
         const { data: portal, error: portalError } = await supabase

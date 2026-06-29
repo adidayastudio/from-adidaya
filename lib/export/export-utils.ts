@@ -86,7 +86,7 @@ export const generateExport = async (
                     'button[title="View All"]',
                     'button[title="Export JPG"]',
                     'button[title="Export PDF"]',
-                    'data-html2canvas-ignore="true"'
+                    '[data-html2canvas-ignore="true"]'
                 ];
                 hideSelectors.forEach(selector => {
                     clonedElement.querySelectorAll(selector).forEach((el) => {

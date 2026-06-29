@@ -318,33 +318,54 @@ export default function ShareClient({ token }: ShareClientProps) {
                                                 <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 truncate max-w-sm sm:max-w-md">{req.description}</p>
                                             </div>
 
-                                            <div className="flex items-center gap-3 shrink-0">
-                                                {/* Status Badge */}
-                                                {isPaid ? (
-                                                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-1">
-                                                        <CheckCircle2 className="w-3 h-3" /> Paid
-                                                    </span>
-                                                ) : req.financial_status === "PARTIALLY_PAID" ? (
-                                                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 flex items-center gap-1">
-                                                        <Coins className="w-3 h-3" /> Partially Paid
-                                                    </span>
-                                                ) : isAwaitingPayment ? (
-                                                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center gap-1">
-                                                        <FileCheck className="w-3 h-3" /> Awaiting Payment
-                                                    </span>
-                                                ) : isAwaitingInvoice ? (
-                                                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-amber-50 dark:bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20 flex items-center gap-1">
-                                                        <Clock className="w-3 h-3 animate-pulse" /> Awaiting Invoice
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-100 dark:border-neutral-700 flex items-center gap-1">
-                                                        {req.purchase_stage || "Processing"}
-                                                    </span>
-                                                )}
+                                            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                                                 {/* Amount & Status Stack */}
+                                                 <div className="flex flex-col items-end gap-1">
+                                                     {/* Amount display */}
+                                                     {req.financial_status === "PARTIALLY_PAID" && req.paid_amount ? (
+                                                         <div className="text-right flex flex-col items-end">
+                                                             <span className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                                                                 {formatCurrency(req.amount - req.paid_amount)} <span className="text-[9px] font-bold opacity-80">outstanding</span>
+                                                             </span>
+                                                             <span className="text-[9px] font-bold text-neutral-400 dark:text-neutral-500 tabular-nums">
+                                                                 of {formatCurrency(req.amount)}
+                                                             </span>
+                                                         </div>
+                                                     ) : (
+                                                         <div className="text-right">
+                                                             <span className="text-[11px] font-black text-neutral-900 dark:text-white tabular-nums">
+                                                                 {formatCurrency(req.amount || 0)}
+                                                             </span>
+                                                         </div>
+                                                     )}
 
-                                                <button className="w-8 h-8 rounded-full bg-neutral-50 dark:bg-neutral-800/80 flex items-center justify-center text-neutral-400">
-                                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                </button>
+                                                     {/* Status Badge */}
+                                                     {isPaid ? (
+                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-1">
+                                                             <CheckCircle2 className="w-3 h-3" /> Paid
+                                                         </span>
+                                                     ) : req.financial_status === "PARTIALLY_PAID" ? (
+                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 flex items-center gap-1">
+                                                             <Coins className="w-3 h-3" /> Partially Paid
+                                                         </span>
+                                                     ) : isAwaitingPayment ? (
+                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center gap-1">
+                                                             <FileCheck className="w-3 h-3" /> Awaiting Payment
+                                                         </span>
+                                                     ) : isAwaitingInvoice ? (
+                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-amber-50 dark:bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20 flex items-center gap-1">
+                                                             <Clock className="w-3 h-3 animate-pulse" /> Awaiting Invoice
+                                                         </span>
+                                                     ) : (
+                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-100 dark:border-neutral-700 flex items-center gap-1">
+                                                             {req.purchase_stage || "Processing"}
+                                                         </span>
+                                                     )}
+                                                 </div>
+
+                                                 <button className="w-8 h-8 rounded-full bg-neutral-50 dark:bg-neutral-800/80 flex items-center justify-center text-neutral-400">
+                                                     {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                 </button>
                                             </div>
                                         </div>
 
@@ -355,8 +376,8 @@ export default function ShareClient({ token }: ShareClientProps) {
                                                 <div className="mt-5 space-y-4">
                                                     <div>
                                                         <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2.5">Item Breakdown</h4>
-                                                        <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white/40 dark:bg-neutral-900/40">
-                                                            <table className="w-full text-left border-collapse text-xs">
+                                                        <div className="border border-neutral-100 dark:border-neutral-800 rounded-2xl overflow-hidden bg-white/40 dark:bg-neutral-900/40 overflow-x-auto">
+                                                            <table className="w-full min-w-[600px] text-left border-collapse text-xs">
                                                                 <thead>
                                                                     <tr className="bg-neutral-50/50 dark:bg-neutral-800/50 border-b border-neutral-100 dark:border-neutral-800 text-neutral-400 font-bold">
                                                                         <th className="px-4 py-2">Item Name</th>
