@@ -145,6 +145,7 @@ export async function updatePurchasingStatus(id: string, updates: {
     revision_reason?: string;
     payment_proof_url?: string;
     approved_amount?: number;
+    paid_amount?: number;
 }) {
     const { data, error } = await apiPatch<any>(`/api/finance/purchasing/${id}`, updates);
 

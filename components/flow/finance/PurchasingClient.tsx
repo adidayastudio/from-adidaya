@@ -763,7 +763,7 @@ function RevertConfirmModal({
 function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
     item: PurchasingItem,
     onClose: () => void,
-    onPay: (sourceId: string, date: string, notes: string, proofFiles: File[]) => Promise<void>,
+    onPay: (sourceId: string, date: string, notes: string, proofFiles: File[], isPartial: boolean, partialAmountVal: number) => Promise<void>,
     fundingSources: FundingSource[],
     isLoadingSources: boolean
 }) {
@@ -772,11 +772,26 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
     const [notes, setNotes] = useState("");
     const [proofFiles, setProofFiles] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    // Partial payment states
+    const [isPartial, setIsPartial] = useState(false);
+    const [partialAmount, setPartialAmount] = useState("");
 
     const handleConfirm = async () => {
         if (!source || !date || proofFiles.length === 0) return;
+
+        let payVal = item.amount - (item.paid_amount || 0);
+        if (isPartial) {
+            const parsed = Number(partialAmount);
+            if (isNaN(parsed) || parsed <= 0 || parsed > (item.amount - (item.paid_amount || 0))) {
+                alert("Please enter a valid partial payment amount.");
+                return;
+            }
+            payVal = parsed;
+        }
+
         setIsSubmitting(true);
-        await onPay(source, date, notes, proofFiles);
+        await onPay(source, date, notes, proofFiles, isPartial, payVal);
         setIsSubmitting(false);
     };
 
@@ -801,13 +816,31 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                 <div className="shrink min-h-0 overflow-y-auto px-8 pb-4 scrollbar-hide space-y-6">
                     <div className="py-2 px-1 rounded-[32px] bg-white/40 dark:bg-neutral-900/40 border border-white/60 dark:border-neutral-800 shadow-sm flex flex-col gap-1">
                         <div className="flex justify-between items-center text-xs px-4 py-2">
-                            <span className="text-neutral-500 font-bold">Amount to Pay</span>
+                            <span className="text-neutral-500 font-bold">Total Request Amount</span>
                             <div className="flex items-center gap-2">
-                                <div className="text-right">
-                                    <div className="font-bold text-neutral-900 text-[17px]">{formatCurrency(item.amount)}</div>
-                                </div>
+                                <div className="font-bold text-neutral-800">{formatCurrency(item.amount)}</div>
                                 <div className="w-6 flex justify-center">
                                     <CopyButton text={String(item.amount)} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {item.paid_amount && item.paid_amount > 0 ? (
+                            <div className="flex justify-between items-center text-xs px-4 py-2">
+                                <span className="text-neutral-500 font-bold">Previously Paid</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-bold text-emerald-600">-{formatCurrency(item.paid_amount)}</span>
+                                    <div className="w-6" />
+                                </div>
+                            </div>
+                        ) : null}
+
+                        <div className="flex justify-between items-center text-xs px-4 py-2 bg-neutral-50/50 dark:bg-neutral-900/20 rounded-2xl mx-1.5 p-2 border border-neutral-200/50 dark:border-neutral-800">
+                            <span className="text-neutral-500 font-bold pl-2">Remaining Outstanding</span>
+                            <div className="flex items-center gap-2">
+                                <span className="font-black text-rose-600 text-[15px]">{formatCurrency(item.amount - (item.paid_amount || 0))}</span>
+                                <div className="w-6 flex justify-center">
+                                    <CopyButton text={String(item.amount - (item.paid_amount || 0))} />
                                 </div>
                             </div>
                         </div>
@@ -940,6 +973,46 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                                 </div>
                             </div>
                         </div>
+                        {/* Partial Payment Toggle & Input */}
+                        <div className="p-4 rounded-3xl bg-neutral-50/50 dark:bg-neutral-900/30 border border-neutral-200/50 dark:border-neutral-800/80 space-y-4 shadow-[inset_0_1px_2px_rgba(0,0,0,0.01)]">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={isPartial}
+                                    onChange={(e) => {
+                                        setIsPartial(e.target.checked);
+                                        if (e.target.checked) {
+                                            setPartialAmount(String(item.amount - (item.paid_amount || 0)));
+                                        } else {
+                                            setPartialAmount("");
+                                        }
+                                    }}
+                                    className="w-4 h-4 rounded text-blue-600 border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 focus:ring-blue-500 focus:ring-offset-0"
+                                />
+                                <div className="min-w-0">
+                                    <div className="text-xs font-bold text-neutral-800 dark:text-white">Pay Partially (Bayar Parsial)</div>
+                                    <div className="text-[10px] text-neutral-400 font-medium leading-tight">Check if you are paying a smaller installment of the remaining outstanding amount.</div>
+                                </div>
+                            </label>
+
+                            {isPartial && (
+                                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider pl-1">Installment Amount to Pay (Nominal Pembayaran)</label>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">Rp</span>
+                                        <input
+                                            type="number"
+                                            value={partialAmount}
+                                            onChange={(e) => setPartialAmount(e.target.value)}
+                                            max={item.amount - (item.paid_amount || 0)}
+                                            placeholder="Enter amount..."
+                                            className="w-full h-12 pl-10 pr-4 text-xs font-bold border border-white/60 dark:border-neutral-800 shadow-sm rounded-full bg-white/60 dark:bg-neutral-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         <div>
                             <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">Notes</label>
                             <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Add payment notes..." className="w-full h-12 px-5 text-[13px] border border-white/60 dark:border-neutral-800 shadow-sm rounded-full bg-white/60 dark:bg-neutral-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all font-medium placeholder:text-neutral-400" />
@@ -957,7 +1030,16 @@ function PayDrawer({ item, onClose, onPay, fundingSources, isLoadingSources }: {
                         </button>
                         <button
                             onClick={handleConfirm}
-                            disabled={!source || !date || proofFiles.length === 0 || isSubmitting || !item.invoice_url || !item.beneficiary_bank || !item.beneficiary_number}
+                            disabled={
+                                !source || 
+                                !date || 
+                                proofFiles.length === 0 || 
+                                isSubmitting || 
+                                !item.invoice_url || 
+                                !item.beneficiary_bank || 
+                                !item.beneficiary_number ||
+                                (isPartial && (!partialAmount || isNaN(Number(partialAmount)) || Number(partialAmount) <= 0 || Number(partialAmount) > (item.amount - (item.paid_amount || 0))))
+                            }
                             className="w-2/3 py-4 text-[15px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
                         >
                             {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "Confirm Payment"}
@@ -3489,10 +3571,10 @@ export default function PurchasingClient() {
                     <PayDrawer
                         item={payingItem}
                         onClose={() => setPayingItem(null)}
-                        onPay={async (source, date, notes, proofFiles) => {
+                        onPay={async (source, date, notes, proofFiles, isPartial, partialAmountVal) => {
                             try {
                                 const requestId = payingItem.request_id || payingItem.id;
-                                console.log("Processing payment for request:", requestId);
+                                console.log("Processing payment for request:", requestId, "isPartial:", isPartial, "amount:", partialAmountVal);
 
                                 let proofUrls: string[] = [];
                                 if (proofFiles && proofFiles.length > 0) {
@@ -3509,18 +3591,34 @@ export default function PurchasingClient() {
                                     }
                                 }
 
+                                const currentPaid = payingItem.paid_amount || 0;
+                                const newPaidAmount = currentPaid + partialAmountVal;
+                                const finalStatus = newPaidAmount >= payingItem.amount ? "PAID" : "PARTIALLY_PAID";
+
+                                const existingProofs = payingItem.payment_proof_url || "";
+                                const finalProofUrl = proofUrls.length > 0 
+                                    ? (existingProofs ? `${existingProofs},${proofUrls.join(',')}` : proofUrls.join(','))
+                                    : existingProofs;
+
                                 const success = await updatePurchasingStatus(requestId, {
-                                    financial_status: "PAID",
+                                    financial_status: finalStatus,
+                                    paid_amount: newPaidAmount,
                                     payment_date: date,
                                     source_of_fund_id: source,
                                     notes: notes,
-                                    payment_proof_url: proofUrls.length > 0 ? proofUrls.join(',') : undefined
+                                    payment_proof_url: finalProofUrl || undefined
                                 });
 
                                 if (success) {
                                     // Update drawer in real-time
                                     if (viewingItem && viewingItem.id === (payingItem.request_id || payingItem.id)) {
-                                        setViewingItem({ ...viewingItem, financial_status: 'PAID', payment_date: date });
+                                        setViewingItem({ 
+                                            ...viewingItem, 
+                                            financial_status: finalStatus as any, 
+                                            paid_amount: newPaidAmount,
+                                            payment_date: date,
+                                            payment_proof_url: finalProofUrl
+                                        });
                                     }
                                     loadData();
                                     setPayingItem(null);

@@ -15,6 +15,7 @@ const PUBLIC_PURCHASING_COLUMNS = `
     payment_date, 
     notes,
     request_number,
+    paid_amount,
     project:projects(id, project_name, project_code, project_number),
     items:purchasing_items(id, name, qty, unit, unit_price, total),
     invoices:purchasing_invoices(id, invoice_url, invoice_name, invoice_type, notes, created_at)

@@ -114,6 +114,7 @@ export function getPrimaryStatus(
     if (approvalStatus === 'REJECTED') return 'REJECTED';
     if (approvalStatus === 'NEED_REVISION') return 'NEED_REVISION';
     if (financialStatus === 'PAID') return 'PAID';
+    if (financialStatus === 'PARTIALLY_PAID') return 'PARTIALLY_PAID';
     if (approvalStatus === 'APPROVED') return 'UNPAID';
     if (approvalStatus === 'SUBMITTED') return 'SUBMITTED';
     return approvalStatus;
@@ -124,6 +125,7 @@ export const STATUS_THEMES: Record<string, { bg: string; text: string; border?: 
     SUBMITTED: { bg: "bg-orange-500/10 dark:bg-orange-500/20", text: "text-orange-600 dark:text-orange-400", border: "border-orange-500/20" },
     APPROVED: { bg: "bg-emerald-500/10 dark:bg-emerald-500/20", text: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-500/20" },
     PAID: { bg: "bg-blue-500/10 dark:bg-blue-500/20", text: "text-blue-600 dark:text-blue-400", border: "border-blue-500/20" },
+    PARTIALLY_PAID: { bg: "bg-indigo-500/10 dark:bg-indigo-500/20", text: "text-indigo-600 dark:text-indigo-400", border: "border-indigo-500/20" },
     UNPAID: { bg: "bg-rose-500/10 dark:bg-rose-500/20", text: "text-rose-600 dark:text-rose-400", border: "border-rose-500/20" },
     PENDING: { bg: "bg-orange-500/10 dark:bg-orange-500/20", text: "text-orange-600 dark:text-orange-400", border: "border-orange-500/20" },
     REJECTED: { bg: "bg-rose-500/10 dark:bg-rose-500/20", text: "text-rose-600 dark:text-rose-400", border: "border-rose-500/20" },

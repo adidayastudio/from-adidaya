@@ -138,9 +138,10 @@ export default function ShareClient({ token }: ShareClientProps) {
     const stats = useMemo(() => {
         if (!requests.length) return { totalAmount: 0, outstandingAmount: 0, paidCount: 0, totalCount: 0 };
         const totalAmount = requests.reduce((sum, r) => sum + (r.amount || 0), 0);
-        const outstandingAmount = requests
-            .filter(r => r.financial_status !== 'PAID')
-            .reduce((sum, r) => sum + (r.amount || 0), 0);
+        const outstandingAmount = requests.reduce((sum, r) => {
+            const paid = r.paid_amount || 0;
+            return sum + Math.max(0, (r.amount || 0) - paid);
+        }, 0);
         const paidCount = requests.filter(r => r.financial_status === 'PAID').length;
         const totalCount = requests.length;
         return { totalAmount, outstandingAmount, paidCount, totalCount };
@@ -323,6 +324,10 @@ export default function ShareClient({ token }: ShareClientProps) {
                                                     <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-1">
                                                         <CheckCircle2 className="w-3 h-3" /> Paid
                                                     </span>
+                                                ) : req.financial_status === "PARTIALLY_PAID" ? (
+                                                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 flex items-center gap-1">
+                                                        <Coins className="w-3 h-3" /> Partially Paid
+                                                    </span>
                                                 ) : isAwaitingPayment ? (
                                                     <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center gap-1">
                                                         <FileCheck className="w-3 h-3" /> Awaiting Payment
@@ -378,11 +383,29 @@ export default function ShareClient({ token }: ShareClientProps) {
                                                                     <tr className="bg-neutral-50/30 dark:bg-neutral-800/20 font-bold border-t border-neutral-100 dark:border-neutral-800">
                                                                         <td className="px-4 py-3" colSpan={2}>Grand Total</td>
                                                                         <td className="px-4 py-3 text-right" colSpan={2}>
-                                                                            <span className="text-sm font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                                                                            <span className="text-sm font-black text-neutral-800 dark:text-neutral-200 tabular-nums">
                                                                                 {formatCurrency(req.amount || 0)}
                                                                             </span>
                                                                         </td>
                                                                     </tr>
+                                                                    {req.paid_amount && req.paid_amount > 0 ? (
+                                                                        <>
+                                                                            <tr className="font-bold text-neutral-500 bg-emerald-50/10 dark:bg-emerald-500/5">
+                                                                                <td className="px-4 py-2" colSpan={2}>Previously Paid</td>
+                                                                                <td className="px-4 py-2 text-right text-emerald-600 dark:text-emerald-400 tabular-nums" colSpan={2}>
+                                                                                    -{formatCurrency(req.paid_amount)}
+                                                                                </td>
+                                                                            </tr>
+                                                                            <tr className="bg-rose-50/10 dark:bg-rose-500/5 font-bold">
+                                                                                <td className="px-4 py-3" colSpan={2}>Remaining Outstanding</td>
+                                                                                <td className="px-4 py-3 text-right" colSpan={2}>
+                                                                                    <span className="text-sm font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                                                                                        {formatCurrency(Math.max(0, (req.amount || 0) - req.paid_amount))}
+                                                                                    </span>
+                                                                                </td>
+                                                                            </tr>
+                                                                        </>
+                                                                    ) : null}
                                                                 </tbody>
                                                             </table>
                                                         </div>

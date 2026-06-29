@@ -1,7 +1,7 @@
 // Finance Domain Types
 // Supports construction purchasing workflows: kasbon, post-spend, pre-approval
 
-export type FinancialStatus = "NOT_PAYABLE" | "UNPAID" | "PAID";
+export type FinancialStatus = "NOT_PAYABLE" | "UNPAID" | "PARTIALLY_PAID" | "PAID";
 export type ApprovalStatus = "DRAFT" | "SUBMITTED" | "APPROVED" | "PAID" | "REJECTED" | "CANCELLED" | "NEED_REVISION";
 export type PurchaseStage = "PLANNED" | "INVOICED" | "RECEIVED";
 export type RequestPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
@@ -58,6 +58,7 @@ export interface PurchasingItem {
     subcategory?: string;
     amount: number;
     approved_amount?: number;
+    paid_amount?: number;
     priority?: RequestPriority;
     approval_status: ApprovalStatus;
     purchase_stage: PurchaseStage;
