@@ -466,70 +466,100 @@ function ShareVendorPortalDrawer({
     onClose: () => void;
     onSuccess: () => void;
 }) {
+    const [mode, setMode] = useState<'new' | 'existing'>('new');
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [vendorName, setVendorName] = useState("");
-    const [existingPortals, setExistingPortals] = useState<any[]>([]);
+    const [allPortals, setAllPortals] = useState<any[]>([]);
     const [selectedPortalId, setSelectedPortalId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
     const [shareUrl, setShareUrl] = useState("");
     const [copied, setCopied] = useState(false);
-    const [hasConflict, setHasConflict] = useState(false);
 
     // Extract requests matching the requestIds
     const selectedRequests = useMemo(() => {
         return items.filter(item => requestIds.includes(item.id));
     }, [items, requestIds]);
 
-    // Check if requests belong to the same vendor
-    useEffect(() => {
-        if (selectedRequests.length === 0) return;
-
+    const { detectedVendor, hasMultipleVendors } = useMemo(() => {
         const vendors = Array.from(new Set(selectedRequests.map(r => r.vendor?.trim()).filter(Boolean)));
-        if (vendors.length > 1) {
-            setHasConflict(true);
-            setVendorName("");
-            setIsLoading(false);
-            return;
-        }
+        return {
+            detectedVendor: vendors[0] || "",
+            hasMultipleVendors: vendors.length > 1
+        };
+    }, [selectedRequests]);
 
-        setHasConflict(false);
-        const detectedVendor = vendors[0] || "Unknown Vendor";
-        setVendorName(detectedVendor);
-
-        // Search for existing portal for this vendor
+    // Load all portals on mount/detectedVendor change
+    useEffect(() => {
         const loadPortals = async () => {
             setIsLoading(true);
             try {
-                const portals = await fetchVendorPortals({ vendor_name: detectedVendor });
-                setExistingPortals(portals);
-                if (portals.length > 0) {
-                    // Set default to first existing portal
-                    setSelectedPortalId(portals[0].id);
-                    const origin = window.location.origin;
-                    setShareUrl(`${origin}/flow/finance/purchasing/share/${portals[0].token}`);
+                const portals = await fetchVendorPortals();
+                setAllPortals(portals || []);
+                
+                // Prepopulate vendor name for new portal
+                setVendorName(detectedVendor || "Custom Vendor");
+
+                // Check if any existing portal matches the detected vendor name (case-insensitively)
+                if (detectedVendor) {
+                    const matchingPortal = portals.find(p => 
+                        p.vendor_name.trim().toLowerCase() === detectedVendor.trim().toLowerCase()
+                    );
+                    if (matchingPortal) {
+                        setSelectedPortalId(matchingPortal.id);
+                        setMode('existing');
+                        const origin = window.location.origin;
+                        setShareUrl(`${origin}/flow/finance/purchasing/share/${matchingPortal.token}`);
+                    } else {
+                        setSelectedPortalId(null);
+                        setMode('new');
+                        setShareUrl("");
+                    }
                 } else {
                     setSelectedPortalId(null);
+                    setMode('new');
                     setShareUrl("");
                 }
             } catch (err) {
                 console.error("Failed to load vendor portals:", err);
+                toast.error("Failed to load active links");
             } finally {
                 setIsLoading(false);
             }
         };
 
-        loadPortals();
-    }, [selectedRequests]);
+        if (selectedRequests.length > 0) {
+            loadPortals();
+        }
+    }, [selectedRequests, detectedVendor]);
+
+    // Filter portals based on search query
+    const filteredPortals = useMemo(() => {
+        if (!searchQuery.trim()) return allPortals;
+        return allPortals.filter(p =>
+            p.vendor_name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [allPortals, searchQuery]);
 
     const handleShare = async (useExisting: boolean) => {
         setIsSubmitting(true);
         try {
             let portal = null;
-            if (useExisting && selectedPortalId) {
-                portal = existingPortals.find(p => p.id === selectedPortalId);
+            if (useExisting) {
+                if (!selectedPortalId) {
+                    toast.error("Please select an existing portal");
+                    setIsSubmitting(false);
+                    return;
+                }
+                portal = allPortals.find(p => p.id === selectedPortalId);
             } else {
+                if (!vendorName.trim()) {
+                    toast.error("Vendor name cannot be empty");
+                    setIsSubmitting(false);
+                    return;
+                }
                 // Create a new vendor portal
-                portal = await createVendorPortal(vendorName);
+                portal = await createVendorPortal(vendorName.trim());
             }
 
             if (!portal) {
@@ -544,7 +574,11 @@ function ShareVendorPortalDrawer({
                 setShareUrl(url);
                 navigator.clipboard.writeText(url);
                 setCopied(true);
-                toast.success("Vendor Link generated and copied to clipboard!");
+                toast.success(
+                    useExisting
+                        ? "Requests added to existing portal! Link copied."
+                        : "Vendor share link created and copied!"
+                );
                 setTimeout(() => setCopied(false), 3000);
                 onSuccess();
             } else {
@@ -582,93 +616,175 @@ function ShareVendorPortalDrawer({
                 </div>
 
                 <div className="shrink min-h-0 overflow-y-auto px-8 pb-4 space-y-6 flex-1">
-                    {hasConflict ? (
-                        <div className="p-4 rounded-3xl bg-rose-50 border border-rose-100 flex gap-3">
-                            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-                            <div>
-                                <h4 className="text-[11px] font-bold text-rose-700 mb-1">Vendor Conflict</h4>
-                                <p className="text-[11px] text-rose-600 font-medium tracking-tight">
-                                    The selected requests belong to different vendors. Please select requests belonging to the same vendor to share them under a single portal link.
-                                </p>
-                            </div>
-                        </div>
-                    ) : isLoading ? (
+                    {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-16 gap-3">
                             <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                            <span className="text-sm font-medium text-neutral-500">Checking existing portals...</span>
+                            <span className="text-sm font-medium text-neutral-500">Loading portals...</span>
                         </div>
                     ) : (
                         <div className="space-y-6">
-                            <div className="p-4 rounded-3xl bg-neutral-50 border border-neutral-100 space-y-2">
-                                <div className="text-[10px] font-bold text-neutral-400 uppercase">Vendor Name</div>
-                                <input
-                                    type="text"
-                                    value={vendorName}
-                                    onChange={(e) => setVendorName(e.target.value)}
-                                    placeholder="Enter vendor name..."
-                                    className="w-full h-11 px-4 text-sm border border-neutral-200 rounded-full bg-white font-bold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
-                                />
-                                <p className="text-[10px] text-neutral-400 font-medium italic pl-1">
-                                    {selectedRequests.length} request(s) will be associated with this vendor portal.
-                                </p>
+                            {/* Segmented Tab Controls */}
+                            <div className="flex p-1 bg-neutral-100 dark:bg-neutral-800 rounded-full">
+                                <button
+                                    onClick={() => {
+                                        setMode('new');
+                                        setShareUrl("");
+                                    }}
+                                    className={clsx(
+                                        "flex-1 py-2.5 px-4 text-xs font-bold rounded-full transition-all text-center",
+                                        mode === 'new'
+                                            ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                                            : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                                    )}
+                                >
+                                    Create New Link
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setMode('existing');
+                                        setShareUrl("");
+                                        // Reset selection to default if matched portal exists
+                                        if (detectedVendor) {
+                                            const matchingPortal = allPortals.find(p => 
+                                                p.vendor_name.trim().toLowerCase() === detectedVendor.trim().toLowerCase()
+                                            );
+                                            if (matchingPortal) {
+                                                setSelectedPortalId(matchingPortal.id);
+                                            }
+                                        }
+                                    }}
+                                    className={clsx(
+                                        "flex-1 py-2.5 px-4 text-xs font-bold rounded-full transition-all text-center",
+                                        mode === 'existing'
+                                            ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                                            : "text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                                    )}
+                                >
+                                    Add to Existing Link
+                                </button>
                             </div>
 
-                            {existingPortals.length > 0 ? (
+                            {mode === 'new' ? (
                                 <div className="space-y-4">
-                                    <div className="p-4 rounded-3xl bg-blue-50/80 border border-blue-100 flex gap-3">
-                                        <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                                        <div>
-                                            <h4 className="text-xs font-bold text-blue-800 mb-1">Existing Link Found</h4>
-                                            <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
-                                                An active portal link already exists for <strong>{vendorName}</strong>. 
-                                                You can add these requests to the existing link so the vendor sees everything in one place.
+                                    <div className="p-4 rounded-3xl bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-100 dark:border-neutral-800 space-y-2">
+                                        <div className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Vendor Name (Custom)</div>
+                                        <input
+                                            type="text"
+                                            value={vendorName}
+                                            onChange={(e) => setVendorName(e.target.value)}
+                                            placeholder="Enter custom vendor name..."
+                                            className="w-full h-11 px-4 text-sm border border-neutral-200 dark:border-neutral-800 rounded-full bg-white dark:bg-neutral-900 font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                                        />
+                                        {hasMultipleVendors && (
+                                            <p className="text-[10px] text-amber-600 dark:text-amber-500 font-medium pl-1 flex items-center gap-1">
+                                                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                                Selected items belong to multiple vendors.
                                             </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col gap-3">
-                                        <button
-                                            onClick={() => handleShare(true)}
-                                            disabled={isSubmitting}
-                                            className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
-                                        >
-                                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                            Add to Existing Portal & Copy Link
-                                        </button>
-                                        
-                                        <button
-                                            onClick={() => handleShare(false)}
-                                            disabled={isSubmitting}
-                                            className="w-full py-3.5 text-sm font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                                        >
-                                            Create New Separate Link
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    <div className="p-4 rounded-3xl bg-neutral-50 border border-neutral-100">
-                                        <p className="text-xs text-neutral-500 font-medium leading-relaxed">
-                                            No existing portal found for <strong>{vendorName}</strong>. A new portal and token will be created, and a public link will be generated.
+                                        )}
+                                        <p className="text-[10px] text-neutral-400 font-medium italic pl-1">
+                                            {selectedRequests.length} request(s) will be associated with this new portal.
                                         </p>
                                     </div>
 
                                     <button
                                         onClick={() => handleShare(false)}
                                         disabled={!vendorName.trim() || isSubmitting}
-                                        className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200"
+                                        className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
                                     >
                                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
                                         Generate & Copy Vendor Link
                                     </button>
                                 </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {/* Search input */}
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">
+                                            <Search size={16} />
+                                        </span>
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search existing links..."
+                                            className="w-full h-11 pl-11 pr-10 text-xs border border-neutral-200 dark:border-neutral-800 rounded-full bg-white dark:bg-neutral-900/50 font-medium text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all"
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                onClick={() => setSearchQuery("")}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Scrollable list of existing portals */}
+                                    <div className="border border-neutral-200/60 dark:border-neutral-800 rounded-3xl overflow-hidden bg-neutral-50/50 dark:bg-neutral-900/20 max-h-[220px] overflow-y-auto custom-scrollbar">
+                                        {filteredPortals.length === 0 ? (
+                                            <div className="py-8 text-center text-xs text-neutral-400 dark:text-neutral-500 font-medium">
+                                                No portals found matching "{searchQuery}"
+                                            </div>
+                                        ) : (
+                                            <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                                                {filteredPortals.map((portal) => {
+                                                    const isSelected = selectedPortalId === portal.id;
+                                                    return (
+                                                        <div
+                                                            key={portal.id}
+                                                            onClick={() => {
+                                                                setSelectedPortalId(portal.id);
+                                                                const origin = window.location.origin;
+                                                                setShareUrl(`${origin}/flow/finance/purchasing/share/${portal.token}`);
+                                                            }}
+                                                            className={clsx(
+                                                                "p-3 px-4 flex items-center justify-between gap-3 cursor-pointer transition-all",
+                                                                isSelected 
+                                                                    ? "bg-blue-50/50 dark:bg-blue-500/10 border-l-4 border-blue-600" 
+                                                                    : "hover:bg-neutral-100/50 dark:hover:bg-neutral-800/30"
+                                                            )}
+                                                        >
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                                                                    {portal.vendor_name}
+                                                                </div>
+                                                                <div className="text-[10px] text-neutral-400 dark:text-neutral-500 font-medium mt-0.5">
+                                                                    Created: {format(new Date(portal.created_at), "dd MMM yyyy")}
+                                                                </div>
+                                                            </div>
+                                                            <div className="shrink-0 flex items-center">
+                                                                {isSelected ? (
+                                                                    <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center text-white">
+                                                                        <Check size={12} strokeWidth={3} />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="w-5 h-5 rounded-full border border-neutral-300 dark:border-neutral-700" />
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Action button */}
+                                    <button
+                                        onClick={() => handleShare(true)}
+                                        disabled={!selectedPortalId || isSubmitting}
+                                        className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
+                                    >
+                                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                                        Add to Existing Portal & Copy Link
+                                    </button>
+                                </div>
                             )}
 
                             {shareUrl && (
-                                <div className="p-4 rounded-3xl bg-emerald-50/50 border border-emerald-100 space-y-3">
-                                    <div className="text-[10px] font-bold text-emerald-800 uppercase">Generated Share Link</div>
-                                    <div className="flex items-center justify-between gap-3 bg-white border border-emerald-200/50 rounded-2xl p-3 pr-2.5">
-                                        <span className="text-[11px] font-mono text-neutral-600 truncate flex-1">{shareUrl}</span>
+                                <div className="p-4 rounded-3xl bg-emerald-50/50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 space-y-3">
+                                    <div className="text-[10px] font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider">Vendor Share Link</div>
+                                    <div className="flex items-center justify-between gap-3 bg-white dark:bg-neutral-900 border border-emerald-200/50 dark:border-emerald-800/50 rounded-2xl p-3 pr-2.5">
+                                        <span className="text-[11px] font-mono text-neutral-600 dark:text-neutral-400 truncate flex-1">{shareUrl}</span>
                                         <button
                                             onClick={() => {
                                                 navigator.clipboard.writeText(shareUrl);
@@ -676,7 +792,7 @@ function ShareVendorPortalDrawer({
                                                 toast.success("Link copied!");
                                                 setTimeout(() => setCopied(false), 2000);
                                             }}
-                                            className="p-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition-all"
+                                            className="p-2 bg-emerald-50 dark:bg-emerald-500/20 hover:bg-emerald-100 dark:hover:bg-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-xl transition-all"
                                         >
                                             {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                                         </button>

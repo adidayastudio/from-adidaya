@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         let query = supabase.from("vendor_portals").select("*");
 
         if (vendorName) {
-            query = query.ilike("vendor_name", vendorName.trim());
+            query = query.ilike("vendor_name", `%${vendorName.trim()}%`);
         }
 
         const { data, error } = await query.order("created_at", { ascending: false });
