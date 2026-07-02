@@ -68,10 +68,6 @@ export default function ShareClient({ token }: ShareClientProps) {
             );
             
             setRequests(resolvedRequests);
-            // Expand all by default initially
-            if (resolvedRequests.length > 0) {
-                setExpandedRequestIds(resolvedRequests.map((r: any) => r.id));
-            }
         } catch (err: any) {
             console.error("Error loading vendor portal data:", err);
             setError(err.message || "Failed to load vendor portal. Please check the link or contact your project administrator.");
@@ -340,7 +336,7 @@ export default function ShareClient({ token }: ShareClientProps) {
                                                      )}
 
                                                      {/* Status Badge */}
-                                                     {isPaid ? (
+                                                     {req.financial_status === "PAID" ? (
                                                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-1">
                                                              <CheckCircle2 className="w-3 h-3" /> Paid
                                                          </span>
@@ -348,17 +344,13 @@ export default function ShareClient({ token }: ShareClientProps) {
                                                          <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-500/20 flex items-center gap-1">
                                                              <Coins className="w-3 h-3" /> Partially Paid
                                                          </span>
-                                                     ) : isAwaitingPayment ? (
-                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20 flex items-center gap-1">
-                                                             <FileCheck className="w-3 h-3" /> Awaiting Payment
-                                                         </span>
-                                                     ) : isAwaitingInvoice ? (
-                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-amber-50 dark:bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-100 dark:border-amber-500/20 flex items-center gap-1">
-                                                             <Clock className="w-3 h-3 animate-pulse" /> Awaiting Invoice
+                                                     ) : req.approval_status === "SUBMITTED" ? (
+                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-100 dark:border-orange-500/20 flex items-center gap-1">
+                                                             <Clock className="w-3 h-3" /> Submitted
                                                          </span>
                                                      ) : (
-                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-100 dark:border-neutral-700 flex items-center gap-1">
-                                                             {req.purchase_stage || "Processing"}
+                                                         <span className="px-2.5 py-0.5 rounded-full text-[9px] font-bold tracking-wide uppercase bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-500/20 flex items-center gap-1">
+                                                             <AlertCircle className="w-3 h-3" /> Unpaid
                                                          </span>
                                                      )}
                                                  </div>
