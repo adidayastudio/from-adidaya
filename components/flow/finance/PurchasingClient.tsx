@@ -489,6 +489,20 @@ function ShareVendorPortalDrawer({
         };
     }, [selectedRequests]);
 
+    // Requests that do not have any vendor portal link yet
+    const unlinkedRequests = useMemo(() => {
+        return selectedRequests.filter(r => !r.vendor_portal_id);
+    }, [selectedRequests]);
+
+    const alreadyLinkedCount = useMemo(() => {
+        return selectedRequests.length - unlinkedRequests.length;
+    }, [selectedRequests, unlinkedRequests]);
+
+    // IDs of requests that actually need to be linked
+    const unlinkedRequestIds = useMemo(() => {
+        return unlinkedRequests.map(r => r.id);
+    }, [unlinkedRequests]);
+
     // Load all portals on mount/detectedVendor change
     useEffect(() => {
         const loadPortals = async () => {
@@ -567,7 +581,7 @@ function ShareVendorPortalDrawer({
             }
 
             // Link requests to this portal
-            const success = await linkRequestsToVendorPortal(portal.id, requestIds);
+            const success = await linkRequestsToVendorPortal(portal.id, unlinkedRequestIds);
             if (success) {
                 const origin = window.location.origin;
                 const url = `${origin}/flow/finance/purchasing/share/${portal.token}`;
@@ -681,18 +695,23 @@ function ShareVendorPortalDrawer({
                                                 Selected items belong to multiple vendors.
                                             </p>
                                         )}
-                                        <p className="text-[10px] text-neutral-400 font-medium italic pl-1">
-                                            {selectedRequests.length} request(s) will be associated with this new portal.
+                                        <p className="text-[10px] text-neutral-400 font-medium italic pl-1 space-y-1">
+                                            <span>{unlinkedRequests.length} request(s) will be associated with this new portal.</span>
+                                            {alreadyLinkedCount > 0 && (
+                                                <span className="text-amber-600 dark:text-amber-500 block font-bold">
+                                                    ⚠️ {alreadyLinkedCount} selected item(s) already have sharing links and will be skipped.
+                                                </span>
+                                            )}
                                         </p>
                                     </div>
 
                                     <button
                                         onClick={() => handleShare(false)}
-                                        disabled={!vendorName.trim() || isSubmitting}
+                                        disabled={!vendorName.trim() || isSubmitting || unlinkedRequestIds.length === 0}
                                         className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
                                     >
                                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-                                        Generate & Copy Vendor Link
+                                        {unlinkedRequestIds.length === 0 ? "All Items Already Linked" : "Generate & Copy Vendor Link"}
                                     </button>
                                 </div>
                             ) : (
@@ -771,12 +790,20 @@ function ShareVendorPortalDrawer({
                                     {/* Action button */}
                                     <button
                                         onClick={() => handleShare(true)}
-                                        disabled={!selectedPortalId || isSubmitting}
+                                        disabled={!selectedPortalId || isSubmitting || unlinkedRequestIds.length === 0}
                                         className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
                                     >
                                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                        Add to Existing Portal & Copy Link
+                                        {unlinkedRequestIds.length === 0 
+                                            ? "All Items Already Linked" 
+                                            : `Add ${unlinkedRequestIds.length} Item(s) & Copy Link`
+                                        }
                                     </button>
+                                    {alreadyLinkedCount > 0 && (
+                                        <p className="text-[10px] text-amber-600 dark:text-amber-500 font-bold text-center pl-1">
+                                            ⚠️ {alreadyLinkedCount} selected item(s) are already linked to a portal and will be skipped.
+                                        </p>
+                                    )}
                                 </div>
                             )}
 

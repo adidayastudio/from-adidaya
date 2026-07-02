@@ -84,6 +84,7 @@ export interface PurchasingItem {
     created_by_role?: string;
     created_at: string;
     updated_at: string;
+    vendor_portal_id?: string | null;
     project?: {
         id: string;
         project_code: string;

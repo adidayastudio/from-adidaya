@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
         const { error } = await supabase
             .from("purchasing_requests")
             .update({ vendor_portal_id: portal_id })
-            .in("id", request_ids);
+            .in("id", request_ids)
+            .is("vendor_portal_id", null);
 
         if (error) {
             console.error("Error linking requests to vendor portal:", error);
