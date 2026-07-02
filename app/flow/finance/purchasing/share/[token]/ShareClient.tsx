@@ -18,7 +18,10 @@ import {
     Loader2, 
     X,
     FileCheck,
-    Coins
+    Coins,
+    Search,
+    ArrowUpNarrowWide,
+    ArrowDownWideNarrow
 } from "lucide-react";
 import { format } from "date-fns";
 import clsx from "clsx";
@@ -41,6 +44,59 @@ export default function ShareClient({ token }: ShareClientProps) {
 
     // Collapsed request cards state
     const [expandedRequestIds, setExpandedRequestIds] = useState<string[]>([]);
+
+    // Search and filter states
+    const [searchQuery, setSearchQuery] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [sortBy, setSortBy] = useState<"invoice_date" | "po_number" | "amount">("invoice_date");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+    // Memoized processed requests
+    const processedRequests = useMemo(() => {
+        let result = [...requests];
+
+        // 1. Text Search Filter (PO number, description, or project name)
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase().trim();
+            result = result.filter(r => {
+                const poIdStr = r.request_number 
+                    ? `PO-${r.project?.project_number || r.project_number}-${r.request_number}`.toLowerCase()
+                    : `PO-${r.id.slice(0, 8).toUpperCase()}`.toLowerCase();
+                const description = (r.description || "").toLowerCase();
+                const project = (r.project?.project_name || "").toLowerCase();
+                
+                return poIdStr.includes(query) || description.includes(query) || project.includes(query);
+            });
+        }
+
+        // 2. Status Filter
+        if (statusFilter !== "ALL") {
+            result = result.filter(r => {
+                const status = r.financial_status === 'PAID' ? 'PAID' :
+                               r.financial_status === 'PARTIALLY_PAID' ? 'PARTIALLY_PAID' :
+                               r.approval_status === 'SUBMITTED' ? 'SUBMITTED' : 'UNPAID';
+                return status === statusFilter;
+            });
+        }
+
+        // 3. Sorting
+        result.sort((a, b) => {
+            let comparison = 0;
+            if (sortBy === "invoice_date") {
+                comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+            } else if (sortBy === "po_number") {
+                const aNum = a.request_number || 0;
+                const bNum = b.request_number || 0;
+                comparison = aNum - bNum;
+            } else if (sortBy === "amount") {
+                comparison = (a.amount || 0) - (b.amount || 0);
+            }
+
+            return sortOrder === "asc" ? comparison : -comparison;
+        });
+
+        return result;
+    }, [requests, searchQuery, statusFilter, sortBy, sortOrder]);
 
     const loadPortalData = async () => {
         try {
@@ -270,20 +326,98 @@ export default function ShareClient({ token }: ShareClientProps) {
 
                     {/* Right Column: Linked Purchase Requests */}
                     <div className="lg:col-span-2 space-y-6">
-                        <h2 className="text-lg font-bold text-neutral-900 dark:text-white px-2">Associated Purchase Orders</h2>
+                        <div className="flex items-center justify-between px-2 flex-wrap gap-4">
+                            <h2 className="text-base font-black text-neutral-900 dark:text-white tracking-tight">Associated Purchase Orders</h2>
+                            {requests.length > 0 && (
+                                <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                                    Showing {processedRequests.length} of {requests.length} POs
+                                </span>
+                            )}
+                        </div>
 
-                        {requests.length === 0 ? (
+                        {requests.length > 0 && (
+                            <div className="bg-white/40 dark:bg-neutral-900/40 border border-white/60 dark:border-neutral-800 rounded-3xl p-4 flex flex-col sm:flex-row gap-3 items-center shadow-[0_4px_20px_rgba(0,0,0,0.01)] backdrop-blur-xl">
+                                {/* Search PO */}
+                                <div className="relative w-full sm:flex-1">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400">
+                                        <Search size={14} />
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Search POs..."
+                                        className="w-full h-10 pl-10 pr-8 text-xs border border-neutral-200 dark:border-neutral-800 rounded-full bg-white dark:bg-neutral-900/50 font-bold text-neutral-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/10 focus:border-rose-500/30 transition-all"
+                                    />
+                                    {searchQuery && (
+                                        <button
+                                            onClick={() => setSearchQuery("")}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-2 w-full sm:w-auto items-center">
+                                    {/* Filter Status */}
+                                    <div className="flex items-center gap-1.5 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-full px-3 h-10 flex-1 sm:flex-initial">
+                                        <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Status:</span>
+                                        <select
+                                            value={statusFilter}
+                                            onChange={(e) => setStatusFilter(e.target.value)}
+                                            className="bg-transparent text-xs font-black text-neutral-700 dark:text-neutral-300 focus:outline-none cursor-pointer w-full"
+                                        >
+                                            <option value="ALL">All</option>
+                                            <option value="UNPAID">Unpaid</option>
+                                            <option value="PAID">Paid</option>
+                                            <option value="PARTIALLY_PAID">Partially Paid</option>
+                                            <option value="SUBMITTED">Submitted</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Sort By */}
+                                    <div className="flex items-center gap-1.5 bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded-full px-3 h-10 flex-1 sm:flex-initial">
+                                        <span className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-wider">Sort:</span>
+                                        <select
+                                            value={sortBy}
+                                            onChange={(e) => setSortBy(e.target.value as any)}
+                                            className="bg-transparent text-xs font-black text-neutral-700 dark:text-neutral-300 focus:outline-none cursor-pointer w-full"
+                                        >
+                                            <option value="invoice_date">Date</option>
+                                            <option value="po_number">PO Number</option>
+                                            <option value="amount">Amount</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Sort Order Toggle */}
+                                    <button
+                                        onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+                                        className="h-10 w-10 rounded-full bg-white dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 flex items-center justify-center text-neutral-500 hover:bg-neutral-50 dark:hover:bg-neutral-800 active:scale-95 transition-all shrink-0"
+                                        title={sortOrder === "asc" ? "Sort Ascending" : "Sort Descending"}
+                                    >
+                                        {sortOrder === "asc" ? (
+                                            <ArrowUpNarrowWide size={14} />
+                                        ) : (
+                                            <ArrowDownWideNarrow size={14} />
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {processedRequests.length === 0 ? (
                             <div className="bg-white/40 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800 rounded-3xl py-16 text-center space-y-4">
                                 <div className="w-16 h-16 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center mx-auto">
                                     <Receipt className="w-8 h-8 text-neutral-400" />
                                 </div>
                                 <div>
-                                    <h3 className="text-base font-bold text-neutral-900 dark:text-white">No active orders</h3>
-                                    <p className="text-xs text-neutral-500 max-w-xs mx-auto mt-1">There are no purchase orders linked to this portal yet.</p>
+                                    <h3 className="text-base font-bold text-neutral-900 dark:text-white">No orders found</h3>
+                                    <p className="text-xs text-neutral-500 max-w-xs mx-auto mt-1">There are no purchase orders matching your current search/filters.</p>
                                 </div>
                             </div>
                         ) : (
-                            requests.map((req) => {
+                            processedRequests.map((req) => {
                                 const isExpanded = expandedRequestIds.includes(req.id);
                                 const poIdStr = req.request_number 
                                     ? `PO-${req.project?.project_number || req.project_number}-${req.request_number}`
