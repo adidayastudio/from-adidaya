@@ -188,15 +188,34 @@ export default function ShareClient({ token }: ShareClientProps) {
 
     // Calculate Summary Stats
     const stats = useMemo(() => {
-        if (!requests.length) return { totalAmount: 0, outstandingAmount: 0, paidCount: 0, totalCount: 0 };
-        const totalAmount = requests.reduce((sum, r) => sum + (r.amount || 0), 0);
-        const outstandingAmount = requests.reduce((sum, r) => {
-            const paid = r.paid_amount || 0;
-            return sum + Math.max(0, (r.amount || 0) - paid);
-        }, 0);
-        const paidCount = requests.filter(r => r.financial_status === 'PAID').length;
+        if (!requests.length) return { totalAmount: 0, paidAmount: 0, unpaidAmount: 0, totalCount: 0, paidCount: 0, unpaidCount: 0 };
+        
+        let totalAmount = 0;
+        let paidAmount = 0;
+        let unpaidAmount = 0;
+        let paidCount = 0;
+        let unpaidCount = 0;
         const totalCount = requests.length;
-        return { totalAmount, outstandingAmount, paidCount, totalCount };
+
+        requests.forEach(r => {
+            const amount = r.amount || 0;
+            totalAmount += amount;
+            
+            if (r.financial_status === 'PAID') {
+                paidAmount += amount;
+                paidCount++;
+            } else if (r.financial_status === 'PARTIALLY_PAID') {
+                const paid = r.paid_amount || 0;
+                paidAmount += paid;
+                unpaidAmount += Math.max(0, amount - paid);
+                unpaidCount++; // Partially paid is still outstanding/unpaid
+            } else {
+                unpaidAmount += amount;
+                unpaidCount++;
+            }
+        });
+
+        return { totalAmount, paidAmount, unpaidAmount, totalCount, paidCount, unpaidCount };
     }, [requests]);
 
     const formatCurrency = (val: number) => {
@@ -292,32 +311,47 @@ export default function ShareClient({ token }: ShareClientProps) {
                         <div className="grid grid-cols-1 gap-4">
                             {/* Card 1: Total Amount */}
                             <div className="bg-white/60 dark:bg-neutral-900/60 border border-white/80 dark:border-neutral-800/60 rounded-3xl p-5 flex items-center gap-4 backdrop-blur-xl">
-                                <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
+                                <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
                                     <DollarSign className="w-6 h-6" />
                                 </div>
                                 <div className="min-w-0">
                                     <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total PO Value</div>
                                     <div className="text-lg font-black text-neutral-900 dark:text-white mt-0.5 truncate">{formatCurrency(stats.totalAmount)}</div>
+                                    <div className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 mt-0.5">
+                                        {stats.totalCount} Purchase Order(s)
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Card 2: Outstanding (Unpaid) */}
+                            {/* Card 2: Paid Amount */}
+                            <div className="bg-white/60 dark:bg-neutral-900/60 border border-white/80 dark:border-neutral-800/60 rounded-3xl p-5 flex items-center gap-4 backdrop-blur-xl">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+                                    <CheckCircle2 className="w-6 h-6" />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Paid Amount</div>
+                                    <div className="text-lg font-black text-neutral-900 dark:text-white mt-0.5 truncate">{formatCurrency(stats.paidAmount)}</div>
+                                    <div className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 mt-0.5">
+                                        {stats.paidCount} PO(s) Paid
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Card 3: Unpaid / Outstanding */}
                             <div className="bg-white/60 dark:bg-neutral-900/60 border border-white/80 dark:border-neutral-800/60 rounded-3xl p-5 flex items-center gap-4 backdrop-blur-xl">
                                 <div className={clsx(
                                     "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
-                                    stats.outstandingAmount > 0 
-                                        ? "bg-amber-50 dark:bg-amber-500/10 text-amber-500" 
-                                        : "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500"
+                                    stats.unpaidAmount > 0 
+                                        ? "bg-rose-50 dark:bg-rose-500/10 text-rose-500" 
+                                        : "bg-neutral-50 dark:bg-neutral-800 text-neutral-400"
                                 )}>
                                     <Coins className="w-6 h-6" />
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Outstanding (Unpaid)</div>
-                                    <div className="text-lg font-black text-neutral-900 dark:text-white mt-0.5 truncate">
-                                        {formatCurrency(stats.outstandingAmount)}
-                                    </div>
+                                    <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Unpaid (Outstanding)</div>
+                                    <div className="text-lg font-black text-neutral-900 dark:text-white mt-0.5 truncate">{formatCurrency(stats.unpaidAmount)}</div>
                                     <div className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 mt-0.5">
-                                        {stats.paidCount} / {stats.totalCount} Paid
+                                        {stats.unpaidCount} PO(s) Outstanding
                                     </div>
                                 </div>
                             </div>
