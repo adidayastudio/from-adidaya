@@ -489,19 +489,28 @@ function ShareVendorPortalDrawer({
         };
     }, [selectedRequests]);
 
-    // Requests that do not have any vendor portal link yet
-    const unlinkedRequests = useMemo(() => {
-        return selectedRequests.filter(r => !r.vendor_portal_id);
-    }, [selectedRequests]);
+    // Requests that need to be linked based on current mode & selected portal
+    const { requestsToLink, alreadyLinkedCount } = useMemo(() => {
+        if (mode === 'new' || !selectedPortalId) {
+            return {
+                requestsToLink: selectedRequests,
+                alreadyLinkedCount: 0
+            };
+        }
+        
+        // Mode is existing: skip only if already linked to the target portal
+        const toLink = selectedRequests.filter(r => r.vendor_portal_id !== selectedPortalId);
+        const skipped = selectedRequests.length - toLink.length;
+        
+        return {
+            requestsToLink: toLink,
+            alreadyLinkedCount: skipped
+        };
+    }, [selectedRequests, mode, selectedPortalId]);
 
-    const alreadyLinkedCount = useMemo(() => {
-        return selectedRequests.length - unlinkedRequests.length;
-    }, [selectedRequests, unlinkedRequests]);
-
-    // IDs of requests that actually need to be linked
-    const unlinkedRequestIds = useMemo(() => {
-        return unlinkedRequests.map(r => r.id);
-    }, [unlinkedRequests]);
+    const requestIdsToLink = useMemo(() => {
+        return requestsToLink.map(r => r.id);
+    }, [requestsToLink]);
 
     // Load all portals on mount/detectedVendor change
     useEffect(() => {
@@ -581,7 +590,7 @@ function ShareVendorPortalDrawer({
             }
 
             // Link requests to this portal
-            const success = await linkRequestsToVendorPortal(portal.id, unlinkedRequestIds);
+            const success = await linkRequestsToVendorPortal(portal.id, requestIdsToLink);
             if (success) {
                 const origin = window.location.origin;
                 const url = `${origin}/flow/finance/purchasing/share/${portal.token}`;
@@ -696,10 +705,10 @@ function ShareVendorPortalDrawer({
                                             </p>
                                         )}
                                         <p className="text-[10px] text-neutral-400 font-medium italic pl-1 space-y-1">
-                                            <span>{unlinkedRequests.length} request(s) will be associated with this new portal.</span>
+                                            <span>{requestsToLink.length} request(s) will be associated with this new portal.</span>
                                             {alreadyLinkedCount > 0 && (
                                                 <span className="text-amber-600 dark:text-amber-500 block font-bold">
-                                                    ⚠️ {alreadyLinkedCount} selected item(s) already have sharing links and will be skipped.
+                                                    ⚠️ {alreadyLinkedCount} selected item(s) are already in this portal link and will be skipped.
                                                 </span>
                                             )}
                                         </p>
@@ -707,11 +716,11 @@ function ShareVendorPortalDrawer({
 
                                     <button
                                         onClick={() => handleShare(false)}
-                                        disabled={!vendorName.trim() || isSubmitting || unlinkedRequestIds.length === 0}
+                                        disabled={!vendorName.trim() || isSubmitting || requestIdsToLink.length === 0}
                                         className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
                                     >
                                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-                                        {unlinkedRequestIds.length === 0 ? "All Items Already Linked" : "Generate & Copy Vendor Link"}
+                                        {requestIdsToLink.length === 0 ? "All Items Already Linked" : "Generate & Copy Vendor Link"}
                                     </button>
                                 </div>
                             ) : (
@@ -790,18 +799,18 @@ function ShareVendorPortalDrawer({
                                     {/* Action button */}
                                     <button
                                         onClick={() => handleShare(true)}
-                                        disabled={!selectedPortalId || isSubmitting || unlinkedRequestIds.length === 0}
+                                        disabled={!selectedPortalId || isSubmitting || requestIdsToLink.length === 0}
                                         className="w-full py-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-full transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-blue-200 dark:shadow-none"
                                     >
                                         {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                                        {unlinkedRequestIds.length === 0 
+                                        {requestIdsToLink.length === 0 
                                             ? "All Items Already Linked" 
-                                            : `Add ${unlinkedRequestIds.length} Item(s) & Copy Link`
+                                            : `Add ${requestIdsToLink.length} Item(s) & Copy Link`
                                         }
                                     </button>
                                     {alreadyLinkedCount > 0 && (
                                         <p className="text-[10px] text-amber-600 dark:text-amber-500 font-bold text-center pl-1">
-                                            ⚠️ {alreadyLinkedCount} selected item(s) are already linked to a portal and will be skipped.
+                                            ⚠️ {alreadyLinkedCount} selected item(s) are already linked to this portal and will be skipped.
                                         </p>
                                     )}
                                 </div>
