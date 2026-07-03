@@ -830,3 +830,97 @@ export async function updateDailyRating(crewId: string, workspaceId: string, dat
         if (error) throw error;
     }
 }
+
+// ============================================
+// FUTURE DATE UNLOCKS
+// ============================================
+
+/**
+ * Checks if a specific future date is unlocked for a project.
+ */
+export async function fetchFutureUnlock(
+    workspaceId: string,
+    projectCode: string,
+    dateStr: string
+): Promise<boolean> {
+    try {
+        const { data, error } = await supabase
+            .from("crew_future_unlocks")
+            .select("id")
+            .eq("workspace_id", workspaceId)
+            .eq("project_code", projectCode)
+            .eq("date", dateStr)
+            .maybeSingle();
+
+        if (error) {
+            // Log warning but don't throw (e.g. if migration not run yet)
+            console.warn("⚠️ Error fetching future unlock (make sure migration is run):", error.message);
+            return false;
+        }
+
+        return !!data;
+    } catch (e) {
+        console.error("❌ Exception in fetchFutureUnlock:", e);
+        return false;
+    }
+}
+
+/**
+ * Unlocks a future date for a project (persisted in database).
+ */
+export async function unlockFutureDate(
+    workspaceId: string,
+    projectCode: string,
+    dateStr: string,
+    userId?: string
+): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from("crew_future_unlocks")
+            .insert({
+                workspace_id: workspaceId,
+                project_code: projectCode,
+                date: dateStr,
+                unlocked_by: userId || null
+            });
+
+        if (error) {
+            console.error("❌ Error unlocking future date:", error.message);
+            throw error;
+        }
+
+        return true;
+    } catch (e) {
+        console.error("❌ Exception in unlockFutureDate:", e);
+        throw e;
+    }
+}
+
+/**
+ * Locks a future date again (removes override from database).
+ */
+export async function lockFutureDate(
+    workspaceId: string,
+    projectCode: string,
+    dateStr: string
+): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from("crew_future_unlocks")
+            .delete()
+            .eq("workspace_id", workspaceId)
+            .eq("project_code", projectCode)
+            .eq("date", dateStr);
+
+        if (error) {
+            console.error("❌ Error locking future date:", error.message);
+            throw error;
+        }
+
+        return true;
+    } catch (e) {
+        console.error("❌ Exception in lockFutureDate:", e);
+        throw e;
+    }
+}
+

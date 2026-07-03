@@ -3,12 +3,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, Check, X, Download, ArrowUpDown, Edit2, Users, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, Check, X, Download, ArrowUpDown, Edit2, Users, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, upsertDailyLog, deleteDailyLogEntry, DailyLog, fetchCrewByAssignment } from "@/lib/api/crew";
+import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, upsertDailyLog, deleteDailyLogEntry, DailyLog, fetchCrewByAssignment, fetchFutureUnlock, unlockFutureDate, lockFutureDate } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { isCrewPaidHolidayOrSunday } from "@/lib/holidays";
+import { supabase } from "@/lib/supabaseClient";
 
 interface CrewDailyInputProps {
     role?: string;
@@ -82,6 +83,16 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [exporting, setExporting] = useState(false);
 
+    // Urgent Advance Submission States
+    const [urgentUnlocked, setUrgentUnlocked] = useState(false);
+    const [showUnlockModal, setShowUnlockModal] = useState(false);
+    const [loadingUnlock, setLoadingUnlock] = useState(false);
+
+    // Check Role
+    const isAuthorizedForUrgent = useMemo(() => {
+        return !!(role && ["admin", "superadmin", "administrator", "supervisor"].includes(role.toLowerCase()));
+    }, [role]);
+
     // 1. Load Projects
     useEffect(() => {
         const loadProjects = async () => {
@@ -104,6 +115,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
         const loadCrew = async () => {
             if (!selectedProject) {
                 setEntries([]);
+                setUrgentUnlocked(false);
                 return;
             }
 
@@ -117,6 +129,10 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                     const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
                     const day = String(selectedDate.getDate()).padStart(2, '0');
                     const dateStr = `${year}-${month}-${day}`;
+
+                    // Fetch unlock status from database
+                    const isUnlocked = await fetchFutureUnlock(wsId, projectSuffix, dateStr);
+                    setUrgentUnlocked(isUnlocked);
 
                     // 1. Fetch who WAS assigned on this date
                     const assignedCrew = await fetchCrewByAssignment(projectSuffix, dateStr);
@@ -435,7 +451,56 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
         target.setHours(0, 0, 0, 0);
         return target > today;
     };
-    const futureLocked = isDateFuture(selectedDate);
+    const futureLocked = isDateFuture(selectedDate) && !urgentUnlocked;
+
+    const handleUnlock = async () => {
+        if (!selectedProject) return;
+        setLoadingUnlock(true);
+        try {
+            const wsId = await fetchDefaultWorkspaceId();
+            if (!wsId) return;
+
+            const projectSuffix = formatProjectCode(selectedProject);
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const day = String(selectedDate.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            const { data: { user } } = await supabase.auth.getUser();
+
+            await unlockFutureDate(wsId, projectSuffix, dateStr, user?.id);
+            setUrgentUnlocked(true);
+            setShowUnlockModal(false);
+        } catch (e) {
+            console.error("Failed to unlock future date:", e);
+            alert("Failed to unlock future date. Please try again.");
+        } finally {
+            setLoadingUnlock(false);
+        }
+    };
+
+    const handleRelock = async () => {
+        if (!selectedProject) return;
+        setLoadingUnlock(true);
+        try {
+            const wsId = await fetchDefaultWorkspaceId();
+            if (!wsId) return;
+
+            const projectSuffix = formatProjectCode(selectedProject);
+            const year = selectedDate.getFullYear();
+            const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+            const day = String(selectedDate.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+
+            await lockFutureDate(wsId, projectSuffix, dateStr);
+            setUrgentUnlocked(false);
+        } catch (e) {
+            console.error("Failed to relock date:", e);
+            alert("Failed to relock date. Please try again.");
+        } finally {
+            setLoadingUnlock(false);
+        }
+    };
 
     const getTotalOT = (e: DailyEntry) => e.ot1Hrs + e.ot2Hrs + e.ot3Hrs;
 
@@ -485,6 +550,57 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                     <Button variant="primary" className="!rounded-full !py-1.5 !px-4" icon={<Save className="w-4 h-4" />} onClick={saveAll} disabled={entries.length === 0}>Save {unsavedCount > 0 && `(${unsavedCount})`}</Button>
                 </div>
             </div>
+
+            {/* FUTURE DATE LOCK NOTICE */}
+            {isDateFuture(selectedDate) && (
+                <div className={clsx(
+                    "flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border transition-all animate-in fade-in slide-in-from-top-2 duration-300",
+                    urgentUnlocked 
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+                        : "bg-amber-50 border-amber-200 text-amber-800"
+                )}>
+                    <div className="flex items-start gap-3">
+                        <div className={clsx(
+                            "p-2 rounded-xl flex-shrink-0 shadow-sm border bg-white",
+                            urgentUnlocked ? "border-emerald-100 text-emerald-600" : "border-amber-100 text-amber-600"
+                        )}>
+                            <AlertTriangle className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-sm">
+                                {urgentUnlocked ? "Future Date Unlocked" : "Future Date Locked"}
+                            </h4>
+                            <p className="text-xs opacity-90 mt-0.5">
+                                {urgentUnlocked 
+                                    ? "This future date is temporarily unlocked for urgent submission by Admin/Supervisor." 
+                                    : "Filling logs for future dates is locked by default to prevent accidental entries."}
+                            </p>
+                        </div>
+                    </div>
+                    {isAuthorizedForUrgent ? (
+                        urgentUnlocked ? (
+                            <button
+                                onClick={handleRelock}
+                                disabled={loadingUnlock}
+                                className="px-4 py-2 bg-white text-emerald-700 hover:bg-emerald-50 rounded-xl text-xs font-bold shadow-sm border border-emerald-200 active:scale-95 transition-all w-fit disabled:opacity-50"
+                            >
+                                {loadingUnlock ? "Relocking..." : "Relock Date"}
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => setShowUnlockModal(true)}
+                                className="px-4 py-2 bg-amber-600 text-white hover:bg-amber-700 rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all w-fit"
+                            >
+                                Fill in Advance? (Urgent)
+                            </button>
+                        )
+                    ) : (
+                        <div className="text-xs italic opacity-85 font-medium self-start sm:self-center">
+                            Only Admin or Supervisor can unlock future dates.
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* BULK */}
             {selectedRows.size > 0 && (
@@ -731,6 +847,63 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                         <p className="text-xs text-emerald-100">Daily logs have been updated.</p>
                     </div>
                     <button onClick={() => setShowSuccessPopup(false)} className="ml-2 hover:bg-white/20 p-1 rounded-full"><X className="w-4 h-4" /></button>
+                </div>
+            )}
+
+            {/* URGENT UNLOCK CONFIRMATION MODAL */}
+            {showUnlockModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 duration-200 border border-neutral-200">
+                        {/* Header */}
+                        <div className="px-6 py-4 border-b flex items-center justify-between bg-amber-50/50 border-amber-100">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-full bg-white shadow-sm border border-amber-100 text-amber-600">
+                                    <AlertTriangle className="w-5 h-5" />
+                                </div>
+                                <h2 className="font-bold text-neutral-900 text-lg">
+                                    Urgent Advance Submission
+                                </h2>
+                            </div>
+                            <button
+                                onClick={() => setShowUnlockModal(false)}
+                                className="p-2 hover:bg-white/50 rounded-full transition-colors"
+                                disabled={loadingUnlock}
+                            >
+                                <X className="w-5 h-5 text-neutral-400" />
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-neutral-600 leading-relaxed">
+                                You are about to unlock attendance input for <strong className="text-neutral-900">{selectedDate.toLocaleDateString("en-US", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong>, which is in the future.
+                            </p>
+                            <p className="text-sm text-neutral-600 leading-relaxed">
+                                This action bypasses the future lock for urgent payroll or submission requirements. Once unlocked, other users will also be able to edit this date.
+                            </p>
+                            <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-100 text-xs text-neutral-500">
+                                Authorized by: <span className="font-bold text-neutral-700 capitalize">{role || "Supervisor/Admin"}</span>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 bg-neutral-50 border-t border-neutral-100 flex items-center justify-end gap-3">
+                            <button
+                                onClick={() => setShowUnlockModal(false)}
+                                className="px-4 py-2 hover:bg-neutral-100 text-neutral-600 rounded-xl text-sm font-semibold transition-all"
+                                disabled={loadingUnlock}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUnlock}
+                                disabled={loadingUnlock}
+                                className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-bold shadow-sm active:scale-95 transition-all disabled:opacity-50 min-w-[120px]"
+                            >
+                                {loadingUnlock ? "Unlocking..." : "Confirm & Unlock"}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
