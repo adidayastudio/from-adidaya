@@ -409,26 +409,36 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
             </div>
 
             {/* TOOLBAR */}
-            <div className="flex items-center justify-between gap-2 w-full">
+            <div className="flex items-center justify-between gap-2 w-full bg-neutral-50/50 p-2 rounded-2xl border border-neutral-100">
                 <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="relative flex-shrink-0">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                        <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-32 sm:w-40 transition-all" />
+                        <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-28 sm:w-40 transition-all" />
                     </div>
                     <button onClick={() => setShowFilterPopup(!showFilterPopup)} className={clsx("p-2 rounded-full border transition-colors flex items-center gap-1.5", selectedProjects.length > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500")}>
                         <Filter className="w-4 h-4" />
                         {selectedProjects.length > 0 && <span className="text-xs font-medium">{selectedProjects.length}</span>}
                     </button>
                 </div>
-                <Button
-                    variant="secondary"
-                    className="!rounded-full !py-1.5 !px-3"
-                    icon={exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    onClick={handleExport}
-                    disabled={exporting || filteredAssignments.length === 0}
-                >
-                    {exporting ? "Exporting..." : "Export"}
-                </Button>
+                <div className="flex items-center gap-1.5">
+                    <Button
+                        variant="secondary"
+                        className="!rounded-full !py-1.5 !px-3 shadow-sm active:scale-95 transition-all"
+                        icon={exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        onClick={handleExport}
+                        disabled={exporting || filteredAssignments.length === 0}
+                    >
+                        {exporting ? "..." : "Export"}
+                    </Button>
+                    <Button
+                        variant="primary"
+                        className="!rounded-full !py-1.5 !px-3.5 shadow-sm active:scale-95 transition-all lg:hidden"
+                        icon={<Plus className="w-4 h-4" />}
+                        onClick={() => { resetForm(); setShowDrawer(true); }}
+                    >
+                        Add
+                    </Button>
+                </div>
             </div>
 
             {/* FILTER */}
