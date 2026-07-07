@@ -87,6 +87,13 @@ export function FinanceItemCard({
                 border: "border-blue-100/50 dark:border-blue-500/20"
             };
         }
+        if (lower === "partially paid" || lower === "partially_paid") {
+            return {
+                text: "text-indigo-600 dark:text-indigo-400",
+                bg: "bg-indigo-50/50 dark:bg-indigo-500/10",
+                border: "border-indigo-100/50 dark:border-indigo-500/20"
+            };
+        }
         if (lower === "rejected" || lower === "cancelled") {
             return {
                 text: "text-rose-600 dark:text-rose-400",
@@ -164,9 +171,20 @@ export function FinanceItemCard({
                         </div>
 
                         <div className="flex flex-col items-end gap-1 shrink-0 ml-4">
-                            <span className="text-[17px] font-bold text-neutral-900 dark:text-white tracking-tight tabular-nums">
-                                {displayAmount}
-                            </span>
+                            {item?.financial_status === "PARTIALLY_PAID" && item?.paid_amount ? (
+                                <div className="text-right flex flex-col items-end gap-0.5">
+                                    <span className="text-[14px] font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                                        {formatCurrency((item.approved_amount || item.amount || 0) - item.paid_amount)} <span className="text-[9px] font-bold opacity-80">left</span>
+                                    </span>
+                                    <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 tabular-nums">
+                                        of {formatCurrency(item.approved_amount || item.amount || 0)}
+                                    </span>
+                                </div>
+                            ) : (
+                                <span className="text-[17px] font-bold text-neutral-900 dark:text-white tracking-tight tabular-nums">
+                                    {displayAmount}
+                                </span>
+                            )}
                             {status && (
                                 <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide border uppercase", theme.text, theme.bg, theme.border)}>
                                     {status}

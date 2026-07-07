@@ -1757,19 +1757,48 @@ function ViewModal({
                                 <div>
                                     <div className="text-[11px] font-semibold text-neutral-500 mb-1.5">Amount</div>
                                     <div className="flex flex-col gap-1">
-                                        <div className="flex items-center gap-1">
-                                            <span className="text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(item.approved_amount || item.amount)}</span>
-                                            {!isExporting && <CopyButton text={String(item.approved_amount || item.amount)} />}
-                                        </div>
-                                        {item.approved_amount && item.approved_amount !== item.amount && (
-                                            <div className="flex flex-col gap-0.5">
-                                                <div className="text-[10px] text-orange-600 line-through opacity-75 font-bold">
-                                                    {formatCurrency(item.amount)}
+                                        {item.financial_status === "PARTIALLY_PAID" && item.paid_amount ? (
+                                            <div className="flex flex-col gap-1.5">
+                                                <div className="flex items-center gap-1.5 bg-indigo-500/5 dark:bg-indigo-500/10 px-3 py-2 rounded-2xl border border-indigo-500/10 w-fit">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider leading-none">Outstanding</span>
+                                                        <span className="text-base font-black text-indigo-700 dark:text-indigo-300 tabular-nums mt-1">
+                                                            {formatCurrency((item.approved_amount || item.amount) - item.paid_amount)}
+                                                        </span>
+                                                    </div>
+                                                    {!isExporting && <CopyButton text={String((item.approved_amount || item.amount) - item.paid_amount)} className="text-indigo-500 hover:text-indigo-600 ml-2" />}
                                                 </div>
-                                                <div className="text-[10px] text-orange-500 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-md w-fit mt-1">
-                                                    Amount manually overridden by {item.approved_by_name || "Admin"}
+                                                <div className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 px-1">
+                                                    Total: {formatCurrency(item.approved_amount || item.amount)} (Paid: {formatCurrency(item.paid_amount)})
                                                 </div>
+                                                {item.approved_amount && item.approved_amount !== item.amount && (
+                                                    <div className="flex flex-col gap-0.5 mt-1">
+                                                        <div className="text-[10px] text-orange-600 line-through opacity-75 font-bold">
+                                                            {formatCurrency(item.amount)}
+                                                        </div>
+                                                        <div className="text-[10px] text-orange-500 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-md w-fit">
+                                                            Amount manually overridden by {item.approved_by_name || "Admin"}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
+                                        ) : (
+                                            <>
+                                                <div className="flex items-center gap-1">
+                                                    <span className="text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(item.approved_amount || item.amount)}</span>
+                                                    {!isExporting && <CopyButton text={String(item.approved_amount || item.amount)} />}
+                                                </div>
+                                                {item.approved_amount && item.approved_amount !== item.amount && (
+                                                    <div className="flex flex-col gap-0.5">
+                                                        <div className="text-[10px] text-orange-600 line-through opacity-75 font-bold">
+                                                            {formatCurrency(item.amount)}
+                                                        </div>
+                                                        <div className="text-[10px] text-orange-500 font-bold bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-md w-fit mt-1">
+                                                            Amount manually overridden by {item.approved_by_name || "Admin"}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -3434,6 +3463,7 @@ export default function PurchasingClient() {
                             ) : (
                                 filteredItems.map((item) => {
                                     const statusToUse = item.financial_status === 'PAID' ? 'Paid' :
+                                        item.financial_status === 'PARTIALLY_PAID' ? 'Partially Paid' :
                                         item.approval_status === 'APPROVED' ? 'Approved' :
                                             item.approval_status === 'REJECTED' ? 'Rejected' :
                                                 item.approval_status === 'NEED_REVISION' ? 'Revise' :
@@ -3767,9 +3797,20 @@ export default function PurchasingClient() {
                                                             </div>
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
-                                                            <div className="text-[12px] font-bold text-neutral-900 tabular-nums tracking-tight">
-                                                                {formatCurrency(item.amount)}
-                                                            </div>
+                                                            {item.financial_status === "PARTIALLY_PAID" && item.paid_amount ? (
+                                                                <div className="flex flex-col items-end gap-0.5">
+                                                                    <div className="text-[12px] font-black text-indigo-600 dark:text-indigo-400 tabular-nums leading-tight">
+                                                                        {formatCurrency((item.approved_amount || item.amount) - item.paid_amount)} <span className="text-[9px] font-bold opacity-80">left</span>
+                                                                    </div>
+                                                                    <div className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 tabular-nums leading-tight">
+                                                                        of {formatCurrency(item.approved_amount || item.amount)}
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-[12px] font-bold text-neutral-900 dark:text-white tabular-nums tracking-tight">
+                                                                    {formatCurrency(item.approved_amount || item.amount)}
+                                                                </div>
+                                                            )}
                                                         </td>
                                                         <td className="px-6 py-4 text-center">
                                                             <div className="flex flex-col items-center gap-1">
