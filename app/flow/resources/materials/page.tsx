@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useContext } from "react";
 import { ResourceLayout } from "@/components/flow/resources/ResourceLayout";
 import { ResourceCard } from "@/components/flow/resources/ResourceCard";
 import { ResourceDetailDrawer } from "@/components/flow/resources/ResourceDetailDrawer";
+import { ProjectContext } from "@/components/flow/project-context";
 import { fetchCatalogResources, fetchCatalogSubcategories, fetchCatalogGroups, CatalogResource } from "@/lib/api/resources-client";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -11,7 +12,7 @@ import { toast } from "sonner";
 const PAGE_SIZE = 50;
 
 // Expanded & Varied Dummy Data with Photo Placeholders
-const DUMMY_MATERIALS: any[] = [
+export const DUMMY_MATERIALS: any[] = [
     {
         id: "dummy-1",
         name: "bata ringan - 10 cm",
@@ -70,7 +71,7 @@ const DUMMY_MATERIALS: any[] = [
 ];
 
 // Mock Stock with photos placeholder
-const MOCK_STOCK: Record<string, any[]> = {
+export const MOCK_STOCK: Record<string, any[]> = {
     "dummy-1": [
         { project: "JPF", quantity: 10, unit: "m3", photo: "https://images.unsplash.com/photo-1590069261209-f8e9b8642343?q=80&w=200&auto=format&fit=crop" },
         { project: "PRG", quantity: 7.5, unit: "m3" },
@@ -87,6 +88,9 @@ const MOCK_STOCK: Record<string, any[]> = {
 };
 
 export default function MaterialsPage() {
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+
     const [items, setItems] = useState<CatalogResource[]>([]);
     const [totalCount, setTotalCount] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
@@ -144,13 +148,13 @@ export default function MaterialsPage() {
                         d.name,
                         d.subcategory,
                         d.group_name,
-                        // Code is generated dynamically for card, but we check if search matches general patterns
                     ].some(v => v?.toLowerCase().includes(searchQuery.toLowerCase()));
 
                     const matchSub = subcategoryFilter === "ALL" || d.subcategory?.toLowerCase() === subcategoryFilter.toLowerCase();
                     const matchGroup = groupFilter === "ALL" || d.group_name?.toLowerCase() === groupFilter.toLowerCase();
+                    const hasStockInProject = (MOCK_STOCK[d.id] || []).some(ps => ps.project === forceProjectCode);
 
-                    return matchSearch && matchSub && matchGroup;
+                    return matchSearch && matchSub && matchGroup && (!forceProjectCode || hasStockInProject);
                 });
 
                 if (isActiveFilter || page > 1) {
@@ -158,8 +162,12 @@ export default function MaterialsPage() {
                     setTotalCount(result.count + dummyMatches.length);
                 } else {
                     // Default view (no filters): Show only items with recorded stock (Dummy items)
-                    finalItems = DUMMY_MATERIALS;
-                    setTotalCount(DUMMY_MATERIALS.length);
+                    const activeDummyItems = DUMMY_MATERIALS.filter(d => {
+                        const hasStock = (MOCK_STOCK[d.id] || []).some(ps => ps.project === forceProjectCode);
+                        return !forceProjectCode || hasStock;
+                    });
+                    finalItems = activeDummyItems;
+                    setTotalCount(activeDummyItems.length);
                 }
 
                 setItems(finalItems);
@@ -171,7 +179,7 @@ export default function MaterialsPage() {
         } finally {
             if (!signal?.aborted) setIsLoading(false);
         }
-    }, [searchQuery, subcategoryFilter, groupFilter, page]);
+    }, [searchQuery, subcategoryFilter, groupFilter, page, forceProjectCode]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -233,7 +241,7 @@ export default function MaterialsPage() {
                         <ResourceCard
                             key={item.id}
                             item={item}
-                            projectStock={MOCK_STOCK[item.id] || []}
+                            projectStock={(MOCK_STOCK[item.id] || []).filter(ps => !forceProjectCode || ps.project === forceProjectCode)}
                             onOpenDetail={() => openDetail(item)}
                         />
                     ))}
@@ -249,7 +257,7 @@ export default function MaterialsPage() {
                 isOpen={isDrawerOpen}
                 onClose={() => setIsDrawerOpen(false)}
                 resource={selectedItem}
-                projectStock={selectedItem ? (MOCK_STOCK[selectedItem.id] || []) : []}
+                projectStock={selectedItem ? ((MOCK_STOCK[selectedItem.id] || []).filter(ps => !forceProjectCode || ps.project === forceProjectCode)) : []}
             />
         </ResourceLayout>
     );

@@ -19,7 +19,7 @@ export default function ProjectDetailOverviewContent({ project }: { project: Pro
   const hasActiveAlerts = true;
 
   return (
-    <div className="max-w-5xl space-y-8">
+    <div className="max-w-4xl space-y-8">
       {/* HEADER WITH TOGGLE */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-neutral-900">Project Overview</h2>

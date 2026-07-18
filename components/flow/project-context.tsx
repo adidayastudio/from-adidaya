@@ -71,7 +71,7 @@ interface ProjectContextValue {
     refreshWBS: () => Promise<void>;
 }
 
-const ProjectContext = createContext<ProjectContextValue | null>(null);
+export const ProjectContext = createContext<ProjectContextValue | null>(null);
 
 // ============================================
 // PROVIDER
@@ -126,6 +126,13 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
                 ]);
 
             setProject(projectData);
+            if (typeof window !== 'undefined' && projectData) {
+                sessionStorage.setItem('project_name_' + projectData.id, projectData.project_name || "");
+                if (projectId && projectId !== projectData.id) {
+                    sessionStorage.setItem('project_name_' + projectId, projectData.project_name || "");
+                }
+                window.dispatchEvent(new CustomEvent('project-name-loaded'));
+            }
             setStages(stagesData);
             setWbsRaw(wbsData);
             setRabVersions(rabData);

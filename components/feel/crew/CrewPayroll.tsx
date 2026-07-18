@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
 import { format } from "date-fns";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, ArrowUpDown, Plus, Minus, Edit2, FileDown, Users } from "lucide-react";
@@ -128,39 +129,61 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
+    const isProjectUrl = pathname.includes("/project/");
+    const urlProjectId = isProjectUrl ? pathname.split("/")[2] : null;
+
+    // Check project context
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+    const forceProjectSuffix = forceProjectCode 
+        ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
+        : null;
 
     // Data state
     const [payrollData, setPayrollData] = useState<PayrollEntry[]>([]);
-    const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
+    const [projects, setProjects] = useState<{ id?: string; code: string; name: string }[]>([]);
     const [loading, setLoading] = useState(false);
     const [exporting, setExporting] = useState(false);
 
     // Initialize from 'project' OR fallback to first of 'projects'
     const [selectedProject, setSelectedProject] = useState(() => {
-        return searchParams.get("project") || searchParams.get("projects")?.split(",")[0] || "";
+        return forceProjectSuffix || searchParams.get("project") || searchParams.get("projects")?.split(",")[0] || "";
     });
+
+    // Auto-select when projects load
+    useEffect(() => {
+        if (urlProjectId && projects.length > 0) {
+            const activeProj = projects.find(p => p.id === urlProjectId);
+            if (activeProj) {
+                const parts = activeProj.code.split("-");
+                const suffix = parts.length > 1 ? parts[1] : activeProj.code;
+                setSelectedProject(suffix);
+            }
+        }
+    }, [urlProjectId, projects]);
 
     // Sync project FROM URL
     useEffect(() => {
-        const project = searchParams.get("project") || searchParams.get("projects")?.split(",")[0];
+        const project = forceProjectSuffix || searchParams.get("project") || searchParams.get("projects")?.split(",")[0];
         if (project && project !== selectedProject) {
             setSelectedProject(project);
         }
-    }, [searchParams]);
+    }, [searchParams, forceProjectSuffix]);
 
     // Sync project TO URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
-        if (selectedProject) {
-            params.set("project", selectedProject);
-            params.set("projects", selectedProject);
+        const activeProj = forceProjectSuffix || selectedProject;
+        if (activeProj) {
+            params.set("project", activeProj);
+            params.set("projects", activeProj);
         }
         else {
             params.delete("project");
             params.delete("projects");
         }
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [selectedProject]);
+    }, [selectedProject, forceProjectSuffix]);
 
     // Anchor date is the reference. 
     // For Weekly: It's the Sunday of the selected week.
@@ -194,6 +217,7 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                 if (wsId) {
                     const data = await fetchProjectsByWorkspace(wsId);
                     setProjects(data.map((p: any) => ({
+                        id: p.id,
                         code: `${p.project_number}-${p.project_code}`,
                         name: p.project_name
                     })));
@@ -492,7 +516,7 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
             {/* TOOLBAR */}
             <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 w-full bg-neutral-50/50 p-2 rounded-2xl border border-neutral-100">
                 {/* 1. Project Select (Full width on mobile) */}
-                {projects.length > 0 && (
+                {!urlProjectId && !forceProjectSuffix && projects.length > 0 && (
                     <div className="relative w-full sm:w-auto sm:min-w-[200px]">
                         <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="appearance-none w-full pl-3 pr-7 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all">
                             <option value="">Select Project</option>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
 import { Plus, Search, ChevronDown, ChevronUp, X, Download, ArrowUpDown, Filter, Edit2, FileText, Trash2, Users, Loader2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -62,6 +63,13 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
     const router = useRouter();
     const pathname = usePathname();
 
+    // Check project context
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+    const forceProjectSuffix = forceProjectCode 
+        ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
+        : null;
+
     // Data state - empty, will be populated from database later
     const [assignments, setAssignments] = useState<Assignment[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
@@ -95,10 +103,9 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
     }, []);
 
     // Helper for array params - checks 'projects' first, then fallback to 'project'
-    const getArrayParam = (key: string) => {
+    const getArrayParam = (key: string): string[] => {
         const val = searchParams.get(key);
         if (val) return val.split(",");
-        // Fallback for compatibility
         if (key === "projects") {
             const single = searchParams.get("project");
             return single ? [single] : [];
@@ -111,7 +118,15 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
     const [sortBy, setSortBy] = useState<"name" | "project" | "date">((searchParams.get("sort") as "name" | "project" | "date") || "date");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">((searchParams.get("order") as "asc" | "desc") || "desc");
     const [showFilterPopup, setShowFilterPopup] = useState(false);
-    const [selectedProjects, setSelectedProjects] = useState<string[]>(getArrayParam("projects"));
+    const [selectedProjects, setSelectedProjects] = useState<string[]>(
+        forceProjectSuffix ? [forceProjectSuffix] : getArrayParam("projects")
+    );
+
+    useEffect(() => {
+        if (forceProjectSuffix) {
+            setSelectedProjects([forceProjectSuffix]);
+        }
+    }, [forceProjectSuffix]);
 
     // Sync from URL params
     useEffect(() => {
@@ -145,16 +160,17 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
         if (sortBy) params.set("sort", sortBy); else params.delete("sort");
         if (sortOrder) params.set("order", sortOrder); else params.delete("order");
 
-        if (selectedProjects.length > 0) {
-            params.set("projects", selectedProjects.join(","));
-            params.set("project", selectedProjects[0]);
+        const activeProjs = forceProjectSuffix ? [forceProjectSuffix] : selectedProjects;
+        if (activeProjs.length > 0) {
+            params.set("projects", activeProjs.join(","));
+            params.set("project", activeProjs[0]);
         } else {
             params.delete("projects");
             params.delete("project");
         }
 
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [searchQuery, activeCard, sortBy, sortOrder, selectedProjects]);
+    }, [searchQuery, activeCard, sortBy, sortOrder, selectedProjects, forceProjectSuffix]);
     const [showDrawer, setShowDrawer] = useState(false);
 
     const [formRole, setFormRole] = useState<CrewRole | "">("");
@@ -415,10 +431,12 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                         <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-28 sm:w-40 transition-all" />
                     </div>
-                    <button onClick={() => setShowFilterPopup(!showFilterPopup)} className={clsx("p-2 rounded-full border transition-colors flex items-center gap-1.5", selectedProjects.length > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500")}>
-                        <Filter className="w-4 h-4" />
-                        {selectedProjects.length > 0 && <span className="text-xs font-medium">{selectedProjects.length}</span>}
-                    </button>
+                    {!forceProjectSuffix && (
+                        <button onClick={() => setShowFilterPopup(!showFilterPopup)} className={clsx("p-2 rounded-full border transition-colors flex items-center gap-1.5", selectedProjects.length > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500")}>
+                            <Filter className="w-4 h-4" />
+                            {selectedProjects.length > 0 && <span className="text-xs font-medium">{selectedProjects.length}</span>}
+                        </button>
+                    )}
                 </div>
                 <div className="flex items-center gap-1.5">
                     <Button
@@ -442,7 +460,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
             </div>
 
             {/* FILTER */}
-            {showFilterPopup && projects.length > 0 && (
+            {!forceProjectSuffix && showFilterPopup && projects.length > 0 && (
                 <div className="bg-white rounded-xl border border-neutral-200 shadow-lg p-4 space-y-4">
                     <div className="flex items-center justify-between"><h3 className="font-semibold text-neutral-900">Filter by Project</h3><button onClick={() => setShowFilterPopup(false)} className="p-1 rounded-full hover:bg-neutral-100"><X className="w-4 h-4 text-neutral-500" /></button></div>
                     <div className="flex flex-wrap gap-2">{projects.map(p => <button key={p.code} onClick={() => toggleProject(formatProjectCode(p.code))} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(formatProjectCode(p.code)) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{formatProjectCode(p.code)}</button>)}</div>

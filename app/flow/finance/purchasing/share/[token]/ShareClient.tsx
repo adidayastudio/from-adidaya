@@ -101,6 +101,9 @@ export default function ShareClient({ token }: ShareClientProps) {
     const loadPortalData = async () => {
         try {
             const data = await fetchVendorPortalByToken(token);
+            if (!data) {
+                throw new Error("Vendor portal link is invalid or has expired.");
+            }
             setPortal(data.portal);
             
             // Resolve signed URLs for all invoices in requests

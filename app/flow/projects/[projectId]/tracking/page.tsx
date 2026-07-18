@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import PageWrapper from "@/components/layout/PageWrapper";
+import StandardPageWrapper from "@/components/layout/StandardPageWrapper";
 import ProjectDetailSidebar from "@/components/flow/projects/project-detail/ProjectDetailSidebar";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import ProjectDetailHeader from "@/components/flow/projects/project-detail/ProjectDetailHeader";
@@ -29,22 +29,20 @@ export default function ProjectTrackingPage() {
   const breadcrumbLabel = `${project.project_number} - ${project.project_code} - ${project.project_name}`;
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-2 md:p-6">
-      <Breadcrumb
-        items={[
-          { label: "Flow" },
-          { label: "Projects", href: "/flow/projects" },
-          { label: breadcrumbLabel, href: `/flow/projects/${projectId}` },
-          { label: "Tracking" },
-        ]}
-      />
-
-      <PageWrapper sidebar={<ProjectDetailSidebar />}>
-        <div className="space-y-6">
-          <ProjectDetailHeader project={projectForHeader as any} />
-          <ProjectDetailTrackingContent />
-        </div>
-      </PageWrapper>
-    </div>
+    <StandardPageWrapper
+      breadcrumbItems={[
+        { label: "Flow" },
+        { label: "Projects", href: "/flow/projects" },
+        { label: breadcrumbLabel },
+        { label: "Tracking" }
+      ]}
+      sidebar={<ProjectDetailSidebar />}
+      isTransparent
+    >
+      <div className="space-y-8 max-w-4xl mx-auto animate-in fade-in duration-500">
+        <ProjectDetailHeader project={projectForHeader as any} />
+        <ProjectDetailTrackingContent />
+      </div>
+    </StandardPageWrapper>
   );
 }

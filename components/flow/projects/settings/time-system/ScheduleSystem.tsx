@@ -14,9 +14,35 @@ export default function ScheduleSystem() {
     const [view, setView] = useState<"table" | "timeline" | "gantt" | "curve">("table");
     const [items, setItems] = useState<any[]>([]);
     const [calculating, setCalculating] = useState(false);
+    const [projectId, setProjectId] = useState<string | null>(null);
 
     const params = useParams();
-    const projectId = params?.projectId as string;
+
+    useEffect(() => {
+        if (params?.projectId) {
+            setProjectId(params.projectId as string);
+        } else {
+            // Fallback: fetch the first project from Supabase for global template preview
+            const fetchDefaultProject = async () => {
+                try {
+                    const { data } = await supabase
+                        .from("projects")
+                        .select("id")
+                        .limit(1)
+                        .maybeSingle();
+                    if (data?.id) {
+                        setProjectId(data.id);
+                    } else {
+                        setIsLoading(false);
+                    }
+                } catch (e) {
+                    console.error("Failed to load default project:", e);
+                    setIsLoading(false);
+                }
+            };
+            fetchDefaultProject();
+        }
+    }, [params]);
 
     useEffect(() => {
         if (projectId) {
@@ -25,6 +51,7 @@ export default function ScheduleSystem() {
     }, [projectId]);
 
     const fetchData = async () => {
+        if (!projectId) return;
         setIsLoading(true);
         try {
             // 1. Sync Schedule Items (Ensure they exist)
@@ -40,7 +67,7 @@ export default function ScheduleSystem() {
                         project_id
                     )
                 `)
-                .order("wbs_code", { ascending: true }); // Note: sorting might be trickier if wbs_code is not perfect
+                .order("code", { ascending: true }); // Note: sorting might be trickier if wbs_code is not perfect
 
             if (error) throw error;
 
@@ -54,6 +81,7 @@ export default function ScheduleSystem() {
 
                 return {
                     ...item,
+                    wbs_code: item.code,
                     schedule: projectSchedule || {}
                 };
             });
@@ -67,6 +95,7 @@ export default function ScheduleSystem() {
     };
 
     const handleAutoSchedule = async () => {
+        if (!projectId) return;
         setCalculating(true);
         try {
             // 1. Prepare Data for Engine

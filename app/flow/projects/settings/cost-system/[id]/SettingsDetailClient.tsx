@@ -149,7 +149,7 @@ export default function SettingsDetailClient({ id }: { id: string }) {
     }
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
+        <div className="min-h-screen bg-transparent px-5 md:px-0 py-6 md:py-0">
             <Breadcrumb items={[
                 { label: "Flow" },
                 { label: "Projects" },

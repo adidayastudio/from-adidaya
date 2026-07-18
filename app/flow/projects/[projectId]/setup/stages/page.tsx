@@ -15,7 +15,7 @@ import StageHO from "@/components/flow/projects/project-detail/setup/stages/Stag
 import { useProject } from "@/components/flow/project-context";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { Download, Plus } from "lucide-react";
+import { Download, Plus, ArrowUpRight } from "lucide-react";
 
 type StageKey = "KO" | "SD" | "DD" | "ED" | "PC" | "CN" | "HO";
 
@@ -53,65 +53,65 @@ export default function ProjectSetupStagesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
-      <div className="mb-4 text-sm">
-        <span className="text-neutral-500">Flow</span>
-        <span className="mx-2 text-neutral-400">|</span>
-        <span className="text-neutral-500">Projects</span>
-        <span className="mx-2 text-neutral-400">|</span>
-        <span className="text-neutral-500">Setup</span>
-        <span className="mx-2 text-neutral-400">|</span>
-        <span className="font-medium text-neutral-900">Stages & Tasks</span>
-      </div>
+    <PageWrapper sidebar={<ProjectDetailSidebar />} isTransparent={true}>
+      <div className="space-y-6 w-full max-w-4xl mx-auto animate-in fade-in duration-500 px-4 md:px-0">
+        <ProjectDetailHeader project={projectForHeader as any} />
 
-      <PageWrapper sidebar={<ProjectDetailSidebar />}>
-        <div className="space-y-6">
-          <ProjectDetailHeader project={projectForHeader as any} />
+        <div>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-neutral-900">Stages & Tasks Setup</h2>
+          </div>
 
-          <div>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-neutral-900">Stages & Tasks Setup</h2>
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-white p-4 mb-6">
+            <div className="flex flex-wrap gap-1 p-0.5 bg-neutral-100 rounded-full">
+              {STAGE_TABS.map((stg) => {
+                const active = activeStage === stg.key;
+                return (
+                  <button
+                    key={stg.key}
+                    onClick={() => setActiveStage(stg.key)}
+                    className={`px-4 py-1.5 text-xs font-semibold rounded-full capitalize transition-all duration-200 ${
+                      active
+                        ? "bg-white text-neutral-950 shadow-sm"
+                        : "text-neutral-500 hover:text-neutral-700"
+                    }`}
+                  >
+                    {stg.label}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="flex items-end justify-between border-b border-neutral-200 mb-6">
-              <Tabs<StageKey>
-                value={activeStage}
-                onChange={setActiveStage}
-                items={STAGE_TABS}
-                className="gap-6"
-              />
-              <div className="pb-2 flex items-center gap-3">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => console.log("Export stage:", activeStage)}
-                  icon={<Download className="w-4 h-4" />}
-                >
-                  Export Latest
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => console.log("Add revision:", activeStage)}
-                  icon={<Plus className="w-4 h-4" />}
-                >
-                  Add Revision
-                </Button>
-              </div>
-            </div>
-
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              {activeStage === "KO" && <StageKO />}
-              {activeStage === "SD" && <StageSD />}
-              {activeStage === "DD" && <StageDD />}
-              {activeStage === "ED" && <StageED />}
-              {activeStage === "PC" && <StagePC />}
-              {activeStage === "CN" && <StageCN />}
-              {activeStage === "HO" && <StageHO />}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => console.log("Export active stage layout")}
+                icon={<ArrowUpRight className="w-4 h-4" />}
+              >
+                Export Latest
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => console.log("Add revision:", activeStage)}
+                icon={<Plus className="w-4 h-4" />}
+              >
+                Add Revision
+              </Button>
             </div>
           </div>
+
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {activeStage === "KO" && <StageKO />}
+            {activeStage === "SD" && <StageSD />}
+            {activeStage === "DD" && <StageDD />}
+            {activeStage === "ED" && <StageED />}
+            {activeStage === "PC" && <StagePC />}
+            {activeStage === "CN" && <StageCN />}
+            {activeStage === "HO" && <StageHO />}
+          </div>
         </div>
-      </PageWrapper>
-    </div>
+      </div>
+    </PageWrapper>
   );
 }
-

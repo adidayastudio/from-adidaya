@@ -6,6 +6,7 @@ import clsx from "clsx";
 import React from "react";
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
+import { usePathname } from "next/navigation";
 
 type BreadcrumbItem = {
   label: string;
@@ -156,6 +157,9 @@ export function Breadcrumb({
   items: BreadcrumbItem[];
   className?: string;
 }) {
+  const pathname = usePathname();
+  if (pathname?.includes("/settings")) return null;
+
   return (
     <nav
       className={clsx(

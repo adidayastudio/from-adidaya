@@ -318,7 +318,7 @@ export default function SettingsWBSPage() {
     };
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
+        <div className="min-h-screen bg-transparent px-5 md:px-0 py-6 md:py-0">
             <Breadcrumb items={[{ label: "Flow" }, { label: "Projects" }, { label: "Settings", href: "/flow/projects/settings" }, { label: "WBS Templates" }]} />
             <PageWrapper sidebar={<ProjectsSidebar />}>
                 <div className="space-y-6 w-full animate-in fade-in duration-500">

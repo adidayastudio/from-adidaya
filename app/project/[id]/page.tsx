@@ -3,30 +3,552 @@
 import { useEffect, useState, use } from "react";
 import { fetchProject, updateProject } from "@/lib/api/projects";
 import { Project } from "@/types/project";
-import ProgressRing from "@/components/project/ProgressRing";
-import { ChevronLeft, Star, Pencil, Settings, FileText, Activity, MapPin, Target, Plus, CheckCircle2, CreditCard } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { 
+    ChevronLeft, 
+    ChevronRight, 
+    Star, 
+    Pencil, 
+    Settings, 
+    FileText, 
+    Activity, 
+    Target, 
+    Plus, 
+    CheckCircle2, 
+    CreditCard, 
+    X, 
+    Calendar, 
+    Filter, 
+    User, 
+    AlertTriangle,
+    MapPin,
+    Briefcase,
+    Clock,
+    FileUp,
+    MessageSquare,
+    ClipboardList,
+    ThumbsUp,
+    Layers,
+    Grid3X3,
+    DollarSign,
+    ShieldCheck,
+    ExternalLink,
+    Users,
+    Package,
+    Banknote,
+    Receipt,
+    Wallet,
+    ChevronDown,
+    FileSpreadsheet,
+    LayoutDashboard,
+    Info,
+    Construction
+} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import clsx from "clsx";
+import { useHeader } from "@/components/providers/HeaderProvider";
+import { AnimatePresence, motion } from "framer-motion";
+import PageWrapper from "@/components/layout/PageWrapper";
+
+// Embedded Tab Components (loaded inline, no nested page wrappers)
+import dynamic from "next/dynamic";
+const ResourcesOverviewEmbed = dynamic(() => import("@/app/flow/resources/overview/page"), { ssr: false });
+const MaterialsPage = dynamic(() => import("@/app/flow/resources/materials/page"), { ssr: false });
+const ToolsPage = dynamic(() => import("@/app/flow/resources/tools/page"), { ssr: false });
+const AssetsPage = dynamic(() => import("@/app/flow/resources/assets/page"), { ssr: false });
+const ServicesPage = dynamic(() => import("@/app/flow/resources/services/page"), { ssr: false });
+
+const PurchasingClient = dynamic(() => import("@/components/flow/finance/PurchasingClient"), { ssr: false });
+const ReimburseClient = dynamic(() => import("@/components/flow/finance/ReimburseClient"), { ssr: false });
+const PettyCashClient = dynamic(() => import("@/components/flow/finance/PettyCashClient"), { ssr: false });
+const ReportsClient = dynamic(() => import("@/components/flow/finance/ReportsClient"), { ssr: false });
+
+import { CrewDirectory } from "@/components/feel/crew/CrewDirectory";
+import { CrewAssignments } from "@/components/feel/crew/CrewAssignments";
+import { CrewDailyInput } from "@/components/feel/crew/CrewDailyInput";
+import { CrewPayroll } from "@/components/feel/crew/CrewPayroll";
+import { CrewPerformance } from "@/components/feel/crew/CrewPerformance";
+import { CrewRequests } from "@/components/feel/crew/CrewRequests";
+import { FinanceProvider } from "@/components/flow/finance/FinanceContext";
+import { FinanceSummaryCard, FinanceSummaryCardsRow } from "@/components/flow/finance/FinanceSummaryCard";
+import { FinancePulseBeta } from "@/components/flow/finance/FinancePulseBeta";
+import { fetchFinanceDashboardData } from "@/lib/client/finance-api";
+import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
+import { ProjectProvider } from "@/components/flow/project-context";
+import { fetchPeopleDirectory } from "@/lib/api/people";
+import GlobalDirectory from "@/components/feel/people/GlobalDirectory";
+
+import ProjectDetailHeader from "@/components/flow/projects/project-detail/ProjectDetailHeader";
+import { mapProjectToHeader } from "@/lib/flow/mappers/project-header";
+
+// Custom Local Sidebar Component for Desktop
+function ProjectDetailLocalSidebar({
+    activeTab,
+    setActiveTab,
+    projectId,
+    router
+}: {
+    activeTab: string;
+    setActiveTab: (tab: string) => void;
+    projectId: string;
+    router: any;
+}) {
+    const [planningOpen, setPlanningOpen] = useState(false);
+    const [workOpen, setWorkOpen] = useState(true);
+
+    const basePath = `/project/${projectId}`;
+
+    const PLANNING_ITEMS = [
+        { label: "Project Information", href: `${basePath}/setup/info`, icon: Info },
+        { label: "Stages & Tasks", href: `${basePath}/setup/stages`, icon: Layers },
+        { label: "WBS", href: `${basePath}/setup/wbs`, icon: Grid3X3 },
+        { label: "RAB", href: `${basePath}/setup/rab`, icon: DollarSign },
+        { label: "Schedule", href: `${basePath}/setup/schedule`, icon: Calendar },
+        { label: "Rules", href: `${basePath}/setup/rules`, icon: ShieldCheck },
+    ];
+
+    return (
+        <aside className="w-full hidden lg:flex flex-col space-y-4 pt-0">
+            <div className="space-y-0.5">
+                {/* Overview */}
+                <button
+                    onClick={() => setActiveTab("overview")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "overview"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    )}
+                >
+                    <LayoutDashboard className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "overview" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate">Overview</span>
+                </button>
+
+                {/* Planning Accordion */}
+                <div>
+                    <button
+                        onClick={() => setPlanningOpen((v) => !v)}
+                        className="w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    >
+                        <Calendar className="w-4 h-4 shrink-0 text-neutral-400" />
+                        <span className="flex-1 truncate">Planning</span>
+                        <ChevronDown
+                            className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", planningOpen && "rotate-180")}
+                        />
+                    </button>
+
+                    {planningOpen && (
+                        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                            {PLANNING_ITEMS.map((item) => (
+                                <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    className="w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                                >
+                                    <item.icon className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
+                                    <span className="truncate">{item.label}</span>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Work Accordion */}
+                <div>
+                    <button
+                        onClick={() => setWorkOpen((v) => !v)}
+                        className={clsx(
+                            "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                            activeTab === "tracking" || activeTab === "activity"
+                                ? "text-neutral-900 dark:text-white font-semibold"
+                                : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                        )}
+                    >
+                        <Activity className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "tracking" || activeTab === "activity" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                        <span className="flex-1 truncate">Work</span>
+                        <ChevronDown
+                            className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", workOpen && "rotate-180")}
+                        />
+                    </button>
+
+                    {workOpen && (
+                        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                            {/* Tracking */}
+                            <button
+                                onClick={() => setActiveTab("tracking")}
+                                className={clsx(
+                                    "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                                    activeTab === "tracking"
+                                        ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                                        : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                                )}
+                            >
+                                <Target className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", activeTab === "tracking" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                                <span className="truncate">Tracking</span>
+                            </button>
+
+                            {/* Activity */}
+                            <button
+                                onClick={() => setActiveTab("activity")}
+                                className={clsx(
+                                    "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                                    activeTab === "activity"
+                                        ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                                        : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                                )}
+                            >
+                                <Activity className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", activeTab === "activity" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                                <span className="truncate">Activity</span>
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Documents */}
+                <Link
+                    href={`${basePath}/docs`}
+                    className="w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                >
+                    <FileText className="w-4 h-4 shrink-0 text-neutral-400" />
+                    <span className="truncate font-medium">Documents</span>
+                </Link>
+
+                {/* Finance */}
+                <button
+                    onClick={() => setActiveTab("finance")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "finance"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    )}
+                >
+                    <Banknote className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "finance" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate">Finance</span>
+                </button>
+
+                {/* Resources */}
+                <button
+                    onClick={() => setActiveTab("resources")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "resources"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    )}
+                >
+                    <Package className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "resources" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate">Resources</span>
+                </button>
+
+                {/* People */}
+                <button
+                    onClick={() => setActiveTab("people")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "people"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    )}
+                >
+                    <Users className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "people" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate">People</span>
+                </button>
+
+
+                {/* Crew */}
+                <button
+                    onClick={() => setActiveTab("crew")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "crew"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    )}
+                >
+                    <ClipboardList className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "crew" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate">Crew</span>
+                </button>
+
+                {/* Reports */}
+                <button
+                    onClick={() => setActiveTab("reports")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "reports"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    )}
+                >
+                    <FileSpreadsheet className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "reports" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate font-medium">Reports</span>
+                </button>
+            </div>
+        </aside>
+    );
+}
+
+// ==========================================
+// EMBEDDED SUB-COMPONENTS (NO NESTED WRAPPERS)
+// ==========================================
+
+/** Finance: renders summary cards + pulse inline with sub-tabs */
+function ProjectFinanceEmbed({ projectId }: { projectId: string }) {
+    const [subTab, setSubTab] = useState("overview");
+    const [data, setData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const wsId = await fetchDefaultWorkspaceId();
+                const res = await fetchFinanceDashboardData(wsId || undefined, projectId);
+                setData(res);
+            } catch (err) {
+                console.error("Failed to load finance data", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        load();
+    }, [projectId]);
+
+    const subTabs = [
+        { id: "overview", label: "Overview" },
+        { id: "purchasing", label: "Purchasing" },
+        { id: "reimburse", label: "Reimburse" },
+        { id: "petty-cash", label: "Petty Cash" },
+        { id: "reports", label: "Reports" },
+    ];
+
+    if (isLoading || !data) {
+        return <div className="py-12 flex justify-center"><GlobalLoading /></div>;
+    }
+
+    const summary = data.summary?.team || data.summary?.personal;
+
+    return (
+        <FinanceProvider>
+            <div className="animate-in fade-in duration-300 pb-12 space-y-4">
+                {/* Finance Sub-Tabs */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-neutral-200 dark:border-neutral-800 pb-2.5">
+                    {subTabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setSubTab(tab.id)}
+                            className={clsx(
+                                "px-3.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all select-none shrink-0",
+                                subTab === tab.id
+                                    ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-sm"
+                                    : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 dark:hover:text-white"
+                            )}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Sub-Tab Contents */}
+                {subTab === "overview" && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        <FinanceSummaryCardsRow>
+                            <FinanceSummaryCard
+                                icon={<DollarSign className="w-4 h-4 text-emerald-600" />}
+                                iconBg="bg-emerald-100"
+                                label="Total Paid (Month)"
+                                value={summary?.totalPaid ? `Rp ${(summary.totalPaid / 1000000).toFixed(1)}M` : "Rp 0"}
+                                subtext="This period"
+                            />
+                            <FinanceSummaryCard
+                                icon={<Receipt className="w-4 h-4 text-orange-600" />}
+                                iconBg="bg-orange-100"
+                                label="Outstanding"
+                                value={summary?.outstanding?.count || 0}
+                                subtext="Pending approval"
+                            />
+                            <FinanceSummaryCard
+                                icon={<Users className="w-4 h-4 text-blue-600" />}
+                                iconBg="bg-blue-100"
+                                label="Reimburse Pending"
+                                value={summary?.reimbursePending?.count || 0}
+                                subtext="Claims to process"
+                            />
+                            <FinanceSummaryCard
+                                icon={<Wallet className="w-4 h-4 text-purple-600" />}
+                                iconBg="bg-purple-100"
+                                label="Balance"
+                                value={summary?.balance?.accounts ? `${summary.balance.accounts} Acc` : "0 Acc"}
+                                subtext="Active accounts"
+                            />
+                        </FinanceSummaryCardsRow>
+
+                        <FinancePulseBeta pulseData={data?.pulse} />
+                    </div>
+                )}
+
+                {subTab === "purchasing" && <PurchasingClient />}
+                {subTab === "reimburse" && <ReimburseClient />}
+                {subTab === "petty-cash" && <PettyCashClient />}
+                {subTab === "reports" && <ReportsClient />}
+            </div>
+        </FinanceProvider>
+    );
+}
+
+/** Resources: renders tabbed resources views inline with sub-tabs */
+function ProjectResourcesEmbed() {
+    const [resTab, setResTab] = useState("overview");
+    const resTabs = [
+        { id: "overview", label: "Overview" },
+        { id: "materials", label: "Materials" },
+        { id: "tools", label: "Tools" },
+        { id: "assets", label: "Assets" },
+        { id: "services", label: "Services" },
+    ];
+
+    return (
+        <div className="animate-in fade-in duration-300 pb-12 space-y-4">
+            {/* Resources Sub-Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-neutral-200 dark:border-neutral-800 pb-2.5">
+                {resTabs.map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setResTab(tab.id)}
+                        className={clsx(
+                            "px-3.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all select-none shrink-0",
+                            resTab === tab.id
+                                ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-sm"
+                                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 dark:hover:text-white"
+                        )}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Resources Tab Content */}
+            {resTab === "overview" && <ResourcesOverviewEmbed />}
+            {resTab === "materials" && <MaterialsPage />}
+            {resTab === "tools" && <ToolsPage />}
+            {resTab === "assets" && <AssetsPage />}
+            {resTab === "services" && <ServicesPage />}
+        </div>
+    );
+}
+
+/** People: renders GlobalDirectory inline */
+function ProjectPeopleEmbed() {
+    const [people, setPeople] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const load = async () => {
+            try {
+                const data = await fetchPeopleDirectory();
+                setPeople(data);
+            } catch (error) {
+                console.error("Failed to load people directory", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        load();
+    }, []);
+
+    if (isLoading) {
+        return <div className="py-12 flex justify-center"><GlobalLoading /></div>;
+    }
+
+    return (
+        <div className="animate-in fade-in duration-300 pb-12">
+            <GlobalDirectory people={people} role="admin" triggerAddPerson={0} />
+        </div>
+    );
+}
+
+/** Crew: renders tabbed crew views inline */
+function ProjectCrewEmbed() {
+    const [crewTab, setCrewTab] = useState("directory");
+    const crewTabs = [
+        { id: "directory", label: "Directory" },
+        { id: "assignments", label: "Assignments" },
+        { id: "daily-input", label: "Daily Log" },
+        { id: "payroll", label: "Payroll" },
+        { id: "performance", label: "Performance" },
+        { id: "requests", label: "Requests" },
+    ];
+
+    return (
+        <div className="animate-in fade-in duration-300 pb-12 space-y-4">
+            {/* Crew Sub-Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-neutral-200 dark:border-neutral-800 pb-2.5">
+                {crewTabs.map((tab) => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setCrewTab(tab.id)}
+                        className={clsx(
+                            "px-3.5 py-1.5 rounded-full text-[11px] font-semibold whitespace-nowrap transition-all select-none shrink-0",
+                            crewTab === tab.id
+                                ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-sm"
+                                : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 dark:hover:text-white"
+                        )}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Crew Tab Content */}
+            {crewTab === "directory" && <CrewDirectory role="admin" />}
+            {crewTab === "assignments" && <CrewAssignments role="admin" />}
+            {crewTab === "daily-input" && <CrewDailyInput role="admin" />}
+            {crewTab === "payroll" && <CrewPayroll role="admin" />}
+            {crewTab === "performance" && <CrewPerformance role="admin" />}
+            {crewTab === "requests" && <CrewRequests role="admin" />}
+        </div>
+    );
+}
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const [project, setProject] = useState<Project | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("overview");
-    const [perfPeriod, setPerfPeriod] = useState("W");
+    const searchParams = useSearchParams();
+    const initialTab = searchParams.get("tab") || "overview";
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [isFav, setIsFav] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
-    const [isTabsSticky, setIsTabsSticky] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const router = useRouter();
+
+    // Activity Feed Filter State
+    const [filterCategory, setFilterCategory] = useState("all");
+    const [filterPIC, setFilterPIC] = useState("all");
+    const [filterStage, setFilterStage] = useState("all");
+
+    // Drawer Form State
+    const [isEditOpen, setIsEditOpen] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [editCode, setEditCode] = useState("");
+    const [editClient, setEditClient] = useState("");
+    const [editCity, setEditCity] = useState("");
+    const [editCoverUrl, setEditCoverUrl] = useState("");
+
+    // Listen to media query to toggle headers dynamically
+    useEffect(() => {
+        const media = window.matchMedia("(max-w: 1023px)");
+        setIsMobile(media.matches);
+        const listener = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        media.addEventListener("change", listener);
+        return () => media.removeEventListener("change", listener);
+    }, []);
 
     useEffect(() => {
         const handleScroll = () => {
             const scroll = window.scrollY;
             setIsScrolled(scroll > 40);
-            // Threshold for tabs to reach top bar (80px)
-            // Image (320) + Title Area shift (-48) + some buffer
-            setIsTabsSticky(scroll > 260);
         };
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
@@ -38,6 +560,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             setProject(data);
             if (data?.meta?.isFavorite) {
                 setIsFav(true);
+            }
+            if (data) {
+                setEditName(data.projectName || "");
+                setEditCode(data.projectCode || "");
+                setEditClient(data.meta?.clientName || "");
+                setEditCity(data.location?.city || "");
+                setEditCoverUrl(data.meta?.coverUrl || "");
             }
             setLoading(false);
         }
@@ -59,6 +588,87 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         }
         setIsUpdating(false);
     };
+ 
+    const handleUpdateProject = async () => {
+        if (!project || isUpdating) return;
+        setIsUpdating(true);
+
+        const newMeta = { 
+            ...(project.meta || {}), 
+            clientName: editClient,
+            coverUrl: editCoverUrl 
+        };
+        const newLocation = { ...(project.location || {}), city: editCity };
+
+        const success = await updateProject(project.id, {
+            projectName: editName,
+            projectCode: editCode,
+            meta: newMeta,
+            location: newLocation
+        });
+
+        if (success) {
+            setProject({
+                ...project,
+                projectName: editName,
+                projectCode: editCode,
+                meta: newMeta,
+                location: newLocation
+            });
+            setIsEditOpen(false);
+        } else {
+            alert("Failed to update project details.");
+        }
+        setIsUpdating(false);
+    };
+
+    // HEADER INJECTION (Desktop Only)
+    useHeader({
+        hideGlobalActions: true,
+        left: (
+            <div className="hidden lg:flex items-center gap-2 pointer-events-auto">
+                <button
+                    onClick={() => router.push("/project")}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all"
+                >
+                    <ChevronLeft size={16} strokeWidth={1.5} />
+                </button>
+            </div>
+        ),
+        middle: project ? (
+            <div className="hidden lg:flex items-center gap-2 pointer-events-auto text-[11px] font-bold text-neutral-800 dark:text-neutral-200 animate-in fade-in duration-300">
+                <span className="opacity-60 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => router.push("/project")}>Projects</span>
+                <ChevronRight size={10} className="text-neutral-400 dark:text-neutral-500 opacity-60" />
+                <span className="truncate max-w-[200px]">{project.projectName}</span>
+            </div>
+        ) : undefined,
+        right: (
+            <div className="hidden lg:flex items-center gap-1 p-0.5 rounded-full border border-white/20 dark:border-neutral-700/20 bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl shadow-sm pointer-events-auto transition-all">
+                <button
+                    onClick={toggleFavorite}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-neutral-700/60 active:scale-95 transition-all shrink-0"
+                >
+                    <Star
+                        size={15}
+                        className={clsx(isFav ? "text-[#FFC107] fill-[#FFC107]" : "text-neutral-700 dark:text-neutral-300")}
+                        strokeWidth={isFav ? 2 : 1.5}
+                    />
+                </button>
+                <button
+                    onClick={() => setIsEditOpen(true)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-neutral-700/60 active:scale-95 transition-all shrink-0"
+                >
+                    <Pencil size={14} className="text-neutral-700 dark:text-neutral-300" strokeWidth={1.5} />
+                </button>
+                <button
+                    onClick={() => router.push(`/project/${id}/setup`)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-neutral-700/60 active:scale-95 transition-all shrink-0"
+                >
+                    <Settings size={15} className="text-neutral-700 dark:text-neutral-300" strokeWidth={1.5} />
+                </button>
+            </div>
+        )
+    }, [project, isFav, isMobile, router, id]);
 
     if (loading) {
         return (
@@ -84,28 +694,76 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     if (progress > 30) stageCode = "DD";
     if (progress > 60) stageCode = "CD";
 
-    // Progress color logic
-    let progressColor = "#0A84FF";
-    if (progress > 0) {
-        if (progress < 40) progressColor = "#FF3B30";
-        else if (progress < 60) progressColor = "#FF9500";
-        else if (progress >= 80) progressColor = "#34C759";
-    } else {
-        progressColor = "#A1A1AA";
-    }
+    // Dynamic color tags based on project status
+    const statusDetails = {
+        "active": { label: "Active", style: "bg-green-500/10 text-green-600 dark:text-green-400" },
+        "on-track": { label: "On Track", style: "bg-green-500/10 text-green-600 dark:text-green-400" },
+        "at-risk": { label: "At Risk", style: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+        "delayed": { label: "Delayed", style: "bg-red-500/10 text-red-600 dark:text-red-400" },
+        "completed": { label: "Completed", style: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
+        "on_hold": { label: "On Hold", style: "bg-neutral-500/10 text-neutral-600 dark:text-neutral-400" }
+    };
+    const currentStatus = statusDetails[project.status as keyof typeof statusDetails] || { label: project.status, style: "bg-neutral-500/10 text-neutral-600" };
+    const projectForComponents = {
+        id: project.id,
+        projectNo: project.projectNumber,
+        code: project.projectCode,
+        name: project.projectName,
+        status: project.status,
+        stage: stageCode,
+        progress: progress,
+        type: project.meta?.type ?? "design-build",
+        client: project.meta?.clientName,
+        city: locationText,
+    };
 
     const innerTabs = [
         { id: "overview", label: "Overview", icon: FileText },
         { id: "activity", label: "Activity", icon: Activity },
         { id: "tracking", label: "Tracking", icon: Target },
+        { id: "finance", label: "Finance", icon: Banknote },
+        { id: "resources", label: "Resources", icon: Package },
+        { id: "people", label: "People", icon: Users },
+        { id: "crew", label: "Crew", icon: ClipboardList },
+        { id: "reports", label: "Reports", icon: FileSpreadsheet },
     ];
 
+    // Mock Data for Activities
+    const rawActivities = [
+        { id: 1, type: "task", title: "Verify Foundation Rebar Alignment", pic: "Andi Prasetya", stage: "Construction", date: "2026-07-14", content: "Site inspection task created for structure crew." },
+        { id: 2, type: "daily_log", title: "Daily Construction Log - Week 24", pic: "Yudi P.", stage: "Construction", date: "2026-07-14", content: "Slab pouring complete in Zone 1. Weather: Clear, slight rain at 4 PM." },
+        { id: 3, type: "meeting", title: "Schematic Signoff Coordination", pic: "Budi Santoso", stage: "Schematic Design", date: "2026-07-13", content: "Reviewed layout options with client. Minor adjustment to kitchen layout approved." },
+        { id: 4, type: "docs", title: "Structure Engineering Plan (REV_2)", pic: "Hendra K.", stage: "Design Development", date: "2026-07-12", content: "Uploaded PDF sheet detailing structural steel joints." },
+        { id: 5, type: "progress", title: "CD Progress weightage updated", pic: "System", stage: "Construction", date: "2026-07-11", content: "Progress increased by 2.6% due to foundation completion." },
+        { id: 6, type: "approval", title: "Material Submittal: Granite Tile Grade A", pic: "Yudi P.", stage: "Procurement", date: "2026-07-10", content: "Approved Granite tiles purchase request from supplier Indah Jaya." },
+        { id: 7, type: "notes", title: "Site Obstruction Note", pic: "Rendi A.", stage: "Construction", date: "2026-07-09", content: "Access path blocked temporarily by neighboring excavation crew." }
+    ];
+
+    // Filter Activities
+    const filteredActivities = rawActivities.filter(act => {
+        if (filterCategory !== "all" && act.type !== filterCategory) return false;
+        if (filterPIC !== "all" && act.pic !== filterPIC) return false;
+        if (filterStage !== "all" && act.stage !== filterStage) return false;
+        return true;
+    });
+
+    const categoryIcons = {
+        task: ClipboardList,
+        daily_log: Clock,
+        meeting: MessageSquare,
+        docs: FileUp,
+        progress: Target,
+        approval: ThumbsUp,
+        notes: FileText
+    };
+
     return (
-        <div className="min-h-screen bg-[#F6F6F6] dark:bg-[#000000] pb-24">
-            {/* Top Navigation Bar - Fixed */}
+        <ProjectProvider projectId={id}>
+            <div className="min-h-screen bg-transparent pb-24 pt-0 lg:pt-[20px]">
+            {/* Top Navigation Bar - Fixed (Mobile Only) */}
             <div
                 className={clsx(
-                    "fixed top-0 inset-x-0 z-50 transition-all duration-300 px-5 flex flex-col",
+                    "lg:hidden fixed top-0 inset-x-0 z-50 transition-all duration-300 px-5 flex flex-col",
                     isScrolled ? "h-[80px] pt-6" : "h-[100px] pt-8"
                 )}
             >
@@ -168,6 +826,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             />
                         </button>
                         <button
+                            onClick={() => setIsEditOpen(true)}
                             className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 active:scale-95 transition-all shrink-0"
                         >
                             <Pencil size={18} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
@@ -182,352 +841,546 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 </div>
             </div>
 
-            {/* Image Header Background */}
-            <div className={clsx(
-                "relative w-full h-[320px] transition-all duration-500 z-0",
-                isScrolled ? "blur-sm opacity-50 scale-110" : ""
-            )}>
-                <img
-                    src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&q=80"
-                    alt={project.projectName}
-                    className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-[#F6F6F6] via-[#F6F6F6]/95 to-transparent dark:from-black dark:via-black/95 dark:to-transparent pointer-events-none" />
-            </div>
-
-            {/* Project Title Area */}
-            <div className={clsx(
-                "relative px-5 -mt-12 z-10 mb-6 flex justify-between items-end transition-all duration-300",
-                isScrolled ? "opacity-0 invisible scale-95" : "opacity-100 visible"
-            )}>
-                <div>
-                    <span className="inline-block px-2.5 py-1 bg-white/40 dark:bg-neutral-800/40 backdrop-blur-xl text-[11px] font-bold tracking-wider text-neutral-800 dark:text-neutral-200 rounded-full shadow-sm mb-1.5 border border-neutral-100/30 dark:border-neutral-700/30 uppercase">
-                        {project.projectCode}
-                    </span>
-                    <h1 className="text-[28px] font-[800] text-neutral-900 dark:text-white tracking-tight leading-tight">
-                        {project.projectName}
-                    </h1>
-                    <p className="text-[14px] font-medium text-neutral-500 dark:text-neutral-400 mt-1">
-                        {locationText} • {stageCode}
-                    </p>
-                </div>
-
-                <div className="shrink-0 mb-1 ml-4 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl rounded-full p-1 shadow-sm border border-white/20 dark:border-neutral-800">
-                    <ProgressRing progress={progress} size={68} strokeWidth={5} color={progressColor} />
-                </div>
-            </div>
-
-            {/* Sticky Inner Tabs - Matched to Finance Benchmark */}
-            <div className={clsx(
-                "z-[60] transition-all duration-300 flex overflow-x-auto hide-scrollbar",
-                isTabsSticky
-                    ? "fixed top-[80px] left-5 right-5 bg-white/70 dark:bg-neutral-900/70 backdrop-blur-2xl backdrop-saturate-[1.8] border border-black/[0.04] dark:border-white/[0.05] p-[2px] rounded-[24px] shadow-[0_8px_32px_-12px_rgba(0,0,0,0.1)] dark:shadow-none"
-                    : "relative mx-5 mb-8 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl p-[2px] border border-white/20 dark:border-white/5 shadow-md rounded-[24px]"
-            )}>
-                {innerTabs.map((tab) => {
-                    const Icon = tab.icon;
-                    const isActive = activeTab === tab.id;
-                    return (
-                        <button
-                            key={tab.id}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveTab(tab.id);
-                            }}
-                            className={clsx(
-                                "flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all shrink-0 active:scale-95",
-                                isActive
-                                    ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.05] font-bold"
-                                    : "bg-transparent text-neutral-500 dark:text-neutral-400 font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                            )}
-                        >
-                            <Icon
-                                className={clsx(
-                                    "w-4 h-4",
-                                    isActive ? "text-neutral-900 dark:text-white" : "text-neutral-500 dark:text-neutral-400 opacity-60"
-                                )}
-                                strokeWidth={isActive ? 2 : 1.5}
+            {/* Layout Wrapper with custom Local Sidebar */}
+            <PageWrapper
+                sidebar={<ProjectDetailLocalSidebar activeTab={activeTab} setActiveTab={setActiveTab} projectId={id} router={router} />}
+                isTransparent={true}
+            >
+                <div className="space-y-6 max-w-4xl mx-auto">
+                    {/* Cover Photo - only on Overview */}
+                    {activeTab === "overview" && (
+                    <div className="relative w-full h-[240px] md:h-[280px] rounded-3xl overflow-hidden mb-6 shadow-sm border border-neutral-100 dark:border-neutral-800/20 bg-neutral-100 dark:bg-neutral-800 group">
+                        {project.meta?.coverUrl ? (
+                            <img
+                                src={project.meta.coverUrl}
+                                alt={project.projectName}
+                                className="absolute inset-0 w-full h-full object-cover"
                             />
-                            <span className="text-[14px]">{tab.label}</span>
-                        </button>
-                    );
-                })}
-            </div>
-
-            {/* Content Body */}
-            <div className="px-5 space-y-6">
-                {activeTab === "overview" && (
-                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 duration-500 pb-10 pt-4">
-                        {/* 1. DAY SNAPSHOT */}
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between px-1">
-                                <h3 className="text-[16px] font-bold text-neutral-900 dark:text-white leading-none">Day Snapshot</h3>
-                                <div className="text-[11px] font-medium text-neutral-400">March 3, 2026</div>
+                        ) : (
+                            <div className="absolute inset-0 bg-neutral-100 dark:bg-neutral-900/60 flex items-center justify-center transition-colors">
+                                <img
+                                    src="/logo-adidaya-red.svg"
+                                    alt="Adidaya Default Logo"
+                                    className="w-16 h-16 object-contain opacity-80"
+                                />
                             </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
+                        
+                        {/* Edit Cover Overlay on Hover */}
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto">
+                            <button
+                                onClick={() => setIsEditOpen(true)}
+                                className="px-5 py-2.5 bg-white/95 dark:bg-neutral-900/95 text-neutral-900 dark:text-white rounded-full font-bold text-xs shadow-lg backdrop-blur-md hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                            >
+                                <Pencil size={12} />
+                                Change Cover Photo
+                            </button>
+                        </div>
+                    </div>
+                    )}
 
-                            <div className="p-6 bg-white dark:bg-neutral-900 rounded-[32px] border border-black/5 dark:border-white/5 shadow-sm space-y-6 relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/5 blur-3xl -mr-16 -mt-16 rounded-full" />
+                    {/* Project Header Info */}
+                    <ProjectDetailHeader project={projectForComponents as any} />
 
-                                {/* HERO STATUS - PROMINENT badge at top center of card */}
-                                <div className="flex flex-col items-center justify-center py-2 space-y-2 border-b border-black/[0.03] dark:border-white/[0.03] pb-6">
-                                    <div className="px-4 py-1.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-[14px] font-bold flex items-center gap-2 shadow-sm border border-green-500/10">
-                                        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                                        Project is On Track
-                                    </div>
-                                    <p className="text-[11px] text-neutral-400 font-medium text-center max-w-[200px]">
-                                        Efficiency is up by 4% compared to last week. Keep it up!
-                                    </p>
-                                </div>
-
-                                {/* SYMMETRICAL METRICS GRID (2x2) */}
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-10 pt-2">
-                                    {/* Execution */}
-                                    <div className="space-y-2">
-                                        <p className="text-[11px] font-semibold text-neutral-400">Execution</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-[28px] font-bold leading-none">1</span>
-                                            <span className="text-[13px] font-medium text-neutral-400">/ 6 tasks</span>
-                                        </div>
-                                        <div className="w-full h-1 bg-neutral-100 dark:bg-neutral-800 rounded-full mt-3 overflow-hidden">
-                                            <div className="h-full bg-amber-500" style={{ width: '16.6%' }} />
-                                        </div>
-                                    </div>
-
-                                    {/* Progress Today */}
-                                    <div className="space-y-2">
-                                        <p className="text-[11px] font-semibold text-neutral-400">Daily Progress</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-[28px] font-bold leading-none">2.6%</span>
-                                            <span className="text-[13px] font-bold text-green-500">↑</span>
-                                        </div>
-                                        <p className="text-[10px] text-neutral-400 font-medium">0.4% above avg</p>
-                                    </div>
-
-                                    {/* Cost Today */}
-                                    <div className="space-y-2">
-                                        <p className="text-[11px] font-semibold text-neutral-400">Spend Today</p>
-                                        <div className="flex items-baseline gap-0.5">
-                                            <span className="text-[14px] font-bold text-neutral-400">Rp</span>
-                                            <span className="text-[28px] font-bold leading-none">4.5M</span>
-                                        </div>
-                                        <p className="text-[10px] text-neutral-400 font-medium">92% within budget</p>
-                                    </div>
-
-                                    {/* Transactions Today */}
-                                    <div className="space-y-2">
-                                        <p className="text-[11px] font-semibold text-neutral-400">Transactions</p>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-[28px] font-bold leading-none">5</span>
-                                            <span className="text-[13px] font-bold text-blue-500">Verified</span>
-                                        </div>
-                                        <p className="text-[10px] text-neutral-400 font-medium">2 pending approval</p>
-                                    </div>
-                                </div>
-                            </div>
+                    {/* Main Content Body */}
+                    <div className="space-y-6">
+                        {/* Sticky Inner Tabs (Mobile Only) */}
+                        <div className={clsx(
+                            "lg:hidden z-[40] flex overflow-x-auto hide-scrollbar bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl p-[2px] border border-white/20 dark:border-white/5 shadow-md rounded-[24px] mb-4"
+                        )}>
+                            {innerTabs.map((tab) => {
+                                const Icon = tab.icon;
+                                const isActive = activeTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveTab(tab.id);
+                                        }}
+                                        className={clsx(
+                                            "flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full whitespace-nowrap transition-all shrink-0 active:scale-95 text-xs font-semibold",
+                                            isActive
+                                                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.05] font-bold"
+                                                : "bg-transparent text-neutral-500 dark:text-neutral-400 font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                        )}
+                                    >
+                                        <Icon
+                                            className={clsx(
+                                                "w-4 h-4",
+                                                isActive ? "text-neutral-900 dark:text-white" : "text-neutral-500 dark:text-neutral-400 opacity-60"
+                                            )}
+                                            strokeWidth={isActive ? 2 : 1.5}
+                                        />
+                                        <span className="text-[13px]">{tab.label}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
 
-                        {/* 2. PERFORMANCE SUMMARY */}
-                        <div className="space-y-4 pt-2">
-                            <div className="flex items-center justify-between px-1">
-                                <h3 className="text-[16px] font-bold text-neutral-900 dark:text-white leading-none">Performance</h3>
-                                {/* W M A Toggle Pill */}
-                                <div className="flex p-0.5 bg-neutral-200 dark:bg-neutral-800 rounded-lg">
-                                    {['W', 'M', 'A'].map((p) => (
-                                        <button
-                                            key={p}
-                                            onClick={() => setPerfPeriod(p)}
-                                            className={clsx(
-                                                "w-7 h-6 flex items-center justify-center rounded-md text-[10px] font-bold transition-all",
-                                                perfPeriod === p
-                                                    ? "bg-white dark:bg-neutral-700 text-purple-600 dark:text-purple-400 shadow-sm"
-                                                    : "text-neutral-500 hover:text-neutral-600"
-                                            )}
-                                        >
-                                            {p}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="p-6 bg-white dark:bg-neutral-900 rounded-[32px] border border-black/5 dark:border-white/5 shadow-sm space-y-6">
-                                {/* Periodic Progress */}
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-end">
-                                        <span className="text-[11px] font-bold text-neutral-400">{perfPeriod === 'W' ? 'Weekly' : perfPeriod === 'M' ? 'Monthly' : 'All-time'} Progress</span>
-                                        <span className="text-[18px] font-bold text-neutral-900 dark:text-white">10.2% <span className="text-red-500 text-[11px] ml-1 font-bold">-2.3%</span></span>
-                                    </div>
-                                    <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                                        <div className="h-full bg-blue-500 rounded-full animate-all transition-all duration-1000" style={{ width: '40%' }} />
-                                    </div>
-                                </div>
-
-                                {/* Financial Status Stack */}
-                                <div className="grid grid-cols-2 gap-4 pt-2">
-                                    <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-black/[0.02] dark:border-white/[0.02] space-y-1">
-                                        <p className="text-[10px] font-bold text-neutral-400">Budget Used</p>
-                                        <p className="text-[20px] font-bold text-green-600 dark:text-green-400 leading-tight">90.1%</p>
-                                    </div>
-                                    <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-black/[0.02] dark:border-white/[0.02] space-y-1 border-l-2 border-l-purple-500/20">
-                                        <p className="text-[10px] font-bold text-neutral-400">Efficiency</p>
-                                        <p className="text-[20px] font-bold text-neutral-900 dark:text-white leading-tight">A+ <span className="text-[10px] text-neutral-400 ml-1">Rating</span></p>
-                                    </div>
-                                </div>
-
-                                {/* Overall Breakdown */}
-                                <div className="pt-2">
-                                    <div className="flex items-center gap-2 mb-4 px-1">
-                                        <div className="w-1 h-3 bg-blue-500 rounded-full" />
-                                        <span className="text-[11px] font-bold text-neutral-400">Weightage Breakdown</span>
-                                    </div>
-                                    <div className="space-y-5 px-1">
+                        {/* Content Body */}
+                        <div className="space-y-6">
+                            {/* OVERVIEW TAB */}
+                            {activeTab === "overview" && (
+                                <div className="space-y-8 animate-in fade-in duration-300 pb-12">
+                                    {/* Project Summary */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {[
-                                            { label: "Design", val: "85%", color: "amber" },
-                                            { label: "Build", val: "42%", color: "blue" },
-                                            { label: "RAB", val: "95%", color: "green" }
+                                            { label: "Progress", value: `${progress}%`, sub: "Overall progress", icon: Target, color: "text-blue-500 dark:text-blue-400", bgIcon: "bg-blue-500/10 text-blue-500" },
+                                            { label: "Schedule Status", value: "On Track", sub: "Matches baseline", icon: Calendar, color: "text-green-500 dark:text-green-400", bgIcon: "bg-green-500/10 text-green-500" },
+                                            { label: "Budget Status", value: "Within Limit", sub: "Rp 150M Utilized", icon: CreditCard, color: "text-neutral-900 dark:text-white", bgIcon: "bg-purple-500/10 text-purple-500" },
+                                            { label: "Target Finish", value: project.endDate ? new Date(project.endDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "N/A", sub: "Contract completion", icon: Clock, color: "text-neutral-900 dark:text-white", bgIcon: "bg-amber-500/10 text-amber-500" },
+                                        ].map((item, idx) => {
+                                            const Icon = item.icon;
+                                            return (
+                                                <div key={idx} className="group relative p-5 bg-white dark:bg-neutral-900 rounded-[22px] border border-black/[0.04] dark:border-white/[0.04] shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_8px_20px_rgba(0,0,0,0.04)] hover:-translate-y-0.5 flex flex-col justify-between h-32">
+                                                    <div className="flex justify-between items-start">
+                                                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">{item.label}</p>
+                                                        <div className={clsx("w-7 h-7 rounded-full flex items-center justify-center shrink-0", item.bgIcon)}>
+                                                            <Icon size={14} strokeWidth={2} />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <p className={clsx("text-2.5xl font-black tracking-tight leading-none", item.color)}>{item.value}</p>
+                                                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-semibold">{item.sub}</p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Attention Section */}
+                                    <div className="space-y-3">
+                                        <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider pl-1">Attention Required</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {[
+                                                { label: "Overdue Tasks", count: "2 Tasks", desc: "Foundation concrete review is overdue by 3 days.", icon: AlertTriangle, color: "border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400" },
+                                                { label: "Pending Approvals", count: "3 Pending", desc: "Material purchase requests require your verification.", icon: CheckCircle2, color: "border-amber-500/20 bg-amber-500/5 text-amber-600 dark:text-amber-400" },
+                                                { label: "Active Issues", count: "1 Active", desc: "Site access coordination issue reported by team.", icon: Activity, color: "border-purple-500/20 bg-purple-500/5 text-purple-600 dark:text-purple-400" }
+                                            ].map((item, idx) => {
+                                                const Icon = item.icon;
+                                                return (
+                                                    <div key={idx} className={clsx("p-5 border rounded-[22px] flex items-start gap-4 transition-all duration-300 hover:scale-[1.01] shadow-sm", item.color)}>
+                                                        <div className="p-2 rounded-xl bg-white/50 dark:bg-black/20 shrink-0">
+                                                            <Icon size={18} strokeWidth={2} />
+                                                        </div>
+                                                        <div className="space-y-1 min-w-0">
+                                                            <div>
+                                                                <span className="text-[9px] font-bold uppercase tracking-wider opacity-70 block">{item.label}</span>
+                                                                <h4 className="text-base font-black leading-none mt-0.5">{item.count}</h4>
+                                                            </div>
+                                                            <p className="text-xs opacity-80 font-medium leading-relaxed">{item.desc}</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Current Work */}
+                                    <div className="space-y-3">
+                                        <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider pl-1">Current Work</h3>
+                                        <div className="p-6 bg-white dark:bg-neutral-900 rounded-[24px] border border-black/5 dark:border-white/5 shadow-sm space-y-4">
+                                            {[
+                                                { title: "Floor Slab Rebar Inspection", desc: "Structure verification under progress for Area B.", pic: "Andi Prasetya", progress: 65, color: "bg-blue-500" },
+                                                { title: "Plumbing Riser Piping Installation", desc: "MEP routing inside shafts.", pic: "Yudi P.", progress: 40, color: "bg-amber-500" }
+                                            ].map((task, idx) => (
+                                                <div key={idx} className="p-4 bg-neutral-50 dark:bg-neutral-800/40 rounded-2xl border border-black/[0.02] dark:border-white/[0.02] space-y-3">
+                                                    <div className="flex justify-between items-start text-xs">
+                                                        <div className="space-y-0.5">
+                                                            <h4 className="font-bold text-neutral-900 dark:text-white">{task.title}</h4>
+                                                            <p className="text-[10px] text-neutral-500 dark:text-neutral-400">{task.desc}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="px-2 py-0.5 bg-neutral-200/50 dark:bg-neutral-700 rounded text-[9px] font-bold text-neutral-600 dark:text-neutral-300">PIC: {task.pic}</span>
+                                                            <span className="font-bold text-neutral-900 dark:text-white">{task.progress}%</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                                                        <div className={clsx("h-full rounded-full transition-all duration-700", task.color)} style={{ width: `${task.progress}%` }} />
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Recent Activity */}
+                                    <div className="space-y-3">
+                                        <h3 className="text-xs font-bold text-neutral-400 uppercase tracking-wider pl-1">Recent Activity</h3>
+                                        <div className="p-6 bg-white dark:bg-neutral-900 rounded-[24px] border border-black/5 dark:border-white/5 shadow-sm space-y-4">
+                                            {[
+                                                { title: "Approved Material Submittal for Ceramic Tiles", time: "2 hours ago", author: "Andi Prasetya" },
+                                                { title: "Daily Construction Log uploaded for Week 24", time: "1 day ago", author: "Yudi P." },
+                                                { title: "Schematic Signoff Coordination meeting scheduled", time: "2 days ago", author: "Budi Santoso" }
+                                            ].map((act, idx) => (
+                                                <div key={idx} className="flex justify-between items-start gap-4 text-xs pb-3 border-b border-black/[0.03] dark:border-white/[0.03] last:border-0 last:pb-0">
+                                                    <div>
+                                                        <p className="font-bold text-neutral-800 dark:text-neutral-200 leading-snug">{act.title}</p>
+                                                        <p className="text-[10px] text-neutral-400 mt-0.5">{act.author}</p>
+                                                    </div>
+                                                    <span className="text-[10px] text-neutral-400 whitespace-nowrap">{act.time}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ACTIVITY TAB */}
+                            {activeTab === "activity" && (
+                                <div className="space-y-6 animate-in fade-in duration-300 pb-12">
+                                    {/* Filter Toolbar */}
+                                    <div className="p-4 bg-white dark:bg-neutral-900 rounded-2xl border border-black/5 dark:border-white/5 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {/* Category Filter */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Category</label>
+                                            <div className="relative">
+                                                <select 
+                                                    value={filterCategory}
+                                                    onChange={(e) => setFilterCategory(e.target.value)}
+                                                    className="w-full bg-neutral-50 dark:bg-neutral-800 text-xs px-3 py-2 rounded-xl border border-neutral-200/60 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                                                >
+                                                    <option value="all">All Categories</option>
+                                                    <option value="task">Tasks</option>
+                                                    <option value="daily_log">Daily Logs</option>
+                                                    <option value="meeting">Meetings</option>
+                                                    <option value="docs">Documents</option>
+                                                    <option value="progress">Progress Updates</option>
+                                                    <option value="approval">Approvals</option>
+                                                    <option value="notes">Site Notes</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Stage Filter */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Stage</label>
+                                            <select 
+                                                value={filterStage}
+                                                onChange={(e) => setFilterStage(e.target.value)}
+                                                className="w-full bg-neutral-50 dark:bg-neutral-800 text-xs px-3 py-2 rounded-xl border border-neutral-200/60 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                                            >
+                                                <option value="all">All Stages</option>
+                                                <option value="Schematic Design">Schematic Design</option>
+                                                <option value="Design Development">Design Development</option>
+                                                <option value="Procurement">Procurement</option>
+                                                <option value="Construction">Construction</option>
+                                            </select>
+                                        </div>
+
+                                        {/* PIC Filter */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">PIC</label>
+                                            <select 
+                                                value={filterPIC}
+                                                onChange={(e) => setFilterPIC(e.target.value)}
+                                                className="w-full bg-neutral-50 dark:bg-neutral-800 text-xs px-3 py-2 rounded-xl border border-neutral-200/60 dark:border-neutral-700 focus:outline-none focus:ring-1 focus:ring-blue-500 font-medium"
+                                            >
+                                                <option value="all">All PICs</option>
+                                                <option value="Andi Prasetya">Andi Prasetya</option>
+                                                <option value="Yudi P.">Yudi P.</option>
+                                                <option value="Budi Santoso">Budi Santoso</option>
+                                                <option value="Hendra K.">Hendra K.</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Activities List */}
+                                    <div className="space-y-3.5">
+                                        {filteredActivities.length > 0 ? (
+                                            filteredActivities.map((act) => {
+                                                const IconComponent = categoryIcons[act.type as keyof typeof categoryIcons] || FileText;
+                                                return (
+                                                    <div 
+                                                        key={act.id} 
+                                                        className="p-5 bg-white dark:bg-neutral-900 rounded-[22px] border border-black/5 dark:border-white/5 shadow-sm flex items-start gap-4"
+                                                    >
+                                                        <div className="w-10 h-10 rounded-full bg-neutral-50 dark:bg-neutral-800 flex items-center justify-center shrink-0 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] border border-neutral-100 dark:border-neutral-800">
+                                                            <IconComponent size={18} className="text-neutral-500 dark:text-neutral-400" />
+                                                        </div>
+                                                        <div className="flex-1 space-y-1">
+                                                            <div className="flex justify-between items-start gap-2">
+                                                                <h4 className="text-[13px] font-bold text-neutral-900 dark:text-white leading-tight">{act.title}</h4>
+                                                                <span className="text-[10px] text-neutral-400 whitespace-nowrap">{act.date}</span>
+                                                            </div>
+                                                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">{act.content}</p>
+                                                            <div className="flex items-center gap-2 pt-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                                                                <span>{act.pic}</span>
+                                                                <span>•</span>
+                                                                <span>{act.stage}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="h-[20vh] flex flex-col items-center justify-center text-center">
+                                                <p className="text-xs font-semibold text-neutral-400">No activities matches the current filter.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TRACKING TAB */}
+                            {activeTab === "tracking" && (
+                                <div className="space-y-8 animate-in fade-in duration-300 pb-12">
+                                    {/* Simplified Tracking Indicators */}
+                                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                        {[
+                                            { label: "Overall Progress", value: `${progress}%`, sub: "Total completed", color: "text-blue-500" },
+                                            { label: "Schedule Status", value: "On Track", sub: "0 days variance", color: "text-green-500" },
+                                            { label: "Budget Status", value: "Within limit", sub: "No overspend", color: "text-green-500" },
+                                            { label: "Current Stage", value: stageCode, sub: "Active focus", color: "text-neutral-900 dark:text-white" },
+                                            { label: "Next Milestone", value: "ED Drawings", sub: "Target: Jul 30", color: "text-neutral-900 dark:text-white" },
                                         ].map((item, idx) => (
-                                            <div key={idx} className="space-y-2">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-[11px] font-semibold text-neutral-500">{item.label}</span>
-                                                    <span className="text-[13px] font-bold text-neutral-900 dark:text-white">{item.val}</span>
-                                                </div>
-                                                <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                                                    <div
-                                                        className={clsx(
-                                                            "h-full rounded-full transition-all duration-700",
-                                                            item.color === 'amber' ? "bg-amber-500" :
-                                                                item.color === 'blue' ? "bg-blue-500" : "bg-green-500"
-                                                        )}
-                                                        style={{ width: item.val }}
-                                                    />
-                                                </div>
+                                            <div key={idx} className="p-4 bg-white dark:bg-neutral-900 rounded-xl border border-black/5 dark:border-white/5 shadow-sm space-y-1">
+                                                <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">{item.label}</p>
+                                                <p className={clsx("text-base font-extrabold leading-none", item.color)}>{item.value}</p>
+                                                <p className="text-[9px] text-neutral-500 dark:text-neutral-400 font-medium">{item.sub}</p>
                                             </div>
                                         ))}
                                     </div>
+
+                                    {/* Progress per Stage & Planned vs Actual */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Progress per Stage */}
+                                        <div className="p-6 bg-white dark:bg-neutral-900 rounded-[24px] border border-black/5 dark:border-white/5 shadow-sm space-y-4">
+                                            <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Progress per Stage</h4>
+                                            <div className="space-y-4">
+                                                {[
+                                                    { label: "01-KO (Kickoff)", progress: 100, status: "completed" },
+                                                    { label: "02-SD (Schematic)", progress: 100, status: "completed" },
+                                                    { label: "03-DD (Design Development)", progress: 42, status: "active" },
+                                                    { label: "04-ED (Engineering)", progress: 0, status: "pending" },
+                                                ].map((st, idx) => (
+                                                    <div key={idx} className="space-y-1">
+                                                        <div className="flex justify-between items-center text-xs font-medium">
+                                                            <span className="text-neutral-700 dark:text-neutral-300">{st.label}</span>
+                                                            <span className="text-neutral-900 dark:text-white font-bold">{st.progress}%</span>
+                                                        </div>
+                                                        <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+                                                            <div 
+                                                                className={clsx(
+                                                                    "h-full rounded-full transition-all duration-700", 
+                                                                    st.status === "completed" ? "bg-green-500" :
+                                                                    st.status === "active" ? "bg-blue-500" : "bg-neutral-200 dark:bg-neutral-700"
+                                                                )} 
+                                                                style={{ width: `${st.progress}%` }} 
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Planned vs Actual */}
+                                        <div className="p-6 bg-white dark:bg-neutral-900 rounded-[24px] border border-black/5 dark:border-white/5 shadow-sm space-y-4">
+                                            <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Planned vs Actual Timeline</h4>
+                                            <div className="space-y-4">
+                                                {[
+                                                    { label: "Design Phase", planned: "May 1 - Jul 15", actual: "May 1 - Jul 20", status: "completed", delayed: true },
+                                                    { label: "Procurement Phase", planned: "Jul 10 - Aug 5", actual: "Jul 10 - Ongoing", status: "active", delayed: false },
+                                                    { label: "Construction Phase", planned: "Aug 1 - Dec 15", actual: "Not Started", status: "pending", delayed: false },
+                                                ].map((tLine, idx) => (
+                                                    <div key={idx} className="space-y-1.5 text-xs pb-3 border-b border-black/[0.03] dark:border-white/[0.03] last:border-0 last:pb-0">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="font-bold text-neutral-900 dark:text-white">{tLine.label}</span>
+                                                            {tLine.delayed && (
+                                                                <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-red-500/10 text-red-600 dark:text-red-400 uppercase tracking-wider">
+                                                                    +5d Variance
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2 text-[10px] text-neutral-500 dark:text-neutral-400">
+                                                            <div>
+                                                                <span className="font-semibold block text-[8px] uppercase tracking-wider opacity-60">Planned</span>
+                                                                {tLine.planned}
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-semibold block text-[8px] uppercase tracking-wider opacity-60">Actual</span>
+                                                                {tLine.actual}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* FINANCE TAB */}
+                    {activeTab === "finance" && (
+                        <ProjectFinanceEmbed projectId={id} />
+                    )}
+
+                    {/* RESOURCES TAB */}
+                    {activeTab === "resources" && (
+                        <div className="py-16 text-center animate-in fade-in duration-300">
+                            <div className="max-w-md mx-auto p-8 bg-white dark:bg-neutral-900 rounded-3xl border border-black/5 dark:border-white/5 shadow-sm space-y-4">
+                                <div className="w-16 h-16 mx-auto bg-amber-50 dark:bg-amber-950/30 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-400">
+                                    <Construction className="w-8 h-8" />
+                                </div>
+                                <h3 className="text-lg font-bold text-neutral-900 dark:text-white">Resources Under Construction</h3>
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                                    We are currently building this section to match your workflow. This feature will be available shortly.
+                                </p>
                             </div>
                         </div>
+                    )}
 
-                        {/* 3. ACTIVE ALERTS */}
-                        <div className="space-y-4 pt-2">
-                            <div className="flex items-center justify-between px-1">
-                                <h3 className="text-[16px] font-bold text-neutral-900 dark:text-white leading-none">Active Alerts</h3>
-                                <div className="px-2 py-0.5 rounded-md bg-red-500 text-white text-[9px] font-bold uppercase tracking-wider">2 NEW</div>
-                            </div>
-                            <div className="p-6 bg-white dark:bg-neutral-900 rounded-[32px] border border-black/5 dark:border-white/5 shadow-sm space-y-4">
-                                <div className="space-y-4">
-                                    <div className="flex gap-4 items-start bg-red-50 dark:bg-red-500/5 p-4 rounded-2xl border border-red-100 dark:border-red-500/10">
-                                        <div className="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
-                                            <Activity size={18} className="text-red-500" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider leading-none">Timeline Risk</p>
-                                            <p className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300 leading-snug">Schedule delayed by <span className="font-bold text-red-600">11.8%</span> due to structural delay.</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-4 items-start bg-amber-50 dark:bg-amber-500/5 p-4 rounded-2xl border border-amber-100 dark:border-amber-500/10">
-                                        <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
-                                            <CreditCard size={18} className="text-amber-500" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider leading-none">Budget Conflict</p>
-                                            <p className="text-[13px] font-medium text-neutral-700 dark:text-neutral-300 leading-snug">Cost exceeded expected by <span className="font-bold text-amber-600">8.4%</span> in 'RAB Maintenance'.</p>
-                                        </div>
-                                    </div>
+                    {/* PEOPLE TAB */}
+                    {activeTab === "people" && (
+                        <div className="py-16 text-center animate-in fade-in duration-300">
+                            <div className="max-w-md mx-auto p-8 bg-white dark:bg-neutral-900 rounded-3xl border border-black/5 dark:border-white/5 shadow-sm space-y-4">
+                                <div className="w-16 h-16 mx-auto bg-amber-50 dark:bg-amber-950/30 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-400">
+                                    <Construction className="w-8 h-8" />
                                 </div>
-                                <button className="w-full py-4 text-[11px] font-bold text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors bg-neutral-50 dark:bg-neutral-800/50 rounded-2xl border border-black/[0.02] dark:border-white/[0.02]">
-                                    View Alert History
+                                <h3 className="text-lg font-bold text-neutral-900 dark:text-white">People Under Construction</h3>
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                                    We are currently building this section to match your workflow. This feature will be available shortly.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* CREW TAB */}
+                    {activeTab === "crew" && (
+                        <ProjectCrewEmbed />
+                    )}
+
+                    {/* REPORTS TAB */}
+                    {activeTab === "reports" && (
+                        <div className="animate-in fade-in duration-300 pb-12">
+                            <div className="p-8 bg-white dark:bg-neutral-900 rounded-2xl border border-black/5 dark:border-white/5 text-center space-y-3">
+                                <FileSpreadsheet className="w-12 h-12 mx-auto text-neutral-300" />
+                                <h3 className="font-semibold text-neutral-700 dark:text-neutral-200">Project Reports</h3>
+                                <p className="text-sm text-neutral-500">Generated reports and analytics for this project.</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </PageWrapper>
+
+            {/* Edit Drawer Modal */}
+            <AnimatePresence>
+                {isEditOpen && (
+                    <>
+                        {/* Backdrop overlay */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsEditOpen(false)}
+                            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] pointer-events-auto"
+                        />
+
+                        {/* Slide-over panel */}
+                        <motion.div
+                            initial={{ x: "100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed inset-y-0 right-0 w-full sm:w-[440px] bg-white dark:bg-neutral-900 shadow-2xl z-[101] flex flex-col border-l border-neutral-100 dark:border-neutral-800 pointer-events-auto"
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-6 py-5 border-b border-neutral-100 dark:border-neutral-800">
+                                <div>
+                                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">Edit Project</h2>
+                                    <p className="text-xs text-neutral-500 mt-0.5">Update project details and metadata</p>
+                                </div>
+                                <button
+                                    onClick={() => setIsEditOpen(false)}
+                                    className="p-2 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-full transition-colors"
+                                >
+                                    <X className="w-5 h-5 text-neutral-500" />
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                )}
 
-                {activeTab === "activity" && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-10">
-                        <div className="flex items-center justify-between mt-2">
-                            <h2 className="text-[18px] font-[800] text-neutral-900 dark:text-white tracking-tight">Log Feed</h2>
-                            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white rounded-lg text-[11px] font-bold shadow-sm active:scale-95 transition-all">
-                                <Plus size={12} strokeWidth={3} />
-                                New Log
-                            </button>
-                        </div>
-
-                        <div className="space-y-2.5">
-                            {/* COMPACT ACTIVITY ITEMS */}
-                            {[
-                                { title: "Verify Foundation Progress", meta: "WBS 3.1 • Site", time: "Tomw", status: "Not Started", color: "blue" },
-                                { title: "Finalize Schematic Design", meta: "Stage 02-SD • Design", time: "Today", status: "In Progress", color: "blue" }
-                            ].map((item, idx) => (
-                                <div key={idx} className="p-3.5 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl rounded-[18px] border border-white dark:border-white/5 shadow-sm flex items-center gap-3.5">
-                                    <div className={clsx(
-                                        "w-9 h-9 rounded-full flex items-center justify-center shrink-0",
-                                        item.color === 'blue' ? "bg-blue-500/10" : "bg-neutral-500/10"
-                                    )}>
-                                        <CheckCircle2 size={18} className={item.color === 'blue' ? "text-blue-600" : "text-neutral-600"} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="text-[13px] font-bold text-neutral-900 dark:text-white leading-tight truncate">{item.title}</h4>
-                                        <p className="text-[10px] font-medium text-neutral-500 mt-0.5 truncate">{item.meta} • <span className="text-neutral-400">{item.time}</span></p>
-                                    </div>
-                                    <div className="shrink-0 text-right">
-                                        <span className={clsx(
-                                            "block text-[8px] font-[900] uppercase tracking-wider mb-1 px-1.5 py-0.5 rounded-full",
-                                            item.status === "In Progress" ? "bg-amber-500/10 text-amber-600" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500"
-                                        )}>
-                                            {item.status}
-                                        </span>
-                                        <div className="w-5 h-5 rounded-full bg-neutral-200 dark:bg-neutral-800 float-right flex items-center justify-center text-[9px] font-bold text-neutral-500 uppercase">ME</div>
-                                    </div>
+                            {/* Body */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                {/* Project Name */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Project Name</label>
+                                    <input
+                                        type="text"
+                                        value={editName}
+                                        onChange={(e) => setEditName(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600 text-neutral-900 dark:text-white transition-all"
+                                    />
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
 
-                {activeTab === "tracking" && (
-                    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500 pb-10">
-                        <div className="flex items-center justify-between mt-2">
-                            <h2 className="text-[18px] font-[800] text-neutral-900 dark:text-white tracking-tight">Tracking</h2>
-                            <button className="px-3 py-1.5 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl border border-black/[0.04] dark:border-white/5 text-neutral-900 dark:text-white rounded-lg text-[11px] font-bold active:scale-95 transition-all">
-                                Update
-                            </button>
-                        </div>
+                                {/* Project Code */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Project Code</label>
+                                    <input
+                                        type="text"
+                                        value={editCode}
+                                        onChange={(e) => setEditCode(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600 text-neutral-900 dark:text-white transition-all uppercase"
+                                    />
+                                </div>
 
-                        {/* COMPACT STAGE PROGRESS */}
-                        <div className="p-5 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl rounded-[24px] border border-white dark:border-white/5 shadow-sm space-y-6">
-                            <div className="space-y-6">
-                                {[
-                                    { label: "03-DD (Design Dev)", sub: "Detailed Engineering", val: "65%", status: "In Progress", color: "red" },
-                                    { label: "02-SD (Schematic)", sub: "Floor Plans & Elevations", val: "100%", status: "Done", color: "red" },
-                                    { label: "01-KO (Kickoff)", sub: "Initial Meeting", val: "100%", status: "Done", color: "red" }
-                                ].map((stage, idx) => (
-                                    <div key={idx} className="space-y-2">
-                                        <div className="flex justify-between items-end">
-                                            <div className="flex-1">
-                                                <h4 className="text-[13px] font-bold text-neutral-900 dark:text-white truncate">{stage.label}</h4>
-                                                <p className="text-[10px] text-neutral-500 truncate">{stage.sub}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <span className="text-[11px] font-bold text-neutral-900 dark:text-white">{stage.val}</span>
-                                                <span className={clsx(
-                                                    "px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider",
-                                                    stage.status === "Done" ? "bg-green-500/10 text-green-600" : "bg-blue-500/10 text-blue-600"
-                                                )}>{stage.status}</span>
-                                            </div>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                                            <div className={clsx(
-                                                "h-full rounded-full transition-all duration-700",
-                                                stage.color === 'red' ? "bg-red-600" : "bg-blue-600"
-                                            )} style={{ width: stage.val }} />
-                                        </div>
-                                    </div>
-                                ))}
+                                {/* Client Name */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Client Name</label>
+                                    <input
+                                        type="text"
+                                        value={editClient}
+                                        onChange={(e) => setEditClient(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600 text-neutral-900 dark:text-white transition-all"
+                                    />
+                                </div>
+
+                                {/* Location (City) */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">City</label>
+                                    <input
+                                        type="text"
+                                        value={editCity}
+                                        onChange={(e) => setEditCity(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600 text-neutral-900 dark:text-white transition-all"
+                                    />
+                                </div>
+ 
+                                {/* Cover Photo URL */}
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Cover Photo URL</label>
+                                    <input
+                                        type="text"
+                                        value={editCoverUrl}
+                                        onChange={(e) => setEditCoverUrl(e.target.value)}
+                                        placeholder="https://images.unsplash.com/..."
+                                        className="w-full px-4 py-3 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-red-600/20 focus:border-red-600 text-neutral-900 dark:text-white transition-all"
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    </div>
+
+                            {/* Footer */}
+                            <div className="p-6 border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 flex gap-3">
+                                <button
+                                    onClick={() => setIsEditOpen(false)}
+                                    className="flex-1 py-3 border border-neutral-200 dark:border-neutral-700 rounded-xl text-sm font-semibold text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleUpdateProject}
+                                    disabled={isUpdating}
+                                    className="flex-1 py-3 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 rounded-xl text-sm font-semibold hover:bg-neutral-800 dark:hover:bg-white transition-colors disabled:opacity-50"
+                                >
+                                    {isUpdating ? "Saving..." : "Save Changes"}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </>
                 )}
-            </div>
-        </div >
+            </AnimatePresence>
+        </div>
+        </ProjectProvider>
     );
 }

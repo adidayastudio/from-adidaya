@@ -172,7 +172,7 @@ export default function ClassesTab({ isOpen = false, onClose = () => { } }: Prop
                     );
                 }
                 return (
-                    <span className="px-2.5 py-1 bg-neutral-100 border border-neutral-200 rounded font-mono font-semibold text-neutral-700 text-sm">
+                    <span className="px-2.5 py-1 bg-neutral-100 border border-neutral-200 rounded-full font-mono font-semibold text-neutral-700 text-sm">
                         {cls.classCode}
                     </span>
                 );

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, Fragment } from "react";
+import { useState, useMemo, useEffect, useRef, Fragment, useContext } from "react";
 import { generateExport, ExportAttachment, ExportMetadata } from "@/lib/export/export-utils";
+import { ProjectContext } from "@/components/flow/project-context";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
 import { useFinance } from "@/components/flow/finance/FinanceContext";
@@ -1730,10 +1731,23 @@ export default function ReimburseClient() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
+    // Check project context
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectId = projectCtx?.project?.id || (pathname.includes("/project/") ? pathname.split("/")[2] : null);
+
     // Filters
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [statusFilter, setStatusFilter] = useState<ReimburseStatus | "ALL">("ALL");
-    const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+    const [selectedProjects, setSelectedProjects] = useState<string[]>(
+        forceProjectId ? [forceProjectId] : []
+    );
+
+    useEffect(() => {
+        if (forceProjectId) {
+            setSelectedProjects([forceProjectId]);
+        }
+    }, [forceProjectId]);
+
     const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
     const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
     const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
@@ -2359,6 +2373,7 @@ export default function ReimburseClient() {
                                 onClearProjects={() => setSelectedProjects([])}
                                 showAllMonths={showAllMonths}
                                 onToggleShowAll={() => setShowAllMonths(!showAllMonths)}
+                                hideProjectFilter={!!forceProjectId}
                             />
                         </div>
 

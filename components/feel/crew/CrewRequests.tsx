@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
 import { Plus, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Check, X, Clock, Download, ArrowUpDown, FileText, Upload, Users, Edit, Trash, Trash2, Ban, Loader2, FileCheck } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -128,6 +129,13 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
     const router = useRouter();
     const pathname = usePathname();
 
+    // Check project context
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+    const forceProjectSuffix = forceProjectCode 
+        ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
+        : null;
+
     const [requests, setRequests] = useState<CrewRequest[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
     const [crew, setCrew] = useState<{ id: string; name: string; role: CrewRole; projectCode?: string }[]>([]);
@@ -137,7 +145,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
     const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
     const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
     const [selectedType, setSelectedType] = useState<RequestType | "ALL">((searchParams.get("type") as any) || "ALL");
-    const [selectedProject, setSelectedProject] = useState(searchParams.get("project") || "ALL");
+    const [selectedProject, setSelectedProject] = useState(forceProjectSuffix || searchParams.get("project") || "ALL");
 
     // Sync FROM URL
     useEffect(() => {
@@ -147,23 +155,25 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
         const card = searchParams.get("card") as FilterCard;
         if (card && card !== activeCard) setActiveCard(card);
 
-        const project = searchParams.get("project") || "ALL";
+        const project = forceProjectSuffix || searchParams.get("project") || "ALL";
         if (project !== selectedProject) setSelectedProject(project);
 
         const type = searchParams.get("type") as any;
         if (type && type !== selectedType) setSelectedType(type);
-    }, [searchParams]);
+    }, [searchParams, forceProjectSuffix]);
 
     // Sync TO URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
         if (searchQuery) params.set("search", searchQuery); else params.delete("search");
         if (activeCard && activeCard !== "ALL") params.set("card", activeCard); else params.delete("card");
-        if (selectedProject !== "ALL") params.set("project", selectedProject); else params.delete("project");
+        
+        const activeProj = forceProjectSuffix || selectedProject;
+        if (activeProj && activeProj !== "ALL") params.set("project", activeProj); else params.delete("project");
         if (selectedType !== "ALL") params.set("type", selectedType); else params.delete("type");
 
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [searchQuery, activeCard, selectedProject, selectedType]);
+    }, [searchQuery, activeCard, selectedProject, selectedType, forceProjectSuffix]);
 
     // Period Selection State
     const [anchorDate, setAnchorDate] = useState(() => {
@@ -654,14 +664,16 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                         </div>
 
                         {/* Project Select */}
-                        <div className="flex-1 sm:flex-none sm:w-48">
-                            <Select
-                                value={selectedProject}
-                                onChange={setSelectedProject}
-                                options={[{ value: "ALL", label: "All Projects" }, ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))]}
-                                placeholder="Project"
-                            />
-                        </div>
+                        {!forceProjectSuffix && (
+                            <div className="flex-1 sm:flex-none sm:w-48">
+                                <Select
+                                    value={selectedProject}
+                                    onChange={setSelectedProject}
+                                    options={[{ value: "ALL", label: "All Projects" }, ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))]}
+                                    placeholder="Project"
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
 

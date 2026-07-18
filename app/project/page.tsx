@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { fetchAllProjects, createProject } from "@/lib/api/projects";
+import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { Project } from "@/types/project";
 import ProjectCard from "@/components/project/ProjectCard";
 import CompactProjectCard from "@/components/project/CompactProjectCard";
@@ -31,7 +32,7 @@ export default function ProjectPage() {
     const [loading, setLoading] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isAddOpen, setIsAddOpen] = useState(false);
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [fallbackWorkspaceId, setFallbackWorkspaceId] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState("active");
     const router = useRouter();
 
@@ -44,6 +45,13 @@ export default function ProjectPage() {
             const data = await fetchAllProjects();
             setProjects(data);
             setLoading(false);
+            
+            try {
+                const wsId = await fetchDefaultWorkspaceId();
+                setFallbackWorkspaceId(wsId);
+            } catch (err) {
+                console.error("Error fetching default workspace:", err);
+            }
         }
         load();
     }, []);
@@ -56,7 +64,7 @@ export default function ProjectPage() {
                 {/* Settings Bubble */}
                 <div className="h-9 w-9 flex items-center justify-center rounded-full border border-white/20 dark:border-neutral-700/20 bg-white/10 dark:bg-neutral-800/10 backdrop-blur-xl shadow-sm pointer-events-auto transition-all">
                     <button
-                        onClick={() => setIsFilterOpen(true)}
+                        onClick={() => router.push("/project/settings")}
                         className="h-7 w-7 rounded-full flex items-center justify-center hover:bg-white/20 dark:hover:bg-neutral-700/60 text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all"
                     >
                         <Settings size={18} strokeWidth={1.5} />
@@ -74,7 +82,7 @@ export default function ProjectPage() {
                 </div>
             </div>
         )
-    }, [router]); // Added router to dependency as it's used inside
+    }, [loading, isAddOpen]);
 
     if (loading) {
         return (
@@ -88,7 +96,7 @@ export default function ProjectPage() {
     const filteredProjects = projects.filter(p => {
         if (activeTab === "all") return true;
         if (activeTab === "focused") return p.meta?.isFavorite === true || ((p.meta?.progress || 0) > 0 && (p.meta?.progress || 0) < 40) || p.status === "at-risk";
-        if (activeTab === "active") return p.status === "active";
+        if (activeTab === "active") return p.status === "active" || p.status === "on-track" || p.status === "at-risk" || p.status === "delayed" || p.status === "overloaded";
         if (activeTab === "completed") return p.status === "completed";
         if (activeTab === "archived") return p.status === "archived";
         if (activeTab === "recent") {
@@ -197,7 +205,7 @@ export default function ProjectPage() {
                                 <>
                                     <div className="h-10 w-10 flex items-center justify-center rounded-full border border-black/[0.03] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-sm transition-all relative">
                                         <button
-                                            onClick={() => setIsFilterOpen(true)}
+                                            onClick={() => router.push("/project/settings")}
                                             className="p-2 rounded-full hover:bg-gray-50 dark:hover:bg-neutral-800 transition-colors"
                                         >
                                             <Settings size={20} className="text-neutral-600 dark:text-neutral-400" strokeWidth={1.5} />
@@ -268,7 +276,7 @@ export default function ProjectPage() {
                 onClose={() => setIsAddOpen(false)}
                 existingProjects={projects}
                 onSubmit={async (newProjectData) => {
-                    const workspaceId = projects[0]?.workspaceId || "806461f9-906d-4767-9275-f850e50f37f3";
+                    const workspaceId = projects[0]?.workspaceId || fallbackWorkspaceId || "f39364e8-1376-4ff7-a716-78277e8d25b3";
                     try {
                         const created = await createProject(workspaceId, {
                             projectName: newProjectData.projectName,

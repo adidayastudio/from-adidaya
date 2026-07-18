@@ -338,7 +338,7 @@ export default function ScopeTypesTab({ isOpen = false, onClose = () => { } }: P
                     );
                 }
                 return (
-                    <span className="px-2.5 py-1 bg-neutral-100 border border-neutral-200 rounded font-mono font-semibold text-neutral-700 text-sm">
+                    <span className="px-2.5 py-1 bg-neutral-100 border border-neutral-200 rounded-full font-mono font-semibold text-neutral-700 text-sm">
                         {type.code || "-"}
                     </span>
                 );
@@ -367,7 +367,7 @@ export default function ScopeTypesTab({ isOpen = false, onClose = () => { } }: P
             sortable: true,
             render: (type) => (
                 <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded text-xs font-bold uppercase tracking-wide">
+                    <span className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-bold uppercase tracking-wide">
                         {type.stageCount ? `${type.stageCount} Stages` : "No Stages"}
                     </span>
                 </div>

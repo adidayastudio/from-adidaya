@@ -33,6 +33,9 @@ import { fetchFinanceDashboardData } from "@/lib/client/finance-api";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
+import { useContext } from "react";
+import { ProjectContext } from "@/components/flow/project-context";
+
 export default function FinanceOverviewClient() {
     const { viewMode, setViewMode, canAccessTeam, isLoading: isAuthLoading, isInitialized, allowedProjectCodes } = useFinance();
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -40,6 +43,10 @@ export default function FinanceOverviewClient() {
     const [data, setData] = useState<any>(null);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const router = useRouter();
+
+    // Check project context for page restriction
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectId = projectCtx?.project?.id || null;
 
     useEffect(() => {
         const handleFabAction = (e: any) => {
@@ -62,8 +69,8 @@ export default function FinanceOverviewClient() {
                     fetchAllProjects()
                 ]);
 
-                let projectIdsFilter: string | undefined = undefined;
-                if (allowedProjectCodes) {
+                let projectIdsFilter: string | undefined = forceProjectId || undefined;
+                if (!forceProjectId && allowedProjectCodes) {
                     const filteredIds = allProjects
                         .filter(p => allowedProjectCodes.includes(p.projectCode))
                         .map(p => p.id);
@@ -71,7 +78,6 @@ export default function FinanceOverviewClient() {
                 }
 
                 // We need to pass the project filter to the dashboard API
-                // Updating fetchFinanceDashboardData to accept it if it's not already
                 const res = await fetchFinanceDashboardData(wsId || undefined, projectIdsFilter);
                 setData(res);
             } catch (err) {
@@ -81,7 +87,7 @@ export default function FinanceOverviewClient() {
             }
         };
         loadWithWorkspace();
-    }, [viewMode, isInitialized]);
+    }, [viewMode, isInitialized, forceProjectId]);
 
     const isLoading = isAuthLoading || (!data && isLoadingData);
 

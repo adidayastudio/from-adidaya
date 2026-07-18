@@ -8,15 +8,37 @@ const nextConfig: NextConfig = {
     // This lets us deploy while fixing non-critical type issues
     ignoreBuildErrors: true,
   },
+  async redirects() {
+    return [
+      {
+        source: "/projects/:path*",
+        destination: "/project/:path*",
+        permanent: true,
+      },
+      {
+        source: "/flow/projects/:path*",
+        destination: "/project/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {
-        source: "/projects",
-        destination: "/flow/projects",
+        source: "/project/settings/:path*",
+        destination: "/flow/projects/settings/:path*",
       },
       {
         source: "/crew",
         destination: "/feel/crew",
+      },
+      {
+        source: "/project/:id/:subpath(setup|tracking|activity|docs|reports)",
+        destination: "/flow/projects/:id/:subpath",
+      },
+      {
+        source: "/project/:id/:subpath(setup|tracking|activity|docs|reports)/:path*",
+        destination: "/flow/projects/:id/:subpath/:path*",
       },
     ];
   },

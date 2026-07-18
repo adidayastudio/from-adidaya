@@ -9,6 +9,8 @@ import { PageHeader, Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { Tabs } from "@/shared/ui/layout/Tabs";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Input } from "@/shared/ui/primitives/input/input";
+import { Button } from "@/shared/ui/primitives/button/button";
+import { Save } from "lucide-react";
 import ScheduleSummaryView from "@/components/flow/projects/project-detail/setup/schedule/views/ScheduleSummaryView";
 import ScheduleTimelineView from "@/components/flow/projects/project-detail/setup/schedule/views/ScheduleTimelineView";
 import ScheduleGanttView from "@/components/flow/projects/project-detail/setup/schedule/views/ScheduleGanttView";
@@ -224,28 +226,39 @@ export default function ProjectSetupSchedulePage() {
   const breadcrumbLabel = `${project.project_number} - ${project.project_code} - ${project.project_name}`;
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
-      <Breadcrumb
-        items={[
-          { label: "Flow" },
-          { label: "Projects", href: "/flow/projects" },
-          { label: breadcrumbLabel, href: `/flow/projects/${projectId}` },
-          { label: "Setup" },
-          { label: "Schedule" },
-        ]}
-      />
-
-      <PageWrapper sidebar={<ProjectDetailSidebar />}>
-        <div className="space-y-6">
+    <PageWrapper sidebar={<ProjectDetailSidebar />} isTransparent={true}>
+      <div className="space-y-6 w-full max-w-4xl mx-auto animate-in fade-in duration-500 pb-36 px-4 md:px-0">
           <ProjectDetailHeader project={projectForHeader as any} />
 
-          <div className="space-y-6 rounded-xl border border-neutral-200 bg-white p-6">
+          {/* FLOATING ACTION BAR */}
+          <div className="fixed z-40 bottom-24 left-1/2 -translate-x-1/2 md:sticky md:top-[100px] md:bottom-auto md:left-auto md:translate-x-0 md:float-right md:h-0 md:overflow-visible md:w-full md:pr-1 md:-mt-3 md:mb-1">
+              <div className="relative md:absolute md:right-0 flex items-center gap-3 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-md p-2 rounded-full border border-neutral-200/50 dark:border-neutral-800/50 shadow-[0_2px_12px_rgba(0,0,0,0.06)] animate-in fade-in whitespace-nowrap z-30">
+                  <Button
+                      variant="secondary"
+                      className="!rounded-full px-5 h-9 text-xs"
+                      onClick={() => {
+                        setScheduleValues({});
+                        console.log("Schedule changes cancelled");
+                      }}
+                  >
+                      Cancel
+                  </Button>
+                  <Button
+                      icon={<Save className="w-4 h-4" />}
+                      className="!rounded-full bg-brand-red hover:bg-brand-red-hover text-white shadow-sm px-5 h-9 text-xs"
+                      onClick={() => console.log("Save Schedule")}
+                  >
+                      Save Schedule
+                  </Button>
+              </div>
+          </div>
+
+          <div className="space-y-6 rounded-2xl border border-white/40 dark:border-white/5 bg-white/40 dark:bg-neutral-800/10 backdrop-blur-md p-6 shadow-sm">
             {/* HEADER */}
             <div className="flex items-center justify-between gap-4">
               <PageHeader title="Schedule" />
               <div className="flex items-center gap-2">
-                <button className="rounded-md border px-3 py-2 text-sm">Export</button>
-                <button className="rounded-md bg-brand-red px-3 py-2 text-sm text-white">Save Schedule</button>
+                <Button variant="secondary" size="sm" onClick={() => console.log("Export schedule")}>Export</Button>
               </div>
             </div>
 
@@ -253,7 +266,7 @@ export default function ProjectSetupSchedulePage() {
             <Tabs value={activeMode} onChange={setActiveMode} items={SCHEDULE_TABS} />
 
             {/* CONTEXT BAR */}
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-neutral-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-white/20 dark:border-white/5 bg-white/20 dark:bg-neutral-800/10 backdrop-blur-md p-4 shadow-sm">
               <div className="flex items-center gap-6 text-sm text-neutral-600">
                 <div>
                   <span className="text-neutral-400 mr-2">Total Project Cost:</span>
@@ -305,6 +318,5 @@ export default function ProjectSetupSchedulePage() {
           </div>
         </div>
       </PageWrapper>
-    </div>
   );
 }

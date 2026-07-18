@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, Check, X, Download, ArrowUpDown, Edit2, Users, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -46,34 +47,56 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
     const router = useRouter();
     const pathname = usePathname();
 
-    // Data state
+    // Check project context and URL fallback
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+    const forceProjectSuffix = forceProjectCode 
+        ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
+        : null;
+
+    const isProjectUrl = pathname.includes("/project/");
+    const urlProjectId = isProjectUrl ? pathname.split("/")[2] : null;
+
     // Data state
     const [selectedProject, setSelectedProject] = useState(() => {
-        return searchParams.get("project") || searchParams.get("projects")?.split(",")[0] || "";
+        return forceProjectSuffix || searchParams.get("project") || searchParams.get("projects")?.split(",")[0] || "";
     });
-    const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
+    const [projects, setProjects] = useState<{ id?: string; code: string; name: string }[]>([]);
+
+    // Auto-select when projects load
+    useEffect(() => {
+        if (urlProjectId && projects.length > 0) {
+            const activeProj = projects.find(p => p.id === urlProjectId);
+            if (activeProj) {
+                const parts = activeProj.code.split("-");
+                const suffix = parts.length > 1 ? parts[1] : activeProj.code;
+                setSelectedProject(suffix);
+            }
+        }
+    }, [urlProjectId, projects]);
 
     // Sync project FROM URL
     useEffect(() => {
-        const project = searchParams.get("project") || searchParams.get("projects")?.split(",")[0];
+        const project = forceProjectSuffix || searchParams.get("project") || searchParams.get("projects")?.split(",")[0];
         if (project && project !== selectedProject) {
             setSelectedProject(project);
         }
-    }, [searchParams]);
+    }, [searchParams, forceProjectSuffix]);
 
     // Sync project TO URL (both singular and plural for compatibility)
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
-        if (selectedProject) {
-            params.set("project", selectedProject);
-            params.set("projects", selectedProject); // Sync plural for consistency
+        const activeProj = forceProjectSuffix || selectedProject;
+        if (activeProj) {
+            params.set("project", activeProj);
+            params.set("projects", activeProj); // Sync plural for consistency
         }
         else {
             params.delete("project");
             params.delete("projects");
         }
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [selectedProject]);
+    }, [selectedProject, forceProjectSuffix]);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [entries, setEntries] = useState<DailyEntry[]>([]);
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
@@ -101,6 +124,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                 if (wsId) {
                     const data = await fetchProjectsByWorkspace(wsId);
                     setProjects(data.map((p: any) => ({
+                        id: p.id,
                         code: `${p.project_number}-${p.project_code}`,
                         name: p.project_name
                     })));
@@ -513,7 +537,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 w-full">
 
                 {/* 1. PROJECT SELECT */}
-                {projects.length > 0 && (
+                {!urlProjectId && !forceProjectSuffix && projects.length > 0 && (
                     <div className="relative w-full sm:w-auto sm:min-w-[200px]">
                         <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="appearance-none w-full pl-3 pr-7 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all">
                             <option value="">Select Project</option>

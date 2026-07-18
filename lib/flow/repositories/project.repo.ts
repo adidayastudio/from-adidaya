@@ -20,6 +20,12 @@ export async function fetchProject(projectId: string) {
  * Fetch project by slug format: "number-code" (e.g., "036-PRG")
  */
 export async function fetchProjectBySlug(slug: string) {
+    // Check if the slug is a UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(slug)) {
+        return fetchProject(slug);
+    }
+
     // Parse slug: "036-PRG" -> number="036", code="PRG"
     const dashIndex = slug.indexOf("-");
     if (dashIndex === -1) {

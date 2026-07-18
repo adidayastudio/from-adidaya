@@ -1,37 +1,34 @@
 "use client";
 
-export type ProjectFilters = {
-  owner: string;
-  type: string;
-  stage: string;
-};
-
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import clsx from "clsx";
 import {
-  LayoutDashboard,
-  LayoutGrid,
-  Activity,
-  Calendar,
-  FileText,
-  BarChart,
   Settings,
+  GitBranch,
+  FolderTree,
+  Calculator,
+  Coins,
+  Clock,
+  Shield,
+  FileText,
+  ChevronLeft,
   MoreHorizontal
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 /* ======================
    NAV ITEMS CONFIG
-====================== */
-const NAV_ITEMS = [
-  { label: "Projects", path: "/flow/projects", icon: LayoutGrid },
-
-  { label: "Activity", path: "/flow/projects/activity", icon: Activity },
-  { label: "Schedule", path: "/flow/projects/schedule", icon: Calendar },
-  { label: "Documents", path: "/flow/projects/docs", icon: FileText },
-  { label: "Reports", path: "/flow/projects/reports", icon: BarChart },
-  { label: "Settings", path: "/flow/projects/settings", icon: Settings },
+ ====================== */
+const SETTINGS_NAV_ITEMS = [
+  { label: "General", path: "/project/settings/general", icon: Settings },
+  { label: "Stages", path: "/project/settings/stages", icon: GitBranch },
+  { label: "Work Structure", path: "/project/settings/work-structure", icon: FolderTree },
+  { label: "Cost System", path: "/project/settings/cost-system", icon: Calculator },
+  { label: "Price Library", path: "/project/settings/price-library", icon: Coins },
+  { label: "Time System", path: "/project/settings/time-system", icon: Clock },
+  { label: "Control", path: "/project/settings/control", icon: Shield },
+  { label: "Reports", path: "/project/settings/reports", icon: FileText },
 ];
 
 export default function ProjectsSidebar() {
@@ -51,23 +48,32 @@ export default function ProjectsSidebar() {
   }, []);
 
   const isActive = (path: string) => {
-    // For overview (root) path, only exact match
-    if (path === "/flow/projects") return pathname === "/flow/projects";
-    // For other paths, use startsWith
+    if (pathname === path) return true;
+    
+    // Sub-path matching
+    if (path.includes("work-structure") && (pathname.includes("work-structure") || pathname.includes("/settings/wbs") || pathname.includes("/settings/rab") || pathname.includes("/settings/templates"))) {
+      return true;
+    }
+    if (path.includes("time-system") && (pathname.includes("time-system") || pathname.includes("/settings/schedule"))) {
+      return true;
+    }
+    if (path.includes("control") && (pathname.includes("control") || pathname.includes("/settings/permissions"))) {
+      return true;
+    }
+    
     return pathname.startsWith(path);
   };
 
   // Mobile Bottom Bar Logic
-  const mobileMainItems = NAV_ITEMS.slice(0, 5);
-  const mobileMoreItems = NAV_ITEMS.slice(5);
+  const mobileMainItems = SETTINGS_NAV_ITEMS.slice(0, 4);
+  const mobileMoreItems = SETTINGS_NAV_ITEMS.slice(4);
 
   return (
     <>
       {/* DESKTOP SIDEBAR */}
       <aside className="w-full hidden lg:flex flex-col">
-        <div className="space-y-0 pt-0">
-          <div className="space-y-0.5">
-            {NAV_ITEMS.map((item) => {
+        <div className="space-y-0.5 pt-0">
+            {SETTINGS_NAV_ITEMS.map((item) => {
               const active = isActive(item.path);
               return (
                 <Link
@@ -85,7 +91,6 @@ export default function ProjectsSidebar() {
                 </Link>
               );
             })}
-          </div>
         </div>
       </aside>
 

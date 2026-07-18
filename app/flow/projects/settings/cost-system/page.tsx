@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Plus, Search, FileCog, Building2, MoreHorizontal, ArrowLeft, Loader2, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Search, FileCog, Building2, MoreHorizontal, ChevronLeft, Loader2, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { useRouter } from "next/navigation";
 import PageWrapper from "@/components/layout/PageWrapper";
@@ -83,7 +83,7 @@ export default function CostSystemPage() {
     );
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
+        <div className="min-h-screen bg-transparent px-5 md:px-0 py-6 md:py-0">
             <Breadcrumb items={[
                 { label: "Flow" },
                 { label: "Projects" },
@@ -94,21 +94,16 @@ export default function CostSystemPage() {
             <PageWrapper sidebar={<ProjectsSidebar />}>
                 <div className="space-y-6 w-full animate-in fade-in duration-500">
                     {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Link href="/flow/projects/settings">
-                                <Button variant="secondary" icon={<ArrowLeft className="w-4 h-4" />}>
-                                    Back
-                                </Button>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex flex-col gap-2 w-full">
+                            <Link href="/project/settings" className="lg:hidden w-fit">
+                                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-900 shadow-sm border border-black/[0.03] dark:border-white/[0.05] active:scale-90 transition-all">
+                                    <ChevronLeft className="w-5 h-5 text-neutral-700 dark:text-white" strokeWidth={1.5} />
+                                </div>
                             </Link>
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center">
-                                    <FileCog className="w-5 h-5 text-neutral-600" />
-                                </div>
-                                <div>
-                                    <h1 className="text-2xl font-bold text-neutral-900">Cost System Templates</h1>
-                                    <p className="text-sm text-neutral-500">Manage cost structure rules and calculation methods</p>
-                                </div>
+                            <div className="flex flex-col gap-1">
+                                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Cost System Templates</h1>
+                                <p className="text-sm text-neutral-500 dark:text-neutral-400">Manage cost structure rules and calculation methods</p>
                             </div>
                         </div>
                         <Link href="/flow/projects/settings/cost-system/new">

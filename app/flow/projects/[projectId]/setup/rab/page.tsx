@@ -449,19 +449,9 @@ export default function ProjectSetupRABPage() {
   /* ================= UI ================= */
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
-      <Breadcrumb
-        items={[
-          { label: "Flow" },
-          { label: "Projects", href: "/flow/projects" },
-          { label: breadcrumbLabel, href: `/flow/projects/${projectId}` },
-          { label: "Setup" },
-          { label: "RAB" },
-        ]}
-      />
-
-      <PageWrapper sidebar={<ProjectDetailSidebar />}>
-        <div className="space-y-6">
+    <>
+      <PageWrapper sidebar={<ProjectDetailSidebar />} isTransparent={true}>
+        <div className="space-y-6 w-full max-w-4xl mx-auto animate-in fade-in duration-500 px-4 md:px-0">
           <ProjectDetailHeader project={projectForHeader as any} />
 
           {/* ===== HEADER + ACTIONS ===== */}
@@ -700,6 +690,6 @@ export default function ProjectSetupRABPage() {
         confirmLabel="Reset"
         confirmVariant="danger"
       />
-    </div>
+    </>
   );
 }

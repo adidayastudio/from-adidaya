@@ -21,7 +21,7 @@ import { SiblingApp } from "@/components/layout/MobileAppHeader";
    FLOW MODE - Level 2 Apps
 ====================== */
 export const FLOW_APPS: SiblingApp[] = [
-    { id: "projects", label: "Projects", href: "/flow/projects", icon: FolderKanban },
+    { id: "projects", label: "Projects", href: "/project", icon: FolderKanban },
     { id: "finance", label: "Finance", href: "/flow/finance", icon: Banknote },
     { id: "resources", label: "Resources", href: "/flow/resources", icon: Package },
     { id: "client", label: "Client", href: "/flow/client", icon: User },

@@ -5,8 +5,9 @@ import PageWrapper from "@/components/layout/PageWrapper";
 import ProjectsSidebar from "@/components/flow/projects/ProjectsSidebar";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { ArrowLeft, FolderTree, Gauge, BarChart3, ListTree } from "lucide-react";
+import { ChevronLeft, FolderTree, Gauge, BarChart3, ListTree } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { fetchProjectTypes, ProjectTypeTemplate, fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import clsx from "clsx";
 
@@ -17,10 +18,10 @@ import DetailTab from "./tabs/DetailTab";
 
 type TabId = "ballpark" | "estimates" | "detail";
 
-const TABS: { id: TabId; label: string; icon: React.ReactNode; description: string }[] = [
-    { id: "ballpark", label: "Ballpark", icon: <Gauge className="w-4 h-4" />, description: "L1-2 Hierarchy. Used for rapid 'Quick Quote' estimation before design." },
-    { id: "estimates", label: "Estimates", icon: <BarChart3 className="w-4 h-4" />, description: "L3 Hierarchy. Primary structure for detailed quantitiy take-offs." },
-    { id: "detail", label: "Detail", icon: <ListTree className="w-4 h-4" />, description: "L4-5 Hierarchy. Granular item dictionary for complex breakdown." },
+const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
+    { id: "ballpark", label: "Ballpark", icon: Gauge, description: "L1-2 Hierarchy. Used for rapid 'Quick Quote' estimation before design." },
+    { id: "estimates", label: "Estimates", icon: BarChart3, description: "L3 Hierarchy. Primary structure for detailed quantitiy take-offs." },
+    { id: "detail", label: "Detail", icon: ListTree, description: "L4-5 Hierarchy. Granular item dictionary for complex breakdown." },
 ];
 
 export default function WorkStructurePage() {
@@ -52,7 +53,7 @@ export default function WorkStructurePage() {
     const activeTabData = TABS.find(t => t.id === activeTab) || TABS[0];
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
+        <div className="min-h-screen bg-transparent px-5 md:px-0 py-6 md:py-0">
             <Breadcrumb items={[
                 { label: "Flow" },
                 { label: "Projects" },
@@ -64,43 +65,40 @@ export default function WorkStructurePage() {
                 <div className="space-y-6 w-full animate-in fade-in duration-500">
 
                     {/* Header */}
-                    <div className="flex items-center gap-4">
-                        <Button
-                            variant="secondary"
-                            icon={<ArrowLeft className="w-4 h-4" />}
-                            onClick={() => router.push('/flow/projects/settings')}
-                        >
-                            Back
-                        </Button>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center">
-                                <FolderTree className="w-5 h-5 text-neutral-600" />
+                    <div className="flex flex-col gap-2">
+                        <Link href="/project/settings" className="lg:hidden w-fit">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-900 shadow-sm border border-black/[0.03] dark:border-white/[0.05] active:scale-90 transition-all">
+                                <ChevronLeft className="w-5 h-5 text-neutral-700 dark:text-white" strokeWidth={1.5} />
                             </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-neutral-900">Work Structure</h1>
-                                <p className="text-sm text-neutral-500">Configure work breakdown structure templates</p>
-                            </div>
+                        </Link>
+                        <div className="flex flex-col gap-1">
+                            <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Work Structure</h1>
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400">Configure work breakdown structure templates</p>
                         </div>
                     </div>
 
-                    {/* Tabs - Underline Style */}
-                    <div className="border-b border-neutral-200 overflow-x-auto">
-                        <div className="flex gap-1 min-w-max">
-                            {TABS.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={clsx(
-                                        "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
-                                        activeTab === tab.id
-                                            ? "border-brand-red text-brand-red"
-                                            : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
-                                    )}
-                                >
-                                    {tab.icon}
-                                    {tab.label}
-                                </button>
-                            ))}
+                    {/* Tabs - Pill Style */}
+                    <div className="flex items-center gap-2 overflow-x-auto">
+                        <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-neutral-800/40 rounded-full w-fit">
+                            {TABS.map((tab) => {
+                                const active = activeTab === tab.id;
+                                const Icon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={clsx(
+                                            "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-all",
+                                            active
+                                                ? "bg-brand-red text-white shadow-sm"
+                                                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-neutral-800/60"
+                                        )}
+                                    >
+                                        <Icon className="w-3.5 h-3.5" />
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 

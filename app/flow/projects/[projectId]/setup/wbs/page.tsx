@@ -344,20 +344,9 @@ export default function ProjectSetupWBSPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 p-6">
-      {/* Breadcrumb */}
-      <div className="mb-4 text-sm">
-        <span className="text-neutral-500">Flow</span>
-        <span className="mx-2 text-neutral-400">|</span>
-        <span className="text-neutral-500">Projects</span>
-        <span className="mx-2 text-neutral-400">|</span>
-        <span className="text-neutral-500">Setup</span>
-        <span className="mx-2 text-neutral-400">|</span>
-        <span className="font-medium text-neutral-900">WBS</span>
-      </div>
-
-      <PageWrapper sidebar={<ProjectDetailSidebar />}>
-        <div className="space-y-6">
+    <>
+      <PageWrapper sidebar={<ProjectDetailSidebar />} isTransparent={true}>
+        <div className="space-y-6 w-full max-w-4xl mx-auto animate-in fade-in duration-500 px-4 md:px-0">
           <ProjectDetailHeader project={projectForHeader as any} />
 
           <div>
@@ -522,7 +511,7 @@ export default function ProjectSetupWBSPage() {
         confirmLabel="Reset"
         confirmVariant="danger"
       />
-    </div>
+    </>
   );
 }
 

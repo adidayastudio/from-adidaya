@@ -40,7 +40,7 @@ export default function ProjectOverviewPage() {
       sidebar={<ProjectDetailSidebar />}
       isTransparent
     >
-      <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="space-y-8 max-w-4xl mx-auto animate-in fade-in duration-500">
         <ProjectDetailHeader project={projectForComponents as any} />
         <ProjectDetailOverviewContent project={projectForComponents as any} />
       </div>

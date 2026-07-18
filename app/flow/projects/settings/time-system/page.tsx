@@ -5,7 +5,7 @@ import PageWrapper from "@/components/layout/PageWrapper";
 import ProjectsSidebar from "@/components/flow/projects/ProjectsSidebar";
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { ArrowLeft, Clock } from "lucide-react";
+import { ChevronLeft, Clock } from "lucide-react";
 import Link from "next/link";
 import clsx from "clsx";
 import ScheduleSystem from "@/components/flow/projects/settings/time-system/ScheduleSystem";
@@ -21,23 +21,43 @@ export default function TimeSystemPage() {
     const [activeTab, setActiveTab] = useState<TabId>("schedule");
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
+        <div className="min-h-screen bg-transparent px-5 md:px-0 py-6 md:py-0">
             <Breadcrumb items={[{ label: "Flow" }, { label: "Projects" }, { label: "Settings", href: "/flow/projects/settings" }, { label: "Time System" }]} />
             <PageWrapper sidebar={<ProjectsSidebar />}>
                 <div className="space-y-6 w-full">
-                    <div className="flex items-center gap-4">
-                        <Link href="/flow/projects/settings"><Button variant="secondary" icon={<ArrowLeft className="w-4 h-4" />}>Back</Button></Link>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center"><Clock className="w-5 h-5 text-neutral-600" /></div>
-                            <div><h1 className="text-2xl font-bold text-neutral-900">Time System</h1><p className="text-sm text-neutral-500">Schedule templates and progress rules</p></div>
+                    {/* Header */}
+                    <div className="flex flex-col gap-2">
+                        <Link href="/project/settings" className="lg:hidden w-fit">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-900 shadow-sm border border-black/[0.03] dark:border-white/[0.05] active:scale-90 transition-all">
+                                <ChevronLeft className="w-5 h-5 text-neutral-700 dark:text-white" strokeWidth={1.5} />
+                            </div>
+                        </Link>
+                        <div className="flex flex-col gap-1">
+                            <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Time System</h1>
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400">Schedule templates and progress rules</p>
                         </div>
                     </div>
 
-                    <div className="border-b border-neutral-200">
-                        <div className="flex gap-6">
-                            {TABS.map((tab) => (
-                                <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={clsx("px-1 py-3 text-sm font-medium border-b-2 transition-colors", activeTab === tab.id ? "border-red-500 text-red-600" : "border-transparent text-neutral-500 hover:text-neutral-700")}>{tab.label}</button>
-                            ))}
+                    {/* Tabs - Pill Style */}
+                    <div className="flex items-center gap-2 overflow-x-auto">
+                        <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-neutral-800/40 rounded-full w-fit">
+                            {TABS.map((tab) => {
+                                const active = activeTab === tab.id;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={clsx(
+                                            "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-all",
+                                            active
+                                                ? "bg-brand-red text-white shadow-sm"
+                                                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-neutral-800/60"
+                                        )}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 

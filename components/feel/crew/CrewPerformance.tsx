@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
 import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, XCircle, Download, ArrowUpDown, Users, Search, Loader2, Calendar } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
@@ -64,13 +65,20 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
     const router = useRouter();
     const pathname = usePathname();
 
+    // Check project context
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+    const forceProjectSuffix = forceProjectCode 
+        ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
+        : null;
+
     const [data, setData] = useState<PerformanceEntry[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
     const [loading, setLoading] = useState(false);
 
     // View State
     const [viewPeriod, setViewPeriod] = useState<ViewPeriod>("EVALUATION_30_DAYS");
-    const [selectedProject, setSelectedProject] = useState(searchParams.get("project") || "ALL");
+    const [selectedProject, setSelectedProject] = useState(forceProjectSuffix || searchParams.get("project") || "ALL");
     const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
     const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
 
@@ -82,23 +90,25 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
         const card = searchParams.get("card") as FilterCard;
         if (card && card !== activeCard) setActiveCard(card);
 
-        const project = searchParams.get("project") || "ALL";
+        const project = forceProjectSuffix || searchParams.get("project") || "ALL";
         if (project !== selectedProject) setSelectedProject(project);
 
         const period = searchParams.get("period") as ViewPeriod;
         if (period && period !== viewPeriod) setViewPeriod(period);
-    }, [searchParams]);
+    }, [searchParams, forceProjectSuffix]);
 
     // Sync TO URL
     useEffect(() => {
         const params = new URLSearchParams(searchParams);
         if (searchQuery) params.set("search", searchQuery); else params.delete("search");
         if (activeCard && activeCard !== "ALL") params.set("card", activeCard); else params.delete("card");
-        if (selectedProject !== "ALL") params.set("project", selectedProject); else params.delete("project");
+        
+        const activeProj = forceProjectSuffix || selectedProject;
+        if (activeProj && activeProj !== "ALL") params.set("project", activeProj); else params.delete("project");
         if (viewPeriod !== "EVALUATION_30_DAYS") params.set("period", viewPeriod); else params.delete("period");
 
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [searchQuery, activeCard, selectedProject, viewPeriod]);
+    }, [searchQuery, activeCard, selectedProject, viewPeriod, forceProjectSuffix]);
 
     // Sorting
     const [sortBy, setSortBy] = useState<"name" | "score" | "status">("score");
@@ -400,14 +410,16 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                     </div>
 
                     {/* Project Select */}
-                    <div className="flex-1 sm:flex-none sm:w-48">
-                        <Select
-                            value={selectedProject}
-                            onChange={setSelectedProject}
-                            options={[{ value: "ALL", label: "All Projects" }, ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))]}
-                            placeholder="Project"
-                        />
-                    </div>
+                    {!forceProjectSuffix && (
+                        <div className="flex-1 sm:flex-none sm:w-48">
+                            <Select
+                                value={selectedProject}
+                                onChange={setSelectedProject}
+                                options={[{ value: "ALL", label: "All Projects" }, ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))]}
+                                placeholder="Project"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Actions */}

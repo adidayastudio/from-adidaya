@@ -9,143 +9,152 @@ import {
   Activity,
   BarChart,
   FileText,
-  Settings,
-  MoreHorizontal,
   Info,
   Layers,
   Grid3X3,
   DollarSign,
   Calendar,
   ShieldCheck,
+  ExternalLink,
+  Users,
+  Package,
+  Banknote,
+  ChevronDown,
+  FileSpreadsheet,
+  UserCheck,
 } from "lucide-react";
-
-/* ======================
-   NAV ITEMS CONFIG
-====================== */
-const NAV_ITEMS = [
-  { label: "Overview", shortLabel: "Overview", href: "", icon: LayoutDashboard },
-  { label: "Activity", shortLabel: "Activity", href: "/activity", icon: Activity },
-  { label: "Tracking", shortLabel: "Track", href: "/tracking", icon: BarChart },
-  { label: "Docs", shortLabel: "Docs", href: "/docs", icon: FileText },
-];
-
-const SETUP_ITEMS = [
-  { key: "info", label: "Project Information", icon: Info },
-  { key: "stages", label: "Stages & Tasks", icon: Layers },
-  { key: "wbs", label: "Work Breakdown Structure", icon: Grid3X3 },
-  { key: "rab", label: "RAB", icon: DollarSign },
-  { key: "schedule", label: "Schedule", icon: Calendar },
-  { key: "rules", label: "Rules", icon: ShieldCheck },
-];
 
 export default function ProjectDetailSidebar() {
   const params = useParams();
   const pathname = usePathname();
   const projectId = params.projectId as string;
-  const basePath = `/flow/projects/${projectId}`;
+  const basePath = `/project/${projectId}`;
 
-  const [setupOpen, setSetupOpen] = useState(false);
-  const [mobileSetupOpen, setMobileSetupOpen] = useState(false);
-  const setupMenuRef = useRef<HTMLDivElement>(null);
+  // Accordion states for Desktop
+  const [planningOpen, setPlanningOpen] = useState(false);
+  const [workOpen, setWorkOpen] = useState(false);
 
-  const isSetupRoute = pathname.includes(`${basePath}/setup`);
+  // Popover states for Mobile
+  const [mobilePlanningOpen, setMobilePlanningOpen] = useState(false);
+  const [mobileWorkOpen, setMobileWorkOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
 
-  // Auto-open accordion when entering setup pages
+  const planningMenuRef = useRef<HTMLDivElement>(null);
+  const workMenuRef = useRef<HTMLDivElement>(null);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+
+  const isPlanningRoute = pathname.includes(`${basePath}/setup`);
+  const isWorkRoute = pathname.includes(`${basePath}/tracking`) || pathname.includes(`${basePath}/activity`);
+
+  // Auto-open accordions when entering their respective routes
   useEffect(() => {
-    if (isSetupRoute) setSetupOpen(true);
-  }, [isSetupRoute]);
+    if (isPlanningRoute) setPlanningOpen(true);
+    if (isWorkRoute) setWorkOpen(true);
+  }, [isPlanningRoute, isWorkRoute]);
 
-  // Close mobile menu on outside click
+  // Close mobile menus on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (setupMenuRef.current && !setupMenuRef.current.contains(event.target as Node)) {
-        setMobileSetupOpen(false);
+      const target = event.target as Node;
+      if (planningMenuRef.current && !planningMenuRef.current.contains(target)) {
+        setMobilePlanningOpen(false);
+      }
+      if (workMenuRef.current && !workMenuRef.current.contains(target)) {
+        setMobileWorkOpen(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(target)) {
+        setMobileMoreOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isActive = (href: string) => {
-    const fullPath = `${basePath}${href}`;
-    if (href === "") return pathname === basePath;
-    return pathname.startsWith(fullPath);
+  const isRouteActive = (href: string, exact = false) => {
+    if (exact) return pathname === href;
+    return pathname.startsWith(href);
   };
 
-  const isSetupItemActive = (key: string) => {
-    return pathname === `${basePath}/setup/${key}`;
+  const handleTogglePlanning = () => {
+    setMobilePlanningOpen((prev) => !prev);
+    setMobileWorkOpen(false);
+    setMobileMoreOpen(false);
   };
+
+  const handleToggleWork = () => {
+    setMobileWorkOpen((prev) => !prev);
+    setMobilePlanningOpen(false);
+    setMobileMoreOpen(false);
+  };
+
+  const handleToggleMore = () => {
+    setMobileMoreOpen((prev) => !prev);
+    setMobilePlanningOpen(false);
+    setMobileWorkOpen(false);
+  };
+
+  // Submenu configuration
+  const PLANNING_ITEMS = [
+    { label: "Project Information", href: `${basePath}/setup/info`, icon: Info },
+    { label: "Stages & Tasks", href: `${basePath}/setup/stages`, icon: Layers },
+    { label: "WBS", href: `${basePath}/setup/wbs`, icon: Grid3X3 },
+    { label: "RAB", href: `${basePath}/setup/rab`, icon: DollarSign },
+    { label: "Schedule", href: `${basePath}/setup/schedule`, icon: Calendar },
+    { label: "Rules", href: `${basePath}/setup/rules`, icon: ShieldCheck },
+  ];
+
+  const WORK_ITEMS = [
+    { label: "Tracking", href: `${basePath}/tracking`, icon: BarChart },
+    { label: "Activity", href: `${basePath}/activity`, icon: Activity },
+  ];
 
   return (
     <>
       {/* DESKTOP SIDEBAR */}
       <aside className="w-full hidden lg:flex flex-col">
         <div className="space-y-4 pt-0">
-          {/* Back link - redesigned */}
-          <Link
-            href="/flow/projects"
-            className="group inline-flex items-center gap-2.5 text-[12px] text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-200 transition-all font-medium px-3"
-          >
-            <span className="w-5 h-5 rounded-full bg-neutral-100 dark:bg-neutral-800 group-hover:bg-neutral-200 dark:group-hover:bg-neutral-700 flex items-center justify-center transition-colors">
-              <svg className="w-3 h-3 translate-x-[-0.5px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-              </svg>
-            </span>
-            <span>Projects</span>
-          </Link>
-
-          {/* Main Nav */}
+          {/* Main Nav Items */}
           <div className="space-y-0.5">
-            {NAV_ITEMS.map((item) => {
-              const active = isActive(item.href);
-              return (
-                <Link
-                  key={item.label}
-                  href={`${basePath}${item.href}`}
-                  className={clsx(
-                    "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
-                    active
-                      ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                      : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
-                  )}
-                >
-                  <item.icon className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-                  <span className="truncate">{item.label}</span>
-                </Link>
-              );
-            })}
+            {/* Overview */}
+            <Link
+              href={basePath}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                isRouteActive(basePath, true)
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+              )}
+            >
+              <LayoutDashboard className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(basePath, true) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate">Overview</span>
+            </Link>
 
-            {/* Setup Accordion */}
-            <div className="pt-2">
+            {/* Planning Accordion */}
+            <div>
               <button
-                onClick={() => setSetupOpen((v) => !v)}
+                onClick={() => setPlanningOpen((v) => !v)}
                 className={clsx(
                   "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
-                  isSetupRoute
+                  isPlanningRoute
                     ? "text-neutral-900 dark:text-white font-semibold"
                     : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                 )}
               >
-                <Settings className={clsx("w-4 h-4 shrink-0 transition-colors", isSetupRoute ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-                <span className="flex-1 truncate">Setup</span>
-                <svg
-                  className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", setupOpen && "rotate-180")}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
+                <Calendar className={clsx("w-4 h-4 shrink-0 transition-colors", isPlanningRoute ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                <span className="flex-1 truncate">Planning</span>
+                <ChevronDown
+                  className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", planningOpen && "rotate-180")}
+                />
               </button>
 
-              {setupOpen && (
+              {planningOpen && (
                 <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                  {SETUP_ITEMS.map((item) => {
-                    const active = isSetupItemActive(item.key);
+                  {PLANNING_ITEMS.map((item) => {
+                    const active = isRouteActive(item.href, true);
                     return (
                       <Link
-                        key={item.key}
-                        href={`${basePath}/setup/${item.key}`}
+                        key={item.label}
+                        href={item.href}
                         className={clsx(
                           "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                           active
@@ -161,6 +170,132 @@ export default function ProjectDetailSidebar() {
                 </div>
               )}
             </div>
+
+            {/* Work Accordion */}
+            <div>
+              <button
+                onClick={() => setWorkOpen((v) => !v)}
+                className={clsx(
+                  "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                  isWorkRoute
+                    ? "text-neutral-900 dark:text-white font-semibold"
+                    : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                )}
+              >
+                <Activity className={clsx("w-4 h-4 shrink-0 transition-colors", isWorkRoute ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                <span className="flex-1 truncate">Work</span>
+                <ChevronDown
+                  className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", workOpen && "rotate-180")}
+                />
+              </button>
+
+              {workOpen && (
+                <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  {WORK_ITEMS.map((item) => {
+                    const active = isRouteActive(item.href, true);
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        className={clsx(
+                          "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                          active
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                        )}
+                      >
+                        <item.icon className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Documents */}
+            <Link
+              href={`${basePath}/docs`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                isRouteActive(`${basePath}/docs`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+              )}
+            >
+              <FileText className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/docs`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate font-medium">Documents</span>
+            </Link>
+
+            {/* Finance */}
+            <Link
+              href={`${basePath}/finance`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                isRouteActive(`${basePath}/finance`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 hover:text-neutral-800 font-medium"
+              )}
+            >
+              <Banknote className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/finance`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate">Finance</span>
+            </Link>
+
+            {/* Resources */}
+            <Link
+              href={`${basePath}/resources`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                isRouteActive(`${basePath}/resources`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 hover:text-neutral-800 font-medium"
+              )}
+            >
+              <Package className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/resources`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate">Resources</span>
+            </Link>
+
+            {/* People */}
+            <Link
+              href={`${basePath}/people`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                isRouteActive(`${basePath}/people`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 hover:text-neutral-800 font-medium"
+              )}
+            >
+              <Users className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/people`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate">People</span>
+            </Link>
+
+            {/* Crew */}
+            <Link
+              href={`${basePath}/crew`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                isRouteActive(`${basePath}/crew`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 hover:text-neutral-800 font-medium"
+              )}
+            >
+              <UserCheck className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/crew`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate">Crew</span>
+            </Link>
+
+            {/* Reports */}
+            <Link
+              href={`${basePath}/reports`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                isRouteActive(`${basePath}/reports`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+              )}
+            >
+              <FileSpreadsheet className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/reports`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+              <span className="truncate font-medium">Reports</span>
+            </Link>
           </div>
         </div>
       </aside>
@@ -168,47 +303,39 @@ export default function ProjectDetailSidebar() {
       {/* MOBILE BOTTOM NAVIGATION */}
       <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center gap-3 w-full px-4 max-w-sm safe-area-bottom">
         <div className="bg-white/50 backdrop-blur-sm backdrop-saturate-150 shadow-sm rounded-full p-2 flex items-center justify-center gap-4">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.label}
-                href={`${basePath}${item.href}`}
-                className={clsx(
-                  "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
-                  active ? "bg-red-50 text-red-600" : "text-neutral-400"
-                )}
-              >
-                <item.icon className={clsx("w-5 h-5 transition-colors", active && "stroke-2")} />
-              </Link>
-            );
-          })}
+          {/* Overview Button */}
+          <Link
+            href={basePath}
+            className={clsx(
+              "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+              isRouteActive(basePath, true) ? "bg-red-50 text-red-600" : "text-neutral-400"
+            )}
+          >
+            <LayoutDashboard className="w-5 h-5" />
+          </Link>
 
-          {/* Setup Fan Menu */}
-          <div className="relative" ref={setupMenuRef}>
+          {/* Planning Menu Toggle */}
+          <div className="relative" ref={planningMenuRef}>
             <button
-              onClick={() => setMobileSetupOpen(!mobileSetupOpen)}
+              onClick={handleTogglePlanning}
               className={clsx(
                 "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
-                (mobileSetupOpen || isSetupRoute) ? "bg-red-50 text-red-600" : "text-neutral-400"
+                mobilePlanningOpen || isPlanningRoute ? "bg-red-50 text-red-600" : "text-neutral-400"
               )}
             >
-              {mobileSetupOpen ? (
-                <div className="w-5 h-5 flex items-center justify-center font-medium">×</div>
-              ) : (
-                <Settings className="w-5 h-5" />
-              )}
+              <Calendar className="w-5 h-5" />
             </button>
 
-            {mobileSetupOpen && (
-              <div className="absolute bottom-full right-0 mb-4 w-56 bg-white/90 backdrop-blur-xl border border-white/50 shadow-xl rounded-2xl p-1.5 animate-in fade-in slide-in-from-bottom-2">
-                {SETUP_ITEMS.map((item) => {
-                  const active = isSetupItemActive(item.key);
+            {mobilePlanningOpen && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-56 bg-white/90 backdrop-blur-xl border border-white/50 shadow-xl rounded-2xl p-1.5 animate-in fade-in slide-in-from-bottom-2">
+                <div className="px-3 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Planning</div>
+                {PLANNING_ITEMS.map((item) => {
+                  const active = isRouteActive(item.href, true);
                   return (
                     <Link
-                      key={item.key}
-                      href={`${basePath}/setup/${item.key}`}
-                      onClick={() => setMobileSetupOpen(false)}
+                      key={item.label}
+                      href={item.href}
+                      onClick={() => setMobilePlanningOpen(false)}
                       className={clsx(
                         "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
                         active ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
@@ -219,6 +346,139 @@ export default function ProjectDetailSidebar() {
                     </Link>
                   );
                 })}
+              </div>
+            )}
+          </div>
+
+          {/* Work Menu Toggle */}
+          <div className="relative" ref={workMenuRef}>
+            <button
+              onClick={handleToggleWork}
+              className={clsx(
+                "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+                mobileWorkOpen || isWorkRoute ? "bg-red-50 text-red-600" : "text-neutral-400"
+              )}
+            >
+              <Activity className="w-5 h-5" />
+            </button>
+
+            {mobileWorkOpen && (
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-48 bg-white/90 backdrop-blur-xl border border-white/50 shadow-xl rounded-2xl p-1.5 animate-in fade-in slide-in-from-bottom-2">
+                <div className="px-3 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Work</div>
+                {WORK_ITEMS.map((item) => {
+                  const active = isRouteActive(item.href, true);
+                  return (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      onClick={() => setMobileWorkOpen(false)}
+                      className={clsx(
+                        "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
+                        active ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
+                      )}
+                    >
+                      <item.icon className={clsx("w-4 h-4", active ? "text-red-600" : "text-neutral-400")} />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Docs Button */}
+          <Link
+            href={`${basePath}/docs`}
+            className={clsx(
+              "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+              isRouteActive(`${basePath}/docs`) ? "bg-red-50 text-red-600" : "text-neutral-400"
+            )}
+          >
+            <FileText className="w-5 h-5" />
+          </Link>
+
+          {/* More Menu Toggle (Finance, Resources, People, Reports) */}
+          <div className="relative" ref={moreMenuRef}>
+            <button
+              onClick={handleToggleMore}
+              className={clsx(
+                "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+                mobileMoreOpen || isRouteActive(`${basePath}/reports`) ? "bg-red-50 text-red-600" : "text-neutral-400"
+              )}
+            >
+              <div className="w-5 h-5 flex items-center justify-center font-bold">•••</div>
+            </button>
+
+            {mobileMoreOpen && (
+              <div className="absolute bottom-full right-0 mb-4 w-52 bg-white/90 backdrop-blur-xl border border-white/50 shadow-xl rounded-2xl p-1.5 animate-in fade-in slide-in-from-bottom-2">
+                <div className="px-3 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">More</div>
+                
+                {/* Reports */}
+                <Link
+                  href={`${basePath}/reports`}
+                  onClick={() => setMobileMoreOpen(false)}
+                  className={clsx(
+                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
+                    isRouteActive(`${basePath}/reports`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
+                  )}
+                >
+                  <FileSpreadsheet className={clsx("w-4 h-4", isRouteActive(`${basePath}/reports`) ? "text-red-600" : "text-neutral-400")} />
+                  Reports
+                </Link>
+
+                <div className="h-px bg-neutral-200/50 my-1" />
+
+                {/* Finance */}
+                <Link
+                  href={`${basePath}/finance`}
+                  onClick={() => setMobileMoreOpen(false)}
+                  className={clsx(
+                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
+                    isRouteActive(`${basePath}/finance`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
+                  )}
+                >
+                  <Banknote className={clsx("w-4 h-4", isRouteActive(`${basePath}/finance`) ? "text-red-600" : "text-neutral-400")} />
+                  Finance
+                </Link>
+
+                {/* Resources */}
+                <Link
+                  href={`${basePath}/resources`}
+                  onClick={() => setMobileMoreOpen(false)}
+                  className={clsx(
+                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
+                    isRouteActive(`${basePath}/resources`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
+                  )}
+                >
+                  <Package className={clsx("w-4 h-4", isRouteActive(`${basePath}/resources`) ? "text-red-600" : "text-neutral-400")} />
+                  Resources
+                </Link>
+
+                {/* People */}
+                <Link
+                  href={`${basePath}/people`}
+                  onClick={() => setMobileMoreOpen(false)}
+                  className={clsx(
+                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
+                    isRouteActive(`${basePath}/people`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
+                  )}
+                >
+                  <Users className={clsx("w-4 h-4", isRouteActive(`${basePath}/people`) ? "text-red-600" : "text-neutral-400")} />
+                  People
+                </Link>
+
+                {/* Crew */}
+                <Link
+                  href={`${basePath}/crew`}
+                  onClick={() => setMobileMoreOpen(false)}
+                  className={clsx(
+                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
+                    isRouteActive(`${basePath}/crew`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
+                  )}
+                >
+                  <UserCheck className={clsx("w-4 h-4", isRouteActive(`${basePath}/crew`) ? "text-red-600" : "text-neutral-400")} />
+                  Crew
+                </Link>
               </div>
             )}
           </div>

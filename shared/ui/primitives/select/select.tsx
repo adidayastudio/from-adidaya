@@ -92,11 +92,11 @@ export function Select({
           )}
           {...props}
         >
-          <option value="" disabled className="text-neutral-400">
+          <option value="" disabled className="text-neutral-400 bg-white dark:bg-neutral-900">
             {placeholder}
           </option>
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <option key={opt.value} value={opt.value} className="text-neutral-900 bg-white dark:text-white dark:bg-neutral-900">
               {opt.label}
             </option>
           ))}

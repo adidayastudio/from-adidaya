@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, Fragment } from "react";
+import { useState, useMemo, useEffect, useRef, Fragment, useContext } from "react";
 import { generateExport, ExportAttachment, ExportMetadata } from "@/lib/export/export-utils";
-// dynamic import used for pdfjs instead of top level import
+import { ProjectContext } from "@/components/flow/project-context";
 import { createPortal } from "react-dom";
 import FinanceHeader from "@/components/flow/finance/FinanceHeader";
 import FinancePageWrapper from "@/components/flow/finance/FinancePageWrapper";
@@ -2462,6 +2462,8 @@ export default function PurchasingClient() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [items, setItems] = useState<PurchasingItem[]>([]);
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectId = projectCtx?.project?.id || (pathname.includes("/project/") ? pathname.split("/")[2] : null);
 
     const { contextInstanceId } = useFinance();
 
@@ -2486,7 +2488,16 @@ export default function PurchasingClient() {
 
     // Filters
     const [currentMonth, setCurrentMonth] = useState(new Date());
-    const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
+    const [selectedProjects, setSelectedProjects] = useState<string[]>(
+        forceProjectId ? [forceProjectId] : []
+    );
+
+    useEffect(() => {
+        if (forceProjectId) {
+            setSelectedProjects([forceProjectId]);
+        }
+    }, [forceProjectId]);
+
     const [categoryFilters, setCategoryFilters] = useState<string[]>([]);
     const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
     const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
@@ -3412,6 +3423,7 @@ export default function PurchasingClient() {
                                 onClearProjects={() => setSelectedProjects([])}
                                 showAllMonths={showAllMonths}
                                 onToggleShowAll={() => setShowAllMonths(!showAllMonths)}
+                                hideProjectFilter={!!forceProjectId}
                             />
 
                             {/* Bulk Share Select Mode Action */}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
 import CrewPageWrapper from "@/components/feel/crew/CrewPageWrapper";
 import CrewSidebar, { CrewSection } from "@/components/feel/crew/CrewSidebar";
 import { CrewDirectory } from "@/components/feel/crew/CrewDirectory";
@@ -22,6 +23,13 @@ export default function CrewPage() {
   const router = useRouter();
   const pathname = usePathname();
 
+  // Check project context
+  const projectCtx = useContext(ProjectContext);
+  const forceProjectCode = projectCtx?.project?.code || null;
+  const forceProjectSuffix = forceProjectCode 
+      ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
+      : null;
+
   const tabParam = searchParams.get("tab");
   const activeSection: CrewSection = (tabParam as CrewSection) || "directory";
 
@@ -39,11 +47,16 @@ export default function CrewPage() {
     if (selectedStatus !== "all") params.set("status", selectedStatus); else params.delete("status");
     if (view !== "list") params.set("view", view); else params.delete("view");
 
+    if (forceProjectSuffix) {
+      params.set("project", forceProjectSuffix);
+      params.set("projects", forceProjectSuffix);
+    }
+
     const newUrl = `${pathname}?${params.toString()}`;
     if (window.location.search !== `?${params.toString()}`) {
       router.replace(newUrl, { scroll: false });
     }
-  }, [searchQuery, selectedRole, selectedStatus, view]);
+  }, [searchQuery, selectedRole, selectedStatus, view, forceProjectSuffix]);
 
   // 2. Sync Tab to URL
   useEffect(() => {

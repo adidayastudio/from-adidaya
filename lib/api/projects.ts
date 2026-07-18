@@ -343,6 +343,39 @@ export async function fetchProjectDocs(projectId: string): Promise<ProjectDoc[]>
     return data.map(mapDbToDoc);
 }
 
+export async function createProjectDoc(doc: Omit<ProjectDoc, "id" | "createdAt" | "updatedAt">): Promise<ProjectDoc | null> {
+    const { data, error } = await supabase
+        .from("project_docs")
+        .insert({
+            project_id: doc.projectId,
+            stage_id: doc.stageId,
+            wbs_item_id: doc.wbsItemId,
+            title: doc.title,
+            doc_type: doc.docType,
+            url: doc.url,
+            storage_path: doc.storagePath,
+            content: doc.content,
+            tags: doc.tags,
+            created_by: doc.createdBy,
+        })
+        .select()
+        .single();
+
+    if (error || !data) {
+        console.error("Error creating project doc:", error);
+        return null;
+    }
+    return mapDbToDoc(data);
+}
+
+export async function deleteProjectDoc(id: string): Promise<boolean> {
+    const { error } = await supabase
+        .from("project_docs")
+        .delete()
+        .eq("id", id);
+    return !error;
+}
+
 // ============================================
 // MAPPERS (DB <-> TypeScript)
 // ============================================

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, GitBranch, ListOrdered, Target, CheckSquare } from "lucide-react";
+import { ChevronLeft, GitBranch, ListOrdered, Target, CheckSquare } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { fetchProjectTypes, ProjectTypeTemplate, fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import clsx from "clsx";
 
@@ -19,10 +20,10 @@ import StageTasksTab from "./tabs/StageTasksTab";
 
 type TabId = "list" | "scope" | "tasks";
 
-const TABS: { id: TabId; label: string; icon: React.ReactNode; description: string }[] = [
-    { id: "list", label: "Stage List", icon: <ListOrdered className="w-4 h-4" />, description: "Master sequence of project phases. Determines default workflow." },
-    { id: "scope", label: "Scope Stages", icon: <Target className="w-4 h-4" />, description: "Map stages to Scopes. Defines which stages appear for each project type." },
-    { id: "tasks", label: "Task Templates", icon: <CheckSquare className="w-4 h-4" />, description: "Standard deliverables per stage. Auto-populates task lists on stage start." },
+const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
+    { id: "list", label: "Stage List", icon: ListOrdered, description: "Master sequence of project phases. Determines default workflow." },
+    { id: "scope", label: "Scope Stages", icon: Target, description: "Map stages to Scopes. Defines which stages appear for each project type." },
+    { id: "tasks", label: "Task Templates", icon: CheckSquare, description: "Standard deliverables per stage. Auto-populates task lists on stage start." },
 ];
 
 export default function StagesPage() {
@@ -55,7 +56,7 @@ export default function StagesPage() {
     const activeTabData = TABS.find(t => t.id === activeTab) || TABS[0];
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
+        <div className="min-h-screen bg-transparent px-5 md:px-0 py-6 md:py-0">
             <Breadcrumb items={[
                 { label: "Flow" },
                 { label: "Projects" },
@@ -67,43 +68,40 @@ export default function StagesPage() {
                 <div className="space-y-6 w-full animate-in fade-in duration-500">
 
                     {/* Header */}
-                    <div className="flex items-center gap-4">
-                        <Button
-                            variant="secondary"
-                            icon={<ArrowLeft className="w-4 h-4" />}
-                            onClick={() => router.push('/flow/projects/settings')}
-                        >
-                            Back
-                        </Button>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center">
-                                <GitBranch className="w-5 h-5 text-neutral-600" />
+                    <div className="flex flex-col gap-2">
+                        <Link href="/project/settings" className="lg:hidden w-fit">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-neutral-900 shadow-sm border border-black/[0.03] dark:border-white/[0.05] active:scale-90 transition-all">
+                                <ChevronLeft className="w-5 h-5 text-neutral-700 dark:text-white" strokeWidth={1.5} />
                             </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-neutral-900">Stages</h1>
-                                <p className="text-sm text-neutral-500">Configure project stages, definitions, and rules</p>
-                            </div>
+                        </Link>
+                        <div className="flex flex-col gap-1">
+                            <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">Stages</h1>
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400">Configure project stages, definitions, and rules</p>
                         </div>
                     </div>
 
-                    {/* Tabs - Underline Style */}
-                    <div className="overflow-x-auto">
-                        <div className="flex gap-1 min-w-max">
-                            {TABS.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={clsx(
-                                        "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-all whitespace-nowrap",
-                                        activeTab === tab.id
-                                            ? "border-brand-red text-brand-red"
-                                            : "border-transparent text-neutral-500 hover:text-neutral-700 hover:border-neutral-300"
-                                    )}
-                                >
-                                    {tab.icon}
-                                    {tab.label}
-                                </button>
-                            ))}
+                    {/* Tabs - Pill Style */}
+                    <div className="flex items-center gap-2 overflow-x-auto">
+                        <div className="flex gap-2 p-1 bg-neutral-100 dark:bg-neutral-800/40 rounded-full w-fit">
+                            {TABS.map((tab) => {
+                                const active = activeTab === tab.id;
+                                const Icon = tab.icon;
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        className={clsx(
+                                            "flex items-center gap-2 px-4 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-all",
+                                            active
+                                                ? "bg-brand-red text-white shadow-sm"
+                                                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-white/50 dark:hover:bg-neutral-800/60"
+                                        )}
+                                    >
+                                        <Icon className="w-3.5 h-3.5" />
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 

@@ -29,6 +29,17 @@ export default function WebHeader({
   const [isMeMenuOpen, setIsMeMenuOpen] = useState(false);
   const meMenuRef = useRef<HTMLDivElement>(null);
 
+  // Dynamic project name tracking state
+  const [projectNameLoaded, setProjectNameLoaded] = useState(0);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleLoaded = () => {
+      setProjectNameLoaded(prev => prev + 1);
+    };
+    window.addEventListener('project-name-loaded', handleLoaded);
+    return () => window.removeEventListener('project-name-loaded', handleLoaded);
+  }, []);
+
   // History state for back/next buttons
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
@@ -162,10 +173,21 @@ export default function WebHeader({
                 {segments.map((segment, i) => {
                   const isDashboard = segment.toLowerCase() === 'dashboard';
                   const path = isDashboard ? '/dashboard' : '/' + segments.slice(0, i + 1).map(s => s.toLowerCase()).join('/');
+                  
+                  // Resolve dynamic project name if it is the project segment (index 1)
+                  let label = segment;
+                  if (i === 1) {
+                    if (mounted && typeof window !== 'undefined') {
+                      label = sessionStorage.getItem('project_name_' + segment) || 'Project';
+                    } else {
+                      label = 'Project';
+                    }
+                  }
+
                   return (
                     <React.Fragment key={segment}>
                       <Link href={path} className="capitalize opacity-90 truncate hover:opacity-100 transition-opacity">
-                        {segment}
+                        {label.replace(/-/g, ' ')}
                       </Link>
                       {i < segments.length - 1 && (
                         <ChevronRight size={12} className={isVibeActive ? "text-white/40" : "text-neutral-400"} />
@@ -179,7 +201,17 @@ export default function WebHeader({
               <div className="flex lg:hidden items-center gap-2 truncate">
                 {segments.length > 0 ? (
                   <span className="capitalize opacity-100 truncate">
-                    {segments[segments.length - 1]}
+                    {(() => {
+                      const idx = segments.length - 1;
+                      const segment = segments[idx];
+                      if (idx === 1) {
+                        if (mounted && typeof window !== 'undefined') {
+                          return (sessionStorage.getItem('project_name_' + segment) || 'Project').replace(/-/g, ' ');
+                        }
+                        return 'Project';
+                      }
+                      return segment.replace(/-/g, ' ');
+                    })()}
                   </span>
                 ) : (
                   <Link href="/dashboard" className="hover:opacity-100 transition-opacity">Dashboard</Link>

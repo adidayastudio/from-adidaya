@@ -13,6 +13,7 @@ import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import { FinanceViewToggleUI } from "@/components/flow/finance/FinanceViewToggle";
 import clsx from "clsx";
 import Link from "next/link";
+import { ProjectContext } from "@/components/flow/project-context";
 
 function FinanceInlineTabs() {
     const pathname = usePathname();
@@ -83,6 +84,10 @@ export default function FinancePageWrapper({
     const pathname = usePathname();
     const { viewMode, setViewMode, canAccessTeam, searchTerm, setSearchTerm } = useFinance();
     const [isMounted, setIsMounted] = useState(false);
+    
+    // Check project context to disable extra headers/sidebars
+    const projectCtx = React.useContext(ProjectContext);
+    const isProjectContext = !!projectCtx || pathname.includes("/project/");
     
     // Ensure we don't render mismatched headers between server and client
     useEffect(() => {
@@ -206,10 +211,18 @@ export default function FinancePageWrapper({
     }), [viewMode, canAccessTeam, fabId, pathname, isSearchExpanded, searchTerm, isOverview, isReports]);
 
     // Apply header injection ONLY on Desktop/iPad
-    useHeader(isMounted ? customHeader : undefined, [isMounted, viewMode, canAccessTeam, isSearchExpanded, searchTerm, pathname, isReports]);
+    useHeader(isMounted && !isProjectContext ? customHeader : undefined, [isMounted, viewMode, canAccessTeam, isSearchExpanded, searchTerm, pathname, isReports, isProjectContext]);
+
+    if (isProjectContext) {
+        return (
+            <div className="w-full animate-in fade-in duration-300">
+                {children}
+            </div>
+        );
+    }
 
     return (
-        <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 md:bg-transparent transition-colors">
+        <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 md:bg-transparent md:dark:bg-transparent transition-colors">
             {/* 1. Mobile-only header is fine to keep separate as it doesn't wrap children */}
             <div className="md:hidden">
                 <FinanceMobileHeader fabId={fabId} backUrl="/dashboard" rightToolbar={rightToolbar} />

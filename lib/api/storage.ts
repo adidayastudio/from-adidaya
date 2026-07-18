@@ -48,3 +48,50 @@ export async function getFinanceFileUrl(path: string): Promise<string | null> {
 
     return data?.signedUrl || null;
 }
+
+export async function uploadProjectFile(file: File, path: string): Promise<string | null> {
+    const { error: uploadError } = await supabase.storage
+        .from('project_documents')
+        .upload(path, file, {
+            cacheControl: '3600',
+            upsert: true
+        });
+
+    if (uploadError) {
+        console.error("Error uploading project file:", uploadError);
+        // Fallback to finance_attachments if project_documents isn't created in Supabase yet
+        const { error: fallbackError } = await supabase.storage
+            .from('finance_attachments')
+            .upload(path, file, {
+                cacheControl: '3600',
+                upsert: true
+            });
+        if (fallbackError) {
+            console.error("Fallback upload error:", fallbackError);
+            return null;
+        }
+    }
+
+    return path;
+}
+
+export async function getProjectFileSignedUrl(path: string): Promise<string | null> {
+    // Try project_documents first
+    const { data, error } = await supabase.storage
+        .from('project_documents')
+        .createSignedUrl(path, 3600);
+
+    if (error || !data?.signedUrl) {
+        // Fallback to finance_attachments
+        const { data: fbData, error: fbError } = await supabase.storage
+            .from('finance_attachments')
+            .createSignedUrl(path, 3600);
+        if (fbError) {
+            console.error("Error getting signed url from fallback:", fbError);
+            return null;
+        }
+        return fbData?.signedUrl || null;
+    }
+
+    return data.signedUrl;
+}

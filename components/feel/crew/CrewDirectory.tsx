@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
 import { Plus, Search, ChevronDown, ChevronUp, Edit2, Trash2, Filter, List, LayoutGrid, ArrowUpDown, X, Download, Loader2, Users, UserCheck, Star, Hammer } from "lucide-react";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
@@ -64,6 +65,13 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     const router = useRouter();
     const pathname = usePathname();
 
+    // Check project context
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+    const forceProjectSuffix = forceProjectCode 
+        ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
+        : null;
+
     // Data state
     const [crewList, setCrewList] = useState<CrewListItem[]>([]);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
@@ -77,10 +85,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
 
     // Helper for array params - checks 'projects' first, then fallback to 'project'
-    const getArrayParam = (key: string) => {
-        const val = searchParams.get(key);
-        if (val) return val.split(",");
-        // Fallback for compatibility
+    const getArrayParam = (key: string): string[] => {
         if (key === "projects") {
             const single = searchParams.get("project");
             return single ? [single] : [];
@@ -90,7 +95,16 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
 
     const [selectedRoles, setSelectedRoles] = useState<CrewRole[]>(getArrayParam("roles") as CrewRole[]);
     const [selectedStatuses, setSelectedStatuses] = useState<CrewStatus[]>(getArrayParam("statuses") as CrewStatus[]);
-    const [selectedProjects, setSelectedProjects] = useState<string[]>(getArrayParam("projects")); // Now stores SUFFIXES like "RBH"
+    const [selectedProjects, setSelectedProjects] = useState<string[]>(
+        forceProjectSuffix ? [forceProjectSuffix] : getArrayParam("projects")
+    );
+
+    useEffect(() => {
+        if (forceProjectSuffix) {
+            setSelectedProjects([forceProjectSuffix]);
+        }
+    }, [forceProjectSuffix]);
+
     const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
     const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("view") as ViewMode) || "list");
     const [sortBy, setSortBy] = useState<"name" | "role" | "status" | "project">("name");
@@ -150,9 +164,10 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             params.delete("status");
         }
 
-        if (selectedProjects.length > 0) {
-            params.set("projects", selectedProjects.join(","));
-            params.set("project", selectedProjects[0]);
+        const activeProjs = forceProjectSuffix ? [forceProjectSuffix] : selectedProjects;
+        if (activeProjs.length > 0) {
+            params.set("projects", activeProjs.join(","));
+            params.set("project", activeProjs[0]);
         } else {
             params.delete("projects");
             params.delete("project");
@@ -643,7 +658,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                     <div className="flex items-center justify-between"><h3 className="font-semibold text-neutral-900">Filters</h3><button onClick={() => setShowFilterPopup(false)} className="p-1 rounded-full hover:bg-neutral-100"><X className="w-4 h-4 text-neutral-500" /></button></div>
                     <div><div className="text-xs font-medium text-neutral-500 mb-2">Roles</div><div className="flex flex-wrap gap-2">{CREW_ROLE_OPTIONS.map(opt => <button key={opt.value} onClick={() => toggleRole(opt.value)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedRoles.includes(opt.value) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{CREW_ROLE_LABELS[opt.value].en}</button>)}</div></div>
                     <div><div className="text-xs font-medium text-neutral-500 mb-2">Status</div><div className="flex flex-wrap gap-2">{(["ACTIVE", "INACTIVE"] as CrewStatus[]).map(s => <button key={s} onClick={() => toggleStatus(s)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedStatuses.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{s}</button>)}</div></div>
-                    {uniqueProjectSuffixes.length > 0 && (
+                    {!forceProjectSuffix && uniqueProjectSuffixes.length > 0 && (
                         <div><div className="text-xs font-medium text-neutral-500 mb-2">Projects</div><div className="flex flex-wrap gap-2">{uniqueProjectSuffixes.map(p => <button key={p} onClick={() => toggleProject(p)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(p) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{p}</button>)}</div></div>
                     )}
                     {activeFiltersCount > 0 && <button onClick={() => { setSelectedRoles([]); setSelectedStatuses([]); setSelectedProjects([]); }} className="text-sm text-red-600 hover:underline">Clear all</button>}

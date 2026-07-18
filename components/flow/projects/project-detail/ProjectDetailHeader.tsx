@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 
 import {
   ProjectStatus,
@@ -53,8 +54,26 @@ export default function ProjectDetailHeader({ project }: { project: ProjectHeade
   // Safe stage access
   const stageLabel = PROJECT_STAGE_LABEL_SHORT[stage as keyof typeof PROJECT_STAGE_LABEL_SHORT] || stage;
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLElement;
+      if (target && typeof target.scrollTop === 'number') {
+        setIsScrolled(target.scrollTop > 5);
+      }
+    };
+    window.addEventListener("scroll", handleScroll, true);
+    return () => window.removeEventListener("scroll", handleScroll, true);
+  }, []);
+
   return (
-    <div className="sticky top-0 z-20 pb-4 pt-2 transition-all duration-200">
+    <div className={clsx(
+      "sticky top-0 z-20 transition-all duration-300",
+      isScrolled
+        ? "px-6 py-4 bg-white/70 dark:bg-neutral-900/60 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] mt-2"
+        : "px-0 pb-4 pt-2 bg-transparent border-transparent shadow-none mt-0"
+    )}>
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 lg:gap-8">
         {/* ================= LEFT ================= */}
         <div className="space-y-2 min-w-0 flex-1">
@@ -123,9 +142,6 @@ export default function ProjectDetailHeader({ project }: { project: ProjectHeade
           </div>
         </div>
       </div>
-
-      {/* Separator - Solid line */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-neutral-200" />
     </div>
   );
 }

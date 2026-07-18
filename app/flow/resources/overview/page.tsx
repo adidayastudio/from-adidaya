@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useContext } from "react";
 import StandardPageHeader from "@/components/layout/StandardPageHeader";
+import { ProjectContext } from "@/components/flow/project-context";
+import { DUMMY_MATERIALS, MOCK_STOCK } from "../materials/page";
 import { Package, Wrench, Truck, Handshake, RefreshCw, Sparkles, MoreHorizontal, Search, ListFilter, Plus } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { triggerResourceMerge, triggerResourceSync } from "@/lib/api/resources-client";
@@ -33,6 +35,9 @@ function SummaryCard({ icon, iconBg, label, value, subtext }: { icon: React.Reac
 }
 
 export default function ResourcesOverviewPage() {
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+
     const [stats, setStats] = useState<CategoryStats[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isMerging, setIsMerging] = useState(false);
@@ -48,6 +53,12 @@ export default function ResourcesOverviewPage() {
             const categories = ['material', 'tool', 'asset', 'service'];
             const results = await Promise.all(
                 categories.map(async (cat) => {
+                    if (cat === 'material' && forceProjectCode) {
+                        const total = DUMMY_MATERIALS.filter(d => 
+                            (MOCK_STOCK[d.id] || []).some(ps => ps.project === forceProjectCode)
+                        ).length;
+                        return { category: cat, total, withStock: 0, outOfStock: 0 };
+                    }
                     const { count } = await supabase
                         .from('pricing_resources')
                         .select('id', { count: 'exact', head: true })
@@ -125,7 +136,7 @@ export default function ResourcesOverviewPage() {
             window.removeEventListener('resource-action', handleAction);
             document.removeEventListener("mousedown", handleClickOutside);
         };
-    }, []);
+    }, [forceProjectCode]);
 
     if (isLoading) {
         return <div className="py-12 text-center text-neutral-400 font-medium animate-pulse">Loading overview...</div>;

@@ -232,7 +232,7 @@ export default function TypeDetailPage() {
 
     if (!currentType) {
         return (
-            <div className="min-h-screen bg-neutral-50 p-6">
+            <div className="min-h-screen bg-transparent px-5 md:px-0 py-6 md:py-0">
                 <div className="text-center py-12">
                     <h2 className="text-xl font-bold text-neutral-900">Project Type Not Found</h2>
                     <Link href="/flow/projects/settings/types">
@@ -244,7 +244,7 @@ export default function TypeDetailPage() {
     }
 
     return (
-        <div className="min-h-screen bg-neutral-50 p-6">
+        <div className="min-h-screen bg-transparent px-5 md:px-0 py-6 md:py-0">
             <Breadcrumb items={[
                 { label: "Flow" },
                 { label: "Projects" },

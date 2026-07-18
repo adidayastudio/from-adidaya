@@ -11,17 +11,14 @@ const PROJECT_COLUMNS = `
     id,
     workspace_id,
     project_code,
+    project_number,
     project_name,
-    project_type,
-    client_id,
-    client_name,
-    location,
     status,
     start_date,
-    target_date,
-    budget,
-    description,
-    stages,
+    end_date,
+    location,
+    meta,
+    created_by,
     created_at,
     updated_at
 `;
@@ -64,8 +61,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const updateData: Record<string, any> = {};
     const allowedFields = [
-        'project_code', 'project_name', 'project_type', 'client_id', 'client_name',
-        'location', 'status', 'start_date', 'target_date', 'budget', 'description', 'stages'
+        'project_code', 'project_number', 'project_name', 'status',
+        'start_date', 'end_date', 'location', 'meta'
     ];
 
     for (const field of allowedFields) {

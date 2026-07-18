@@ -233,7 +233,7 @@ export default function DashboardPage() {
           {/* NEW REVAMPED DASHBOARD (MOBILE) */}
           <div className="md:hidden">
             <DashboardHeader onOpenNotifications={() => setIsNotifSheetOpen(true)} />
-            <ActivitySummaryCard />
+            {/* <ActivitySummaryCard /> */}
             {/* <VibeCard /> */}
             <WorkspaceGrid />
           </div>
@@ -252,11 +252,11 @@ export default function DashboardPage() {
             />
 
             <div className="space-y-8">
-              {/* Top Row: Activity and Vibe */}
-              <div className="grid grid-cols-1 gap-6 relative z-10 overflow-visible">
+              {/* Top Row: Activity and Vibe (Hidden for now) */}
+              {/* <div className="grid grid-cols-1 gap-6 relative z-10 overflow-visible">
                 <ActivitySummaryCard />
-                {/* <VibeCard /> */}
-              </div>
+                <VibeCard />
+              </div> */}
 
               {/* Bottom Row: Workspace Grid full width */}
               <WorkspaceGrid />

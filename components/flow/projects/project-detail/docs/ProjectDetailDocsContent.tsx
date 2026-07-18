@@ -1,23 +1,31 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Project } from "@/components/flow/projects/data";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { Plus, Folder, File, Download, ChevronUp, ChevronDown, Filter, ArrowUpDown, Check } from "lucide-react";
+import { Plus, Folder, File, Download, ChevronUp, ChevronDown, Filter, ArrowUpDown, Check, Sparkles, Trash2, Upload } from "lucide-react";
 import DocsUploadModal from "./DocsUploadModal";
 import FilePreviewModal from "./FilePreviewModal";
+import DocumentGenerator from "./DocumentGenerator";
 import clsx from "clsx";
 import { PopoverRoot as Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { fetchProjectDocs, deleteProjectDoc } from "@/lib/api/projects";
+import { ProjectDoc } from "@/types/project";
+import toast from "react-hot-toast";
 
-type DocTab = "all" | "con" | "drw" | "viz" | "rab" | "sch" | "other" | "bundle";
+type DocTab = "all" | "design" | "legal" | "controls" | "exports" | "other";
 type SortKey = "title" | "stage" | "type" | "date" | "size";
 type SortDirection = "asc" | "desc";
 type TabItem<T> = { key: T; label: string };
 type TimeFilter = "all" | "today" | "week" | "month";
 
-export default function ProjectDetailDocsContent({ project }: { project: Project }) {
+export default function ProjectDetailDocsContent({ project }: { project: any }) {
     const [activeTab, setActiveTab] = useState<DocTab>("all");
     const [isUploadOpen, setIsUploadOpen] = useState(false);
+    const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+
+    // Database docs state
+    const [docs, setDocs] = useState<ProjectDoc[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     // Filter State
     const [filterStage, setFilterStage] = useState<string[]>([]);
@@ -32,78 +40,88 @@ export default function ProjectDetailDocsContent({ project }: { project: Project
 
     const tabs: TabItem<DocTab>[] = [
         { key: "all", label: "All Files" },
-        { key: "con", label: "Contracts" },
-        { key: "drw", label: "Drawings" },
-        { key: "viz", label: "Visuals" },
-        { key: "rab", label: "RAB" },
-        { key: "sch", label: "Schedule" },
-        { key: "bundle", label: "Exports" },
+        { key: "design", label: "Design & Renders" },
+        { key: "legal", label: "Contracts & Invoices" },
+        { key: "controls", label: "Controls & RAB" },
+        { key: "exports", label: "Exports" },
+        { key: "other", label: "Other" },
     ];
 
-    // Mock Files (Usually fetched)
-    const files = [
-        {
-            title: "Client Agreement",
-            version: "1",
-            generatedName: "20260102_003_LAX_01-KO_CON_Agreement_v1.pdf",
-            type: "CON",
-            date: "Jan 2, 2026",
-            timestamp: new Date("2026-01-02"),
-            size: "2.4 MB",
-            stage: "01-KO"
-        },
-        {
-            title: "Schematic Layout",
-            version: "2",
-            generatedName: "20260103_003_LAX_02-SD_DRW_Layout_v2.pdf",
-            type: "DRW",
-            date: "Jan 3, 2026",
-            timestamp: new Date("2026-01-03"),
-            size: "5.1 MB",
-            stage: "02-SD"
-        },
-        {
-            title: "3D Model Exterior",
-            version: "1",
-            generatedName: "20260103_003_LAX_02-SD_SKP_Model_v1.skp",
-            type: "SKP",
-            date: "Jan 3, 2026",
-            timestamp: new Date("2026-01-03"),
-            size: "45 MB",
-            stage: "02-SD"
-        },
-        {
-            title: "Exterior Render",
-            version: "1",
-            generatedName: "20260104_003_LAX_02-SD_VIZ_Exterior_v1.jpg",
-            type: "VIZ",
-            date: "Jan 4, 2026",
-            timestamp: new Date("2026-01-04"),
-            size: "3.2 MB",
-            stage: "02-SD"
-        },
-        {
-            title: "Full Stage Bundle",
-            version: "1",
-            generatedName: "20260104_003_LAX_02-SD_ALL_Bundle_v1.zip",
-            type: "ALL",
-            date: "Jan 4, 2026",
-            timestamp: new Date("2026-01-04"),
-            size: "125 MB",
-            stage: "02-SD"
-        },
-    ];
+    // Load docs from DB
+    const loadDocs = async () => {
+        setIsLoading(true);
+        try {
+            const fetched = await fetchProjectDocs(project.id);
+            setDocs(fetched);
+        } catch (err: any) {
+            console.error("Error loading documents:", err);
+            toast.error("Failed to load documents.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    // Logic
+    useEffect(() => {
+        loadDocs();
+    }, [project.id]);
+
+    // Handle document deletion
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm("Are you sure you want to delete this document?")) return;
+
+        try {
+            const success = await deleteProjectDoc(id);
+            if (success) {
+                toast.success("Document deleted successfully!");
+                loadDocs();
+            } else {
+                toast.error("Failed to delete document.");
+            }
+        } catch (err: any) {
+            console.error(err);
+            toast.error("An error occurred during deletion.");
+        }
+    };
+
+    // Format tags info to mapped files
+    const mappedFiles = useMemo(() => {
+        return docs.map(doc => {
+            // tags format: [Type, Stage, Version, Size]
+            const type = doc.tags?.[0] || "OTH";
+            const stage = doc.tags?.[1] || "—";
+            const version = doc.tags?.[2] || "1";
+            const size = doc.tags?.[3] || "—";
+
+            return {
+                id: doc.id,
+                title: doc.title,
+                version: version,
+                generatedName: doc.storagePath?.split('/').pop() || doc.title,
+                type: type,
+                date: doc.createdAt ? new Date(doc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+                timestamp: doc.createdAt ? new Date(doc.createdAt) : new Date(),
+                size: size,
+                stage: stage,
+                storagePath: doc.storagePath,
+                url: doc.url
+            };
+        });
+    }, [docs]);
+
+    // Filter and Sort logic
     const sortedFiles = useMemo(() => {
         // 1. Filter by Tab
         let items = activeTab === "all"
-            ? files
-            : files.filter(f => {
-                if (activeTab === "bundle") return f.type === "ALL";
-                if (activeTab === "other") return !["CON", "DRW", "VIZ", "RAB", "SCH", "ALL"].includes(f.type);
-                if (activeTab === "drw") return ["DRW", "SKP", "DWG", "ACD"].includes(f.type);
-                return f.type.toLowerCase() === activeTab;
+            ? mappedFiles
+            : mappedFiles.filter(f => {
+                const typeUpper = f.type.toUpperCase();
+                if (activeTab === "design") return ["DRW", "SKP", "DWG", "ACD", "PLN", "VIZ", "JPG", "PNG"].includes(typeUpper);
+                if (activeTab === "legal") return ["CON", "INV", "AGR"].includes(typeUpper);
+                if (activeTab === "controls") return ["RAB", "SCH", "BOQ"].includes(typeUpper);
+                if (activeTab === "exports") return ["EXP", "ALL"].includes(typeUpper);
+                if (activeTab === "other") return !["DRW", "SKP", "DWG", "ACD", "PLN", "VIZ", "JPG", "PNG", "CON", "INV", "AGR", "RAB", "SCH", "BOQ", "EXP", "ALL"].includes(typeUpper);
+                return false;
             });
 
         // 2. Filter by Stage
@@ -113,11 +131,7 @@ export default function ProjectDetailDocsContent({ project }: { project: Project
 
         // 3. Filter by Time
         if (filterTime !== "all") {
-            const now = new Date(); // In real app, consider mocking today or using existing date
-            // Using a future date here relative to mock data for demo purposes, or just comparing diffs
-            // Let's assume 'now' is Jan 6, 2026 relative to mock data
-            // Or just use real Date() and accept mock data is old.
-            // For now, let's use the actual dates in items.
+            const now = new Date();
             items = items.filter((f) => {
                 const diffTime = Math.abs(now.getTime() - f.timestamp.getTime());
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -137,15 +151,15 @@ export default function ProjectDetailDocsContent({ project }: { project: Project
                 valA = a.timestamp.getTime();
                 valB = b.timestamp.getTime();
             } else if (sortKey === "size") {
-                valA = parseFloat(a.size);
-                valB = parseFloat(b.size);
+                valA = parseFloat(a.size) || 0;
+                valB = parseFloat(b.size) || 0;
             }
 
             if (valA < valB) return sortDirection === "asc" ? -1 : 1;
             if (valA > valB) return sortDirection === "asc" ? 1 : -1;
             return 0;
         });
-    }, [activeTab, filterStage, filterTime, sortKey, sortDirection]);
+    }, [mappedFiles, activeTab, filterStage, filterTime, sortKey, sortDirection]);
 
     const toggleStage = (stage: string) => {
         setFilterStage((prev) =>
@@ -160,33 +174,61 @@ export default function ProjectDetailDocsContent({ project }: { project: Project
             : <ChevronDown className="w-3 h-3 text-brand-red" />;
     };
 
+    // If generator panel is active, replace main content
+    if (isGeneratorOpen) {
+        return (
+            <DocumentGenerator
+                project={project}
+                onClose={() => {
+                    setIsGeneratorOpen(false);
+                    loadDocs();
+                }}
+            />
+        );
+    }
+
     return (
         <div>
             {/* HEADER: TITLE LEFT, TOGGLE + ACTION RIGHT */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <h2 className="text-xl font-bold text-neutral-900 whitespace-nowrap">Documents</h2>
 
-                <div className="flex flex-row items-center justify-between gap-2 w-full xl:w-auto relative">
-                    {/* SEGMENTED TOGGLE (Scrollable on Mobile) */}
-                    <div className="flex items-center overflow-x-auto no-scrollbar md:grid md:grid-flow-col p-1 bg-neutral-100 rounded-full flex-1 xl:flex-none xl:w-auto gap-0 xl:gap-0 min-w-0">
-                        {tabs.map((tab) => (
+                <div className="flex items-center justify-end gap-2 w-full sm:w-auto">
+                    {/* CATEGORY SELECTOR DROPDOWN */}
+                    <Popover>
+                        <PopoverTrigger asChild>
                             <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                className={clsx(
-                                    "px-4 py-1.5 text-xs md:text-sm font-medium rounded-full transition-all duration-200 capitalize flex items-center justify-center whitespace-nowrap min-w-0 flex-shrink-0",
-                                    activeTab === tab.key
-                                        ? "bg-white text-neutral-900 shadow-sm"
-                                        : "text-neutral-500 hover:text-neutral-700"
-                                )}
+                                type="button"
+                                className="inline-flex items-center gap-2 text-sm h-10 px-4 font-semibold rounded-full bg-white text-neutral-700 border border-neutral-200 hover:bg-neutral-50 active:bg-neutral-100 transition-all select-none shadow-sm cursor-pointer"
                             >
-                                {tab.label}
+                                <Folder className="w-4 h-4 text-neutral-500 shrink-0" />
+                                <span>{tabs.find(t => t.key === activeTab)?.label}</span>
+                                <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" />
                             </button>
-                        ))}
-                    </div>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-2 bg-white rounded-xl shadow-lg border border-neutral-100" align="start">
+                            <div className="flex flex-col gap-1">
+                                {tabs.map((tab) => (
+                                    <button
+                                        key={tab.key}
+                                        onClick={() => setActiveTab(tab.key)}
+                                        className={clsx(
+                                            "flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors text-left",
+                                            activeTab === tab.key
+                                                ? "bg-neutral-50 text-brand-red font-semibold"
+                                                : "text-neutral-600 hover:bg-neutral-50"
+                                        )}
+                                    >
+                                        {tab.label}
+                                        {activeTab === tab.key && <Check className="w-4 h-4 text-brand-red" />}
+                                    </button>
+                                ))}
+                            </div>
+                        </PopoverContent>
+                    </Popover>
 
-                    {/* ACTIONS (Sort/Filter + Upload) */}
-                    <div className="flex items-center justify-end gap-1 w-auto shrink-0 xl:gap-2 pl-2 bg-gradient-to-l from-neutral-50 via-neutral-50 to-transparent xl:bg-none">
+                    {/* ACTIONS (Sort/Filter + Add Popover Menu) */}
+                    <div className="flex items-center justify-end gap-2 shrink-0">
 
                         {/* FILTER POPOVER */}
                         <Popover>
@@ -305,25 +347,51 @@ export default function ProjectDetailDocsContent({ project }: { project: Project
                             </PopoverContent>
                         </Popover>
 
-                        <Button
-                            onClick={() => setIsUploadOpen(true)}
-                            className="!h-10 !rounded-full bg-red-600 hover:bg-brand-red-hover text-white border-transparent shadow-md flex items-center justify-center p-0 xl:px-6 xl:w-auto w-10 min-w-[40px] flex-shrink-0 gap-2"
-                        >
-                            <Plus className="w-5 h-5" />
-                            <span className="hidden xl:inline font-medium whitespace-nowrap">Upload</span>
-                        </Button>
+                        {/* ADD/NEW POPOVER BUTTON */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    className="!h-10 !w-10 !p-0 !rounded-full bg-red-600 hover:bg-red-700 text-white border-transparent shadow-sm flex items-center justify-center min-w-[40px] flex-shrink-0"
+                                    title="Add New Document"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48 p-2 bg-white rounded-xl shadow-lg border border-neutral-100" align="end">
+                                <div className="flex flex-col gap-1">
+                                    <button
+                                        onClick={() => setIsUploadOpen(true)}
+                                        className="flex items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors text-left w-full"
+                                    >
+                                        <Upload className="w-4 h-4 text-neutral-500" />
+                                        Upload File
+                                    </button>
+                                    <button
+                                        onClick={() => setIsGeneratorOpen(true)}
+                                        className="flex items-center gap-2.5 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors text-left w-full"
+                                    >
+                                        <Sparkles className="w-4 h-4 text-brand-red" />
+                                        Generate Document
+                                    </button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
             </div>
 
             {/* LIST */}
             <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {sortedFiles.length === 0 ? (
+                {isLoading ? (
+                    <div className="flex justify-center items-center py-20 text-neutral-500 text-sm">
+                        Loading documents...
+                    </div>
+                ) : sortedFiles.length === 0 ? (
                     <div className="text-center py-12 rounded-xl border border-dashed border-neutral-200 bg-neutral-50/50">
                         <Folder className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
                         <h3 className="text-sm font-medium text-neutral-900">No documents found</h3>
                         <p className="text-xs text-neutral-500">
-                            {(filterStage.length > 0 || filterTime !== "all") ? "Try adjusting your filters." : "Upload a file to get started."}
+                            {(filterStage.length > 0 || filterTime !== "all") ? "Try adjusting your filters." : "Upload or generate a document to get started."}
                         </p>
                     </div>
                 ) : (
@@ -353,7 +421,7 @@ export default function ProjectDetailDocsContent({ project }: { project: Project
                                                 </div>
                                             </th>
                                         ))}
-                                        <th className="px-4 py-3 w-10"></th>
+                                        <th className="px-4 py-3 w-20"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-100">
@@ -384,16 +452,27 @@ export default function ProjectDetailDocsContent({ project }: { project: Project
                                             <td className="px-4 py-3 text-neutral-500 text-xs whitespace-nowrap">{file.date}</td>
                                             <td className="px-4 py-3 text-neutral-500 text-xs text-right whitespace-nowrap">{file.size}</td>
                                             <td className="px-4 py-3 text-right">
-                                                <button
-                                                    className="text-neutral-400 hover:text-brand-red p-2 hover:bg-red-50 rounded-full transition-colors"
-                                                    title={`Download ${file.generatedName}`}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        // Download logic
-                                                    }}
-                                                >
-                                                    <Download className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex justify-end gap-1">
+                                                    {file.url && (
+                                                        <a
+                                                            href={file.url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-neutral-400 hover:text-brand-red p-2 hover:bg-red-50 rounded-full transition-colors"
+                                                            title={`Download file`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </a>
+                                                    )}
+                                                    <button
+                                                        className="text-neutral-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors"
+                                                        title="Delete document"
+                                                        onClick={(e) => handleDelete(file.id, e)}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -407,7 +486,10 @@ export default function ProjectDetailDocsContent({ project }: { project: Project
             {/* MODAL */}
             <DocsUploadModal
                 open={isUploadOpen}
-                onClose={() => setIsUploadOpen(false)}
+                onClose={() => {
+                    setIsUploadOpen(false);
+                    loadDocs();
+                }}
                 project={project}
             />
 
