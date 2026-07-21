@@ -458,6 +458,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
 
             if (editingId) {
                 await updateRequest(editingId, {
+                    projectCode: formProject || undefined,
                     type: formType,
                     amount: formAmount ? parseFloat(formAmount) : undefined,
                     startDate: finalStartDate,
@@ -472,6 +473,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                     workspaceId: wsId,
                     crewId: formCrew,
                     crewName: crewName,
+                    projectCode: formProject || undefined,
                     type: formType,
                     startDate: finalStartDate,
                     endDate: formEndDate || undefined,
@@ -1086,12 +1088,20 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                                             value={formCrew} 
                                             onChange={setFormCrew} 
                                             disabled={!formProject || !!editingId} 
-                                            options={crew.filter(c => {
-                                                if (!formProject || !c.projectCode) return true;
-                                                const p1 = formProject.toLowerCase();
-                                                const p2 = c.projectCode.toLowerCase();
-                                                return p1.includes(p2) || p2.includes(p1);
-                                            }).map(c => ({ value: c.id, label: `${c.name} (${CREW_ROLE_LABELS[c.role]?.en || c.role})` }))} 
+                                            options={[...crew]
+                                                .sort((a, b) => {
+                                                    const p = formProject ? formProject.toLowerCase() : "";
+                                                    const aMatch = p && a.projectCode && (p.includes(a.projectCode.toLowerCase()) || a.projectCode.toLowerCase().includes(p));
+                                                    const bMatch = p && b.projectCode && (p.includes(b.projectCode.toLowerCase()) || b.projectCode.toLowerCase().includes(p));
+                                                    if (aMatch && !bMatch) return -1;
+                                                    if (!aMatch && bMatch) return 1;
+                                                    return a.name.localeCompare(b.name);
+                                                })
+                                                .map(c => ({
+                                                    value: c.id,
+                                                    label: `${c.name} (${CREW_ROLE_LABELS[c.role]?.en || c.role})${c.projectCode ? ` • ${c.projectCode}` : ''}`
+                                                }))
+                                            } 
                                             placeholder={formProject ? "Select crew member" : "Select project first"}
                                             accentColor="blue"
                                             searchable={true}

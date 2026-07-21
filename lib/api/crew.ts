@@ -686,9 +686,9 @@ export async function fetchRequests(workspaceId: string, projectId?: string): Pr
         id: r.id,
         workspaceId: r.workspace_id,
         crewId: r.crew_id,
-        crewName: r.crew?.name,
+        crewName: r.crew?.name || "Unknown",
         crewRole: r.crew?.role,
-        projectCode: r.crew?.current_project_code, // Or use r.project_code if we stored it
+        projectCode: r.project_code || r.crew?.current_project_code,
         type: r.type,
         amount: parseFloat(r.amount) || 0,
         startDate: r.start_date,
@@ -707,6 +707,7 @@ export async function createRequest(request: Partial<CrewRequest>) {
         .insert({
             workspace_id: request.workspaceId,
             crew_id: request.crewId,
+            project_code: request.projectCode || null,
             type: request.type,
             amount: request.amount,
             start_date: request.startDate,
@@ -724,17 +725,19 @@ export async function createRequest(request: Partial<CrewRequest>) {
 }
 
 export async function updateRequest(id: string, updates: Partial<CrewRequest>) {
+    const updateData: Record<string, any> = {};
+    if (updates.type !== undefined) updateData.type = updates.type;
+    if (updates.amount !== undefined) updateData.amount = updates.amount;
+    if (updates.startDate !== undefined) updateData.start_date = updates.startDate;
+    if (updates.endDate !== undefined) updateData.end_date = updates.endDate;
+    if (updates.reason !== undefined) updateData.reason = updates.reason;
+    if (updates.proofUrl !== undefined) updateData.proof_url = updates.proofUrl;
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.projectCode !== undefined) updateData.project_code = updates.projectCode;
+
     const { data, error } = await supabase
         .from("crew_requests")
-        .update({
-            type: updates.type,
-            amount: updates.amount,
-            start_date: updates.startDate,
-            end_date: updates.endDate,
-            reason: updates.reason,
-            proof_url: updates.proofUrl,
-            status: updates.status
-        })
+        .update(updateData)
         .eq("id", id)
         .select()
         .single();

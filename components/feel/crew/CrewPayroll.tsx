@@ -255,8 +255,34 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                 const logsArrs = await Promise.all(logsPromises);
                 const allLogs = logsArrs.flat();
 
-                // 3. Identify relevant crew (those who have logs OR are currently assigned)
+                // 3. Load Requests (Kasbon & Reimburse)
+                let approvedReqs: CrewRequest[] = [];
+                try {
+                    const requests = await fetchRequests(wsId);
+                    const periodStartStr = period.start.toISOString().split("T")[0];
+                    const periodEndStr = period.end.toISOString().split("T")[0];
+
+                    approvedReqs = requests.filter(r => {
+                        if (r.status !== "APPROVED") return false;
+                        if (r.type !== "KASBON" && r.type !== "REIMBURSE") return false;
+
+                        // Match project if projectSuffix is selected
+                        if (projectSuffix) {
+                            const reqProj = r.projectCode ? formatProjectCode(r.projectCode) : undefined;
+                            if (reqProj && reqProj !== projectSuffix) return false;
+                        }
+
+                        // Match date range
+                        const reqDate = r.startDate || r.createdAt.split("T")[0];
+                        return reqDate >= periodStartStr && reqDate <= periodEndStr;
+                    });
+                } catch (err) {
+                    console.error("Error loading requests for payroll:", err);
+                }
+
+                // 4. Identify relevant crew (those who have logs, approved requests, OR are currently assigned)
                 const crewIdsWithLogs = new Set(allLogs.map(l => l.crewId));
+                const crewIdsWithReqs = new Set(approvedReqs.map(r => r.crewId));
                 const currentlyAssigned = projectSuffix 
                     ? allMembers.filter(m => m.currentProjectCode && (
                         formatProjectCode(m.currentProjectCode) === projectSuffix ||
@@ -266,6 +292,7 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
 
                 const relevantCrew = allMembers.filter(m => 
                     crewIdsWithLogs.has(m.id) || 
+                    crewIdsWithReqs.has(m.id) ||
                     (projectSuffix ? currentlyAssigned.some(ca => ca.id === m.id) : true)
                 );
 
@@ -275,7 +302,7 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                     return;
                 }
 
-                // 3. Aggregate
+                // 5. Aggregate
                 const payrollMap = new Map<string, PayrollEntry>();
 
                 relevantCrew.forEach(crew => {
@@ -321,29 +348,17 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                     entry.otPay += (log.ot1Hours * crew.otRate1) + (log.ot2Hours * crew.otRate2) + (log.ot3Hours * crew.otRate3);
                 });
 
-                // 4. Load Requests (Kasbon & Reimburse)
-                try {
-                    const requests = await fetchRequests(wsId);
-                    const approvedReqs = requests.filter(r =>
-                        r.status === "APPROVED" &&
-                        (r.type === "KASBON" || r.type === "REIMBURSE") &&
-                        new Date(r.createdAt) >= period.start &&
-                        new Date(r.createdAt) <= period.end
-                    );
+                // Aggregate Approved Requests (Kasbon & Reimburse)
+                approvedReqs.forEach(req => {
+                    const entry = payrollMap.get(req.crewId);
+                    if (!entry) return;
 
-                    approvedReqs.forEach(req => {
-                        const entry = payrollMap.get(req.crewId);
-                        if (!entry) return;
-
-                        if (req.type === "KASBON") {
-                            entry.kasbon += (req.amount || 0);
-                        } else if (req.type === "REIMBURSE") {
-                            entry.reimburse += (req.amount || 0);
-                        }
-                    });
-                } catch (err) {
-                    console.error("Error loading requests for payroll:", err);
-                }
+                    if (req.type === "KASBON") {
+                        entry.kasbon += (req.amount || 0);
+                    } else if (req.type === "REIMBURSE") {
+                        entry.reimburse += (req.amount || 0);
+                    }
+                });
 
                 // Finalize Totals
                 const results = Array.from(payrollMap.values()).map(e => ({
