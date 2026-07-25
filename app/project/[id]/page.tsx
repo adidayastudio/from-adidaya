@@ -846,7 +846,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 sidebar={<ProjectDetailLocalSidebar activeTab={activeTab} setActiveTab={setActiveTab} projectId={id} router={router} />}
                 isTransparent={true}
             >
-                <div className="space-y-6 max-w-4xl mx-auto">
+                <div className={clsx(
+                    "space-y-6 max-w-4xl mx-auto px-4 lg:px-0",
+                    activeTab !== "overview" ? "pt-24 lg:pt-0" : "pt-0"
+                )}>
                     {/* Cover Photo - only on Overview */}
                     {activeTab === "overview" && (
                     <div className="relative w-full h-[240px] md:h-[280px] rounded-3xl overflow-hidden mb-6 shadow-sm border border-neutral-100 dark:border-neutral-800/20 bg-neutral-100 dark:bg-neutral-800 group">
@@ -887,7 +890,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <div className="space-y-6">
                         {/* Sticky Inner Tabs (Mobile Only) */}
                         <div className={clsx(
-                            "lg:hidden z-[40] flex overflow-x-auto hide-scrollbar bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl p-[2px] border border-white/20 dark:border-white/5 shadow-md rounded-[24px] mb-4"
+                            "lg:hidden z-[40] flex overflow-x-auto hide-scrollbar bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl p-1 gap-1 border border-white/20 dark:border-white/5 shadow-md rounded-[24px] mb-4"
                         )}>
                             {innerTabs.map((tab) => {
                                 const Icon = tab.icon;

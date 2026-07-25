@@ -34,7 +34,7 @@ export default function ProjectFinancePage() {
                     { label: "Finance" }
                 ]}
             >
-                <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-500">
+                <div className="space-y-6 max-w-4xl mx-auto px-4 lg:px-0 animate-in fade-in duration-500">
                     {/* Tab Navigation */}
                     <div className="flex items-center gap-2 border-b border-neutral-200 pb-3 overflow-x-auto no-scrollbar">
                         {tabs.map((tab) => {
