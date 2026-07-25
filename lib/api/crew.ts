@@ -702,26 +702,51 @@ export async function fetchRequests(workspaceId: string, projectId?: string): Pr
 }
 
 export async function createRequest(request: Partial<CrewRequest>) {
-    const { data, error } = await supabase
-        .from("crew_requests")
-        .insert({
-            workspace_id: request.workspaceId,
-            crew_id: request.crewId,
-            project_code: request.projectCode || null,
-            type: request.type,
-            amount: request.amount,
-            start_date: request.startDate,
-            end_date: request.endDate,
-            reason: request.reason,
-            proof_url: request.proofUrl,
-            status: "PENDING",
-            created_by: request.createdBy
-        })
-        .select()
-        .single();
+    try {
+        const { data, error } = await supabase
+            .from("crew_requests")
+            .insert({
+                workspace_id: request.workspaceId,
+                crew_id: request.crewId,
+                project_code: request.projectCode || null,
+                type: request.type,
+                amount: request.amount,
+                start_date: request.startDate,
+                end_date: request.endDate,
+                reason: request.reason,
+                proof_url: request.proofUrl,
+                status: "PENDING",
+                created_by: request.createdBy
+            })
+            .select()
+            .single();
 
-    if (error) throw error;
-    return data;
+        if (error) throw error;
+        return data;
+    } catch (err: any) {
+        if (err.message?.includes("project_code") || err.code === "PGRST204" || err.message?.includes("cache")) {
+            console.warn("⚠️ Column project_code not found in crew_requests, falling back to inserting without it.");
+            const { data, error } = await supabase
+                .from("crew_requests")
+                .insert({
+                    workspace_id: request.workspaceId,
+                    crew_id: request.crewId,
+                    type: request.type,
+                    amount: request.amount,
+                    start_date: request.startDate,
+                    end_date: request.endDate,
+                    reason: request.reason,
+                    proof_url: request.proofUrl,
+                    status: "PENDING",
+                    created_by: request.createdBy
+                })
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
+        throw err;
+    }
 }
 
 export async function updateRequest(id: string, updates: Partial<CrewRequest>) {
@@ -735,14 +760,30 @@ export async function updateRequest(id: string, updates: Partial<CrewRequest>) {
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.projectCode !== undefined) updateData.project_code = updates.projectCode;
 
-    const { data, error } = await supabase
-        .from("crew_requests")
-        .update(updateData)
-        .eq("id", id)
-        .select()
-        .single();
-    if (error) throw error;
-    return data;
+    try {
+        const { data, error } = await supabase
+            .from("crew_requests")
+            .update(updateData)
+            .eq("id", id)
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    } catch (err: any) {
+        if (err.message?.includes("project_code") || err.code === "PGRST204" || err.message?.includes("cache")) {
+            console.warn("⚠️ Column project_code not found in crew_requests, falling back to updating without it.");
+            delete updateData.project_code;
+            const { data, error } = await supabase
+                .from("crew_requests")
+                .update(updateData)
+                .eq("id", id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
+        throw err;
+    }
 }
 
 export async function deleteDailyLogsForDate(crewId: string, date: string) {

@@ -35,7 +35,7 @@ async function runSQL(sqlFile: string) {
                 "Authorization": `Bearer ${supabaseKey}`,
                 "Prefer": "return=representation"
             },
-            body: JSON.stringify({ query: sqlContent })
+            body: JSON.stringify({ sql: sqlContent })
         });
 
         const result = await response.text();
