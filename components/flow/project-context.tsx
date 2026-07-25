@@ -32,7 +32,7 @@ import { buildWBSTree, type WBSNode } from "@/lib/flow/mappers/wbs-tree";
 // TYPES
 // ============================================
 
-type ProjectRow = Awaited<ReturnType<typeof fetchProject>>;
+type ProjectRow = Awaited<ReturnType<typeof fetchProject>> & { code?: string; name?: string };
 type StageRow = Awaited<ReturnType<typeof fetchProjectStages>>[number];
 type RABVersionRow = Awaited<ReturnType<typeof fetchRABVersions>>[number];
 type ScheduleVersionRow = Awaited<ReturnType<typeof fetchScheduleVersions>>[number];
@@ -125,7 +125,15 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
                     fetchScheduleVersions(realProjectId).catch(() => []),
                 ]);
 
-            setProject(projectData);
+            if (projectData) {
+                setProject({
+                    ...projectData,
+                    code: `${projectData.project_number}-${projectData.project_code}`,
+                    name: projectData.project_name
+                });
+            } else {
+                setProject(null);
+            }
             if (typeof window !== 'undefined' && projectData) {
                 sessionStorage.setItem('project_name_' + projectData.id, projectData.project_name || "");
                 if (projectId && projectId !== projectData.id) {

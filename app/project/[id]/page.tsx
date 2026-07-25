@@ -78,6 +78,7 @@ import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { ProjectProvider } from "@/components/flow/project-context";
 import { fetchPeopleDirectory } from "@/lib/api/people";
 import GlobalDirectory from "@/components/feel/people/GlobalDirectory";
+import ProjectDetailDocsContent from "@/components/flow/projects/project-detail/docs/ProjectDetailDocsContent";
 
 import ProjectDetailHeader from "@/components/flow/projects/project-detail/ProjectDetailHeader";
 import { mapProjectToHeader } from "@/lib/flow/mappers/project-header";
@@ -95,7 +96,6 @@ function ProjectDetailLocalSidebar({
     router: any;
 }) {
     const [planningOpen, setPlanningOpen] = useState(false);
-    const [workOpen, setWorkOpen] = useState(true);
 
     const basePath = `/project/${projectId}`;
 
@@ -125,94 +125,47 @@ function ProjectDetailLocalSidebar({
                     <span className="truncate">Overview</span>
                 </button>
 
-                {/* Planning Accordion */}
-                <div>
-                    <button
-                        onClick={() => setPlanningOpen((v) => !v)}
-                        className="w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
-                    >
-                        <Calendar className="w-4 h-4 shrink-0 text-neutral-400" />
-                        <span className="flex-1 truncate">Planning</span>
-                        <ChevronDown
-                            className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", planningOpen && "rotate-180")}
-                        />
-                    </button>
-
-                    {planningOpen && (
-                        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                            {PLANNING_ITEMS.map((item) => (
-                                <Link
-                                    key={item.label}
-                                    href={item.href}
-                                    className="w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
-                                >
-                                    <item.icon className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
-                                    <span className="truncate">{item.label}</span>
-                                </Link>
-                            ))}
-                        </div>
+                {/* Activity */}
+                <button
+                    onClick={() => setActiveTab("activity")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "activity"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                     )}
-                </div>
-
-                {/* Work Accordion */}
-                <div>
-                    <button
-                        onClick={() => setWorkOpen((v) => !v)}
-                        className={clsx(
-                            "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
-                            activeTab === "tracking" || activeTab === "activity"
-                                ? "text-neutral-900 dark:text-white font-semibold"
-                                : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
-                        )}
-                    >
-                        <Activity className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "tracking" || activeTab === "activity" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-                        <span className="flex-1 truncate">Work</span>
-                        <ChevronDown
-                            className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", workOpen && "rotate-180")}
-                        />
-                    </button>
-
-                    {workOpen && (
-                        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                            {/* Tracking */}
-                            <button
-                                onClick={() => setActiveTab("tracking")}
-                                className={clsx(
-                                    "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
-                                    activeTab === "tracking"
-                                        ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                                        : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
-                                )}
-                            >
-                                <Target className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", activeTab === "tracking" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-                                <span className="truncate">Tracking</span>
-                            </button>
-
-                            {/* Activity */}
-                            <button
-                                onClick={() => setActiveTab("activity")}
-                                className={clsx(
-                                    "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
-                                    activeTab === "activity"
-                                        ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                                        : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
-                                )}
-                            >
-                                <Activity className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", activeTab === "activity" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-                                <span className="truncate">Activity</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Documents */}
-                <Link
-                    href={`${basePath}/docs`}
-                    className="w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
                 >
-                    <FileText className="w-4 h-4 shrink-0 text-neutral-400" />
-                    <span className="truncate font-medium">Documents</span>
-                </Link>
+                    <Activity className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "activity" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate">Activity</span>
+                </button>
+
+                {/* Tracking */}
+                <button
+                    onClick={() => setActiveTab("tracking")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "tracking"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    )}
+                >
+                    <Target className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "tracking" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate">Tracking</span>
+                </button>
+
+                {/* Document */}
+                <button
+                    onClick={() => setActiveTab("document")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "document"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    )}
+                >
+                    <FileText className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "document" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate font-medium">Document</span>
+                </button>
 
                 {/* Finance */}
                 <button
@@ -226,6 +179,20 @@ function ProjectDetailLocalSidebar({
                 >
                     <Banknote className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "finance" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
                     <span className="truncate">Finance</span>
+                </button>
+
+                {/* Crew */}
+                <button
+                    onClick={() => setActiveTab("crew")}
+                    className={clsx(
+                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                        activeTab === "crew"
+                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    )}
+                >
+                    <ClipboardList className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "crew" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <span className="truncate">Crew</span>
                 </button>
 
                 {/* Resources */}
@@ -256,21 +223,6 @@ function ProjectDetailLocalSidebar({
                     <span className="truncate">People</span>
                 </button>
 
-
-                {/* Crew */}
-                <button
-                    onClick={() => setActiveTab("crew")}
-                    className={clsx(
-                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
-                        activeTab === "crew"
-                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
-                    )}
-                >
-                    <ClipboardList className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "crew" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-                    <span className="truncate">Crew</span>
-                </button>
-
                 {/* Reports */}
                 <button
                     onClick={() => setActiveTab("reports")}
@@ -284,6 +236,35 @@ function ProjectDetailLocalSidebar({
                     <FileSpreadsheet className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "reports" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
                     <span className="truncate font-medium">Reports</span>
                 </button>
+
+                {/* Planning Accordion */}
+                <div className="pt-2">
+                    <button
+                        onClick={() => setPlanningOpen((v) => !v)}
+                        className="w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    >
+                        <Settings className="w-4 h-4 shrink-0 text-neutral-400" />
+                        <span className="flex-1 truncate">Project Settings</span>
+                        <ChevronDown
+                            className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", planningOpen && "rotate-180")}
+                        />
+                    </button>
+
+                    {planningOpen && (
+                        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                            {PLANNING_ITEMS.map((item) => (
+                                <Link
+                                    key={item.label}
+                                    href={item.href}
+                                    className="w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                                >
+                                    <item.icon className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
+                                    <span className="truncate">{item.label}</span>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </aside>
     );
@@ -718,13 +699,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     };
 
     const innerTabs = [
-        { id: "overview", label: "Overview", icon: FileText },
+        { id: "overview", label: "Overview", icon: LayoutDashboard },
         { id: "activity", label: "Activity", icon: Activity },
         { id: "tracking", label: "Tracking", icon: Target },
+        { id: "document", label: "Document", icon: FileText },
         { id: "finance", label: "Finance", icon: Banknote },
+        { id: "crew", label: "Crew", icon: ClipboardList },
         { id: "resources", label: "Resources", icon: Package },
         { id: "people", label: "People", icon: Users },
-        { id: "crew", label: "Crew", icon: ClipboardList },
         { id: "reports", label: "Reports", icon: FileSpreadsheet },
     ];
 
@@ -1215,6 +1197,13 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             )}
                         </div>
                     </div>
+
+                    {/* DOCUMENT TAB */}
+                    {activeTab === "document" && (
+                        <div className="animate-in fade-in duration-300 pb-12">
+                            <ProjectDetailDocsContent project={projectForComponents as any} />
+                        </div>
+                    )}
 
                     {/* FINANCE TAB */}
                     {activeTab === "finance" && (
