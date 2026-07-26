@@ -47,6 +47,8 @@ function EditorContentComponent() {
     const paramType = searchParams.get("type") as "daily" | "weekly" | "monthly" | null;
     const paramId = searchParams.get("id");
     const paramProjectId = searchParams.get("projectId");
+    const paramExport = searchParams.get("export") === "true";
+    const paramRevise = searchParams.get("revise") === "true";
 
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -256,17 +258,32 @@ function EditorContentComponent() {
                         } else {
                             setEditorContent(data.content || "");
                         }
+
+                        if (paramRevise) {
+                            setReportId(null);
+                            try {
+                                const parsed = data.content ? JSON.parse(data.content || "{}") : {};
+                                const curRev = parseInt(parsed.revision || "00", 10);
+                                const nextRev = String(isNaN(curRev) ? 1 : curRev + 1).padStart(2, "0");
+                                setRevision(nextRev);
+                            } catch(e) {}
+                        }
                     }
                 } catch (err) {
                     console.error("Error loading report details:", err);
                     alert("Error loading report details");
                 } finally {
                     setIsLoading(false);
+                    if (paramExport) {
+                        setTimeout(() => {
+                            handleExportPdf();
+                        }, 500);
+                    }
                 }
             };
             fetchReportDetails();
         }
-    }, [paramId]);
+    }, [paramId, paramRevise, paramExport]);
 
     // Date validation (No future dates allowed)
     useEffect(() => {
