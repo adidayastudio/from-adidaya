@@ -342,6 +342,8 @@ export interface ProjectReport {
 
     content?: string; // Markdown supported
 
+    reportType?: "daily" | "weekly" | "monthly";
+
     createdBy?: string;
     createdAt: string;
     updatedAt: string;

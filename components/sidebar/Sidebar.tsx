@@ -33,6 +33,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  FileText,
 
   Menu,
   X,
@@ -61,6 +62,7 @@ const menuItems: MenuSection[] = [
     items: [
       { label: "Finance", href: "/flow/finance", icon: Banknote },
       { label: "Resources", href: "/flow/resources", icon: Package },
+      { label: "Reports", href: "/flow/reports", icon: FileText },
       { label: "People", href: "/feel/people", icon: Users },
       { label: "Clock", href: "/feel/clock", icon: Clock },
       { label: "Crew", href: "/feel/crew", icon: HardHat },

@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { CreditCard, Package, User, Clock, Users, Compass, MessageCircle, BookOpen } from "lucide-react";
+import { CreditCard, Package, User, Clock, Users, Compass, MessageCircle, BookOpen, FileText } from "lucide-react";
 import clsx from "clsx";
 
 const APPS = [
     { label: "Finance", href: "/flow/finance", icon: CreditCard, color: "from-red-500/40 to-red-500/20 dark:from-red-500/30 dark:to-neutral-900", iconColor: "text-red-500", border: "border-red-500/20 dark:border-red-500/30" },
     { label: "Resources", href: "/flow/resources", icon: Package, color: "from-orange-500/40 to-orange-500/20 dark:from-orange-500/30 dark:to-neutral-900", iconColor: "text-orange-500", border: "border-orange-500/20 dark:border-orange-500/30" },
+    { label: "Reports", href: "/flow/reports", icon: FileText, color: "from-blue-500/40 to-blue-500/20 dark:from-blue-500/30 dark:to-neutral-900", iconColor: "text-blue-500", border: "border-blue-500/20 dark:border-blue-500/30" },
     { label: "People", href: "/feel/people", icon: User, color: "from-green-500/40 to-green-500/20 dark:from-green-500/30 dark:to-neutral-900", iconColor: "text-green-500", border: "border-green-500/20 dark:border-green-500/30" },
     { label: "Clock", href: "/feel/clock", icon: Clock, color: "from-sky-500/40 to-sky-500/20 dark:from-sky-500/30 dark:to-neutral-900", iconColor: "text-sky-500", border: "border-sky-500/20 dark:border-sky-500/30" },
     { label: "Crew", href: "/feel/crew", icon: Users, color: "from-purple-500/40 to-purple-500/20 dark:from-purple-500/30 dark:to-neutral-900", iconColor: "text-purple-500", border: "border-purple-500/20 dark:border-purple-500/30" },
