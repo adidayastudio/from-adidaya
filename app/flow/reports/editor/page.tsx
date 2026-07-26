@@ -584,19 +584,19 @@ function EditorContentComponent() {
     }, [dayNumber, totalDays]);
 
     const REPORT_PREFIX_MAP: Record<string, { code: string; title: string }> = {
-        daily: { code: "LH", title: "Laporan Harian" },
-        weekly: { code: "LM", title: "Laporan Mingguan" },
-        monthly: { code: "LB", title: "Laporan Bulanan" },
+        daily: { code: "RDL", title: "Laporan Harian" },
+        weekly: { code: "RWK", title: "Laporan Mingguan" },
+        monthly: { code: "RMN", title: "Laporan Bulanan" },
         schedule: { code: "SCH", title: "Schedule & Kurva-S" },
         cost: { code: "CST", title: "Cost & Budget Realization" },
-        manpower: { code: "MP", title: "Manpower & Payroll" },
+        manpower: { code: "CRW", title: "Manpower & Payroll (Crew)" },
         procurement: { code: "PRC", title: "Procurement & Stock" },
-        quality: { code: "QC", title: "Quality Control (QA/QC)" },
+        quality: { code: "QAC", title: "Quality Control (QA/QC)" },
         safety: { code: "HSE", title: "Safety & K3 Report" },
         issue_risk: { code: "IRK", title: "Issue & Risk Register" },
-        doc_control: { code: "DCR", title: "Document Control Register" },
-        change_order: { code: "VO", title: "Variation Order (Change Order)" },
-        executive: { code: "EXC", title: "Executive Summary Report" },
+        doc_control: { code: "DOC", title: "Document Control Register" },
+        change_order: { code: "CCO", title: "Contract Change Order (VO)" },
+        executive: { code: "EXE", title: "Executive Summary Report" },
         site_survey: { code: "SUR", title: "Site Survey & Field Investigation" },
         mom: { code: "MOM", title: "Minute of Meeting (Notula Rapat)" },
         mou_contract: { code: "MOU", title: "MOU & Contract Agreement" },
@@ -604,6 +604,11 @@ function EditorContentComponent() {
         punch_list: { code: "PCH", title: "Punch List & BAST Handover" },
         commissioning: { code: "COM", title: "Commissioning & Testing" },
         environmental: { code: "ENV", title: "Environmental Management" },
+        // Module codes
+        finance: { code: "FIN", title: "Finance & Accounting" },
+        resources: { code: "RSC", title: "Resources Register" },
+        people: { code: "PPL", title: "People & HR Register" },
+        clock: { code: "CLK", title: "Clock & Attendance" },
     };
 
     const getReportMeta = (type: string) => {
@@ -623,16 +628,16 @@ function EditorContentComponent() {
             if (!isDocIdManuallyEdited) {
                 const weekVal = getWeekOfYear(reportDate);
                 const dayOfWeekVal = getDayOfWeekNumber(reportDate);
-                setDocumentId(`LH-${weekVal}-${dayOfWeekVal}`);
+                setDocumentId(`RDL-${weekVal}-${dayOfWeekVal}`);
             }
             if (!isTitleManuallyEdited) {
                 const dayVal = dayNumber || "1";
-                setTitle(`LH - ${currentProj.project_code || currentProj.name} - H${dayVal}`);
+                setTitle(`RDL - ${currentProj.project_code || currentProj.name} - H${dayVal}`);
             }
         } else if (reportType === "weekly") {
             const formattedWeek = weekNumber ? weekNumber.padStart(2, "0") : "01";
             if (!isDocIdManuallyEdited) {
-                setDocumentId(`LM-${formattedWeek}-01`);
+                setDocumentId(`RWK-${formattedWeek}-01`);
             }
             if (!isTitleManuallyEdited) {
                 setTitle(`Laporan Mingguan ${formattedWeek} - ${currentProj.project_code || currentProj.name}`);
@@ -640,7 +645,7 @@ function EditorContentComponent() {
         } else if (reportType === "monthly") {
             const formattedMonth = monthNumber ? monthNumber.padStart(2, "0") : "01";
             if (!isDocIdManuallyEdited) {
-                setDocumentId(`LB-${formattedMonth}-01`);
+                setDocumentId(`RMN-${formattedMonth}-01`);
             }
             if (!isTitleManuallyEdited) {
                 setTitle(`Laporan Bulanan ${formattedMonth} - ${currentProj.project_code || currentProj.name}`);
@@ -682,18 +687,18 @@ function EditorContentComponent() {
         if (reportType === "monthly") {
             const month = monthNumber ? monthNumber.padStart(2, "0") : "01";
             if (!isDocIdManuallyEdited || !documentId) {
-                return `LB-${month}-${pageStr}`;
+                return `RMN-${month}-${pageStr}`;
             }
         } else if (reportType === "weekly") {
             const week = weekNumber ? weekNumber.padStart(2, "0") : "01";
             if (!isDocIdManuallyEdited || !documentId) {
-                return `LM-${week}-${pageStr}`;
+                return `RWK-${week}-${pageStr}`;
             }
         } else if (reportType === "daily") {
             if (!isDocIdManuallyEdited || !documentId) {
                 const weekVal = getWeekOfYear(reportDate);
                 const dayOfWeekVal = getDayOfWeekNumber(reportDate);
-                return `LH-${weekVal}-${dayOfWeekVal}`;
+                return `RDL-${weekVal}-${dayOfWeekVal}`;
             }
         } else {
             const week = weekNumber ? weekNumber.padStart(2, "0") : "01";
@@ -2429,7 +2434,7 @@ function EditorContentComponent() {
                                 
                                 {/* ---------------- LH PAGE 1 ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3 border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("LH", documentId || "LH-00-01", "Laporan Harian")}
+                                    {renderPageHeader("RDL", documentId || "RDL-00-01", "Laporan Harian")}
 
                                     {/* Date Meta */}
                                     <div className="grid grid-cols-5 border border-neutral-300 rounded overflow-hidden text-center">
@@ -2664,7 +2669,7 @@ function EditorContentComponent() {
                                 {/* ---------------- PAGE 1: COVER (LM-XX-01 / LB-XX-01) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
                                     
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(1), reportType === "monthly" ? "Laporan Bulanan" : "Laporan Mingguan")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(1), reportType === "monthly" ? "Laporan Bulanan" : "Laporan Mingguan")}
 
                                     {/* Center Title Box */}
                                     <div className="text-center my-auto space-y-4 px-4 py-12">
@@ -2705,7 +2710,7 @@ function EditorContentComponent() {
                                 {/* ---------------- PAGE 2: EXECUTIVE SUMMARY (LM-XX-02 / LB-XX-02) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
                                     
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(2), reportType === "monthly" ? "Executive Summary Bulanan" : "Executive Summary")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(2), reportType === "monthly" ? "Executive Summary Bulanan" : "Executive Summary")}
                                     {renderWeeklyDateMetaRow()}
 
                                     {/* Section Banner */}
@@ -2839,7 +2844,7 @@ function EditorContentComponent() {
 
                                 {/* ---------------- PAGE 3: WBS (LM-XX-03 / LB-XX-03) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(3), "Work Breakdown Structure")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(3), "Work Breakdown Structure")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2863,7 +2868,7 @@ function EditorContentComponent() {
 
                                 {/* ---------------- PAGE 4: KURVA S (LM-XX-04 / LB-XX-04) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(4), "Kurva S")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(4), "Kurva S")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2887,7 +2892,7 @@ function EditorContentComponent() {
 
                                 {/* ---------------- PAGE 5: KEGIATAN PEKERJAAN (LM-XX-05 / LB-XX-05) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(5), "Kegiatan Pekerjaan")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(5), "Kegiatan Pekerjaan")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2962,7 +2967,7 @@ function EditorContentComponent() {
 
                                 {/* ---------------- PAGE 6: LAPORAN PERSONEL (LM-XX-06 / LB-XX-06) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(6), "Laporan Personel")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(6), "Laporan Personel")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -3080,7 +3085,7 @@ function EditorContentComponent() {
 
                                 {/* ---------------- PAGE 7: LAPORAN CUACA (LM-XX-07 / LB-XX-07) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(7), "Laporan Cuaca")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(7), "Laporan Cuaca")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -3206,7 +3211,7 @@ function EditorContentComponent() {
 
                                 {/* ---------------- PAGE 8: LAPORAN KENDALA (LM-XX-08 / LB-XX-08) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(8), "Laporan Kendala")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(8), "Laporan Kendala")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -3243,7 +3248,7 @@ function EditorContentComponent() {
 
                                 {/* ---------------- PAGE 9: DOKUMENTASI (LM-XX-09 / LB-XX-09) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(9), "Dokumentasi Pekerjaan")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(9), "Dokumentasi Pekerjaan")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -3271,7 +3276,7 @@ function EditorContentComponent() {
 
                                 {/* ---------------- PAGE 10: LAMPIRAN (LM-XX-10 / LB-XX-10) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(10), reportType === "monthly" ? "Lampiran Laporan Mingguan / Harian" : "Lampiran Laporan Harian")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(10), reportType === "monthly" ? "Lampiran Laporan Mingguan / Harian" : "Lampiran Laporan Harian")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
