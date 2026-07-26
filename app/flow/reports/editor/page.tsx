@@ -1323,51 +1323,95 @@ function EditorContentComponent() {
         } catch(e) { return "-"; }
     };
 
+    const REPORT_BILINGUAL_TITLES: Record<string, { en: string; id: string }> = {
+        RDL: { en: "DAILY REPORT", id: "Laporan Harian" },
+        RWK: { en: "WEEKLY REPORT", id: "Laporan Mingguan" },
+        RMN: { en: "MONTHLY REPORT", id: "Laporan Bulanan" },
+        SCH: { en: "SCHEDULE & S-CURVE", id: "Jadwal & Kurva-S" },
+        CST: { en: "COST & BUDGET REPORT", id: "Realisasi Biaya & RAB" },
+        CRW: { en: "MANPOWER & PAYROLL", id: "Tenaga Kerja & Penggajian" },
+        PRC: { en: "PROCUREMENT & STOCK", id: "Pengadaan & Stok Material" },
+        QAC: { en: "QUALITY CONTROL (QA/QC)", id: "Mutu & Inspeksi Pekerjaan" },
+        HSE: { en: "HEALTH SAFETY ENVIRONMENT", id: "Keselamatan & K3 Lapangan" },
+        IRK: { en: "ISSUE & RISK REGISTER", id: "Register Isu & Risiko Proyek" },
+        DOC: { en: "DOCUMENT CONTROL REGISTER", id: "Register Kontrol Dokumen" },
+        CCO: { en: "CONTRACT CHANGE ORDER", id: "Perubahan Kontrak & VO" },
+        EXE: { en: "EXECUTIVE SUMMARY", id: "Ringkasan Eksekutif" },
+        SUR: { en: "SITE SURVEY & FIELD LOG", id: "Survei & Investigasi Lapangan" },
+        MOM: { en: "MINUTE OF MEETING", id: "Notula & Risalah Rapat" },
+        MOU: { en: "MOU & CONTRACT AGREEMENT", id: "Kesepakatan & Kontrak Kerja" },
+        MEM: { en: "MEMO & FIELD NOTICE", id: "Memo & Surat Dinas Lapangan" },
+        PCH: { en: "PUNCH LIST & BAST HANDOVER", id: "Daftar Temuan & Serah Terima" },
+        COM: { en: "COMMISSIONING & TESTING", id: "Pengujian & Commissioning" },
+        ENV: { en: "ENVIRONMENTAL MANAGEMENT", id: "Pengelolaan Lingkungan Proyek" },
+        FIN: { en: "FINANCE & ACCOUNTING", id: "Keuangan & Akuntansi" },
+        RSC: { en: "RESOURCES REGISTER", id: "Register Sumber Daya" },
+        PPL: { en: "PEOPLE & HR REGISTER", id: "Register SDM & Personel" },
+        CLK: { en: "CLOCK & ATTENDANCE LOG", id: "Log Presensi & Kehadiran" },
+    };
+
     // Shared Header Renderer for Adidaya Document Standard
-    const renderPageHeader = (headerTypeLabel: string, pageDocCode: string, subLabel: string) => (
-        <div className="flex items-center gap-4 border-b-2 border-neutral-900 pb-3">
-            {/* Left: Logo */}
-            <div className="flex items-center shrink-0">
-                <img src="/logo-adidaya-red.svg" alt="Adidaya" className="h-8 w-auto object-contain filter brightness-0" />
-            </div>
+    const renderPageHeader = (headerTypeLabel: string, pageDocCode: string, subLabel: string) => {
+        const bTitle = REPORT_BILINGUAL_TITLES[headerTypeLabel] || {
+            en: subLabel ? subLabel.toUpperCase() : "PROJECT REPORT",
+            id: subLabel || "Laporan Proyek",
+        };
 
-            {/* Center: Project Info */}
-            <div className="flex-1 pl-4 border-l border-neutral-300 space-y-0.5">
-                <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest">Proyek</div>
-                <div className="flex items-center gap-2">
-                    {currentProject?.project_code && (
-                        <span className="inline-block px-1.5 py-0.5 bg-neutral-900 text-white text-[7px] font-black uppercase tracking-widest rounded-sm leading-none shrink-0">
-                            {currentProject.project_code}
+        return (
+            <div className="flex items-center gap-4 border-b-2 border-neutral-900 pb-3">
+                {/* Left: Logo */}
+                <div className="flex items-center shrink-0">
+                    <img src="/logo-adidaya-red.svg" alt="Adidaya" className="h-8 w-auto object-contain filter brightness-0" />
+                </div>
+
+                {/* Center: Project Info */}
+                <div className="flex-1 pl-4 border-l border-neutral-300 space-y-0.5">
+                    <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest">Proyek</div>
+                    <div className="flex items-center gap-2">
+                        {currentProject?.project_code && (
+                            <span className="inline-block px-1.5 py-0.5 bg-neutral-900 text-white text-[7px] font-black uppercase tracking-widest rounded-sm leading-none shrink-0">
+                                {currentProject.project_code}
+                            </span>
+                        )}
+                        <span className="font-extrabold text-[11px] text-neutral-900 tracking-tight uppercase leading-tight">
+                            {currentProject?.name || "NAMA PROYEK"}
                         </span>
-                    )}
-                    <span className="font-extrabold text-[11px] text-neutral-900 tracking-tight uppercase leading-tight">
-                        {currentProject?.name || "NAMA PROYEK"}
-                    </span>
+                    </div>
+                    <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest pt-1">Lokasi</div>
+                    <div className="text-[8px] font-semibold text-neutral-700 uppercase leading-tight">
+                        {locationOverride || currentProject?.location || "—"}
+                    </div>
+                    <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest pt-1">Tahap Pekerjaan</div>
+                    <div className="text-[7.5px] font-bold text-neutral-800 uppercase leading-tight">{workPackage || "—"}</div>
                 </div>
-                <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest pt-1">Lokasi</div>
-                <div className="text-[8px] font-semibold text-neutral-700 uppercase leading-tight">
-                    {locationOverride || currentProject?.location || "—"}
-                </div>
-                <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest pt-1">Tahap Pekerjaan</div>
-                <div className="text-[7.5px] font-bold text-neutral-800 uppercase leading-tight">{workPackage || "—"}</div>
-            </div>
 
-            {/* Right: Stamp Box */}
-            <div className="w-[130px] shrink-0 border border-neutral-300 rounded-sm flex flex-col items-center justify-between p-2 text-center bg-neutral-50/50">
-                <div className="font-black text-[34px] text-neutral-900 leading-none tracking-tighter">{headerTypeLabel}</div>
-                <div className="text-[5px] font-black text-neutral-500 uppercase tracking-[0.15em] leading-none">{subLabel}</div>
-                <div className="w-full border-t border-neutral-300 my-1" />
-                <div className="font-black text-[12px] text-neutral-900 tracking-tight leading-none">{pageDocCode}</div>
-                <div className="w-full border-t border-neutral-200 my-1" />
-                <div className="w-full grid grid-cols-2 gap-x-1 text-[5px] text-neutral-500">
-                    <span className="text-left font-bold">TGL LAPORAN</span>
-                    <span className="text-right font-bold">REV</span>
-                    <span className="text-left font-black text-neutral-800">{getDayDateOnly()}</span>
-                    <span className="text-right font-black text-neutral-800">{revision || "00"}</span>
+                {/* Right: Stamp Box */}
+                <div className="w-[140px] shrink-0 border border-neutral-300 rounded-sm flex flex-col items-center justify-between p-2 text-center bg-neutral-50/50">
+                    <div className="font-black text-[30px] text-neutral-900 leading-none tracking-tighter">{headerTypeLabel}</div>
+                    
+                    {/* English Title (Top Line) */}
+                    <div className="text-[5.5px] font-black text-neutral-900 uppercase tracking-wider leading-tight pt-1">
+                        {bTitle.en}
+                    </div>
+                    
+                    {/* Indonesian Title (Bottom Line) */}
+                    <div className="text-[5px] font-semibold text-neutral-500 tracking-tight leading-tight">
+                        {bTitle.id}
+                    </div>
+
+                    <div className="w-full border-t border-neutral-300 my-1" />
+                    <div className="font-black text-[12px] text-neutral-900 tracking-tight leading-none">{pageDocCode}</div>
+                    <div className="w-full border-t border-neutral-200 my-1" />
+                    <div className="w-full grid grid-cols-2 gap-x-1 text-[5px] text-neutral-500">
+                        <span className="text-left font-bold">TGL LAPORAN</span>
+                        <span className="text-right font-bold">REV</span>
+                        <span className="text-left font-black text-neutral-800">{getDayDateOnly()}</span>
+                        <span className="text-right font-black text-neutral-800">{revision || "00"}</span>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     // Shared Date Meta Row Renderer
     const renderWeeklyDateMetaRow = () => (
