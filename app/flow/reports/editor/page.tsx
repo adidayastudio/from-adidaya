@@ -2224,45 +2224,6 @@ function EditorContentComponent() {
                         </>
                     )}
 
-                    {/* ==================== MONTHLY FORMS ==================== */}
-                    {reportType === "monthly" && (
-                        <div className="space-y-5">
-                            <Select
-                                label="Proyek *"
-                                value={selectedProjectId}
-                                onChange={(val) => setSelectedProjectId(val)}
-                                options={[
-                                    { value: "", label: "-- Pilih Proyek --" },
-                                    ...projects.map(p => ({ value: p.id, label: p.name }))
-                                ]}
-                                disabled={!!paramProjectId}
-                                required
-                            />
-                            <div className="grid grid-cols-2 gap-4">
-                                <Input label="Tanggal Laporan *" type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} required />
-                                <Input label="Progres Fisik (%) *" type="number" min={0} max={100} value={progress} onChange={(e) => setProgress(e.target.value)} required />
-                            </div>
-                            <Input label="Judul Laporan *" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Laporan Bulanan Progres Struktur" required />
-                            <Select
-                                label="Status *"
-                                value={status}
-                                onChange={(val) => setStatus(val as ReportStatus)}
-                                options={[
-                                    { value: "on-track", label: "On Track" },
-                                    { value: "delayed", label: "Delayed" },
-                                    { value: "critical", label: "Critical" },
-                                    { value: "completed", label: "Completed" },
-                                ]}
-                            />
-                            <div className="space-y-1.5 pt-2">
-                                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block">Deskripsi Laporan</label>
-                                <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden min-h-[300px]">
-                                    <RichTextEditor value={editorContent} onChange={setEditorContent} />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                 </div>
 
                 {/* Right Card: Live Document Preview */}
@@ -2982,35 +2943,6 @@ function EditorContentComponent() {
 
                                 </div>
 
-                            </div>
-                        )}
-
-                        {/* ===================== MONTHLY PREVIEW ===================== */}
-                        {reportType === "monthly" && (
-                            <div className="bg-white text-neutral-800 shadow-xl w-full p-8 flex flex-col justify-between" style={{ minHeight: "920px", fontFamily: "Arial, sans-serif" }}>
-                                <div>
-                                    <div className="border-b border-neutral-800 pb-3 mb-4 flex items-center justify-between">
-                                        <div className="flex items-center gap-2.5">
-                                            <img src="/logo-adidaya-red.svg" alt="Adidaya" className="w-5 h-5 object-contain filter brightness-0" />
-                                            <div>
-                                                <h1 className="font-black text-[11px] text-neutral-900 tracking-wider">ADIDAYA STUDIO</h1>
-                                                <p className="text-[6px] text-neutral-400 font-bold uppercase tracking-widest leading-none mt-0.5">Laporan Rekapitulasi Progres Bulanan</p>
-                                            </div>
-                                        </div>
-                                        <span className="inline-block px-2 py-0.5 text-[6px] font-black uppercase tracking-widest rounded bg-neutral-900 text-white leading-none">MONTHLY</span>
-                                    </div>
-                                    <div className="bg-neutral-50 p-2.5 rounded-lg border border-neutral-200 mb-4 grid grid-cols-2 gap-3 text-[7px] font-semibold text-neutral-600">
-                                        <div>
-                                            <span className="text-[5px] font-bold text-neutral-400 block uppercase">Proyek</span>
-                                            <span className="text-[8px] font-bold text-neutral-800 uppercase block">{currentProject?.name || "—"}</span>
-                                        </div>
-                                        <div>
-                                            <span className="text-[5px] font-bold text-neutral-400 block uppercase">Tanggal</span>
-                                            <span className="text-[8px] font-bold text-neutral-800 block">{getFormattedDate()}</span>
-                                        </div>
-                                    </div>
-                                    <div className="prose prose-sm max-w-none text-neutral-800 text-[8px] leading-relaxed" dangerouslySetInnerHTML={{ __html: editorContent || "<p>Belum ada isi laporan.</p>" }} />
-                                </div>
                             </div>
                         )}
 
