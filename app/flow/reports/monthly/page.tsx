@@ -171,11 +171,11 @@ export default function MonthlyReportsPage() {
     return (
         <div className="w-full space-y-6">
             <StandardPageHeader
-                title="Laporan Bulanan (LBL)"
-                subtitle="Daftar laporan rekapitulasi kemajuan fisik & dokumen proyek bulanan (LBL-XX-01 s.d. LBL-XX-10)."
+                title="Laporan Bulanan (LB)"
+                subtitle="Daftar laporan rekapitulasi kemajuan fisik & dokumen proyek bulanan (LB-XX-01 s.d. LB-XX-10)."
                 action={
                     <Button onClick={handleCreateClick} className="bg-neutral-900 hover:bg-black text-white font-bold text-xs" icon={<Plus className="w-4 h-4" />}>
-                        + Buat Laporan Bulanan (LBL)
+                        + Buat Laporan Bulanan (LB)
                     </Button>
                 }
             />
@@ -274,7 +274,7 @@ export default function MonthlyReportsPage() {
                             <tbody>
                                 {filteredReports.map((report) => {
                                     const pContent = report.parsedContent || {};
-                                    const docCode = pContent.documentId || "LBL-01-01";
+                                    const docCode = pContent.documentId || "LB-01-01";
                                     const rev = pContent.revision ? `REV ${pContent.revision}` : "REV 00";
                                     const startDateStr = pContent.startDate || report.reportDate;
                                     const endDateStr = pContent.endDate || "";

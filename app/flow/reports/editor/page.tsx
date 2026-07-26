@@ -55,6 +55,25 @@ interface PersonelWeeklyRow {
     minggu: number;
 }
 
+interface PersonelMonthlyRow {
+    role: string;
+    unit: string;
+    minggu1: number;
+    minggu2: number;
+    minggu3: number;
+    minggu4: number;
+    minggu5: number;
+}
+
+interface WeatherMonthlyRow {
+    condition: string;
+    minggu1Hours: number;
+    minggu2Hours: number;
+    minggu3Hours: number;
+    minggu4Hours: number;
+    minggu5Hours: number;
+}
+
 interface HourlyWeatherRow {
     hour: number;
     label: string;
@@ -219,6 +238,44 @@ function EditorContentComponent() {
         { role: "Security / Guard", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
     ];
     const [personelWeeklyGrid, setPersonelWeeklyGrid] = useState<PersonelWeeklyRow[]>(defaultPersonelRoles);
+
+    // Personel Monthly Grid Page (LB-XX-06)
+    const defaultPersonelMonthlyRoles: PersonelMonthlyRow[] = [
+        { role: "Project Manager", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Site Manager", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Supervisor / Field Engineer", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Quality Control (QC)", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Safety Officer / HSE", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Drafter / Quantity Surveyor", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Admin Proyek", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Logistik", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Mandor", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Tukang Batu / Sipil", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Tukang Kayu / Bekisting", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Tukang Besi / Pembesian", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Pekerja / Helper", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Operator Alat Berat", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+        { role: "Security / Guard", unit: "orang", minggu1: 0, minggu2: 0, minggu3: 0, minggu4: 0, minggu5: 0 },
+    ];
+    const [personelMonthlyGrid, setPersonelMonthlyGrid] = useState<PersonelMonthlyRow[]>(defaultPersonelMonthlyRoles);
+
+    // Weather Monthly Page (LB-XX-07)
+    const defaultWeatherMonthlyGrid: WeatherMonthlyRow[] = [
+        { condition: "Cerah (C)", minggu1Hours: 0, minggu2Hours: 0, minggu3Hours: 0, minggu4Hours: 0, minggu5Hours: 0 },
+        { condition: "Berawan (B)", minggu1Hours: 0, minggu2Hours: 0, minggu3Hours: 0, minggu4Hours: 0, minggu5Hours: 0 },
+        { condition: "Hujan (H)", minggu1Hours: 0, minggu2Hours: 0, minggu3Hours: 0, minggu4Hours: 0, minggu5Hours: 0 },
+    ];
+    const [weatherMonthlyGrid, setWeatherMonthlyGrid] = useState<WeatherMonthlyRow[]>(defaultWeatherMonthlyGrid);
+
+    // Effective Hours Table (Monthly LB)
+    const defaultEffectiveHoursMonthlyTable = [
+        { weekLabel: "Minggu 1", dateRangeStr: "—", totalHours: "56", effectiveHours: "48" },
+        { weekLabel: "Minggu 2", dateRangeStr: "—", totalHours: "56", effectiveHours: "48" },
+        { weekLabel: "Minggu 3", dateRangeStr: "—", totalHours: "56", effectiveHours: "48" },
+        { weekLabel: "Minggu 4", dateRangeStr: "—", totalHours: "56", effectiveHours: "48" },
+        { weekLabel: "Minggu 5", dateRangeStr: "—", totalHours: "56", effectiveHours: "48" },
+    ];
+    const [effectiveHoursMonthlyTable, setEffectiveHoursMonthlyTable] = useState(defaultEffectiveHoursMonthlyTable);
 
     // Weather 24h Matrix Page (LMS-01-06 / LM-XX-07)
     const createDefaultHourlyWeather = (): HourlyWeatherRow[] => {
@@ -405,7 +462,7 @@ function EditorContentComponent() {
                             } catch (e) {
                                 setEditorContent(data.content || "");
                             }
-                        } else if (data.report_type === "weekly") {
+                        } else if (data.report_type === "weekly" || data.report_type === "monthly") {
                             try {
                                 const parsed = JSON.parse(data.content || "");
                                 if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
@@ -413,12 +470,15 @@ function EditorContentComponent() {
                                     setStartDate(sDate);
                                     setEndDate(parsed.endDate || getNextSaturdayDateStr());
                                     setWeekNumber(parsed.weekNumber || "01");
+                                    setMonthNumber(parsed.monthNumber || "01");
                                     setDayNumber(parsed.dayNumber?.toString() || "");
                                     setTotalDays(parsed.totalDays?.toString() || "");
                                     setRemainingDays(parsed.remainingDays?.toString() || "");
                                     setWorkPackage(parsed.workPackage || "");
-                                    const formattedWeek = (parsed.weekNumber || "01").padStart(2, "0");
-                                    setDocumentId(parsed.documentId || `LM-${formattedWeek}-01`);
+                                    
+                                    const prefix = data.report_type === "monthly" ? "LB" : "LM";
+                                    const formattedPeriod = (data.report_type === "monthly" ? (parsed.monthNumber || "01") : (parsed.weekNumber || "01")).padStart(2, "0");
+                                    setDocumentId(parsed.documentId || `${prefix}-${formattedPeriod}-01`);
                                     setRevision(parsed.revision || "00");
                                     setLocationOverride(parsed.locationOverride || "");
                                     
@@ -437,8 +497,14 @@ function EditorContentComponent() {
                                     if (parsed.personelWeeklyGrid && Array.isArray(parsed.personelWeeklyGrid)) {
                                         setPersonelWeeklyGrid(parsed.personelWeeklyGrid);
                                     }
+                                    if (parsed.personelMonthlyGrid && Array.isArray(parsed.personelMonthlyGrid)) {
+                                        setPersonelMonthlyGrid(parsed.personelMonthlyGrid);
+                                    }
                                     if (parsed.weatherHourlyGrid && Array.isArray(parsed.weatherHourlyGrid)) {
                                         setWeatherHourlyGrid(parsed.weatherHourlyGrid);
+                                    }
+                                    if (parsed.weatherMonthlyGrid && Array.isArray(parsed.weatherMonthlyGrid)) {
+                                        setWeatherMonthlyGrid(parsed.weatherMonthlyGrid);
                                     }
                                     if (parsed.kendalaItems && Array.isArray(parsed.kendalaItems)) {
                                         setKendalaItems(parsed.kendalaItems);
@@ -446,6 +512,9 @@ function EditorContentComponent() {
 
                                     if (parsed.effectiveHoursTable && Array.isArray(parsed.effectiveHoursTable)) {
                                         setEffectiveHoursTable(generateEffectiveHoursDates(sDate, parsed.effectiveHoursTable));
+                                    }
+                                    if (parsed.effectiveHoursMonthlyTable && Array.isArray(parsed.effectiveHoursMonthlyTable)) {
+                                        setEffectiveHoursMonthlyTable(parsed.effectiveHoursMonthlyTable);
                                     }
                                     setWaktuKerjaSummaryText(parsed.waktuKerjaSummaryText || "");
 
@@ -559,13 +628,13 @@ function EditorContentComponent() {
         return (day + 1).toString().padStart(2, "0");
     };
 
-    // Computes LM-XX-YY or LBL-XX-YY for each page in Weekly / Monthly Report
+    // Computes LM-XX-YY or LB-XX-YY for each page in Weekly / Monthly Report
     const getReportPageDocCode = (pageIndex: number) => {
         const pageStr = String(pageIndex).padStart(2, "0");
         if (reportType === "monthly") {
             const month = monthNumber ? monthNumber.padStart(2, "0") : "01";
             if (!isDocIdManuallyEdited || !documentId) {
-                return `LBL-${month}-${pageStr}`;
+                return `LB-${month}-${pageStr}`;
             }
             const match = documentId.match(/^(.*?-)(\d{1,2})$/);
             if (match) {
@@ -598,7 +667,7 @@ function EditorContentComponent() {
         }
 
         const revPart = revision ? `R${revision}` : "R0";
-        const typePart = reportType === "daily" ? "LH" : reportType === "weekly" ? "LM" : "LBL";
+        const typePart = reportType === "daily" ? "LH" : reportType === "weekly" ? "LM" : "LB";
         return `${datePart}_${codePart}_${typePart}_${docPart}_${revPart}.pdf`;
     };
 
@@ -759,6 +828,77 @@ function EditorContentComponent() {
 
             setPersonelWeeklyGrid(newPersonelGrid);
             setWeatherHourlyGrid(newWeatherHourlyGrid);
+
+            if (reportType === "monthly") {
+                const startT = new Date(startDate).getTime();
+                const newPersonelMonthlyGrid = [...defaultPersonelMonthlyRoles.map(r => ({ ...r }))];
+                const newWeatherMonthlyGrid = [...defaultWeatherMonthlyGrid.map(r => ({ ...r }))];
+                const weekCounts = [0, 0, 0, 0, 0];
+
+                parsedLogs.forEach(log => {
+                    const lDate = new Date(log.report_date).getTime();
+                    const diffDays = Math.floor((lDate - startT) / (86400000));
+                    const wIdx = Math.max(0, Math.min(4, Math.floor(diffDays / 7)));
+                    weekCounts[wIdx]++;
+
+                    const c = log.content || {};
+                    const p = c.personnel || {};
+                    const pm = parseInt(p.projectManager) || 0;
+                    const sm = parseInt(p.siteManager) || 0;
+                    const sv = parseInt(p.supervisor) || 0;
+                    const md = parseInt(p.mandor) || 0;
+                    const tk = parseInt(p.tukang) || 0;
+                    const pk = parseInt(p.pekerja) || 0;
+                    const op = parseInt(p.operator) || 0;
+
+                    const key = `minggu${wIdx + 1}` as "minggu1" | "minggu2" | "minggu3" | "minggu4" | "minggu5";
+                    newPersonelMonthlyGrid[0][key] += pm;
+                    newPersonelMonthlyGrid[1][key] += sm;
+                    newPersonelMonthlyGrid[2][key] += sv;
+                    newPersonelMonthlyGrid[8][key] += md;
+                    newPersonelMonthlyGrid[9][key] += tk;
+                    newPersonelMonthlyGrid[12][key] += pk;
+                    newPersonelMonthlyGrid[13][key] += op;
+
+                    if (c.weatherItems && Array.isArray(c.weatherItems)) {
+                        c.weatherItems.forEach((w: any) => {
+                            const timeStr = w.timeRange || "";
+                            const matchDur = timeStr.match(/(\d{1,2})[\.:](\d{2})\s*-\s*(\d{1,2})[\.:](\d{2})/);
+                            const dur = matchDur ? Math.max(1, parseInt(matchDur[3]) - parseInt(matchDur[1])) : 1;
+                            const hKey = `minggu${wIdx + 1}Hours` as "minggu1Hours" | "minggu2Hours" | "minggu3Hours" | "minggu4Hours" | "minggu5Hours";
+                            if (w.condition === "cerah") newWeatherMonthlyGrid[0][hKey] += dur;
+                            else if (w.condition === "berawan") newWeatherMonthlyGrid[1][hKey] += dur;
+                            else if (w.condition === "hujan") newWeatherMonthlyGrid[2][hKey] += dur;
+                        });
+                    }
+                });
+
+                for (let w = 0; w < 5; w++) {
+                    const key = `minggu${w + 1}` as "minggu1" | "minggu2" | "minggu3" | "minggu4" | "minggu5";
+                    const cnt = weekCounts[w] || 1;
+                    newPersonelMonthlyGrid.forEach(row => {
+                        row[key] = Math.round(row[key] / cnt);
+                    });
+                }
+
+                setPersonelMonthlyGrid(newPersonelMonthlyGrid);
+                setWeatherMonthlyGrid(newWeatherMonthlyGrid);
+
+                const newEffectiveHoursMonthlyTable = [1, 2, 3, 4, 5].map((wNum) => {
+                    const hKey = `minggu${wNum}Hours` as "minggu1Hours" | "minggu2Hours" | "minggu3Hours" | "minggu4Hours" | "minggu5Hours";
+                    const cerahH = newWeatherMonthlyGrid[0][hKey];
+                    const berawanH = newWeatherMonthlyGrid[1][hKey];
+                    const totH = cerahH + berawanH + newWeatherMonthlyGrid[2][hKey];
+                    const effH = cerahH + Math.round(berawanH * 0.8);
+                    return {
+                        weekLabel: `Minggu ${wNum}`,
+                        dateRangeStr: `Minggu ${wNum}`,
+                        totalHours: (totH || 56).toString(),
+                        effectiveHours: (effH || 48).toString(),
+                    };
+                });
+                setEffectiveHoursMonthlyTable(newEffectiveHoursMonthlyTable);
+            }
 
             if (extractedKendala.length > 0) {
                 setKendalaItems(extractedKendala);
@@ -997,16 +1137,17 @@ function EditorContentComponent() {
                     nextActions
                 };
                 finalContent = JSON.stringify(templateData);
-            } else if (reportType === "weekly") {
+            } else if (reportType === "weekly" || reportType === "monthly") {
                 const weeklyTemplateData = {
                     startDate,
                     endDate,
                     weekNumber,
+                    monthNumber,
                     dayNumber: dayNumber ? parseInt(dayNumber) : null,
                     totalDays: totalDays ? parseInt(totalDays) : null,
                     remainingDays: remainingDays ? parseInt(remainingDays) : null,
                     workPackage,
-                    documentId: documentId || `LM-${weekNumber.padStart(2, "0")}-01`,
+                    documentId: documentId || (reportType === "monthly" ? `LB-${monthNumber.padStart(2, "0")}-01` : `LM-${weekNumber.padStart(2, "0")}-01`),
                     revision,
                     locationOverride,
                     progressLastWeek,
@@ -1020,9 +1161,12 @@ function EditorContentComponent() {
                     avgTotalPersonel,
                     personelSummaryText,
                     personelWeeklyGrid,
+                    personelMonthlyGrid,
                     weatherHourlyGrid,
+                    weatherMonthlyGrid,
                     kendalaItems,
                     effectiveHoursTable,
+                    effectiveHoursMonthlyTable,
                     waktuKerjaSummaryText,
                     weatherSummaryTable,
                     weatherSummaryText,
@@ -1890,42 +2034,76 @@ function EditorContentComponent() {
                                     <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 flex items-start gap-3">
                                         <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                                         <div>
-                                            <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300">Otomatis Dari Laporan Harian (LH)</h4>
+                                            <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300">Otomatis Dari Laporan Harian / Mingguan</h4>
                                             <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed mt-0.5">
-                                                Tabel Laporan Personel Harian (LM-XX-06) terisi dan terakumulasi secara otomatis saat Anda menekan tombol <strong>Sync Data dari Laporan Harian (LH)</strong> pada tab Info & Periode.
+                                                Tabel Laporan Personel ({reportType === "monthly" ? "LB-XX-06" : "LM-XX-06"}) terisi dan terakumulasi secara otomatis saat Anda menekan tombol <strong>Sync Data</strong> pada tab Info & Periode.
                                             </p>
                                         </div>
                                     </div>
 
-                                    <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Detail Laporan Personel Harian (Senin - Minggu)</span>
-                                    <div className="space-y-3 overflow-x-auto">
-                                        {personelWeeklyGrid.map((row, idx) => (
-                                            <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-xs font-bold text-neutral-400 w-5">{idx + 1}.</span>
-                                                    <Input label="" value={row.role} onChange={(e) => { const copy = [...personelWeeklyGrid]; copy[idx].role = e.target.value; setPersonelWeeklyGrid(copy); }} placeholder="Nama Peran / Personel" />
+                                    <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                        Detail Laporan Personel {reportType === "monthly" ? "Bulanan (Minggu 1 - 5)" : "Harian (Senin - Minggu)"}
+                                    </span>
+                                    
+                                    {reportType === "monthly" ? (
+                                        <div className="space-y-3 overflow-x-auto">
+                                            {personelMonthlyGrid.map((row, idx) => (
+                                                <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-neutral-400 w-5">{idx + 1}.</span>
+                                                        <Input label="" value={row.role} onChange={(e) => { const copy = [...personelMonthlyGrid]; copy[idx].role = e.target.value; setPersonelMonthlyGrid(copy); }} placeholder="Nama Peran / Personel" />
+                                                    </div>
+                                                    <div className="grid grid-cols-5 gap-1 pl-7">
+                                                        {(["minggu1", "minggu2", "minggu3", "minggu4", "minggu5"] as const).map((wKey, wIdx) => (
+                                                            <div key={wIdx} className="text-center">
+                                                                <span className="text-[9px] font-bold text-neutral-400 uppercase block mb-0.5">M{wIdx + 1}</span>
+                                                                <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    className="w-full text-center p-1 border border-neutral-200 dark:border-neutral-700 rounded text-xs bg-white dark:bg-neutral-900 font-bold"
+                                                                    value={row[wKey]}
+                                                                    onChange={(e) => {
+                                                                        const copy = [...personelMonthlyGrid];
+                                                                        copy[idx][wKey] = parseInt(e.target.value) || 0;
+                                                                        setPersonelMonthlyGrid(copy);
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                                <div className="grid grid-cols-7 gap-1 pl-7">
-                                                    {(["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"] as const).map((dayKey, dIdx) => (
-                                                        <div key={dIdx} className="text-center">
-                                                            <span className="text-[9px] font-bold text-neutral-400 uppercase block mb-0.5">{dayKey.substring(0,3)}</span>
-                                                            <input
-                                                                type="number"
-                                                                min={0}
-                                                                className="w-full text-center p-1 border border-neutral-200 dark:border-neutral-700 rounded text-xs bg-white dark:bg-neutral-900 font-bold"
-                                                                value={row[dayKey]}
-                                                                onChange={(e) => {
-                                                                    const copy = [...personelWeeklyGrid];
-                                                                    copy[idx][dayKey] = parseInt(e.target.value) || 0;
-                                                                    setPersonelWeeklyGrid(copy);
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    ))}
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3 overflow-x-auto">
+                                            {personelWeeklyGrid.map((row, idx) => (
+                                                <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-neutral-400 w-5">{idx + 1}.</span>
+                                                        <Input label="" value={row.role} onChange={(e) => { const copy = [...personelWeeklyGrid]; copy[idx].role = e.target.value; setPersonelWeeklyGrid(copy); }} placeholder="Nama Peran / Personel" />
+                                                    </div>
+                                                    <div className="grid grid-cols-7 gap-1 pl-7">
+                                                        {(["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"] as const).map((dayKey, dIdx) => (
+                                                            <div key={dIdx} className="text-center">
+                                                                <span className="text-[9px] font-bold text-neutral-400 uppercase block mb-0.5">{dayKey.substring(0,3)}</span>
+                                                                <input
+                                                                    type="number"
+                                                                    min={0}
+                                                                    className="w-full text-center p-1 border border-neutral-200 dark:border-neutral-700 rounded text-xs bg-white dark:bg-neutral-900 font-bold"
+                                                                    value={row[dayKey]}
+                                                                    onChange={(e) => {
+                                                                        const copy = [...personelWeeklyGrid];
+                                                                        copy[idx][dayKey] = parseInt(e.target.value) || 0;
+                                                                        setPersonelWeeklyGrid(copy);
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -1934,14 +2112,47 @@ function EditorContentComponent() {
                                     <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-2xl p-4 flex items-start gap-3">
                                         <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
                                         <div>
-                                            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Otomatis Dari Laporan Harian (LH)</h4>
+                                            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Otomatis Dari Laporan Harian / Mingguan</h4>
                                             <p className="text-[11px] text-blue-700 dark:text-blue-400 leading-relaxed mt-0.5">
-                                                Matriks Cuaca 24 Jam & Laporan Kendala (LM-XX-07) dipetakan secara otomatis dari catatan kondisi cuaca & kendala harian saat Anda menekan <strong>Sync Data dari Laporan Harian (LH)</strong>.
+                                                Laporan Cuaca & Kendala ({reportType === "monthly" ? "LB-XX-07" : "LM-XX-07"}) dipetakan secara otomatis saat Anda menekan <strong>Sync Data</strong>.
                                             </p>
                                         </div>
                                     </div>
 
-                                    <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Detail Laporan Kendala Lapangan</span>
+                                    {reportType === "monthly" && (
+                                        <div className="space-y-3">
+                                            <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                                Jam Cuaca Per Minggu (8 Jam = 1 Hari Ekuivalen)
+                                            </span>
+                                            <div className="space-y-2">
+                                                {weatherMonthlyGrid.map((row, idx) => (
+                                                    <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
+                                                        <span className="text-xs font-bold text-neutral-800 dark:text-white block">{row.condition}</span>
+                                                        <div className="grid grid-cols-5 gap-1">
+                                                            {(["minggu1Hours", "minggu2Hours", "minggu3Hours", "minggu4Hours", "minggu5Hours"] as const).map((wKey, wIdx) => (
+                                                                <div key={wIdx} className="text-center">
+                                                                    <span className="text-[9px] font-bold text-neutral-400 uppercase block mb-0.5">M{wIdx + 1} (Jam)</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        min={0}
+                                                                        className="w-full text-center p-1 border border-neutral-200 dark:border-neutral-700 rounded text-xs bg-white dark:bg-neutral-900 font-bold"
+                                                                        value={row[wKey]}
+                                                                        onChange={(e) => {
+                                                                            const copy = [...weatherMonthlyGrid];
+                                                                            copy[idx][wKey] = parseInt(e.target.value) || 0;
+                                                                            setWeatherMonthlyGrid(copy);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2 pt-2">Detail Laporan Kendala Lapangan</span>
                                     <div className="space-y-3">
                                         {kendalaItems.map((k, idx) => (
                                             <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
@@ -2152,10 +2363,10 @@ function EditorContentComponent() {
                         {(reportType === "weekly" || reportType === "monthly") && (
                             <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
                                 
-                                {/* ---------------- PAGE 1: COVER (LM-XX-01 / LBL-XX-01) ---------------- */}
+                                {/* ---------------- PAGE 1: COVER (LM-XX-01 / LB-XX-01) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
                                     
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(1), reportType === "monthly" ? "Laporan Bulanan" : "Laporan Mingguan")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(1), reportType === "monthly" ? "Laporan Bulanan" : "Laporan Mingguan")}
 
                                     {/* Center Title Box */}
                                     <div className="text-center my-auto space-y-4 px-4 py-12">
@@ -2193,10 +2404,10 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 2: EXECUTIVE SUMMARY (LM-XX-02 / LBL-XX-02) ---------------- */}
+                                {/* ---------------- PAGE 2: EXECUTIVE SUMMARY (LM-XX-02 / LB-XX-02) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
                                     
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(2), reportType === "monthly" ? "Executive Summary Bulanan" : "Executive Summary")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(2), reportType === "monthly" ? "Executive Summary Bulanan" : "Executive Summary")}
                                     {renderWeeklyDateMetaRow()}
 
                                     {/* Section Banner */}
@@ -2240,13 +2451,23 @@ function EditorContentComponent() {
                                                 <div className="font-extrabold text-[7px] text-neutral-900 uppercase border-b border-neutral-300 pb-0.5 mb-1">C. WAKTU KERJA EFEKTIF</div>
                                                 <table className="w-full text-left border border-neutral-300" style={{ borderCollapse: "collapse" }}>
                                                     <tbody>
-                                                        {effectiveHoursTable.map((h, i) => (
-                                                            <tr key={i} className="border-b border-neutral-200">
-                                                                <td className="p-0.5 pl-1 font-semibold text-neutral-700">{h.day}</td>
-                                                                <td className="p-0.5 text-center text-neutral-600">{h.totalHours} jam</td>
-                                                                <td className="p-0.5 text-right pr-1 font-bold text-neutral-900">efektif {h.effectiveHours} jam</td>
-                                                            </tr>
-                                                        ))}
+                                                        {reportType === "monthly" ? (
+                                                            effectiveHoursMonthlyTable.map((h, i) => (
+                                                                <tr key={i} className="border-b border-neutral-200">
+                                                                    <td className="p-0.5 pl-1 font-semibold text-neutral-700">{h.weekLabel}</td>
+                                                                    <td className="p-0.5 text-center text-neutral-600">{h.totalHours} jam</td>
+                                                                    <td className="p-0.5 text-right pr-1 font-bold text-neutral-900">efektif {h.effectiveHours} jam</td>
+                                                                </tr>
+                                                            ))
+                                                        ) : (
+                                                            effectiveHoursTable.map((h, i) => (
+                                                                <tr key={i} className="border-b border-neutral-200">
+                                                                    <td className="p-0.5 pl-1 font-semibold text-neutral-700">{h.day}</td>
+                                                                    <td className="p-0.5 text-center text-neutral-600">{h.totalHours} jam</td>
+                                                                    <td className="p-0.5 text-right pr-1 font-bold text-neutral-900">efektif {h.effectiveHours} jam</td>
+                                                                </tr>
+                                                            ))
+                                                        )}
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -2290,9 +2511,9 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 3: WBS (LM-XX-03 / LBL-XX-03) ---------------- */}
+                                {/* ---------------- PAGE 3: WBS (LM-XX-03 / LB-XX-03) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(3), "Work Breakdown Structure")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(3), "Work Breakdown Structure")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2314,9 +2535,9 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 4: KURVA S (LM-XX-04 / LBL-XX-04) ---------------- */}
+                                {/* ---------------- PAGE 4: KURVA S (LM-XX-04 / LB-XX-04) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(4), "Kurva S")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(4), "Kurva S")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2338,9 +2559,9 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 5: KEGIATAN PEKERJAAN (LM-XX-05 / LBL-XX-05) ---------------- */}
+                                {/* ---------------- PAGE 5: KEGIATAN PEKERJAAN (LM-XX-05 / LB-XX-05) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(5), "Kegiatan Pekerjaan")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(5), "Kegiatan Pekerjaan")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2413,82 +2634,184 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 6: LAPORAN PERSONEL (LM-XX-06 / LBL-XX-06) ---------------- */}
+                                {/* ---------------- PAGE 6: LAPORAN PERSONEL (LM-XX-06 / LB-XX-06) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(6), "Laporan Personel")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(6), "Laporan Personel")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
-                                        LAPORAN PERSONEL {reportType === "monthly" ? "BULANAN" : ""}
+                                        LAPORAN PERSONEL {reportType === "monthly" ? "BULANAN (RATA-RATA MINGGUAN)" : "MINGGUAN"}
                                     </div>
 
-                                    <table className="w-full text-left border border-neutral-300 text-[6px]" style={{ borderCollapse: "collapse" }}>
-                                        <thead>
-                                            <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase text-center">
-                                                <th className="p-1 w-5 border-r border-neutral-300" rowSpan={2}>NO.</th>
-                                                <th className="p-1 border-r border-neutral-300 text-left" rowSpan={2}>PERSONEL</th>
-                                                <th className="p-1 w-12 border-r border-neutral-300" rowSpan={2}>SATUAN</th>
-                                                <th className="p-0.5 border-r border-neutral-300" colSpan={7}>HARI & TANGGAL</th>
-                                                <th className="p-1 w-12 border-l border-neutral-300" rowSpan={2}>JUMLAH</th>
-                                            </tr>
-                                            <tr className="bg-neutral-50 border-b border-neutral-300 font-bold text-neutral-500 text-center text-[5.5px]">
-                                                <th className="p-0.5 border-r border-neutral-200">SENIN<br/>1</th>
-                                                <th className="p-0.5 border-r border-neutral-200">SELASA<br/>2</th>
-                                                <th className="p-0.5 border-r border-neutral-200">RABU<br/>3</th>
-                                                <th className="p-0.5 border-r border-neutral-200">KAMIS<br/>4</th>
-                                                <th className="p-0.5 border-r border-neutral-200">JUMAT<br/>5</th>
-                                                <th className="p-0.5 border-r border-neutral-200">SABTU<br/>6</th>
-                                                <th className="p-0.5 border-r border-neutral-300">MINGGU<br/>7</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {personelWeeklyGrid.map((row, i) => {
-                                                const rowTotal = row.senin + row.selasa + row.rabu + row.kamis + row.jumat + row.sabtu + row.minggu;
-                                                return (
-                                                    <tr key={i} className="border-b border-neutral-200">
-                                                        <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{i + 1}</td>
-                                                        <td className="p-1 border-r border-neutral-200 font-bold text-neutral-800">{row.role}</td>
-                                                        <td className="p-1 text-center border-r border-neutral-200 text-neutral-500">{row.unit}</td>
-                                                        <td className="p-1 text-center border-r border-neutral-200">{row.senin || 0}</td>
-                                                        <td className="p-1 text-center border-r border-neutral-200">{row.selasa || 0}</td>
-                                                        <td className="p-1 text-center border-r border-neutral-200">{row.rabu || 0}</td>
-                                                        <td className="p-1 text-center border-r border-neutral-200">{row.kamis || 0}</td>
-                                                        <td className="p-1 text-center border-r border-neutral-200">{row.jumat || 0}</td>
-                                                        <td className="p-1 text-center border-r border-neutral-200">{row.sabtu || 0}</td>
-                                                        <td className="p-1 text-center border-r border-neutral-300">{row.minggu || 0}</td>
-                                                        <td className="p-1 text-center font-black text-neutral-900 bg-neutral-50/50">{rowTotal}</td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                        <tfoot>
-                                            <tr className="bg-neutral-100 font-black text-neutral-900 text-center border-t border-neutral-300">
-                                                <td colSpan={3} className="p-1 text-right pr-2 border-r border-neutral-300 uppercase">JUMLAH</td>
-                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.senin, 0)}</td>
-                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.selasa, 0)}</td>
-                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.rabu, 0)}</td>
-                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.kamis, 0)}</td>
-                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.jumat, 0)}</td>
-                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.sabtu, 0)}</td>
-                                                <td className="p-1 border-r border-neutral-300">{personelWeeklyGrid.reduce((a, r) => a + r.minggu, 0)}</td>
-                                                <td className="p-1 bg-neutral-200 text-neutral-900">{personelWeeklyGrid.reduce((a, r) => a + r.senin + r.selasa + r.rabu + r.kamis + r.jumat + r.sabtu + r.minggu, 0)}</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
+                                    {reportType === "monthly" ? (
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase text-center">
+                                                    <th className="p-1 w-5 border-r border-neutral-300">NO.</th>
+                                                    <th className="p-1 border-r border-neutral-300 text-left">PERSONEL</th>
+                                                    <th className="p-1 w-12 border-r border-neutral-300">SATUAN</th>
+                                                    <th className="p-1 border-r border-neutral-200">MINGGU 1</th>
+                                                    <th className="p-1 border-r border-neutral-200">MINGGU 2</th>
+                                                    <th className="p-1 border-r border-neutral-200">MINGGU 3</th>
+                                                    <th className="p-1 border-r border-neutral-200">MINGGU 4</th>
+                                                    <th className="p-1 border-r border-neutral-300">MINGGU 5</th>
+                                                    <th className="p-1 w-16 border-l border-neutral-300 bg-neutral-200 font-black text-neutral-900">RATA-RATA</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {personelMonthlyGrid.map((row, i) => {
+                                                    const vals = [row.minggu1, row.minggu2, row.minggu3, row.minggu4, row.minggu5].filter(v => v > 0);
+                                                    const avgVal = vals.length > 0 ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 0;
+                                                    return (
+                                                        <tr key={i} className="border-b border-neutral-200 text-center">
+                                                            <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{i + 1}</td>
+                                                            <td className="p-1 text-left border-r border-neutral-200 font-bold text-neutral-800">{row.role}</td>
+                                                            <td className="p-1 text-center border-r border-neutral-200 text-neutral-500">{row.unit}</td>
+                                                            <td className="p-1 border-r border-neutral-200">{row.minggu1 || 0}</td>
+                                                            <td className="p-1 border-r border-neutral-200">{row.minggu2 || 0}</td>
+                                                            <td className="p-1 border-r border-neutral-200">{row.minggu3 || 0}</td>
+                                                            <td className="p-1 border-r border-neutral-200">{row.minggu4 || 0}</td>
+                                                            <td className="p-1 border-r border-neutral-300">{row.minggu5 || 0}</td>
+                                                            <td className="p-1 font-black text-neutral-900 bg-neutral-50">{avgVal}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="bg-neutral-100 font-black text-neutral-900 text-center border-t border-neutral-300">
+                                                    <td colSpan={3} className="p-1 text-right pr-2 border-r border-neutral-300 uppercase">RATA-RATA TOTAL</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelMonthlyGrid.reduce((a, r) => a + r.minggu1, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelMonthlyGrid.reduce((a, r) => a + r.minggu2, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelMonthlyGrid.reduce((a, r) => a + r.minggu3, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelMonthlyGrid.reduce((a, r) => a + r.minggu4, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-300">{personelMonthlyGrid.reduce((a, r) => a + r.minggu5, 0)}</td>
+                                                    <td className="p-1 bg-neutral-200 text-neutral-900">
+                                                        {Math.round(personelMonthlyGrid.reduce((a, r) => {
+                                                            const vals = [r.minggu1, r.minggu2, r.minggu3, r.minggu4, r.minggu5].filter(v => v > 0);
+                                                            return a + (vals.length > 0 ? Math.round(vals.reduce((x, y) => x + y, 0) / vals.length) : 0);
+                                                        }, 0))}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    ) : (
+                                        <table className="w-full text-left border border-neutral-300 text-[6px]" style={{ borderCollapse: "collapse" }}>
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase text-center">
+                                                    <th className="p-1 w-5 border-r border-neutral-300" rowSpan={2}>NO.</th>
+                                                    <th className="p-1 border-r border-neutral-300 text-left" rowSpan={2}>PERSONEL</th>
+                                                    <th className="p-1 w-12 border-r border-neutral-300" rowSpan={2}>SATUAN</th>
+                                                    <th className="p-0.5 border-r border-neutral-300" colSpan={7}>HARI & TANGGAL</th>
+                                                    <th className="p-1 w-12 border-l border-neutral-300" rowSpan={2}>JUMLAH</th>
+                                                </tr>
+                                                <tr className="bg-neutral-50 border-b border-neutral-300 font-bold text-neutral-500 text-center text-[5.5px]">
+                                                    <th className="p-0.5 border-r border-neutral-200">SENIN<br/>1</th>
+                                                    <th className="p-0.5 border-r border-neutral-200">SELASA<br/>2</th>
+                                                    <th className="p-0.5 border-r border-neutral-200">RABU<br/>3</th>
+                                                    <th className="p-0.5 border-r border-neutral-200">KAMIS<br/>4</th>
+                                                    <th className="p-0.5 border-r border-neutral-200">JUMAT<br/>5</th>
+                                                    <th className="p-0.5 border-r border-neutral-200">SABTU<br/>6</th>
+                                                    <th className="p-0.5 border-r border-neutral-300">MINGGU<br/>7</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {personelWeeklyGrid.map((row, i) => {
+                                                    const rowTotal = row.senin + row.selasa + row.rabu + row.kamis + row.jumat + row.sabtu + row.minggu;
+                                                    return (
+                                                        <tr key={i} className="border-b border-neutral-200">
+                                                            <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{i + 1}</td>
+                                                            <td className="p-1 border-r border-neutral-200 font-bold text-neutral-800">{row.role}</td>
+                                                            <td className="p-1 text-center border-r border-neutral-200 text-neutral-500">{row.unit}</td>
+                                                            <td className="p-1 text-center border-r border-neutral-200">{row.senin || 0}</td>
+                                                            <td className="p-1 text-center border-r border-neutral-200">{row.selasa || 0}</td>
+                                                            <td className="p-1 text-center border-r border-neutral-200">{row.rabu || 0}</td>
+                                                            <td className="p-1 text-center border-r border-neutral-200">{row.kamis || 0}</td>
+                                                            <td className="p-1 text-center border-r border-neutral-200">{row.jumat || 0}</td>
+                                                            <td className="p-1 text-center border-r border-neutral-200">{row.sabtu || 0}</td>
+                                                            <td className="p-1 text-center border-r border-neutral-300">{row.minggu || 0}</td>
+                                                            <td className="p-1 text-center font-black text-neutral-900 bg-neutral-50/50">{rowTotal}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="bg-neutral-100 font-black text-neutral-900 text-center border-t border-neutral-300">
+                                                    <td colSpan={3} className="p-1 text-right pr-2 border-r border-neutral-300 uppercase">JUMLAH</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.senin, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.selasa, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.rabu, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.kamis, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.jumat, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.sabtu, 0)}</td>
+                                                    <td className="p-1 border-r border-neutral-300">{personelWeeklyGrid.reduce((a, r) => a + r.minggu, 0)}</td>
+                                                    <td className="p-1 bg-neutral-200 text-neutral-900">{personelWeeklyGrid.reduce((a, r) => a + r.senin + r.selasa + r.rabu + r.kamis + r.jumat + r.sabtu + r.minggu, 0)}</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    )}
                                 </div>
 
 
-                                {/* ---------------- PAGE 7: LAPORAN CUACA (LM-XX-07 / LBL-XX-07) ---------------- */}
+                                {/* ---------------- PAGE 7: LAPORAN CUACA (LM-XX-07 / LB-XX-07) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(7), "Laporan Cuaca")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(7), "Laporan Cuaca")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
-                                        LAPORAN CUACA {reportType === "monthly" ? "BULANAN" : ""}
+                                        LAPORAN CUACA {reportType === "monthly" ? "BULANAN (REKAP MINGGUAN)" : "MINGGUAN"}
                                     </div>
 
-                                    {/* 24h Weather Table Matrix */}
-                                    <table className="w-full text-left border border-neutral-300 text-[5.5px]" style={{ borderCollapse: "collapse" }}>
+                                    {reportType === "monthly" ? (
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase text-center">
+                                                    <th className="p-1 border-r border-neutral-300 text-left">KONDISI CUACA</th>
+                                                    <th className="p-1 border-r border-neutral-200">MINGGU 1 (JAM)</th>
+                                                    <th className="p-1 border-r border-neutral-200">MINGGU 2 (JAM)</th>
+                                                    <th className="p-1 border-r border-neutral-200">MINGGU 3 (JAM)</th>
+                                                    <th className="p-1 border-r border-neutral-200">MINGGU 4 (JAM)</th>
+                                                    <th className="p-1 border-r border-neutral-300">MINGGU 5 (JAM)</th>
+                                                    <th className="p-1 border-r border-neutral-300 bg-neutral-200 font-black text-neutral-900">TOTAL (JAM)</th>
+                                                    <th className="p-1 bg-neutral-900 text-white font-black">EKUIVALEN (HARI @ 8 JAM)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {weatherMonthlyGrid.map((row, i) => {
+                                                    const totalHours = row.minggu1Hours + row.minggu2Hours + row.minggu3Hours + row.minggu4Hours + row.minggu5Hours;
+                                                    const eqDays = (totalHours / 8).toFixed(1);
+                                                    return (
+                                                        <tr key={i} className="border-b border-neutral-200 text-center">
+                                                            <td className="p-1 font-bold text-left text-neutral-800 border-r border-neutral-200 pl-2 bg-neutral-50/50">{row.condition}</td>
+                                                            <td className="p-1 border-r border-neutral-200">{row.minggu1Hours || 0}</td>
+                                                            <td className="p-1 border-r border-neutral-200">{row.minggu2Hours || 0}</td>
+                                                            <td className="p-1 border-r border-neutral-200">{row.minggu3Hours || 0}</td>
+                                                            <td className="p-1 border-r border-neutral-200">{row.minggu4Hours || 0}</td>
+                                                            <td className="p-1 border-r border-neutral-300">{row.minggu5Hours || 0}</td>
+                                                            <td className="p-1 font-black text-neutral-900 border-r border-neutral-300 bg-neutral-100">{totalHours} jam</td>
+                                                            <td className="p-1 font-black text-neutral-900 bg-amber-100/70">{eqDays} hari</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                            <tfoot>
+                                                <tr className="bg-neutral-100 font-black text-neutral-900 text-center border-t border-neutral-300 text-[6.5px]">
+                                                    <td className="p-1 text-left pl-2 border-r border-neutral-300 uppercase">TOTAL WAKTU</td>
+                                                    <td className="p-1 border-r border-neutral-200">{weatherMonthlyGrid.reduce((a, r) => a + r.minggu1Hours, 0)} jam</td>
+                                                    <td className="p-1 border-r border-neutral-200">{weatherMonthlyGrid.reduce((a, r) => a + r.minggu2Hours, 0)} jam</td>
+                                                    <td className="p-1 border-r border-neutral-200">{weatherMonthlyGrid.reduce((a, r) => a + r.minggu3Hours, 0)} jam</td>
+                                                    <td className="p-1 border-r border-neutral-200">{weatherMonthlyGrid.reduce((a, r) => a + r.minggu4Hours, 0)} jam</td>
+                                                    <td className="p-1 border-r border-neutral-300">{weatherMonthlyGrid.reduce((a, r) => a + r.minggu5Hours, 0)} jam</td>
+                                                    <td className="p-1 border-r border-neutral-300 bg-neutral-200 text-neutral-900">
+                                                        {weatherMonthlyGrid.reduce((a, r) => a + r.minggu1Hours + r.minggu2Hours + r.minggu3Hours + r.minggu4Hours + r.minggu5Hours, 0)} jam
+                                                    </td>
+                                                    <td className="p-1 bg-amber-200 text-neutral-900">
+                                                        {(weatherMonthlyGrid.reduce((a, r) => a + r.minggu1Hours + r.minggu2Hours + r.minggu3Hours + r.minggu4Hours + r.minggu5Hours, 0) / 8).toFixed(1)} hari
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    ) : (
+                                        <table className="w-full text-left border border-neutral-300 text-[5.5px]" style={{ borderCollapse: "collapse" }}>
                                         <thead>
                                             <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase text-center">
                                                 <th className="p-0.5 w-10 border-r border-neutral-300">JAM</th>
@@ -2551,12 +2874,13 @@ function EditorContentComponent() {
                                             </tr>
                                         </tfoot>
                                     </table>
-                                </div>
+                                )}
+                            </div>
 
 
-                                {/* ---------------- PAGE 8: LAPORAN KENDALA (LM-XX-08 / LBL-XX-08) ---------------- */}
+                                {/* ---------------- PAGE 8: LAPORAN KENDALA (LM-XX-08 / LB-XX-08) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(8), "Laporan Kendala")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(8), "Laporan Kendala")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2591,13 +2915,13 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 9: DOKUMENTASI (LM-XX-09 / LBL-XX-09) ---------------- */}
+                                {/* ---------------- PAGE 9: DOKUMENTASI (LM-XX-09 / LB-XX-09) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(9), "Dokumentasi Pekerjaan")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(9), "Dokumentasi Pekerjaan")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
-                                        DOKUMENTASI FOTO MINGGUAN
+                                        DOKUMENTASI FOTO {reportType === "monthly" ? "BULANAN" : "MINGGUAN"}
                                     </div>
 
                                     <div className="border border-neutral-300 border-t-0 p-3">
@@ -2619,9 +2943,9 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 10: LAMPIRAN (LM-XX-10 / LBL-XX-10) ---------------- */}
+                                {/* ---------------- PAGE 10: LAMPIRAN (LM-XX-10 / LB-XX-10) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(10), reportType === "monthly" ? "Lampiran Laporan Mingguan / Harian" : "Lampiran Laporan Harian")}
+                                    {renderPageHeader(reportType === "monthly" ? "LB" : "LM", getReportPageDocCode(10), reportType === "monthly" ? "Lampiran Laporan Mingguan / Harian" : "Lampiran Laporan Harian")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
