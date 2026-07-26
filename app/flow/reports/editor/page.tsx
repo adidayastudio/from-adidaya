@@ -583,12 +583,41 @@ function EditorContentComponent() {
         }
     }, [dayNumber, totalDays]);
 
+    const REPORT_PREFIX_MAP: Record<string, { code: string; title: string }> = {
+        daily: { code: "LH", title: "Laporan Harian" },
+        weekly: { code: "LM", title: "Laporan Mingguan" },
+        monthly: { code: "LB", title: "Laporan Bulanan" },
+        schedule: { code: "SCH", title: "Schedule & Kurva-S" },
+        cost: { code: "CST", title: "Cost & Budget Realization" },
+        manpower: { code: "MP", title: "Manpower & Payroll" },
+        procurement: { code: "PRC", title: "Procurement & Stock" },
+        quality: { code: "QC", title: "Quality Control (QA/QC)" },
+        safety: { code: "HSE", title: "Safety & K3 Report" },
+        issue_risk: { code: "IRK", title: "Issue & Risk Register" },
+        doc_control: { code: "DCR", title: "Document Control Register" },
+        change_order: { code: "VO", title: "Variation Order (Change Order)" },
+        executive: { code: "EXC", title: "Executive Summary Report" },
+        site_survey: { code: "SUR", title: "Site Survey & Field Investigation" },
+        mom: { code: "MOM", title: "Minute of Meeting (Notula Rapat)" },
+        mou_contract: { code: "MOU", title: "MOU & Contract Agreement" },
+        memo_correspondence: { code: "MEM", title: "Memo & Field Notice" },
+        punch_list: { code: "PCH", title: "Punch List & BAST Handover" },
+        commissioning: { code: "COM", title: "Commissioning & Testing" },
+        environmental: { code: "ENV", title: "Environmental Management" },
+    };
+
+    const getReportMeta = (type: string) => {
+        return REPORT_PREFIX_MAP[type] || { code: "DOC", title: "Laporan Proyek" };
+    };
+
     // Auto-generate Document Title and ID
     useEffect(() => {
         if (isLoading || paramId) return;
 
         const currentProj = projects.find(p => p.id === selectedProjectId);
         if (!currentProj) return;
+
+        const meta = getReportMeta(reportType);
 
         if (reportType === "daily") {
             if (!isDocIdManuallyEdited) {
@@ -608,8 +637,24 @@ function EditorContentComponent() {
             if (!isTitleManuallyEdited) {
                 setTitle(`Laporan Mingguan ${formattedWeek} - ${currentProj.project_code || currentProj.name}`);
             }
+        } else if (reportType === "monthly") {
+            const formattedMonth = monthNumber ? monthNumber.padStart(2, "0") : "01";
+            if (!isDocIdManuallyEdited) {
+                setDocumentId(`LB-${formattedMonth}-01`);
+            }
+            if (!isTitleManuallyEdited) {
+                setTitle(`Laporan Bulanan ${formattedMonth} - ${currentProj.project_code || currentProj.name}`);
+            }
+        } else {
+            const formattedWeek = weekNumber ? weekNumber.padStart(2, "0") : "01";
+            if (!isDocIdManuallyEdited) {
+                setDocumentId(`${meta.code}-${formattedWeek}-01`);
+            }
+            if (!isTitleManuallyEdited) {
+                setTitle(`${meta.title} - ${currentProj.project_code || currentProj.name}`);
+            }
         }
-    }, [selectedProjectId, dayNumber, reportDate, weekNumber, reportType, projects, isLoading, paramId, isTitleManuallyEdited, isDocIdManuallyEdited]);
+    }, [selectedProjectId, dayNumber, reportDate, weekNumber, monthNumber, reportType, projects, isLoading, paramId, isTitleManuallyEdited, isDocIdManuallyEdited]);
 
     const getWeekOfYear = (dateStr: string) => {
         if (!dateStr) return "01";
@@ -629,47 +674,55 @@ function EditorContentComponent() {
         return (day + 1).toString().padStart(2, "0");
     };
 
-    // Computes LM-XX-YY or LB-XX-YY for each page in Weekly / Monthly Report
+    // Computes XXX-YY-ZZ for each page in Report
     const getReportPageDocCode = (pageIndex: number) => {
         const pageStr = String(pageIndex).padStart(2, "0");
+        const meta = getReportMeta(reportType);
+
         if (reportType === "monthly") {
             const month = monthNumber ? monthNumber.padStart(2, "0") : "01";
             if (!isDocIdManuallyEdited || !documentId) {
                 return `LB-${month}-${pageStr}`;
             }
-            const match = documentId.match(/^(.*?-)(\d{1,2})$/);
-            if (match) {
-                return `${match[1]}${pageStr}`;
-            }
-            return `${documentId}-${pageStr}`;
-        } else {
+        } else if (reportType === "weekly") {
             const week = weekNumber ? weekNumber.padStart(2, "0") : "01";
             if (!isDocIdManuallyEdited || !documentId) {
                 return `LM-${week}-${pageStr}`;
             }
+        } else if (reportType === "daily") {
+            if (!isDocIdManuallyEdited || !documentId) {
+                const weekVal = getWeekOfYear(reportDate);
+                const dayOfWeekVal = getDayOfWeekNumber(reportDate);
+                return `LH-${weekVal}-${dayOfWeekVal}`;
+            }
+        } else {
+            const week = weekNumber ? weekNumber.padStart(2, "0") : "01";
+            if (!isDocIdManuallyEdited || !documentId) {
+                return `${meta.code}-${week}-${pageStr}`;
+            }
+        }
+
+        if (documentId) {
             const match = documentId.match(/^(.*?-)(\d{1,2})$/);
             if (match) {
                 return `${match[1]}${pageStr}`;
             }
             return `${documentId}-${pageStr}`;
         }
+        return `${meta.code}-01-${pageStr}`;
     };
 
     const getWeeklyPageDocCode = getReportPageDocCode;
 
     const getGeneratedFilename = () => {
-        const datePart = reportDate ? reportDate.replace(/-/g, "") : "YYYYMMDD";
+        const datePart = reportDate ? reportDate.replace(/-/g, "") : "20260727";
         const currentProj = projects.find(p => p.id === selectedProjectId);
-        const codePart = currentProj?.project_code || "KODE";
+        const codePart = currentProj?.project_code || "PROJ";
+        const meta = getReportMeta(reportType);
         
-        let docPart = "00_00";
-        if (documentId) {
-            docPart = documentId.replace(/[^A-Z0-9]/gi, "_").toUpperCase();
-        }
-
-        const revPart = revision ? `R${revision}` : "R0";
-        const typePart = reportType === "daily" ? "LH" : reportType === "weekly" ? "LM" : "LB";
-        return `${datePart}_${codePart}_${typePart}_${docPart}_${revPart}.pdf`;
+        let docPart = documentId ? documentId.replace(/[^A-Z0-9-]/gi, "_").toUpperCase() : `${meta.code}_01_01`;
+        const revPart = revision ? `R${revision}` : "R00";
+        return `${datePart}_${codePart}_${docPart}_${revPart}.pdf`;
     };
 
     // Auto Sync Weekly Data from Daily Reports
@@ -3253,6 +3306,188 @@ function EditorContentComponent() {
                                         </table>
                                     </div>
 
+                                </div>
+
+                            </div>
+                        )}
+
+                        {/* ===================== EXTENDED REPORTS PREVIEW (Multi-Page XXX-YY-ZZ Code Format) ===================== */}
+                        {reportType !== "daily" && reportType !== "weekly" && reportType !== "monthly" && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                
+                                {/* ---------------- PAGE 1: EXECUTIVE SUMMARY & MAIN DATA TABLE ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader(getReportMeta(reportType).code, getReportPageDocCode(1), getReportMeta(reportType).title)}
+
+                                        {/* Date Meta Row */}
+                                        <div className="grid grid-cols-5 border border-neutral-300 rounded overflow-hidden text-center">
+                                            {[
+                                                { label: "Proyek", value: currentProject?.project_code || "PROYEK" },
+                                                { label: "Tanggal", value: getDayDateOnly() },
+                                                { label: "Periode / Minggu", value: `M-${weekNumber || "01"}` },
+                                                { label: "Revisi", value: `R${revision || "00"}` },
+                                                { label: "Status", value: "FINAL" },
+                                            ].map((cell, i) => (
+                                                <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                    <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{cell.label}</div>
+                                                    <div className="text-[8px] font-bold text-neutral-800 py-1">{cell.value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Section Banner */}
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            {getReportMeta(reportType).title.toUpperCase()} — RINGKASAN & REALISASI LAPANGAN
+                                        </div>
+
+                                        {/* Progress / Metric Summary Box */}
+                                        <div className="grid grid-cols-3 gap-2 border border-neutral-300 rounded p-3 bg-neutral-50/50 text-center">
+                                            <div>
+                                                <div className="text-[6px] font-extrabold text-neutral-400 uppercase">Target Rencana</div>
+                                                <div className="text-[12px] font-black text-neutral-900 mt-0.5">{progressTotal || "0.000"} %</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-[6px] font-extrabold text-neutral-400 uppercase">Realisasi Lapangan</div>
+                                                <div className="text-[12px] font-black text-emerald-600 mt-0.5">{progressThisWeek || "0.000"} %</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-[6px] font-extrabold text-neutral-400 uppercase">Deviasi / Sisa</div>
+                                                <div className="text-[12px] font-black text-amber-600 mt-0.5">{progressRemaining || "100.000"} %</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Main Data Table */}
+                                        <div>
+                                            <div className="bg-neutral-800 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                                LOG RINCIAN PEKERJAAN / ITEM REPORT
+                                            </div>
+                                            <table className="w-full text-left border border-neutral-300 border-t-0 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
+                                                <thead>
+                                                    <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-600 uppercase">
+                                                        <th className="p-1.5 w-6 text-center border-r border-neutral-300">NO</th>
+                                                        <th className="p-1.5 border-r border-neutral-300">DESKRIPSI / URAIAN ITEM</th>
+                                                        <th className="p-1.5 w-24 border-r border-neutral-300">LOKASI / AREA</th>
+                                                        <th className="p-1.5 w-20 text-center">VOLUME / TARGET</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {workItems.map((item, idx) => (
+                                                        <tr key={idx} className="border-b border-neutral-200">
+                                                            <td className="p-1.5 text-center border-r border-neutral-200 font-bold text-neutral-400">{idx + 1}</td>
+                                                            <td className="p-1.5 border-r border-neutral-200 font-bold text-neutral-900">{item.description || "—"}</td>
+                                                            <td className="p-1.5 border-r border-neutral-200 text-neutral-600 font-semibold">{item.position || "—"}</td>
+                                                            <td className="p-1.5 text-center font-bold text-neutral-800">{item.volume || "—"}</td>
+                                                        </tr>
+                                                    ))}
+                                                    {workItems.length === 0 && (
+                                                        <tr>
+                                                            <td colSpan={4} className="p-4 text-center text-neutral-400 italic font-medium">
+                                                                Belum ada item rincian pekerjaan ditambahkan.
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Material / Equipment Summary if present */}
+                                        {materialItems.length > 0 && (
+                                            <div>
+                                                <div className="bg-neutral-800 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                                    LOG LOGISTIK & RESOURCE TERHUBUNG
+                                                </div>
+                                                <table className="w-full text-left border border-neutral-300 border-t-0 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
+                                                    <thead>
+                                                        <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-600 uppercase">
+                                                            <th className="p-1 w-6 text-center border-r border-neutral-300">NO</th>
+                                                            <th className="p-1 w-16 border-r border-neutral-300">KATEGORI</th>
+                                                            <th className="p-1 border-r border-neutral-300">NAMA ITEM</th>
+                                                            <th className="p-1 w-12 text-center border-r border-neutral-300">SATUAN</th>
+                                                            <th className="p-1 w-14 text-center">STOK / REALISASI</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {materialItems.map((mat, idx) => (
+                                                            <tr key={idx} className="border-b border-neutral-200">
+                                                                <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{idx + 1}</td>
+                                                                <td className="p-1 border-r border-neutral-200 font-bold text-neutral-600 uppercase">{mat.category || "MATERIAL"}</td>
+                                                                <td className="p-1 border-r border-neutral-200 font-bold text-neutral-800">{mat.name || "—"}</td>
+                                                                <td className="p-1 text-center border-r border-neutral-200 text-neutral-600">{mat.unit || "unit"}</td>
+                                                                <td className="p-1 text-center font-bold text-neutral-800">{mat.stock || mat.incoming || "0"}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Footer Brand */}
+                                    <div className="border-t border-neutral-200 pt-2 text-[6px] text-neutral-400 flex justify-between font-mono">
+                                        <span>ADIDAYA STUDIO — DOKUMEN PROYEK RESMI</span>
+                                        <span>{getReportPageDocCode(1)}</span>
+                                    </div>
+                                </div>
+
+                                {/* ---------------- PAGE 2: NOTES, PHOTOS & SIGNATURES ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader(getReportMeta(reportType).code, getReportPageDocCode(2), `${getReportMeta(reportType).title} — LAMPIRAN & PERSETUJUAN`)}
+
+                                        {/* Catatan / Kendala */}
+                                        <div>
+                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                                CATATAN TEKNIS & EVALUASI LAPANGAN
+                                            </div>
+                                            <div className="p-2.5 border border-neutral-300 border-t-0 min-h-[100px] text-[7px] font-semibold text-neutral-800 leading-relaxed whitespace-pre-wrap">
+                                                {notes || "Tidak ada catatan teknis / kendala khusus."}
+                                            </div>
+                                        </div>
+
+                                        {/* Rencana Pekerjaan Lanjutan */}
+                                        <div>
+                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                                REKOMENDASI & RENCANA TINDAK LANJUT
+                                            </div>
+                                            <div className="p-2.5 border border-neutral-300 border-t-0 min-h-[100px] text-[7px] font-semibold text-neutral-800 leading-relaxed whitespace-pre-wrap">
+                                                {nextActions || "Tidak ada rekomendasi khusus."}
+                                            </div>
+                                        </div>
+
+                                        {/* Dokumentasi Lapangan */}
+                                        {photos.length > 0 && (
+                                            <div>
+                                                <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                                    DOKUMENTASI FOTO LAPANGAN
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 p-2 border border-neutral-300 border-t-0 bg-neutral-50/30">
+                                                    {photos.slice(0, 4).map((ph, idx) => (
+                                                        <div key={idx} className="flex flex-col gap-1">
+                                                            <img src={ph.url} alt="Dokumentasi" className="w-full h-28 object-cover rounded border border-neutral-200" />
+                                                            <div className="text-[6px] font-semibold text-neutral-700 leading-tight">{ph.caption || "Dokumentasi foto"}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Signatures */}
+                                    <div className="grid grid-cols-2 gap-3 border-t border-neutral-300 pt-4 text-center mt-6">
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-[7px] font-bold text-neutral-600 uppercase tracking-wider">Disetujui Oleh</div>
+                                            <div className="w-full border border-neutral-300 rounded h-16 bg-neutral-50/50 my-2"></div>
+                                            <div className="text-[8px] font-black text-neutral-900">{approvedBy || "( Nama Terang )"}</div>
+                                            <div className="text-[6px] font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{approvedByRole || "Project Manager / Direktur"}</div>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-[7px] font-bold text-neutral-600 uppercase tracking-wider">Disusun Oleh</div>
+                                            <div className="w-full border border-neutral-300 rounded h-16 bg-neutral-50/50 my-2"></div>
+                                            <div className="text-[8px] font-black text-neutral-900">{preparedBy || "( Nama Terang )"}</div>
+                                            <div className="text-[6px] font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{preparedByRole || "Project Officer / Pengawas"}</div>
+                                        </div>
+                                    </div>
                                 </div>
 
                             </div>
