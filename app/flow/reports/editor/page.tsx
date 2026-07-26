@@ -2413,21 +2413,49 @@ function EditorContentComponent() {
                                                 <table className="w-full text-left border border-neutral-300" style={{ borderCollapse: "collapse" }}>
                                                     <tbody>
                                                         {reportType === "monthly" ? (
-                                                            effectiveHoursMonthlyTable.map((h, i) => (
-                                                                <tr key={i} className="border-b border-neutral-200">
-                                                                    <td className="p-0.5 pl-1 font-semibold text-neutral-700">{h.weekLabel}</td>
-                                                                    <td className="p-0.5 text-center text-neutral-600">{h.totalHours} jam</td>
-                                                                    <td className="p-0.5 text-right pr-1 font-bold text-neutral-900">efektif {h.effectiveHours} jam</td>
-                                                                </tr>
-                                                            ))
+                                                            <>
+                                                                {effectiveHoursMonthlyTable.map((h, i) => (
+                                                                    <tr key={i} className="border-b border-neutral-200">
+                                                                        <td className="p-0.5 pl-1 font-semibold text-neutral-700">{h.weekLabel}</td>
+                                                                        <td className="p-0.5 text-center text-neutral-600">{h.totalHours} jam</td>
+                                                                        <td className="p-0.5 text-right pr-1 font-bold text-neutral-900">efektif {h.effectiveHours} jam</td>
+                                                                    </tr>
+                                                                ))}
+                                                                {(() => {
+                                                                    const count = effectiveHoursMonthlyTable.length || 1;
+                                                                    const avgTot = Math.round(effectiveHoursMonthlyTable.reduce((a, b) => a + (parseFloat(b.totalHours) || 0), 0) / count);
+                                                                    const avgEff = Math.round(effectiveHoursMonthlyTable.reduce((a, b) => a + (parseFloat(b.effectiveHours) || 0), 0) / count);
+                                                                    return (
+                                                                        <tr className="bg-neutral-100 font-black text-neutral-900 border-t border-neutral-300">
+                                                                            <td className="p-0.5 pl-1 uppercase font-black text-neutral-900">Rata-rata</td>
+                                                                            <td className="p-0.5 text-center">{avgTot} jam</td>
+                                                                            <td className="p-0.5 text-right pr-1 font-black text-neutral-900">efektif {avgEff} jam</td>
+                                                                        </tr>
+                                                                    );
+                                                                })()}
+                                                            </>
                                                         ) : (
-                                                            effectiveHoursTable.map((h, i) => (
-                                                                <tr key={i} className="border-b border-neutral-200">
-                                                                    <td className="p-0.5 pl-1 font-semibold text-neutral-700">{h.day}</td>
-                                                                    <td className="p-0.5 text-center text-neutral-600">{h.totalHours} jam</td>
-                                                                    <td className="p-0.5 text-right pr-1 font-bold text-neutral-900">efektif {h.effectiveHours} jam</td>
-                                                                </tr>
-                                                            ))
+                                                            <>
+                                                                {effectiveHoursTable.map((h, i) => (
+                                                                    <tr key={i} className="border-b border-neutral-200">
+                                                                        <td className="p-0.5 pl-1 font-semibold text-neutral-700">{h.day}</td>
+                                                                        <td className="p-0.5 text-center text-neutral-600">{h.totalHours} jam</td>
+                                                                        <td className="p-0.5 text-right pr-1 font-bold text-neutral-900">efektif {h.effectiveHours} jam</td>
+                                                                    </tr>
+                                                                ))}
+                                                                {(() => {
+                                                                    const count = effectiveHoursTable.length || 1;
+                                                                    const avgTot = Math.round(effectiveHoursTable.reduce((a, b) => a + (parseFloat(b.totalHours) || 0), 0) / count);
+                                                                    const avgEff = Math.round(effectiveHoursTable.reduce((a, b) => a + (parseFloat(b.effectiveHours) || 0), 0) / count);
+                                                                    return (
+                                                                        <tr className="bg-neutral-100 font-black text-neutral-900 border-t border-neutral-300">
+                                                                            <td className="p-0.5 pl-1 uppercase font-black text-neutral-900">Rata-rata</td>
+                                                                            <td className="p-0.5 text-center">{avgTot} jam</td>
+                                                                            <td className="p-0.5 text-right pr-1 font-black text-neutral-900">efektif {avgEff} jam</td>
+                                                                        </tr>
+                                                                    );
+                                                                })()}
+                                                            </>
                                                         )}
                                                     </tbody>
                                                 </table>
