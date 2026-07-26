@@ -42,14 +42,14 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
         cluster: "Main Reports",
         items: [
             { label: "Overview", path: "/flow/reports/overview", icon: LayoutGrid },
-            { label: "Daily Reports", path: "/flow/reports/daily", type: "daily", icon: Calendar },
-            { label: "Weekly Reports", path: "/flow/reports/weekly", type: "weekly", icon: FileText },
-            { label: "Monthly Reports", path: "/flow/reports/monthly", type: "monthly", icon: CalendarCheck },
         ]
     },
     {
-        cluster: "Progress & Schedule",
+        cluster: "Progress Report",
         items: [
+            { label: "Daily Reports", path: "/flow/reports/daily", type: "daily", icon: Calendar },
+            { label: "Weekly Reports", path: "/flow/reports/weekly", type: "weekly", icon: FileText },
+            { label: "Monthly Reports", path: "/flow/reports/monthly", type: "monthly", icon: CalendarCheck },
             { label: "Schedule & S-Curve", path: "/flow/reports/editor?type=schedule", type: "schedule", icon: TrendingUp },
         ]
     },
