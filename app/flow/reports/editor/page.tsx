@@ -99,7 +99,7 @@ function EditorContentComponent() {
     const searchParams = useSearchParams();
     
     // URL Search Params
-    const paramType = searchParams.get("type") as "daily" | "weekly" | "monthly" | null;
+    const paramType = searchParams.get("type") as ExtendedReportType | null;
     const paramId = searchParams.get("id");
     const paramProjectId = searchParams.get("projectId");
     const paramExport = searchParams.get("export") === "true";
@@ -114,11 +114,12 @@ function EditorContentComponent() {
     // Core Form State
     const [reportId, setReportId] = useState<string | null>(paramId);
     const [selectedProjectId, setSelectedProjectId] = useState("");
-    const [reportType, setReportType] = useState<"daily" | "weekly" | "monthly">(paramType || "daily");
+    const [reportType, setReportType] = useState<ExtendedReportType | string>(paramType || "daily");
     const [title, setTitle] = useState("");
     const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
     const [progress, setProgress] = useState("0");
     const [status, setStatus] = useState<ReportStatus>("on-track");
+
     
     // Text Content (For Monthly or Legacy Rich Text)
     const [editorContent, setEditorContent] = useState("");
@@ -1182,9 +1183,18 @@ function EditorContentComponent() {
                 finalContent = JSON.stringify(weeklyTemplateData);
             }
 
+            const getCategoryForReportType = (typeStr: string): string => {
+                if (["daily", "weekly", "monthly", "schedule"].includes(typeStr)) return "progress_control";
+                if (["cost", "manpower", "procurement"].includes(typeStr)) return "financial_resources";
+                if (["quality", "safety", "issue_risk"].includes(typeStr)) return "quality_safety_risk";
+                if (["doc_control", "change_order", "executive"].includes(typeStr)) return "governance_change";
+                return "site_formal";
+            };
+
             const payload = {
                 project_id: selectedProjectId,
                 report_type: reportType,
+                report_category: getCategoryForReportType(reportType),
                 title,
                 report_date: reportDate,
                 progress: parseFloat(progressTotal) || parseFloat(progress) || 0,
@@ -1194,6 +1204,7 @@ function EditorContentComponent() {
                 content: finalContent || null,
                 updated_at: new Date().toISOString(),
             };
+
 
             const { data: { user } } = await supabase.auth.getUser();
 
@@ -1717,19 +1728,143 @@ function EditorContentComponent() {
                             {activeTab === "cuaca" && (
                                 <div className="space-y-4 animate-in fade-in duration-300">
                                     <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Kondisi Cuaca Lapangan</span>
+
                                     <div className="space-y-2">
                                         {weatherItems.map((w, idx) => (
                                             <div key={idx} className="flex items-center gap-2">
-                                                <Input label="" value={w.timeRange} onChange={(e) => setWeatherItems(prev => prev.map((item, i) => i === idx ? { ...item, timeRange: e.target.value } : item))} placeholder="08.00 - 09.00" />
-                                                <Select
-                                                    label=""
-                                                    value={w.condition}
-                                                    onChange={(val) => setWeatherItems(prev => prev.map((item, i) => i === idx ? { ...item, condition: val } : item))}
-                                                    options={[{ value: "cerah", label: "Cerah" }, { value: "berawan", label: "Berawan" }, { value: "hujan", label: "Hujan" }]}
-                                                />
+                                                <div className="flex-1">
+                                                    <Input 
+                                                        label="" 
+                                                        value={w.timeRange} 
+                                                        onChange={(e) => setWeatherItems(prev => prev.map((item, i) => i === idx ? { ...item, timeRange: e.target.value } : item))} 
+                                                        placeholder="08.00 - 09.00" 
+                                                    />
+                                                </div>
+                                                <div className="w-36">
+                                                    <Select
+                                                        label=""
+                                                        value={w.condition}
+                                                        onChange={(val) => setWeatherItems(prev => prev.map((item, i) => i === idx ? { ...item, condition: val } : item))}
+                                                        options={[{ value: "cerah", label: "Cerah" }, { value: "berawan", label: "Berawan" }, { value: "hujan", label: "Hujan" }]}
+                                                    />
+                                                </div>
+                                                {weatherItems.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setWeatherItems(weatherItems.filter((_, i) => i !== idx))}
+                                                        className="p-2 text-neutral-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors shrink-0"
+                                                        title="Hapus Baris Cuaca"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const lastItem = weatherItems[weatherItems.length - 1];
+                                            let nextTime = "17.00 - 18.00";
+                                            if (lastItem && lastItem.timeRange.includes("-")) {
+                                                const endParts = lastItem.timeRange.split("-")[1].trim().split(".");
+                                                const endHour = parseInt(endParts[0], 10);
+                                                if (!isNaN(endHour)) {
+                                                    const startStr = endHour.toString().padStart(2, "0") + ".00";
+                                                    const endStr = (endHour + 1).toString().padStart(2, "0") + ".00";
+                                                    nextTime = `${startStr} - ${endStr}`;
+                                                }
+                                            }
+                                            setWeatherItems([...weatherItems, { timeRange: nextTime, condition: "cerah" }]);
+                                        }}
+                                        className="w-full py-2.5 text-xs font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 flex items-center justify-center gap-1.5 bg-orange-50/80 dark:bg-orange-950/30 rounded-xl border border-orange-200/60 dark:border-orange-900/40 hover:bg-orange-100/60 transition-colors"
+                                    >
+                                        <Plus className="w-4 h-4" /> Tambah Jam / Baris Cuaca
+                                    </button>
+                                </div>
+                            )}
+
+                            {activeTab === "material" && (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Material / Alat / Jasa Lapangan</span>
+
+                                    <div className="space-y-3">
+                                        {materialItems.map((mat, idx) => (
+                                            <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50 space-y-3 relative">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[11px] font-extrabold text-neutral-400 uppercase tracking-wider">Item #{idx + 1}</span>
+                                                    {materialItems.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setMaterialItems(materialItems.filter((_, i) => i !== idx))}
+                                                            className="p-1 text-neutral-400 hover:text-rose-600 rounded-lg transition-colors"
+                                                            title="Hapus Item"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-2.5">
+                                                    <Select
+                                                        label="Kategori"
+                                                        value={mat.category}
+                                                        onChange={(val) => setMaterialItems(prev => prev.map((item, i) => i === idx ? { ...item, category: val } : item))}
+                                                        options={[
+                                                            { value: "Material", label: "Material" },
+                                                            { value: "Alat", label: "Alat" },
+                                                            { value: "Jasa", label: "Jasa" }
+                                                        ]}
+                                                    />
+                                                    <Input
+                                                        label="Nama Item"
+                                                        value={mat.name}
+                                                        onChange={(e) => setMaterialItems(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))}
+                                                        placeholder="Semen / Excavator / Bor"
+                                                    />
+                                                </div>
+
+                                                <div className="grid grid-cols-4 gap-2">
+                                                    <Input
+                                                        label="Satuan"
+                                                        value={mat.unit}
+                                                        onChange={(e) => setMaterialItems(prev => prev.map((item, i) => i === idx ? { ...item, unit: e.target.value } : item))}
+                                                        placeholder="sak / unit / m3"
+                                                    />
+                                                    <Input
+                                                        label="Masuk"
+                                                        type="number"
+                                                        value={mat.incoming}
+                                                        onChange={(e) => setMaterialItems(prev => prev.map((item, i) => i === idx ? { ...item, incoming: e.target.value } : item))}
+                                                        placeholder="0"
+                                                    />
+                                                    <Input
+                                                        label="Keluar / Pakai"
+                                                        type="number"
+                                                        value={mat.outgoing}
+                                                        onChange={(e) => setMaterialItems(prev => prev.map((item, i) => i === idx ? { ...item, outgoing: e.target.value } : item))}
+                                                        placeholder="0"
+                                                    />
+                                                    <Input
+                                                        label="Sisa / Stok"
+                                                        type="number"
+                                                        value={mat.stock}
+                                                        onChange={(e) => setMaterialItems(prev => prev.map((item, i) => i === idx ? { ...item, stock: e.target.value } : item))}
+                                                        placeholder="0"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setMaterialItems([...materialItems, { name: "", category: "Material", unit: "unit", incoming: "0", outgoing: "0", stock: "0" }])}
+                                        className="w-full py-2.5 text-xs font-bold text-orange-600 dark:text-orange-400 hover:text-orange-700 flex items-center justify-center gap-1.5 bg-orange-50/80 dark:bg-orange-950/30 rounded-xl border border-orange-200/60 dark:border-orange-900/40 hover:bg-orange-100/60 transition-colors"
+                                    >
+                                        <Plus className="w-4 h-4" /> Tambah Material / Alat
+                                    </button>
                                 </div>
                             )}
 
@@ -2235,88 +2370,237 @@ function EditorContentComponent() {
 
                     <div id="document-preview-a4" className="w-full max-w-[680px]">
                         
-                        {/* ===================== DAILY PREVIEW (1 Page) ===================== */}
+                        {/* ===================== DAILY PREVIEW (2 Pages LH) ===================== */}
                         {reportType === "daily" && (
-                            <div className="bg-white text-neutral-800 shadow-xl w-full p-8 flex flex-col gap-3" style={{ fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
-                                {renderPageHeader("LH", documentId || "LH-00-01", "Laporan Harian")}
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                
+                                {/* ---------------- LH PAGE 1 ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3 border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    {renderPageHeader("LH", documentId || "LH-00-01", "Laporan Harian")}
 
-                                {/* Date Meta */}
-                                <div className="grid grid-cols-5 border border-neutral-300 rounded overflow-hidden text-center">
-                                    {[
-                                        { label: "Hari", value: getDayName() },
-                                        { label: "Tanggal", value: getDayDateOnly() },
-                                        { label: "Hari Ke-", value: dayNumber || "—" },
-                                        { label: "Total Hari", value: totalDays || "—" },
-                                        { label: "Sisa Hari", value: remainingDays || "—" },
-                                    ].map((cell, i) => (
-                                        <div key={i} className="border-r border-neutral-300 last:border-r-0">
-                                            <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{cell.label}</div>
-                                            <div className="text-[8px] font-bold text-neutral-800 py-1">{cell.value}</div>
+                                    {/* Date Meta */}
+                                    <div className="grid grid-cols-5 border border-neutral-300 rounded overflow-hidden text-center">
+                                        {[
+                                            { label: "Hari", value: getDayName() },
+                                            { label: "Tanggal", value: getDayDateOnly() },
+                                            { label: "Hari Ke-", value: dayNumber || "—" },
+                                            { label: "Total Hari", value: totalDays || "—" },
+                                            { label: "Sisa Hari", value: remainingDays || "—" },
+                                        ].map((cell, i) => (
+                                            <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{cell.label}</div>
+                                                <div className="text-[8px] font-bold text-neutral-800 py-1">{cell.value}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Main Tables Grid */}
+                                    <div className="flex gap-3">
+                                        {/* Uraian Pekerjaan */}
+                                        <div className="flex-1">
+                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Uraian Pekerjaan</div>
+                                            <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
+                                                <thead>
+                                                    <tr className="bg-neutral-50 border-b border-neutral-300 text-[6px] font-extrabold text-neutral-500 uppercase">
+                                                        <th className="p-1 w-5 text-center border-r border-neutral-300">No</th>
+                                                        <th className="p-1 border-r border-neutral-300">Uraian Pekerjaan</th>
+                                                        <th className="p-1 w-16 border-r border-neutral-300">Lokasi</th>
+                                                        <th className="p-1 w-12 text-center">Volume</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {workItems.map((item, idx) => (
+                                                        <tr key={idx} className="border-b border-neutral-200 text-[6.5px] leading-tight">
+                                                            <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{idx + 1}</td>
+                                                            <td className="p-1 border-r border-neutral-200 text-neutral-800 font-bold">{item.description || ""}</td>
+                                                            <td className="p-1 border-r border-neutral-200 text-neutral-600 font-semibold">{item.position || ""}</td>
+                                                            <td className="p-1 text-center text-neutral-800 font-bold">{item.volume || ""}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
                                         </div>
-                                    ))}
-                                </div>
 
-                                {/* Main Tables */}
-                                <div className="flex gap-3">
-                                    <div className="flex-1">
-                                        <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Uraian Pekerjaan</div>
+                                        {/* Right Sidebar (Personel + Waktu Kerja + Cuaca) */}
+                                        <div className="w-[200px] shrink-0 flex flex-col gap-2">
+                                            {/* Personel */}
+                                            <div>
+                                                <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Personel</div>
+                                                <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
+                                                    <tbody className="text-[6px]">
+                                                        {[
+                                                            ["Project Manager", pmCount], ["Site Manager", smCount], ["Supervisor", supervisorCount],
+                                                            ["Mandor", mandorCount], ["Tukang", tukangCount], ["Pekerja", pekerjaCount], ["Operator", operatorCount]
+                                                        ].map(([label, val], i) => (
+                                                            <tr key={i} className="border-b border-neutral-200">
+                                                                <td className="p-0.5 pl-1.5 border-r border-neutral-200 text-neutral-600 font-semibold">{label}</td>
+                                                                <td className="p-0.5 text-center font-black text-neutral-900 w-8">{val || "0"}</td>
+                                                            </tr>
+                                                        ))}
+                                                        <tr className="bg-neutral-100 font-black">
+                                                            <td className="p-0.5 pl-1.5 border-r border-neutral-200 text-neutral-900">Total</td>
+                                                            <td className="p-0.5 text-center font-black text-neutral-900 w-8">{
+                                                                (parseInt(pmCount) || 0) + (parseInt(smCount) || 0) + (parseInt(supervisorCount) || 0) + 
+                                                                (parseInt(mandorCount) || 0) + (parseInt(tukangCount) || 0) + (parseInt(pekerjaCount) || 0) + (parseInt(operatorCount) || 0)
+                                                            }</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {/* Waktu Kerja */}
+                                            <div>
+                                                <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Waktu Kerja</div>
+                                                <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
+                                                    <tbody className="text-[6px]">
+                                                        <tr className="border-b border-neutral-200">
+                                                            <td className="p-0.5 pl-1.5 border-r border-neutral-200 text-neutral-600 font-semibold">Reguler 08.00–16.00</td>
+                                                            <td className="p-0.5 text-center font-bold text-neutral-900 w-12">{shiftReguler || "0"} Jam</td>
+                                                        </tr>
+                                                        <tr className="border-b border-neutral-200">
+                                                            <td className="p-0.5 pl-1.5 border-r border-neutral-200 text-neutral-600 font-semibold">OT 1 16.00–18.00</td>
+                                                            <td className="p-0.5 text-center font-bold text-neutral-900 w-12">{shiftOt1 || "0"} Jam</td>
+                                                        </tr>
+                                                        <tr className="border-b border-neutral-200">
+                                                            <td className="p-0.5 pl-1.5 border-r border-neutral-200 text-neutral-600 font-semibold">OT 2 18.00–22.00</td>
+                                                            <td className="p-0.5 text-center font-bold text-neutral-900 w-12">{shiftOt2 || "0"} Jam</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td className="p-0.5 pl-1.5 border-r border-neutral-200 text-neutral-600 font-semibold">OT 3 22.00–08.00</td>
+                                                            <td className="p-0.5 text-center font-bold text-neutral-900 w-12">{shiftOt3 || "0"} Jam</td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {/* Cuaca */}
+                                            <div>
+                                                <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Cuaca</div>
+                                                <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
+                                                    <thead>
+                                                        <tr className="bg-neutral-50 border-b border-neutral-300 text-[5.5px] font-extrabold text-neutral-500 uppercase">
+                                                            <th className="p-0.5 pl-1 border-r border-neutral-300">Waktu</th>
+                                                            <th className="p-0.5 text-center border-r border-neutral-300 w-4">☀️</th>
+                                                            <th className="p-0.5 text-center border-r border-neutral-300 w-4">⛅</th>
+                                                            <th className="p-0.5 text-center border-r border-neutral-300 w-4">🌧️</th>
+                                                            <th className="p-0.5 text-center w-8">Durasi</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="text-[6px]">
+                                                        {weatherItems.map((w, idx) => (
+                                                            <tr key={idx} className="border-b border-neutral-200">
+                                                                <td className="p-0.5 pl-1 border-r border-neutral-200 text-neutral-600 font-medium">{w.timeRange}</td>
+                                                                <td className="p-0.5 text-center border-r border-neutral-200 font-black text-neutral-900">{w.condition === "cerah" ? "✓" : ""}</td>
+                                                                <td className="p-0.5 text-center border-r border-neutral-200 font-black text-neutral-900">{w.condition === "berawan" ? "✓" : ""}</td>
+                                                                <td className="p-0.5 text-center border-r border-neutral-200 font-black text-neutral-900">{w.condition === "hujan" ? "✓" : ""}</td>
+                                                                <td className="p-0.5 text-center font-semibold text-neutral-600">1 Jam</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Material / Alat / Jasa */}
+                                    <div>
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Material / Alat / Jasa Lapangan</div>
                                         <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
                                             <thead>
                                                 <tr className="bg-neutral-50 border-b border-neutral-300 text-[6px] font-extrabold text-neutral-500 uppercase">
                                                     <th className="p-1 w-5 text-center border-r border-neutral-300">No</th>
-                                                    <th className="p-1 border-r border-neutral-300">Uraian Pekerjaan</th>
-                                                    <th className="p-1 w-16 border-r border-neutral-300">Lokasi</th>
-                                                    <th className="p-1 w-12 text-center">Volume</th>
+                                                    <th className="p-1 w-16 border-r border-neutral-300">Kategori</th>
+                                                    <th className="p-1 border-r border-neutral-300">Nama Material / Alat / Jasa</th>
+                                                    <th className="p-1 w-12 text-center border-r border-neutral-300">Satuan</th>
+                                                    <th className="p-1 w-12 text-center border-r border-neutral-300">Masuk</th>
+                                                    <th className="p-1 w-14 text-center border-r border-neutral-300">Keluar / Terpakai</th>
+                                                    <th className="p-1 w-14 text-center">Sisa / Stok</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {workItems.map((item, idx) => (
-                                                    <tr key={idx} className="border-b border-neutral-200 text-[6.5px] leading-tight">
+                                                {materialItems.map((mat, idx) => (
+                                                    <tr key={idx} className="border-b border-neutral-200 text-[6.5px]">
                                                         <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{idx + 1}</td>
-                                                        <td className="p-1 border-r border-neutral-200 text-neutral-800 font-bold">{item.description || ""}</td>
-                                                        <td className="p-1 border-r border-neutral-200 text-neutral-600 font-semibold">{item.position || ""}</td>
-                                                        <td className="p-1 text-center text-neutral-800 font-bold">{item.volume || ""}</td>
+                                                        <td className="p-1 border-r border-neutral-200 font-bold text-neutral-600 uppercase">{mat.category || "MATERIAL"}</td>
+                                                        <td className="p-1 border-r border-neutral-200 font-bold text-neutral-800">{mat.name || ""}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-semibold text-neutral-600">{mat.unit || "unit"}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-800">{mat.incoming || "0"}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-800">{mat.outgoing || "0"}</td>
+                                                        <td className="p-1 text-center font-bold text-neutral-800">{mat.stock || "0"}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
                                         </table>
                                     </div>
 
-                                    <div className="w-[200px] shrink-0 flex flex-col gap-2">
+                                    {/* Dokumentasi Lapangan */}
+                                    {photos.length > 0 && (
                                         <div>
-                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Personel</div>
-                                            <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
-                                                <tbody className="text-[6px]">
-                                                    {[
-                                                        ["Project Manager", pmCount], ["Site Manager", smCount], ["Supervisor", supervisorCount],
-                                                        ["Mandor", mandorCount], ["Tukang", tukangCount], ["Pekerja", pekerjaCount], ["Operator", operatorCount]
-                                                    ].map(([label, val], i) => (
-                                                        <tr key={i} className="border-b border-neutral-200">
-                                                            <td className="p-0.5 pl-1.5 border-r border-neutral-200 text-neutral-600 font-semibold">{label}</td>
-                                                            <td className="p-0.5 text-center font-black text-neutral-900 w-8">{val || "0"}</td>
-                                                        </tr>
+                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Dokumentasi Lapangan</div>
+                                            <div className="grid grid-cols-2 gap-2 p-2 border border-neutral-300 border-t-0 bg-neutral-50/30">
+                                                {photos.slice(0, 2).map((ph, idx) => (
+                                                    <div key={idx} className="flex flex-col gap-1">
+                                                        <img src={ph.url} alt="Dokumentasi" className="w-full h-32 object-cover rounded border border-neutral-200" />
+                                                        <div className="text-[6px] font-semibold text-neutral-700 leading-tight">{ph.caption || "Dokumentasi foto"}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ---------------- LH PAGE 2 ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {/* Extra Photos if > 2 */}
+                                        {photos.length > 2 && (
+                                            <div>
+                                                <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Dokumentasi Lapangan (Lanjutan)</div>
+                                                <div className="grid grid-cols-2 gap-2 p-2 border border-neutral-300 border-t-0 bg-neutral-50/30">
+                                                    {photos.slice(2).map((ph, idx) => (
+                                                        <div key={idx} className="flex flex-col gap-1">
+                                                            <img src={ph.url} alt="Dokumentasi" className="w-full h-32 object-cover rounded border border-neutral-200" />
+                                                            <div className="text-[6px] font-semibold text-neutral-700 leading-tight">{ph.caption || "Dokumentasi foto"}</div>
+                                                        </div>
                                                     ))}
-                                                </tbody>
-                                            </table>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Catatan / Kendala */}
+                                        <div>
+                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Catatan / Kendala</div>
+                                            <div className="p-2 border border-neutral-300 border-t-0 min-h-[100px] text-[7px] font-semibold text-neutral-800 leading-relaxed whitespace-pre-wrap">
+                                                {notes || "Tidak ada catatan / kendala."}
+                                            </div>
+                                        </div>
+
+                                        {/* Rencana Pekerjaan Lanjutan */}
+                                        <div>
+                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Rencana Pekerjaan Lanjutan</div>
+                                            <div className="p-2 border border-neutral-300 border-t-0 min-h-[100px] text-[7px] font-semibold text-neutral-800 leading-relaxed whitespace-pre-wrap">
+                                                {nextActions || "Tidak ada rencana khusus."}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Signatures */}
+                                    <div className="grid grid-cols-2 gap-3 border-t border-neutral-300 pt-4 text-center">
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-[7px] font-bold text-neutral-600 uppercase tracking-wider">Disetujui Oleh</div>
+                                            <div className="w-full border border-neutral-300 rounded h-16 bg-neutral-50/50 my-2"></div>
+                                            <div className="text-[8px] font-black text-neutral-900">{approvedBy || "( Nama Terang )"}</div>
+                                            <div className="text-[6px] font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{approvedByRole || "Project Manager / Direktur"}</div>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-[7px] font-bold text-neutral-600 uppercase tracking-wider">Disusun Oleh</div>
+                                            <div className="w-full border border-neutral-300 rounded h-16 bg-neutral-50/50 my-2"></div>
+                                            <div className="text-[8px] font-black text-neutral-900">{preparedBy || "( Nama Terang )"}</div>
+                                            <div className="text-[6px] font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{preparedByRole || "Project Officer / Pengawas"}</div>
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Signatures */}
-                                <div className="grid grid-cols-2 gap-3 mt-4">
-                                    <div className="text-center border-t border-neutral-300 pt-2">
-                                        <div className="text-[7px] font-bold text-neutral-500 uppercase">Disetujui Oleh</div>
-                                        <div className="h-10"></div>
-                                        <div className="text-[8px] font-black text-neutral-900">{approvedBy || "( Nama Terang )"}</div>
-                                        <div className="text-[6px] text-neutral-500">{approvedByRole || "Project Manager"}</div>
-                                    </div>
-                                    <div className="text-center border-t border-neutral-300 pt-2">
-                                        <div className="text-[7px] font-bold text-neutral-500 uppercase">Disusun Oleh</div>
-                                        <div className="h-10"></div>
-                                        <div className="text-[8px] font-black text-neutral-900">{preparedBy || "( Nama Terang )"}</div>
-                                        <div className="text-[6px] text-neutral-500">{preparedByRole || "Pengawas"}</div>
-                                    </div>
-                                </div>
                             </div>
                         )}
 

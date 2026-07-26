@@ -322,10 +322,55 @@ export interface ProjectDoc {
 }
 
 // ============================================
-// REPORTS (Manual Tracking)
+// REPORTS (Advanced Multi-Type Engine)
 // ============================================
 
 export type ReportStatus = "on-track" | "delayed" | "critical" | "completed";
+
+export type ReportCluster = 
+    | "progress_control"
+    | "financial_resources"
+    | "quality_safety_risk"
+    | "governance_change"
+    | "site_formal";
+
+export type ExtendedReportType = 
+    // Cluster 1: Progress & Schedule
+    | "daily"
+    | "weekly"
+    | "monthly"
+    | "schedule"
+    // Cluster 2: Financial & Resources
+    | "cost"
+    | "manpower"
+    | "procurement"
+    // Cluster 3: Quality, Safety & Risk
+    | "quality"
+    | "safety"
+    | "issue_risk"
+    // Cluster 4: Governance, Change & Executive
+    | "doc_control"
+    | "change_order"
+    | "executive"
+    // Cluster 5: Site Operations & Formal Docs
+    | "site_survey"
+    | "mom"
+    | "mou_contract"
+    | "memo_correspondence"
+    | "punch_list"
+    | "commissioning"
+    | "environmental";
+
+export interface ReportTypeDefinition {
+    type: ExtendedReportType;
+    category: ReportCluster;
+    title: string;
+    subtitle: string;
+    description: string;
+    icon: string;
+    badgeColor: string;
+    supportedPeriods: ("daily" | "weekly" | "monthly" | "all_time" | "custom")[];
+}
 
 export interface ProjectReport {
     id: string;
@@ -342,9 +387,12 @@ export interface ProjectReport {
 
     content?: string; // Markdown supported
 
-    reportType?: "daily" | "weekly" | "monthly";
+    reportType?: ExtendedReportType | string;
+    reportCategory?: ReportCluster;
+    meta?: Record<string, any>;
 
     createdBy?: string;
     createdAt: string;
     updatedAt: string;
 }
+

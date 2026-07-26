@@ -7,94 +7,185 @@ import {
     LayoutGrid,
     Calendar,
     CalendarCheck,
-    FileText
+    FileText,
+    TrendingUp,
+    DollarSign,
+    Users,
+    Package,
+    ShieldCheck,
+    HardHat,
+    AlertOctagon,
+    FileSpreadsheet,
+    FileDiff,
+    Award,
+    MapPin,
+    MessageSquare,
+    FileCheck,
+    Mail,
+    CheckSquare,
+    Sliders,
+    Leaf
 } from "lucide-react";
 
-/* ======================
-   NAV ITEMS CONFIG
-   (Reports Module)
- ====================== */
-const NAV_ITEMS = [
-    { label: "Overview", path: "/flow/reports/overview", icon: LayoutGrid },
-    { label: "Daily Reports", path: "/flow/reports/daily", icon: Calendar },
-    { label: "Weekly Reports", path: "/flow/reports/weekly", icon: FileText },
-    { label: "Monthly Reports", path: "/flow/reports/monthly", icon: CalendarCheck },
+interface SidebarGroup {
+    cluster: string;
+    items: {
+        label: string;
+        path: string;
+        type?: string;
+        icon: any;
+    }[];
+}
+
+const SIDEBAR_GROUPS: SidebarGroup[] = [
+    {
+        cluster: "Main Reports",
+        items: [
+            { label: "Overview", path: "/flow/reports/overview", icon: LayoutGrid },
+            { label: "Daily Reports", path: "/flow/reports/daily", type: "daily", icon: Calendar },
+            { label: "Weekly Reports", path: "/flow/reports/weekly", type: "weekly", icon: FileText },
+            { label: "Monthly Reports", path: "/flow/reports/monthly", type: "monthly", icon: CalendarCheck },
+        ]
+    },
+    {
+        cluster: "Progress & Schedule",
+        items: [
+            { label: "Schedule & S-Curve", path: "/flow/reports/editor?type=schedule", type: "schedule", icon: TrendingUp },
+        ]
+    },
+    {
+        cluster: "Cost & Logistics",
+        items: [
+            { label: "Cost & Budget", path: "/flow/reports/editor?type=cost", type: "cost", icon: DollarSign },
+            { label: "Manpower & Payroll", path: "/flow/reports/editor?type=manpower", type: "manpower", icon: Users },
+            { label: "Procurement & Stock", path: "/flow/reports/editor?type=procurement", type: "procurement", icon: Package },
+        ]
+    },
+    {
+        cluster: "QA/QC, HSE & Risk",
+        items: [
+            { label: "Quality (QA/QC)", path: "/flow/reports/editor?type=quality", type: "quality", icon: ShieldCheck },
+            { label: "Safety (HSE/K3)", path: "/flow/reports/editor?type=safety", type: "safety", icon: HardHat },
+            { label: "Issue & Risk", path: "/flow/reports/editor?type=issue_risk", type: "issue_risk", icon: AlertOctagon },
+        ]
+    },
+    {
+        cluster: "Governance & Exec",
+        items: [
+            { label: "Document Control", path: "/flow/reports/editor?type=doc_control", type: "doc_control", icon: FileSpreadsheet },
+            { label: "Change Order (VO)", path: "/flow/reports/editor?type=change_order", type: "change_order", icon: FileDiff },
+            { label: "Executive Report", path: "/flow/reports/editor?type=executive", type: "executive", icon: Award },
+        ]
+    },
+    {
+        cluster: "Site Ops & Formal",
+        items: [
+            { label: "Site Survey", path: "/flow/reports/editor?type=site_survey", type: "site_survey", icon: MapPin },
+            { label: "Minute of Meeting", path: "/flow/reports/editor?type=mom", type: "mom", icon: MessageSquare },
+            { label: "MOU & Contract", path: "/flow/reports/editor?type=mou_contract", type: "mou_contract", icon: FileCheck },
+            { label: "Memo & Notice", path: "/flow/reports/editor?type=memo_correspondence", type: "memo_correspondence", icon: Mail },
+            { label: "Punch List (BAST)", path: "/flow/reports/editor?type=punch_list", type: "punch_list", icon: CheckSquare },
+            { label: "Commissioning", path: "/flow/reports/editor?type=commissioning", type: "commissioning", icon: Sliders },
+            { label: "Environmental", path: "/flow/reports/editor?type=environmental", type: "environmental", icon: Leaf },
+        ]
+    }
 ];
+
 
 export default function ReportsSidebar() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const typeParam = searchParams.get("type");
 
-    const isActive = (path: string) => {
-        if (pathname === "/flow/reports/editor") {
-            if (path === "/flow/reports/daily") return typeParam === "daily";
-            if (path === "/flow/reports/weekly") return typeParam === "weekly";
-            if (path === "/flow/reports/monthly") return typeParam === "monthly";
-            return false;
-        }
-
-        if (path === "/flow/reports/overview") {
+    const isActive = (item: { path: string; type?: string }) => {
+        if (item.path === "/flow/reports/overview") {
             return pathname === "/flow/reports/overview" || pathname === "/flow/reports";
         }
-        return pathname.startsWith(path);
+        if (pathname === "/flow/reports/editor" && item.type) {
+            return typeParam === item.type;
+        }
+        return pathname.startsWith(item.path);
     };
-
-    const mobileMainItems = NAV_ITEMS;
 
     return (
         <>
             {/* DESKTOP SIDEBAR */}
-            <aside className="w-full hidden lg:flex flex-col">
-                <div className="space-y-0 pt-0">
-                    <div className="space-y-0.5">
-                        {NAV_ITEMS.map((item) => {
-                            const active = isActive(item.path);
-                            return (
-                                <Link
-                                    key={item.path}
-                                    href={item.path}
-                                    className={clsx(
-                                        "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
-                                        active
-                                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
-                                    )}
-                                >
-                                    <item.icon className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-                                    <span className="truncate">{item.label}</span>
-                                </Link>
-                            );
-                        })}
+            <aside className="w-full hidden lg:flex flex-col space-y-4 max-h-[85vh] overflow-y-auto pr-1 scrollbar-thin">
+                {SIDEBAR_GROUPS.map((group, idx) => (
+                    <div key={idx} className="space-y-1">
+                        {group.cluster !== "Main" && (
+                            <div className="px-3 text-[10px] font-black uppercase tracking-wider text-neutral-400 dark:text-neutral-500 pt-2 pb-0.5">
+                                {group.cluster}
+                            </div>
+                        )}
+                        <div className="space-y-0.5">
+                            {group.items.map((item) => {
+                                const active = isActive(item);
+                                const Icon = item.icon;
+                                return (
+                                    <Link
+                                        key={item.path}
+                                        href={item.path}
+                                        className={clsx(
+                                            "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                                            active
+                                                ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                                                : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                                        )}
+                                    >
+                                        <Icon className={clsx("w-4 h-4 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                                        <span className="truncate">{item.label}</span>
+                                    </Link>
+                                );
+                            })}
+                        </div>
                     </div>
-                </div>
+                ))}
             </aside>
 
             {/* MOBILE BOTTOM NAVIGATION */}
             <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center gap-3 w-full px-4 max-w-sm safe-area-bottom">
-                <div className="bg-white/50 backdrop-blur-sm backdrop-saturate-150 shadow-sm rounded-full px-4 py-1.5 flex items-center justify-center gap-4 border border-white/30 dark:border-neutral-800/30">
-                    {mobileMainItems.map((item) => {
-                        const active = isActive(item.path);
-                        return (
-                            <Link
-                                key={item.path}
-                                href={item.path}
-                                className={clsx(
-                                    "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
-                                    active ? "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400" : "text-neutral-400"
-                                )}
-                            >
-                                <item.icon
-                                    className={clsx(
-                                        "w-5 h-5 transition-colors",
-                                        active && "stroke-2"
-                                    )}
-                                />
-                            </Link>
-                        );
-                    })}
+                <div className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-md shadow-lg rounded-full px-4 py-2 flex items-center justify-center gap-4 border border-neutral-200/50 dark:border-neutral-800/50">
+                    <Link
+                        href="/flow/reports/overview"
+                        className={clsx(
+                            "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+                            pathname === "/flow/reports/overview" ? "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400" : "text-neutral-400"
+                        )}
+                    >
+                        <LayoutGrid className="w-5 h-5" />
+                    </Link>
+                    <Link
+                        href="/flow/reports/daily"
+                        className={clsx(
+                            "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+                            pathname.startsWith("/flow/reports/daily") || (pathname === "/flow/reports/editor" && typeParam === "daily") ? "bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400" : "text-neutral-400"
+                        )}
+                    >
+                        <Calendar className="w-5 h-5" />
+                    </Link>
+                    <Link
+                        href="/flow/reports/weekly"
+                        className={clsx(
+                            "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+                            pathname.startsWith("/flow/reports/weekly") || (pathname === "/flow/reports/editor" && typeParam === "weekly") ? "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400" : "text-neutral-400"
+                        )}
+                    >
+                        <FileText className="w-5 h-5" />
+                    </Link>
+                    <Link
+                        href="/flow/reports/monthly"
+                        className={clsx(
+                            "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+                            pathname.startsWith("/flow/reports/monthly") || (pathname === "/flow/reports/editor" && typeParam === "monthly") ? "bg-purple-50 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400" : "text-neutral-400"
+                        )}
+                    >
+                        <CalendarCheck className="w-5 h-5" />
+                    </Link>
+
                 </div>
             </div>
         </>
     );
 }
+
