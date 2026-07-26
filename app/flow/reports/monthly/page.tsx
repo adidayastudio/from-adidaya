@@ -18,12 +18,16 @@ import {
     AlertTriangle, 
     Clock,
     CalendarCheck,
-    TrendingUp
+    TrendingUp,
+    Download,
+    GitBranch
 } from "lucide-react";
 import clsx from "clsx";
+import toast from "react-hot-toast";
 
 interface MappedReport extends ProjectReport {
     projectName: string;
+    parsedContent?: any;
 }
 
 export default function MonthlyReportsPage() {
@@ -62,21 +66,29 @@ export default function MonthlyReportsPage() {
 
             if (error) throw error;
 
-            const mapped = (data || []).map(r => ({
-                id: r.id,
-                projectId: r.project_id,
-                reportType: r.report_type,
-                title: r.title,
-                reportDate: r.report_date,
-                progress: r.progress,
-                status: r.status,
-                manpowerCount: r.manpower_count,
-                weatherCondition: r.weather_condition,
-                content: r.content,
-                createdAt: r.created_at,
-                updatedAt: r.updated_at,
-                projectName: r.projects?.project_name || "Unknown Project"
-            }));
+            const mapped = (data || []).map(r => {
+                let parsed: any = {};
+                try {
+                    parsed = JSON.parse(r.content || "{}");
+                } catch(e) {}
+
+                return {
+                    id: r.id,
+                    projectId: r.project_id,
+                    reportType: r.report_type,
+                    title: r.title,
+                    reportDate: r.report_date,
+                    progress: r.progress,
+                    status: r.status,
+                    manpowerCount: r.manpower_count,
+                    weatherCondition: r.weather_condition,
+                    content: r.content,
+                    createdAt: r.created_at,
+                    updatedAt: r.updated_at,
+                    projectName: r.projects?.project_name || "Unknown Project",
+                    parsedContent: parsed
+                };
+            });
 
             setReports(mapped);
         } catch (err) {
@@ -92,13 +104,15 @@ export default function MonthlyReportsPage() {
     }, []);
 
     const handleDelete = async (id: string) => {
-        if (!confirm("Are you sure you want to delete this monthly report?")) return;
+        if (!confirm("Apakah Anda yakin ingin menghapus Laporan Bulanan ini?")) return;
         try {
             const { error } = await supabase.from("project_reports").delete().eq("id", id);
             if (error) throw error;
+            toast.success("Laporan Bulanan berhasil dihapus.");
             fetchReports();
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
+            toast.error(`Gagal menghapus: ${e.message}`);
         }
     };
 
@@ -108,6 +122,14 @@ export default function MonthlyReportsPage() {
 
     const handleEditClick = (report: MappedReport) => {
         router.push(`/flow/reports/editor?id=${report.id}&type=monthly`);
+    };
+
+    const handleExportClick = (report: MappedReport) => {
+        router.push(`/flow/reports/editor?id=${report.id}&type=monthly&export=true`);
+    };
+
+    const handleReviseClick = (report: MappedReport) => {
+        router.push(`/flow/reports/editor?id=${report.id}&type=monthly&revise=true`);
     };
 
     const filteredReports = reports.filter(r => {
@@ -149,11 +171,11 @@ export default function MonthlyReportsPage() {
     return (
         <div className="w-full space-y-6">
             <StandardPageHeader
-                title="Laporan Bulanan (Monthly)"
-                subtitle="Consolidated month-end project health and alignment dashboard."
+                title="Laporan Bulanan (LBL)"
+                subtitle="Daftar laporan rekapitulasi kemajuan fisik & dokumen proyek bulanan (LBL-XX-01 s.d. LBL-XX-10)."
                 action={
-                    <Button onClick={handleCreateClick} className="bg-purple-600 hover:bg-purple-700 border-purple-600 hover:border-purple-700 text-white font-bold text-xs" icon={<Plus className="w-4 h-4" />}>
-                        New Monthly Report
+                    <Button onClick={handleCreateClick} className="bg-neutral-900 hover:bg-black text-white font-bold text-xs" icon={<Plus className="w-4 h-4" />}>
+                        + Buat Laporan Bulanan (LBL)
                     </Button>
                 }
             />
@@ -165,7 +187,7 @@ export default function MonthlyReportsPage() {
                         <CalendarCheck className="w-6 h-6 text-purple-500" />
                     </div>
                     <div>
-                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">Reports Filed</span>
+                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">Total Laporan Bulanan</span>
                         <span className="text-2xl font-black text-neutral-900 dark:text-white leading-none">{totalReports}</span>
                     </div>
                 </div>
@@ -175,7 +197,7 @@ export default function MonthlyReportsPage() {
                         <TrendingUp className="w-6 h-6 text-blue-500" />
                     </div>
                     <div>
-                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">Average Progress</span>
+                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">Rata-Rata Kemajuan</span>
                         <span className="text-2xl font-black text-neutral-900 dark:text-white leading-none">{avgProgress}%</span>
                     </div>
                 </div>
@@ -185,7 +207,7 @@ export default function MonthlyReportsPage() {
                         <CheckCircle2 className="w-6 h-6 text-emerald-500" />
                     </div>
                     <div>
-                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">Completed Milestones</span>
+                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">Proyek Selesai</span>
                         <span className="text-2xl font-black text-neutral-900 dark:text-white leading-none">{completedProjectsCount}</span>
                     </div>
                 </div>
@@ -195,7 +217,7 @@ export default function MonthlyReportsPage() {
             <div className="bg-white/50 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/60 rounded-3xl p-4 shadow-sm flex flex-col md:flex-row gap-3">
                 <div className="relative flex-1">
                     <Input
-                        placeholder="Search monthly details..."
+                        placeholder="Cari Laporan Bulanan..."
                         value={searchVal}
                         onChange={(e) => setSearchVal(e.target.value)}
                         className="pl-9 bg-white dark:bg-neutral-900"
@@ -206,9 +228,9 @@ export default function MonthlyReportsPage() {
                 <Select
                     value={selectedProject}
                     onChange={(val) => setSelectedProject(val)}
-                    placeholder="Select Project"
+                    placeholder="Semua Proyek"
                     options={[
-                        { value: "all", label: "All Projects" },
+                        { value: "all", label: "Semua Proyek" },
                         ...projects.map(p => ({ value: p.id, label: p.name }))
                     ]}
                 />
@@ -216,9 +238,9 @@ export default function MonthlyReportsPage() {
                 <Select
                     value={selectedStatus}
                     onChange={(val) => setSelectedStatus(val)}
-                    placeholder="Select Status"
+                    placeholder="Semua Status"
                     options={[
-                        { value: "all", label: "All Statuses" },
+                        { value: "all", label: "Semua Status" },
                         { value: "on-track", label: "On Track" },
                         { value: "delayed", label: "Delayed" },
                         { value: "critical", label: "Critical" },
@@ -234,55 +256,82 @@ export default function MonthlyReportsPage() {
                 ) : filteredReports.length === 0 ? (
                     <div className="p-16 flex flex-col items-center justify-center text-center gap-3">
                         <CalendarCheck className="w-8 h-8 text-neutral-300" />
-                        <span className="text-sm font-semibold text-neutral-500">No Monthly Reports filed.</span>
+                        <span className="text-sm font-semibold text-neutral-500">Belum ada Laporan Bulanan tersimpan.</span>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-900/30">
-                                    <th className="p-4 pl-6">Report Title</th>
-                                    <th className="p-4">Project</th>
-                                    <th className="p-4">Date</th>
-                                    <th className="p-4">Progress</th>
+                                    <th className="p-4 pl-6">Kode & Judul Laporan</th>
+                                    <th className="p-4">Proyek</th>
+                                    <th className="p-4">Periode</th>
+                                    <th className="p-4">Progres (%)</th>
                                     <th className="p-4">Status</th>
-                                    <th className="p-4 pr-6 text-right">Actions</th>
+                                    <th className="p-4 pr-6 text-right">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredReports.map((report) => (
-                                    <tr 
-                                        key={report.id}
-                                        className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/40 dark:hover:bg-neutral-900/20 transition-colors align-middle"
-                                    >
-                                        <td className="p-4 pl-6 font-bold text-neutral-900 dark:text-white">{report.title}</td>
-                                        <td className="p-4 text-neutral-500 dark:text-neutral-400">{report.projectName}</td>
-                                        <td className="p-4 whitespace-nowrap text-xs text-neutral-400">{report.reportDate}</td>
-                                        <td className="p-4">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-16 bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden">
-                                                    <div className="bg-purple-600 h-full rounded-full" style={{ width: `${report.progress}%` }} />
+                                {filteredReports.map((report) => {
+                                    const pContent = report.parsedContent || {};
+                                    const docCode = pContent.documentId || "LBL-01-01";
+                                    const rev = pContent.revision ? `REV ${pContent.revision}` : "REV 00";
+                                    const startDateStr = pContent.startDate || report.reportDate;
+                                    const endDateStr = pContent.endDate || "";
+                                    const periodStr = endDateStr ? `${startDateStr} s.d. ${endDateStr}` : startDateStr;
+
+                                    return (
+                                        <tr 
+                                            key={report.id}
+                                            className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/40 dark:hover:bg-neutral-900/20 transition-colors align-middle"
+                                        >
+                                            <td className="p-4 pl-6">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="px-2 py-0.5 bg-neutral-900 text-white font-mono font-bold text-[10px] rounded-md shrink-0">
+                                                        {docCode}
+                                                    </span>
+                                                    <span className="font-extrabold text-neutral-900 dark:text-white text-sm">
+                                                        {report.title}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">
+                                                        {rev}
+                                                    </span>
                                                 </div>
-                                                <span className="text-xs font-bold">{report.progress}%</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <span className={clsx(
-                                                "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border shadow-sm",
-                                                getStatusStyle(report.status)
-                                            )}>
-                                                {getStatusIcon(report.status)}
-                                                <span>{report.status.replace("-", " ")}</span>
-                                            </span>
-                                        </td>
-                                        <td className="p-4 pr-6 text-right whitespace-nowrap">
-                                            <div className="flex items-center justify-end gap-1.5">
-                                                <button onClick={() => handleEditClick(report)} className="p-2 text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 transition-colors"><Edit3 className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDelete(report.id)} className="p-2 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"><Trash2 className="w-4 h-4" /></button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="p-4 font-semibold text-neutral-600 dark:text-neutral-300 text-xs">{report.projectName}</td>
+                                            <td className="p-4 whitespace-nowrap text-xs font-semibold text-neutral-500">{periodStr}</td>
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-16 bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                                                        <div className="bg-purple-600 h-full rounded-full" style={{ width: `${Math.min(100, report.progress)}%` }} />
+                                                    </div>
+                                                    <span className="text-xs font-bold text-neutral-900 dark:text-white">{report.progress}%</span>
+                                                </div>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className={clsx(
+                                                    "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border shadow-sm",
+                                                    getStatusStyle(report.status)
+                                                )}>
+                                                    {getStatusIcon(report.status)}
+                                                    <span>{report.status.replace("-", " ")}</span>
+                                                </span>
+                                            </td>
+                                            <td className="p-4 pr-6 text-right whitespace-nowrap">
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <button onClick={() => handleExportClick(report)} title="Export PDF Laporan Bulanan" className="p-2 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors flex items-center gap-1 text-xs font-bold border border-neutral-200 dark:border-neutral-800">
+                                                        <Download className="w-3.5 h-3.5" /> PDF
+                                                    </button>
+                                                    <button onClick={() => handleReviseClick(report)} title="Buat Revisi (REV+1)" className="p-2 text-purple-600 hover:text-purple-700 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors flex items-center gap-1 text-xs font-bold border border-purple-200 dark:border-purple-900/40">
+                                                        <GitBranch className="w-3.5 h-3.5" /> Revisi
+                                                    </button>
+                                                    <button onClick={() => handleEditClick(report)} title="Edit Laporan" className="p-2 text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"><Edit3 className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDelete(report.id)} title="Hapus Laporan" className="p-2 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

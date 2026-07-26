@@ -193,7 +193,8 @@ function EditorContentComponent() {
     const [summaryText, setSummaryText] = useState("");
     const [catatanUmum, setCatatanUmum] = useState("");
 
-    // Personel Summary (LM)
+    // Personel Summary (LM / LBL)
+    const [monthNumber, setMonthNumber] = useState("01");
     const [avgStaffInti, setAvgStaffInti] = useState("0");
     const [avgTukangPekerja, setAvgTukangPekerja] = useState("0");
     const [avgTotalPersonel, setAvgTotalPersonel] = useState("0");
@@ -558,19 +559,33 @@ function EditorContentComponent() {
         return (day + 1).toString().padStart(2, "0");
     };
 
-    // Computes LM-XX-YY for each page in Weekly Report
-    const getWeeklyPageDocCode = (pageIndex: number) => {
-        const week = weekNumber ? weekNumber.padStart(2, "0") : "01";
+    // Computes LM-XX-YY or LBL-XX-YY for each page in Weekly / Monthly Report
+    const getReportPageDocCode = (pageIndex: number) => {
         const pageStr = String(pageIndex).padStart(2, "0");
-        if (!isDocIdManuallyEdited || !documentId) {
-            return `LM-${week}-${pageStr}`;
+        if (reportType === "monthly") {
+            const month = monthNumber ? monthNumber.padStart(2, "0") : "01";
+            if (!isDocIdManuallyEdited || !documentId) {
+                return `LBL-${month}-${pageStr}`;
+            }
+            const match = documentId.match(/^(.*?-)(\d{1,2})$/);
+            if (match) {
+                return `${match[1]}${pageStr}`;
+            }
+            return `${documentId}-${pageStr}`;
+        } else {
+            const week = weekNumber ? weekNumber.padStart(2, "0") : "01";
+            if (!isDocIdManuallyEdited || !documentId) {
+                return `LM-${week}-${pageStr}`;
+            }
+            const match = documentId.match(/^(.*?-)(\d{1,2})$/);
+            if (match) {
+                return `${match[1]}${pageStr}`;
+            }
+            return `${documentId}-${pageStr}`;
         }
-        const match = documentId.match(/^(.*?-)(\d{1,2})$/);
-        if (match) {
-            return `${match[1]}${pageStr}`;
-        }
-        return `${documentId}-${pageStr}`;
     };
+
+    const getWeeklyPageDocCode = getReportPageDocCode;
 
     const getGeneratedFilename = () => {
         const datePart = reportDate ? reportDate.replace(/-/g, "") : "YYYYMMDD";
@@ -583,7 +598,7 @@ function EditorContentComponent() {
         }
 
         const revPart = revision ? `R${revision}` : "R0";
-        const typePart = reportType === "daily" ? "LH" : reportType === "weekly" ? "LM" : "LM";
+        const typePart = reportType === "daily" ? "LH" : reportType === "weekly" ? "LM" : "LBL";
         return `${datePart}_${codePart}_${typePart}_${docPart}_${revPart}.pdf`;
     };
 
@@ -1146,7 +1161,7 @@ function EditorContentComponent() {
         <div className="grid grid-cols-5 border border-neutral-300 rounded overflow-hidden text-center">
             {[
                 { label: "Periode", value: getPeriodFormattedDate() },
-                { label: "Minggu Ke-", value: weekNumber ? weekNumber.padStart(2, "0") : "01" },
+                { label: reportType === "monthly" ? "Bulan Ke-" : "Minggu Ke-", value: reportType === "monthly" ? (monthNumber ? monthNumber.padStart(2, "0") : "01") : (weekNumber ? weekNumber.padStart(2, "0") : "01") },
                 { label: "Hari Ke-", value: dayNumber || "—" },
                 { label: "Total Hari", value: totalDays || "—" },
                 { label: "Sisa Hari", value: remainingDays || "—" },
@@ -1382,8 +1397,8 @@ function EditorContentComponent() {
                 </div>
             )}
 
-            {/* Weekly Tabs */}
-            {reportType === "weekly" && (
+            {/* Weekly & Monthly Tabs */}
+            {(reportType === "weekly" || reportType === "monthly") && (
                 <div className="flex border-b border-neutral-200/60 dark:border-neutral-800/60 px-2 overflow-x-auto shrink-0 gap-1">
                     {([
                         { key: "general", label: "1. Info & Periode" },
@@ -1629,8 +1644,8 @@ function EditorContentComponent() {
                         </>
                     )}
 
-                    {/* ==================== WEEKLY (LM) FORMS ==================== */}
-                    {reportType === "weekly" && (
+                    {/* ==================== WEEKLY & MONTHLY (LM/LBL) FORMS ==================== */}
+                    {(reportType === "weekly" || reportType === "monthly") && (
                         <>
                             {weeklyTab === "general" && (
                                 <div className="space-y-5 animate-in fade-in duration-300">
@@ -1694,8 +1709,12 @@ function EditorContentComponent() {
                                     </div>
 
                                     <div className="grid grid-cols-4 gap-2">
-                                        <Input label="Minggu Ke-" value={weekNumber} onChange={(e) => setWeekNumber(e.target.value)} placeholder="01" />
-                                        <Input label="Hari Ke-" type="number" value={dayNumber} onChange={(e) => setDayNumber(e.target.value)} placeholder="e.g. 7" />
+                                        {reportType === "monthly" ? (
+                                            <Input label="Bulan Ke-" value={monthNumber} onChange={(e) => setMonthNumber(e.target.value)} placeholder="01" />
+                                        ) : (
+                                            <Input label="Minggu Ke-" value={weekNumber} onChange={(e) => setWeekNumber(e.target.value)} placeholder="01" />
+                                        )}
+                                        <Input label="Hari Ke-" type="number" value={dayNumber} onChange={(e) => setDayNumber(e.target.value)} placeholder="e.g. 30" />
                                         <Input label="Total Hari" type="number" value={totalDays} onChange={(e) => setTotalDays(e.target.value)} placeholder="150" />
                                         <Input label="Sisa Hari" type="number" value={remainingDays} onChange={(e) => setRemainingDays(e.target.value)} placeholder="Auto / Manual" />
                                     </div>
@@ -2129,14 +2148,14 @@ function EditorContentComponent() {
                             </div>
                         )}
 
-                        {/* ===================== WEEKLY PREVIEW (Multi-Page LM Code Format: LM-XX-YY) ===================== */}
-                        {reportType === "weekly" && (
+                        {/* ===================== WEEKLY & MONTHLY PREVIEW (Multi-Page LM/LBL Code Format) ===================== */}
+                        {(reportType === "weekly" || reportType === "monthly") && (
                             <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
                                 
-                                {/* ---------------- PAGE 1: COVER (LM-XX-01) ---------------- */}
+                                {/* ---------------- PAGE 1: COVER (LM-XX-01 / LBL-XX-01) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
                                     
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(1), "Laporan Mingguan")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(1), reportType === "monthly" ? "Laporan Bulanan" : "Laporan Mingguan")}
 
                                     {/* Center Title Box */}
                                     <div className="text-center my-auto space-y-4 px-4 py-12">
@@ -2174,15 +2193,15 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 2: EXECUTIVE SUMMARY (LM-XX-02) ---------------- */}
+                                {/* ---------------- PAGE 2: EXECUTIVE SUMMARY (LM-XX-02 / LBL-XX-02) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
                                     
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(2), "Executive Summary")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(2), reportType === "monthly" ? "Executive Summary Bulanan" : "Executive Summary")}
                                     {renderWeeklyDateMetaRow()}
 
                                     {/* Section Banner */}
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
-                                        EXECUTIVE SUMMARY
+                                        EXECUTIVE SUMMARY {reportType === "monthly" ? "BULANAN" : "MINGGUAN"}
                                     </div>
 
                                     {/* 2-Column Content */}
@@ -2196,9 +2215,9 @@ function EditorContentComponent() {
                                                 <div className="font-extrabold text-[7px] text-neutral-900 uppercase border-b border-neutral-300 pb-0.5 mb-1">A. KEMAJUAN PEKERJAAN</div>
                                                 <table className="w-full text-left border border-neutral-300" style={{ borderCollapse: "collapse" }}>
                                                     <tbody>
-                                                        <tr className="border-b border-neutral-200"><td className="p-1 text-neutral-700 font-semibold">Kemajuan Hingga Minggu Lalu</td><td className="p-1 text-right font-bold text-neutral-900">{progressLastWeek} %</td></tr>
-                                                        <tr className="border-b border-neutral-200"><td className="p-1 text-neutral-700 font-semibold">Kemajuan Minggu Ini</td><td className="p-1 text-right font-bold text-neutral-900">{progressThisWeek} %</td></tr>
-                                                        <tr className="border-b border-neutral-200 bg-neutral-100"><td className="p-1 font-black text-neutral-900">Kemajuan Hingga Minggu Ini</td><td className="p-1 text-right font-black text-neutral-900">{progressTotal} %</td></tr>
+                                                        <tr className="border-b border-neutral-200"><td className="p-1 text-neutral-700 font-semibold">Kemajuan Hingga {reportType === "monthly" ? "Bulan" : "Minggu"} Lalu</td><td className="p-1 text-right font-bold text-neutral-900">{progressLastWeek} %</td></tr>
+                                                        <tr className="border-b border-neutral-200"><td className="p-1 text-neutral-700 font-semibold">Kemajuan {reportType === "monthly" ? "Bulan" : "Minggu"} Ini</td><td className="p-1 text-right font-bold text-neutral-900">{progressThisWeek} %</td></tr>
+                                                        <tr className="border-b border-neutral-200 bg-neutral-100"><td className="p-1 font-black text-neutral-900">Kemajuan Hingga {reportType === "monthly" ? "Bulan" : "Minggu"} Ini</td><td className="p-1 text-right font-black text-neutral-900">{progressTotal} %</td></tr>
                                                         <tr><td className="p-1 text-neutral-700 font-semibold">Sisa Pekerjaan</td><td className="p-1 text-right font-bold text-neutral-900">{progressRemaining} %</td></tr>
                                                     </tbody>
                                                 </table>
@@ -2271,9 +2290,9 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 3: WBS (LM-XX-03) ---------------- */}
+                                {/* ---------------- PAGE 3: WBS (LM-XX-03 / LBL-XX-03) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(3), "Work Breakdown Structure")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(3), "Work Breakdown Structure")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2295,9 +2314,9 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 4: KURVA S (LM-XX-04) ---------------- */}
+                                {/* ---------------- PAGE 4: KURVA S (LM-XX-04 / LBL-XX-04) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(4), "Kurva S")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(4), "Kurva S")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2313,25 +2332,25 @@ function EditorContentComponent() {
                                         </span>
                                         <h3 className="text-[12px] font-black text-neutral-900 uppercase tracking-wide">Grafik Kemajuan Fisik Kumulatif</h3>
                                         <p className="text-[8px] text-neutral-600 font-medium max-w-md mt-2 leading-relaxed">
-                                            Halaman ini dialokasikan khusus untuk grafik Kurva S (S-Curve) perbandingan rencana bobot vs realisasi kumulatif fisik per minggu. Visualisasi Kurva S dinamis akan terintegrasi langsung dengan modul jadwal dan master progres proyek.
+                                            Halaman ini dialokasikan khusus untuk grafik Kurva S (S-Curve) perbandingan rencana bobot vs realisasi kumulatif fisik per {reportType === "monthly" ? "bulan" : "minggu"}. Visualisasi Kurva S dinamis akan terintegrasi langsung dengan modul jadwal dan master progres proyek.
                                         </p>
                                     </div>
                                 </div>
 
 
-                                {/* ---------------- PAGE 5: KEGIATAN PEKERJAAN (LM-XX-05) ---------------- */}
+                                {/* ---------------- PAGE 5: KEGIATAN PEKERJAAN (LM-XX-05 / LBL-XX-05) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(5), "Kegiatan Pekerjaan")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(5), "Kegiatan Pekerjaan")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
-                                        LAPORAN KEGIATAN PEKERJAAN
+                                        LAPORAN KEGIATAN PEKERJAAN {reportType === "monthly" ? "BULANAN" : ""}
                                     </div>
 
-                                    {/* Table 1: KEGIATAN MINGGU INI */}
+                                    {/* Table 1: KEGIATAN MINGGU/BULAN INI */}
                                     <div className="space-y-0.5">
                                         <div className="bg-neutral-800 text-white font-bold text-[7px] py-0.5 px-2 uppercase tracking-wider">
-                                            KEGIATAN YANG DILAKSANAKAN MINGGU INI
+                                            KEGIATAN YANG DILAKSANAKAN {reportType === "monthly" ? "BULAN" : "MINGGU"} INI
                                         </div>
                                         <table className="w-full text-left border border-neutral-300 border-t-0 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
                                             <thead>
@@ -2354,16 +2373,16 @@ function EditorContentComponent() {
                                                     </tr>
                                                 ))}
                                                 {weeklyActivitiesThisWeek.length === 0 && (
-                                                    <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Belum ada data kegiatan minggu ini.</td></tr>
+                                                    <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Belum ada data kegiatan {reportType === "monthly" ? "bulan" : "minggu"} ini.</td></tr>
                                                 )}
                                             </tbody>
                                         </table>
                                     </div>
 
-                                    {/* Table 2: RENCANA MINGGU DEPAN */}
+                                    {/* Table 2: RENCANA MINGGU/BULAN DEPAN */}
                                     <div className="space-y-0.5 pt-3">
                                         <div className="bg-neutral-800 text-white font-bold text-[7px] py-0.5 px-2 uppercase tracking-wider">
-                                            RENCANA KEGIATAN MINGGU DEPAN
+                                            RENCANA KEGIATAN {reportType === "monthly" ? "BULAN" : "MINGGU"} DEPAN
                                         </div>
                                         <table className="w-full text-left border border-neutral-300 border-t-0 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
                                             <thead>
@@ -2386,7 +2405,7 @@ function EditorContentComponent() {
                                                     </tr>
                                                 ))}
                                                 {weeklyActivitiesNextWeek.length === 0 && (
-                                                    <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Belum ada data rencana minggu depan.</td></tr>
+                                                    <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Belum ada data rencana {reportType === "monthly" ? "bulan" : "minggu"} depan.</td></tr>
                                                 )}
                                             </tbody>
                                         </table>
@@ -2394,13 +2413,13 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 6: LAPORAN PERSONEL (LM-XX-06) ---------------- */}
+                                {/* ---------------- PAGE 6: LAPORAN PERSONEL (LM-XX-06 / LBL-XX-06) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(6), "Laporan Personel")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(6), "Laporan Personel")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
-                                        LAPORAN PERSONEL
+                                        LAPORAN PERSONEL {reportType === "monthly" ? "BULANAN" : ""}
                                     </div>
 
                                     <table className="w-full text-left border border-neutral-300 text-[6px]" style={{ borderCollapse: "collapse" }}>
@@ -2459,13 +2478,13 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 7: LAPORAN CUACA (LM-XX-07) ---------------- */}
+                                {/* ---------------- PAGE 7: LAPORAN CUACA (LM-XX-07 / LBL-XX-07) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(7), "Laporan Cuaca")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(7), "Laporan Cuaca")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
-                                        LAPORAN CUACA
+                                        LAPORAN CUACA {reportType === "monthly" ? "BULANAN" : ""}
                                     </div>
 
                                     {/* 24h Weather Table Matrix */}
@@ -2535,13 +2554,13 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 8: LAPORAN KENDALA (LM-XX-08) ---------------- */}
+                                {/* ---------------- PAGE 8: LAPORAN KENDALA (LM-XX-08 / LBL-XX-08) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(8), "Laporan Kendala")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(8), "Laporan Kendala")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
-                                        LAPORAN KENDALA
+                                        LAPORAN KENDALA {reportType === "monthly" ? "BULANAN" : ""}
                                     </div>
 
                                     <table className="w-full text-left border border-neutral-300 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
@@ -2565,16 +2584,16 @@ function EditorContentComponent() {
                                                 </tr>
                                             ))}
                                             {kendalaItems.length === 0 && (
-                                                <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Tidak ada catatan kendala lapangan minggu ini.</td></tr>
+                                                <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Tidak ada catatan kendala lapangan {reportType === "monthly" ? "bulan" : "minggu"} ini.</td></tr>
                                             )}
                                         </tbody>
                                     </table>
                                 </div>
 
 
-                                {/* ---------------- PAGE 9: DOKUMENTASI (LM-XX-09) ---------------- */}
+                                {/* ---------------- PAGE 9: DOKUMENTASI (LM-XX-09 / LBL-XX-09) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(9), "Dokumentasi Pekerjaan")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(9), "Dokumentasi Pekerjaan")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
@@ -2600,13 +2619,13 @@ function EditorContentComponent() {
                                 </div>
 
 
-                                {/* ---------------- PAGE 10: LAMPIRAN (LM-XX-10) ---------------- */}
+                                {/* ---------------- PAGE 10: LAMPIRAN (LM-XX-10 / LBL-XX-10) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("LM", getWeeklyPageDocCode(10), "Lampiran Laporan Harian")}
+                                    {renderPageHeader(reportType === "monthly" ? "LBL" : "LM", getReportPageDocCode(10), reportType === "monthly" ? "Lampiran Laporan Mingguan / Harian" : "Lampiran Laporan Harian")}
                                     {renderWeeklyDateMetaRow()}
 
                                     <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
-                                        LAMPIRAN LAPORAN HARIAN (PERIODE MINGGU KE-{weekNumber.padStart(2,'0')})
+                                        LAMPIRAN LAPORAN {reportType === "monthly" ? "MINGGUAN / HARIAN" : "HARIAN"} (PERIODE {reportType === "monthly" ? `BULAN KE-${monthNumber.padStart(2,'0')}` : `MINGGU KE-${weekNumber.padStart(2,'0')}`})
                                     </div>
 
                                     <div className="space-y-2">
