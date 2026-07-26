@@ -23,12 +23,16 @@ import {
     Camera,
     UploadCloud,
     X,
-    Download
+    Download,
+    RefreshCw,
+    Sparkles,
+    Combine,
+    Grid,
+    CheckCircle2,
+    CloudRain
 } from "lucide-react";
 import RichTextEditor from "@/components/RichTextEditor";
 import clsx from "clsx";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
 import toast from "react-hot-toast";
 
 interface ProjectDropdownOption {
@@ -37,6 +41,38 @@ interface ProjectDropdownOption {
     location?: string;
     project_code: string;
     project_number?: string;
+}
+
+interface PersonelWeeklyRow {
+    role: string;
+    unit: string;
+    senin: number;
+    selasa: number;
+    rabu: number;
+    kamis: number;
+    jumat: number;
+    sabtu: number;
+    minggu: number;
+}
+
+interface HourlyWeatherRow {
+    hour: number;
+    label: string;
+    senin: string; // "C", "B", "H"
+    selasa: string;
+    rabu: string;
+    kamis: string;
+    jumat: string;
+    sabtu: string;
+    minggu: string;
+    keterangan?: string;
+}
+
+interface KendalaItem {
+    date: string;
+    problem: string;
+    solution: string;
+    recommendation: string;
 }
 
 function EditorContentComponent() {
@@ -53,6 +89,7 @@ function EditorContentComponent() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [isSyncing, setIsSyncing] = useState(false);
     const [projects, setProjects] = useState<ProjectDropdownOption[]>([]);
     
     // Core Form State
@@ -64,7 +101,7 @@ function EditorContentComponent() {
     const [progress, setProgress] = useState("0");
     const [status, setStatus] = useState<ReportStatus>("on-track");
     
-    // Text Content (For Weekly/Monthly or Legacy Daily)
+    // Text Content (For Monthly or Legacy Rich Text)
     const [editorContent, setEditorContent] = useState("");
 
     // --- DAILY TEMPLATE STATES ---
@@ -77,12 +114,12 @@ function EditorContentComponent() {
     const [documentId, setDocumentId] = useState("");
     const [revision, setRevision] = useState("00");
 
-    // Dynamic Work Items
+    // Dynamic Work Items (Daily)
     const [workItems, setWorkItems] = useState<{ description: string; position: string; volume: string }[]>([
         { description: "", position: "", volume: "" }
     ]);
 
-    // Personnel
+    // Personnel (Daily)
     const [pmCount, setPmCount] = useState("");
     const [smCount, setSmCount] = useState("");
     const [supervisorCount, setSupervisorCount] = useState("");
@@ -91,20 +128,19 @@ function EditorContentComponent() {
     const [pekerjaCount, setPekerjaCount] = useState("");
     const [operatorCount, setOperatorCount] = useState("");
 
-    // Work Hours (Hours/shift)
+    // Work Hours (Daily)
     const [shiftReguler, setShiftReguler] = useState("");
     const [shiftOt1, setShiftOt1] = useState("");
     const [shiftOt2, setShiftOt2] = useState("");
     const [shiftOt3, setShiftOt3] = useState("");
 
-    // Weather
+    // Weather (Daily)
     const [weatherItems, setWeatherItems] = useState<{ timeRange: string; condition: string }[]>([
         { timeRange: "08.00 - 09.00", condition: "cerah" },
         { timeRange: "09.00 - 10.00", condition: "cerah" },
         { timeRange: "10.00 - 11.00", condition: "cerah" },
         { timeRange: "11.00 - 12.00", condition: "cerah" },
         { timeRange: "12.00 - 13.00", condition: "cerah" },
-        { timeRange: "13.00 - 14.00", condition: "cerah" },
         { timeRange: "14.00 - 15.00", condition: "cerah" },
         { timeRange: "15.00 - 16.00", condition: "cerah" }
     ]);
@@ -118,15 +154,158 @@ function EditorContentComponent() {
 
     // Additional Daily States
     const [photos, setPhotos] = useState<{ url: string; caption: string }[]>([]);
+    const [allDailyPhotos, setAllDailyPhotos] = useState<{ url: string; caption: string; dateStr?: string }[]>([]);
+    const [isPhotoPickerOpen, setIsPhotoPickerOpen] = useState(false);
+
     const [nextActions, setNextActions] = useState("");
     const [isTitleManuallyEdited, setIsTitleManuallyEdited] = useState(false);
     const [isDocIdManuallyEdited, setIsDocIdManuallyEdited] = useState(false);
-    const [hasDailyLogs, setHasDailyLogs] = useState<boolean | null>(null);
-    const [isFetchingLogs, setIsFetchingLogs] = useState(false);
     const [locationOverride, setLocationOverride] = useState("");
     const [materialItems, setMaterialItems] = useState<{ name: string; category: string; unit: string; incoming: string; outgoing: string; stock: string }[]>([
         { name: "", category: "Material", unit: "unit", incoming: "", outgoing: "", stock: "" }
     ]);
+
+    // --- WEEKLY (LM) TEMPLATE STATES ---
+    const [weeklyTab, setWeeklyTab] = useState<"general" | "summary" | "kegiatan" | "personel" | "cuaca" | "dokumentasi" | "ttd">("general");
+
+    const getPrevSundayDateStr = () => {
+        const d = new Date();
+        d.setDate(d.getDate() - d.getDay()); // Sunday
+        return d.toISOString().split('T')[0];
+    };
+
+    const getNextSaturdayDateStr = () => {
+        const d = new Date();
+        d.setDate(d.getDate() + (6 - d.getDay())); // Saturday
+        return d.toISOString().split('T')[0];
+    };
+
+    const [startDate, setStartDate] = useState(getPrevSundayDateStr());
+    const [endDate, setEndDate] = useState(getNextSaturdayDateStr());
+    const [weekNumber, setWeekNumber] = useState("01");
+
+    // Executive Summary Metrics (LM)
+    const [progressLastWeek, setProgressLastWeek] = useState("0.000");
+    const [progressThisWeek, setProgressThisWeek] = useState("0.000");
+    const [progressTotal, setProgressTotal] = useState("0.000");
+    const [progressRemaining, setProgressRemaining] = useState("100.000");
+
+    const [summaryText, setSummaryText] = useState("");
+    const [catatanUmum, setCatatanUmum] = useState("");
+
+    // Personel Summary (LM)
+    const [avgStaffInti, setAvgStaffInti] = useState("0");
+    const [avgTukangPekerja, setAvgTukangPekerja] = useState("0");
+    const [avgTotalPersonel, setAvgTotalPersonel] = useState("0");
+    const [personelSummaryText, setPersonelSummaryText] = useState("");
+
+    // Personel Detailed Grid Page (LMS-01-05 / LM-XX-06)
+    const defaultPersonelRoles: PersonelWeeklyRow[] = [
+        { role: "Project Manager", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Site Manager", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Supervisor / Field Engineer", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Quality Control (QC)", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Safety Officer / HSE", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Drafter / Quantity Surveyor", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Admin Proyek", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Logistik", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Mandor", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Tukang Batu / Sipil", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Tukang Kayu / Bekisting", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Tukang Besi / Pembesian", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Pekerja / Helper", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Operator Alat Berat", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+        { role: "Security / Guard", unit: "orang", senin: 0, selasa: 0, rabu: 0, kamis: 0, jumat: 0, sabtu: 0, minggu: 0 },
+    ];
+    const [personelWeeklyGrid, setPersonelWeeklyGrid] = useState<PersonelWeeklyRow[]>(defaultPersonelRoles);
+
+    // Weather 24h Matrix Page (LMS-01-06 / LM-XX-07)
+    const createDefaultHourlyWeather = (): HourlyWeatherRow[] => {
+        const rows: HourlyWeatherRow[] = [];
+        for (let i = 1; i <= 24; i++) {
+            const hourLabel = `${i < 10 ? '0' : ''}${i}.00`;
+            const defCond = i >= 8 && i <= 16 ? "C" : i >= 17 && i <= 20 ? "B" : "H";
+            rows.push({
+                hour: i,
+                label: hourLabel,
+                senin: defCond,
+                selasa: defCond,
+                rabu: defCond,
+                kamis: defCond,
+                jumat: defCond,
+                sabtu: defCond,
+                minggu: defCond,
+                keterangan: ""
+            });
+        }
+        return rows;
+    };
+    const [weatherHourlyGrid, setWeatherHourlyGrid] = useState<HourlyWeatherRow[]>(createDefaultHourlyWeather());
+
+    // Kendala Lapangan Page (LMS-01-06 / LM-XX-07)
+    const [kendalaItems, setKendalaItems] = useState<KendalaItem[]>([
+        { date: "", problem: "", solution: "", recommendation: "" }
+    ]);
+
+    // Helper for Generating Dates for Effective Hours Table (11 Senin, 12 Selasa, etc.)
+    const generateEffectiveHoursDates = (startStr: string, existingTable?: any[]) => {
+        if (!startStr) return existingTable || [];
+        try {
+            const start = new Date(startStr);
+            const dayNames = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+            const result = [];
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(start);
+                d.setDate(start.getDate() + i);
+                const dateNum = d.getDate();
+                const dayName = dayNames[d.getDay()];
+                const formattedDayLabel = `${dateNum} ${dayName}`;
+                
+                const prev = existingTable?.[i] || {};
+                result.push({
+                    day: formattedDayLabel,
+                    dateStr: d.toISOString().split('T')[0],
+                    totalHours: prev.totalHours || "12",
+                    effectiveHours: prev.effectiveHours || "8"
+                });
+            }
+            return result;
+        } catch(e) {
+            return existingTable || [];
+        }
+    };
+
+    // Effective Work Hours (LM)
+    const [effectiveHoursTable, setEffectiveHoursTable] = useState<{ day: string; dateStr: string; totalHours: string; effectiveHours: string }[]>(() => 
+        generateEffectiveHoursDates(getPrevSundayDateStr())
+    );
+    const [waktuKerjaSummaryText, setWaktuKerjaSummaryText] = useState("");
+
+    // Update effective hours dates when startDate changes
+    useEffect(() => {
+        if (startDate) {
+            setEffectiveHoursTable(prev => generateEffectiveHoursDates(startDate, prev));
+        }
+    }, [startDate]);
+
+    // Weather Summary (LM)
+    const [weatherSummaryTable, setWeatherSummaryTable] = useState<{ condition: string; hours: string; days: string }[]>([
+        { condition: "Cerah", hours: "0", days: "0" },
+        { condition: "Berawan", hours: "0", days: "0" },
+        { condition: "Hujan", hours: "0", days: "0" },
+    ]);
+    const [weatherSummaryText, setWeatherSummaryText] = useState("");
+
+    // Weekly Activities (LM)
+    const [weeklyActivitiesThisWeek, setWeeklyActivitiesThisWeek] = useState<{ description: string; duration: string; position: string; volume: string }[]>([
+        { description: "", duration: "1 hari", position: "", volume: "" }
+    ]);
+    const [weeklyActivitiesNextWeek, setWeeklyActivitiesNextWeek] = useState<{ description: string; duration: string; position: string; volume: string }[]>([
+        { description: "", duration: "1 hari", position: "", volume: "" }
+    ]);
+
+    // Attached Daily Reports (LM)
+    const [attachedDailyReports, setAttachedDailyReports] = useState<any[]>([]);
 
     // Load active projects
     useEffect(() => {
@@ -146,7 +325,6 @@ function EditorContentComponent() {
                 }));
                 setProjects(mapped);
 
-                // Set preselected project if exists in params
                 if (paramProjectId) {
                     setSelectedProjectId(paramProjectId);
                 }
@@ -179,7 +357,6 @@ function EditorContentComponent() {
                         setProgress(data.progress?.toString() || "0");
                         setStatus(data.status || "on-track");
 
-                        // Try to parse Daily report details from content JSON
                         if (data.report_type === "daily") {
                             try {
                                 const parsed = JSON.parse(data.content || "");
@@ -210,49 +387,88 @@ function EditorContentComponent() {
 
                                     if (parsed.weatherItems && Array.isArray(parsed.weatherItems) && parsed.weatherItems.length > 0) {
                                         setWeatherItems(parsed.weatherItems);
-                                    } else {
-                                        const w = parsed.weather || {};
-                                        const tempWeather = [];
-                                        if (w.pagi) tempWeather.push({ timeRange: "08.00 - 10.00", condition: w.pagi });
-                                        if (w.siang) tempWeather.push({ timeRange: "10.00 - 12.00", condition: w.siang });
-                                        if (w.sore) tempWeather.push({ timeRange: "12.00 - 15.00", condition: w.sore });
-                                        if (w.malam) tempWeather.push({ timeRange: "15.00 - 16.00", condition: w.malam });
-                                        setWeatherItems(tempWeather.length > 0 ? tempWeather : [
-                                            { timeRange: "08.00 - 09.00", condition: "cerah" },
-                                            { timeRange: "09.00 - 10.00", condition: "cerah" },
-                                            { timeRange: "10.00 - 11.00", condition: "cerah" },
-                                            { timeRange: "11.00 - 12.00", condition: "cerah" },
-                                            { timeRange: "12.00 - 13.00", condition: "cerah" },
-                                            { timeRange: "13.00 - 14.00", condition: "cerah" },
-                                            { timeRange: "14.00 - 15.00", condition: "cerah" },
-                                            { timeRange: "15.00 - 16.00", condition: "cerah" }
-                                        ]);
                                     }
-
                                     setApprovedBy(parsed.approvedBy || "");
                                     setApprovedByRole(parsed.approvedByRole || "Project Manager / Direktur");
                                     setPreparedBy(parsed.preparedBy || "");
                                     setPreparedByRole(parsed.preparedByRole || "Project Officer / Pengawas");
                                     setNotes(parsed.notes || "");
                                     setPhotos(parsed.photos || []);
-                                    setMaterialItems(
-                                        (parsed.materialItems || []).map((m: any) => ({
-                                            name: m.name || "",
-                                            category: m.category || "Material",
-                                            unit: m.unit || "unit",
-                                            incoming: m.incoming || "",
-                                            outgoing: m.outgoing || "",
-                                            stock: m.stock || ""
-                                        }))
-                                    );
+                                    setMaterialItems(parsed.materialItems || []);
                                     setNextActions(parsed.nextActions || "");
-                                    
                                     setIsTitleManuallyEdited(true);
                                     setIsDocIdManuallyEdited(true);
                                 } else {
                                     setEditorContent(data.content || "");
                                 }
                             } catch (e) {
+                                setEditorContent(data.content || "");
+                            }
+                        } else if (data.report_type === "weekly") {
+                            try {
+                                const parsed = JSON.parse(data.content || "");
+                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                    const sDate = parsed.startDate || getPrevSundayDateStr();
+                                    setStartDate(sDate);
+                                    setEndDate(parsed.endDate || getNextSaturdayDateStr());
+                                    setWeekNumber(parsed.weekNumber || "01");
+                                    setDayNumber(parsed.dayNumber?.toString() || "");
+                                    setTotalDays(parsed.totalDays?.toString() || "");
+                                    setRemainingDays(parsed.remainingDays?.toString() || "");
+                                    setWorkPackage(parsed.workPackage || "");
+                                    const formattedWeek = (parsed.weekNumber || "01").padStart(2, "0");
+                                    setDocumentId(parsed.documentId || `LM-${formattedWeek}-01`);
+                                    setRevision(parsed.revision || "00");
+                                    setLocationOverride(parsed.locationOverride || "");
+                                    
+                                    setProgressLastWeek(parsed.progressLastWeek?.toString() || "0.000");
+                                    setProgressThisWeek(parsed.progressThisWeek?.toString() || "0.000");
+                                    setProgressTotal(parsed.progressTotal?.toString() || "0.000");
+                                    setProgressRemaining(parsed.progressRemaining?.toString() || "100.000");
+
+                                    setSummaryText(parsed.summaryText || "");
+                                    setCatatanUmum(parsed.catatanUmum || "");
+                                    setAvgStaffInti(parsed.avgStaffInti?.toString() || "0");
+                                    setAvgTukangPekerja(parsed.avgTukangPekerja?.toString() || "0");
+                                    setAvgTotalPersonel(parsed.avgTotalPersonel?.toString() || "0");
+                                    setPersonelSummaryText(parsed.personelSummaryText || "");
+
+                                    if (parsed.personelWeeklyGrid && Array.isArray(parsed.personelWeeklyGrid)) {
+                                        setPersonelWeeklyGrid(parsed.personelWeeklyGrid);
+                                    }
+                                    if (parsed.weatherHourlyGrid && Array.isArray(parsed.weatherHourlyGrid)) {
+                                        setWeatherHourlyGrid(parsed.weatherHourlyGrid);
+                                    }
+                                    if (parsed.kendalaItems && Array.isArray(parsed.kendalaItems)) {
+                                        setKendalaItems(parsed.kendalaItems);
+                                    }
+
+                                    if (parsed.effectiveHoursTable && Array.isArray(parsed.effectiveHoursTable)) {
+                                        setEffectiveHoursTable(generateEffectiveHoursDates(sDate, parsed.effectiveHoursTable));
+                                    }
+                                    setWaktuKerjaSummaryText(parsed.waktuKerjaSummaryText || "");
+
+                                    if (parsed.weatherSummaryTable && Array.isArray(parsed.weatherSummaryTable)) {
+                                        setWeatherSummaryTable(parsed.weatherSummaryTable);
+                                    }
+                                    setWeatherSummaryText(parsed.weatherSummaryText || "");
+
+                                    setWeeklyActivitiesThisWeek(parsed.weeklyActivitiesThisWeek || []);
+                                    setWeeklyActivitiesNextWeek(parsed.weeklyActivitiesNextWeek || []);
+                                    setAttachedDailyReports(parsed.attachedDailyReports || []);
+
+                                    setApprovedBy(parsed.approvedBy || "");
+                                    setApprovedByRole(parsed.approvedByRole || "Project Manager / Direktur");
+                                    setPreparedBy(parsed.preparedBy || "");
+                                    setPreparedByRole(parsed.preparedByRole || "Project Officer / Pengawas");
+                                    setPhotos(parsed.photos || []);
+
+                                    setIsTitleManuallyEdited(true);
+                                    setIsDocIdManuallyEdited(true);
+                                } else {
+                                    setEditorContent(data.content || "");
+                                }
+                            } catch(e) {
                                 setEditorContent(data.content || "");
                             }
                         } else {
@@ -285,122 +501,6 @@ function EditorContentComponent() {
         }
     }, [paramId, paramRevise, paramExport]);
 
-    // Date validation (No future dates allowed)
-    useEffect(() => {
-        const getLocalTodayString = () => {
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        };
-        const todayStr = getLocalTodayString();
-        if (reportDate && reportDate > todayStr) {
-            alert("Tanggal laporan tidak boleh di masa depan.");
-            setReportDate(todayStr);
-        }
-    }, [reportDate]);
-
-    // Fetch crew daily logs when project or date changes (skip during initial load)
-    useEffect(() => {
-        if (isLoading || reportType !== "daily" || !selectedProjectId || !reportDate) {
-            setHasDailyLogs(null);
-            return;
-        }
-
-        const currentProj = projects.find(p => p.id === selectedProjectId);
-        if (!currentProj) return;
-
-        const checkDailyLogs = async () => {
-            setIsFetchingLogs(true);
-            try {
-                const projectSuffix = currentProj.project_code;
-                const { data, error } = await supabase
-                    .from("crew_daily_logs")
-                    .select(`
-                        id,
-                        status,
-                        regular_hours,
-                        ot1_hours,
-                        ot2_hours,
-                        ot3_hours,
-                        crew:crew_members (
-                            id,
-                            name,
-                            role
-                        )
-                    `)
-                    .eq("date", reportDate)
-                    .or(`project_code.eq.${projectSuffix},project_code.ilike.%-${projectSuffix}`);
-
-                if (error) throw error;
-
-                if (data && data.length > 0) {
-                    setHasDailyLogs(true);
-                    
-                    // Filter to present workers
-                    const presentLogs = data.filter(log => log.status === "PRESENT" || log.status === "HALF_DAY");
-                    
-                    // Count by role
-                    let mandor = 0;
-                    let tukang = 0;
-                    let pekerja = 0;
-                    let operator = 0;
-
-                    presentLogs.forEach(log => {
-                        const crewMember = Array.isArray(log.crew) ? log.crew[0] : log.crew;
-                        const role = (crewMember as any)?.role;
-                        if (role === "FOREMAN") mandor++;
-                        else if (role === "SKILLED" || role === "LEADER") tukang++;
-                        else if (role === "HELPER" || role === "GENERAL") pekerja++;
-                        else if (role === "OPERATOR") operator++;
-                    });
-
-                    // Shift hours average (sum divided by number of people working that shift)
-                    const regLogs = presentLogs.filter(log => (parseFloat(log.regular_hours) || 0) > 0);
-                    const regAvg = regLogs.length > 0 ? regLogs.reduce((sum, log) => sum + (parseFloat(log.regular_hours) || 0), 0) / regLogs.length : 0;
-
-                    const ot1Logs = presentLogs.filter(log => (parseFloat(log.ot1_hours) || 0) > 0);
-                    const ot1Avg = ot1Logs.length > 0 ? ot1Logs.reduce((sum, log) => sum + (parseFloat(log.ot1_hours) || 0), 0) / ot1Logs.length : 0;
-
-                    const ot2Logs = presentLogs.filter(log => (parseFloat(log.ot2_hours) || 0) > 0);
-                    const ot2Avg = ot2Logs.length > 0 ? ot2Logs.reduce((sum, log) => sum + (parseFloat(log.ot2_hours) || 0), 0) / ot2Logs.length : 0;
-
-                    const ot3Logs = presentLogs.filter(log => (parseFloat(log.ot3_hours) || 0) > 0);
-                    const ot3Avg = ot3Logs.length > 0 ? ot3Logs.reduce((sum, log) => sum + (parseFloat(log.ot3_hours) || 0), 0) / ot3Logs.length : 0;
-
-                    // Set state
-                    setMandorCount(mandor.toString());
-                    setTukangCount(tukang.toString());
-                    setPekerjaCount(pekerja.toString());
-                    setOperatorCount(operator.toString());
-
-                    setShiftReguler(regAvg.toFixed(1).replace(/\.0$/, ""));
-                    setShiftOt1(ot1Avg.toFixed(1).replace(/\.0$/, ""));
-                    setShiftOt2(ot2Avg.toFixed(1).replace(/\.0$/, ""));
-                    setShiftOt3(ot3Avg.toFixed(1).replace(/\.0$/, ""));
-                } else {
-                    setHasDailyLogs(false);
-                    // Reset crew-log dependent inputs if no logs exist
-                    setMandorCount("0");
-                    setTukangCount("0");
-                    setPekerjaCount("0");
-                    setOperatorCount("0");
-                    setShiftReguler("0");
-                    setShiftOt1("0");
-                    setShiftOt2("0");
-                    setShiftOt3("0");
-                }
-            } catch (err) {
-                console.error("Error checking crew daily logs:", err);
-            } finally {
-                setIsFetchingLogs(false);
-            }
-        };
-
-        checkDailyLogs();
-    }, [selectedProjectId, reportDate, reportType, projects, isLoading]);
-
     // Auto-calculate Sisa Hari
     useEffect(() => {
         const total = parseInt(totalDays) || 0;
@@ -419,33 +519,57 @@ function EditorContentComponent() {
         const currentProj = projects.find(p => p.id === selectedProjectId);
         if (!currentProj) return;
 
-        // Auto-generate Doc ID
-        if (!isDocIdManuallyEdited) {
-            const weekVal = getWeekOfYear(reportDate);
-            const dayOfWeekVal = getDayOfWeekNumber(reportDate);
-            setDocumentId(`LH-${weekVal}-${dayOfWeekVal}`);
-        }
-
-        // Auto-generate Title
-        if (!isTitleManuallyEdited) {
-            const dayVal = dayNumber || "1";
-            setTitle(`LH - ${currentProj.project_code || currentProj.name} - H${dayVal}`);
-        }
-    }, [selectedProjectId, dayNumber, reportDate, projects, isLoading, paramId, isTitleManuallyEdited, isDocIdManuallyEdited]);
-
-    // Parse volume string to separate number and unit
-    const parseVolume = (volStr: string) => {
-        if (!volStr) return { value: "", unit: "m3" };
-        const parts = volStr.trim().split(/\s+/);
-        if (parts.length === 0) return { value: "", unit: "m3" };
-        if (parts.length === 1) {
-            // Check if numeric
-            if (!isNaN(Number(parts[0]))) {
-                return { value: parts[0], unit: "m3" };
+        if (reportType === "daily") {
+            if (!isDocIdManuallyEdited) {
+                const weekVal = getWeekOfYear(reportDate);
+                const dayOfWeekVal = getDayOfWeekNumber(reportDate);
+                setDocumentId(`LH-${weekVal}-${dayOfWeekVal}`);
             }
-            return { value: "", unit: parts[0] };
+            if (!isTitleManuallyEdited) {
+                const dayVal = dayNumber || "1";
+                setTitle(`LH - ${currentProj.project_code || currentProj.name} - H${dayVal}`);
+            }
+        } else if (reportType === "weekly") {
+            const formattedWeek = weekNumber ? weekNumber.padStart(2, "0") : "01";
+            if (!isDocIdManuallyEdited) {
+                setDocumentId(`LM-${formattedWeek}-01`);
+            }
+            if (!isTitleManuallyEdited) {
+                setTitle(`Laporan Mingguan ${formattedWeek} - ${currentProj.project_code || currentProj.name}`);
+            }
         }
-        return { value: parts[0], unit: parts[1] };
+    }, [selectedProjectId, dayNumber, reportDate, weekNumber, reportType, projects, isLoading, paramId, isTitleManuallyEdited, isDocIdManuallyEdited]);
+
+    const getWeekOfYear = (dateStr: string) => {
+        if (!dateStr) return "01";
+        const date = new Date(dateStr);
+        const startOfYear = new Date(date.getFullYear(), 0, 1);
+        const diff = date.getTime() - startOfYear.getTime();
+        const oneDay = 24 * 60 * 60 * 1000;
+        const dayOfYear = Math.floor(diff / oneDay) + 1;
+        const week = Math.ceil((dayOfYear + startOfYear.getDay()) / 7);
+        return week.toString().padStart(2, "0");
+    };
+
+    const getDayOfWeekNumber = (dateStr: string) => {
+        if (!dateStr) return "01";
+        const date = new Date(dateStr);
+        const day = date.getDay();
+        return (day + 1).toString().padStart(2, "0");
+    };
+
+    // Computes LM-XX-YY for each page in Weekly Report
+    const getWeeklyPageDocCode = (pageIndex: number) => {
+        const week = weekNumber ? weekNumber.padStart(2, "0") : "01";
+        const pageStr = String(pageIndex).padStart(2, "0");
+        if (!isDocIdManuallyEdited || !documentId) {
+            return `LM-${week}-${pageStr}`;
+        }
+        const match = documentId.match(/^(.*?-)(\d{1,2})$/);
+        if (match) {
+            return `${match[1]}${pageStr}`;
+        }
+        return `${documentId}-${pageStr}`;
     };
 
     const getGeneratedFilename = () => {
@@ -453,17 +577,298 @@ function EditorContentComponent() {
         const currentProj = projects.find(p => p.id === selectedProjectId);
         const codePart = currentProj?.project_code || "KODE";
         
-        let docPart = "00_01";
+        let docPart = "00_00";
         if (documentId) {
-            let cleaned = documentId.toUpperCase();
-            if (cleaned.startsWith("LHS-")) {
-                cleaned = cleaned.substring(4);
-            }
-            docPart = cleaned.replace(/[^A-Z0-9]/g, "_");
+            docPart = documentId.replace(/[^A-Z0-9]/gi, "_").toUpperCase();
         }
 
         const revPart = revision ? `R${revision}` : "R0";
-        return `${datePart}_${codePart}_LH_${docPart}_${revPart}.pdf`;
+        const typePart = reportType === "daily" ? "LH" : reportType === "weekly" ? "LM" : "LM";
+        return `${datePart}_${codePart}_${typePart}_${docPart}_${revPart}.pdf`;
+    };
+
+    // Auto Sync Weekly Data from Daily Reports
+    const handleSyncFromDailyReports = async () => {
+        if (!selectedProjectId) {
+            toast.error("Pilih proyek terlebih dahulu.");
+            return;
+        }
+        if (!startDate || !endDate) {
+            toast.error("Tentukan rentang tanggal periode laporan.");
+            return;
+        }
+
+        setIsSyncing(true);
+        const syncToast = toast.loading("Mengambil & merangkum data Laporan Harian...");
+        try {
+            const { data: dailyReports, error } = await supabase
+                .from("project_reports")
+                .select("*")
+                .eq("project_id", selectedProjectId)
+                .eq("report_type", "daily")
+                .gte("report_date", startDate)
+                .lte("report_date", endDate)
+                .order("report_date", { ascending: true });
+
+            if (error) throw error;
+
+            if (!dailyReports || dailyReports.length === 0) {
+                toast.error("Tidak ditemukan Laporan Harian (LH) pada rentang tanggal ini.", { id: syncToast });
+                setIsSyncing(false);
+                return;
+            }
+
+            const parsedLogs = dailyReports.map(r => {
+                let contentObj: any = {};
+                try { contentObj = JSON.parse(r.content || "{}"); } catch(e) {}
+                return {
+                    id: r.id,
+                    report_date: r.report_date,
+                    title: r.title,
+                    progress: r.progress || 0,
+                    manpowerCount: r.manpower_count || 0,
+                    weatherCondition: r.weather_condition || "",
+                    content: contentObj,
+                };
+            });
+
+            // 1. Progress & Days calculation
+            const maxProgress = Math.max(...parsedLogs.map(l => l.progress), 0);
+            const prevProg = parseFloat(progressLastWeek) || 0;
+            const thisWeekProg = Math.max(0, maxProgress - prevProg);
+            setProgressThisWeek(thisWeekProg.toFixed(3));
+            setProgressTotal(maxProgress.toFixed(3));
+            setProgressRemaining((Math.max(0, 100 - maxProgress)).toFixed(3));
+            setProgress(maxProgress.toString());
+
+            const lastLogWithDays = parsedLogs.slice().reverse().find(l => l.content?.dayNumber || l.content?.totalDays);
+            if (lastLogWithDays?.content?.dayNumber) {
+                setDayNumber(lastLogWithDays.content.dayNumber.toString());
+            }
+            if (lastLogWithDays?.content?.totalDays) {
+                setTotalDays(lastLogWithDays.content.totalDays.toString());
+            }
+
+            // 2. Aggregate & Smart Group Work Items
+            const rawWorkItems: { description: string; duration: string; position: string; volume: string }[] = [];
+            const allNextActions: string[] = [];
+            const extractedKendala: KendalaItem[] = [];
+            let totalPm = 0, totalSm = 0, totalSv = 0, totalMd = 0, totalTk = 0, totalPk = 0, totalOp = 0;
+            let totalCerahHours = 0, totalBerawanHours = 0, totalHujanHours = 0;
+
+            const dayKeys: ("senin" | "selasa" | "rabu" | "kamis" | "jumat" | "sabtu" | "minggu")[] = [
+                "senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"
+            ];
+
+            const newPersonelGrid = [...defaultPersonelRoles.map(r => ({ ...r }))];
+            const newWeatherHourlyGrid = createDefaultHourlyWeather();
+
+            parsedLogs.forEach(log => {
+                const logDate = new Date(log.report_date);
+                const dayIndex = logDate.getDay() === 0 ? 6 : logDate.getDay() - 1; // 0=Senin, 6=Minggu
+                const dayKey = dayKeys[dayIndex];
+
+                const c = log.content;
+                if (c.workItems && Array.isArray(c.workItems)) {
+                    c.workItems.forEach((wi: any) => {
+                        if (wi.description) {
+                            rawWorkItems.push({
+                                description: wi.description.trim(),
+                                duration: "1 hari",
+                                position: wi.position || "—",
+                                volume: wi.volume || "—",
+                            });
+                        }
+                    });
+                }
+                if (c.nextActions) {
+                    allNextActions.push(c.nextActions);
+                }
+                if (c.notes) {
+                    extractedKendala.push({
+                        date: log.report_date,
+                        problem: c.notes,
+                        solution: c.nextActions || "Penanganan lapangan secara intensif",
+                        recommendation: "Evaluasi pengawasan & penambahan sumber daya"
+                    });
+                }
+
+                // Personnel breakdown into grid
+                const p = c.personnel || {};
+                const pm = parseInt(p.projectManager) || 0;
+                const sm = parseInt(p.siteManager) || 0;
+                const sv = parseInt(p.supervisor) || 0;
+                const md = parseInt(p.mandor) || 0;
+                const tk = parseInt(p.tukang) || 0;
+                const pk = parseInt(p.pekerja) || 0;
+                const op = parseInt(p.operator) || 0;
+
+                totalPm += pm; totalSm += sm; totalSv += sv; totalMd += md; totalTk += tk; totalPk += pk; totalOp += op;
+
+                if (dayKey) {
+                    newPersonelGrid[0][dayKey] = pm;
+                    newPersonelGrid[1][dayKey] = sm;
+                    newPersonelGrid[2][dayKey] = sv;
+                    newPersonelGrid[8][dayKey] = md;
+                    newPersonelGrid[9][dayKey] = tk;
+                    newPersonelGrid[12][dayKey] = pk;
+                    newPersonelGrid[13][dayKey] = op;
+                }
+
+                // Weather 24h matrix mapping
+                if (dayKey && c.weatherItems && Array.isArray(c.weatherItems)) {
+                    c.weatherItems.forEach((w: any) => {
+                        const timeStr = w.timeRange || "";
+                        const match = timeStr.match(/(\d{1,2})[\.:](\d{2})\s*-\s*(\d{1,2})[\.:](\d{2})/);
+                        if (match) {
+                            const startHour = Math.max(1, Math.min(24, parseInt(match[1])));
+                            const endHour = Math.max(startHour, Math.min(24, parseInt(match[3])));
+                            const condCode = w.condition === "cerah" ? "C" : w.condition === "berawan" ? "B" : "H";
+                            for (let h = startHour; h <= endHour; h++) {
+                                const rowIdx = h - 1;
+                                if (newWeatherHourlyGrid[rowIdx]) {
+                                    newWeatherHourlyGrid[rowIdx][dayKey] = condCode;
+                                }
+                            }
+                        }
+
+                        // Weather duration count for summary
+                        const matchDur = (w.timeRange || "").match(/(\d{2})[\.:](\d{2})\s*-\s*(\d{2})[\.:](\d{2})/);
+                        const dur = matchDur ? (parseFloat(matchDur[3]) - parseFloat(matchDur[1]) || 1) : 1;
+                        if (w.condition === "cerah") totalCerahHours += dur;
+                        else if (w.condition === "berawan") totalBerawanHours += dur;
+                        else if (w.condition === "hujan") totalHujanHours += dur;
+                    });
+                }
+            });
+
+            setPersonelWeeklyGrid(newPersonelGrid);
+            setWeatherHourlyGrid(newWeatherHourlyGrid);
+
+            if (extractedKendala.length > 0) {
+                setKendalaItems(extractedKendala);
+            }
+
+            // Smart group identical items
+            const groupedItemsMap: { [key: string]: { description: string; duration: string; position: string; volume: string } } = {};
+            rawWorkItems.forEach(item => {
+                const normKey = item.description.toLowerCase().replace(/\s+/g, " ");
+                if (!groupedItemsMap[normKey]) {
+                    groupedItemsMap[normKey] = { ...item };
+                } else {
+                    const existing = groupedItemsMap[normKey];
+                    const v1 = parseFloat(existing.volume);
+                    const v2 = parseFloat(item.volume);
+                    if (!isNaN(v1) && !isNaN(v2)) {
+                        const unitMatch = existing.volume.match(/[a-zA-Z3²]+/);
+                        const unit = unitMatch ? ` ${unitMatch[0]}` : "";
+                        existing.volume = `${(v1 + v2).toFixed(1).replace(/\.0$/, "")}${unit}`;
+                    } else if (item.volume && item.volume !== "—" && !existing.volume.includes(item.volume)) {
+                        existing.volume = existing.volume && existing.volume !== "—" ? `${existing.volume}, ${item.volume}` : item.volume;
+                    }
+                }
+            });
+
+            const aggregatedWorkItems = Object.values(groupedItemsMap);
+
+            const count = parsedLogs.length || 1;
+            const staffIntiAvg = Math.round((totalPm + totalSm + totalSv) / count);
+            const tukangPekerjaAvg = Math.round((totalMd + totalTk + totalPk + totalOp) / count);
+            const totalAvg = staffIntiAvg + tukangPekerjaAvg;
+
+            setAvgStaffInti(staffIntiAvg.toString());
+            setAvgTukangPekerja(tukangPekerjaAvg.toString());
+            setAvgTotalPersonel(totalAvg.toString());
+
+            // Weather days calculation (8h/day standard)
+            const cerahDays = (totalCerahHours / 8).toFixed(3);
+            const berawanDays = (totalBerawanHours / 8).toFixed(3);
+            const hujanDays = (totalHujanHours / 8).toFixed(3);
+
+            setWeatherSummaryTable([
+                { condition: "Cerah", hours: totalCerahHours.toString(), days: cerahDays },
+                { condition: "Berawan", hours: totalBerawanHours.toString(), days: berawanDays },
+                { condition: "Hujan", hours: totalHujanHours.toString(), days: hujanDays },
+            ]);
+
+            // Update effective hours table with exact dates
+            setEffectiveHoursTable(generateEffectiveHoursDates(startDate, effectiveHoursTable));
+
+            if (aggregatedWorkItems.length > 0) {
+                setWeeklyActivitiesThisWeek(aggregatedWorkItems);
+            }
+            if (allNextActions.length > 0) {
+                setWeeklyActivitiesNextWeek(allNextActions.map(na => ({
+                    description: na,
+                    duration: "1 hari",
+                    position: "—",
+                    volume: "—"
+                })));
+            }
+
+            // Summaries text auto-generate
+            setSummaryText(`Pekerjaan pada minggu ini mengalami kemajuan pekerjaan sebesar ${thisWeekProg.toFixed(3)}% sehingga total kemajuan yang telah dikerjakan hingga minggu ini adalah sebesar ${maxProgress.toFixed(3)}%.`);
+            setPersonelSummaryText(`Dengan jumlah pekerja rata-rata ${totalAvg} orang per hari, sudah cukup efektif. Namun dengan sisa hari sebesar ${remainingDays || "—"} hari dari jadwal, maka perlu dipertimbangkan ketersediaan tenaga kerja.`);
+            setWaktuKerjaSummaryText(`Waktu kerja efektif adalah rata-rata 8 jam per hari, atau 56 jam per minggu.`);
+            setWeatherSummaryText(`Cuaca cenderung ${totalHujanHours > 0 ? `hujan selama ${hujanDays} hari/minggu atau sekitar ${Math.round((totalHujanHours/(totalCerahHours+totalBerawanHours+totalHujanHours||1))*100)}%, mengakibatkan waktu kerja efektif berkurang.` : 'cerah dan berawan, mendukung kelancaran pekerjaan.'}`);
+
+            // Photos aggregation & limit 18
+            const aggregatedPhotos: { url: string; caption: string; dateStr?: string }[] = [];
+            parsedLogs.forEach(l => {
+                if (l.content.photos && Array.isArray(l.content.photos)) {
+                    l.content.photos.forEach((p: any) => {
+                        if (p.url && !aggregatedPhotos.some(ap => ap.url === p.url)) {
+                            aggregatedPhotos.push({ url: p.url, caption: p.caption || `Foto Lapangan ${l.report_date}`, dateStr: l.report_date });
+                        }
+                    });
+                }
+            });
+            
+            setAllDailyPhotos(aggregatedPhotos);
+            if (aggregatedPhotos.length > 0) {
+                setPhotos(aggregatedPhotos.slice(0, 18));
+                if (aggregatedPhotos.length > 18) {
+                    toast.success(`Ditemukan ${aggregatedPhotos.length} foto pada LH. 18 foto pertama otomatis dipilih untuk Laporan Utama.`, { duration: 5000 });
+                }
+            }
+
+            setAttachedDailyReports(parsedLogs);
+            toast.success(`Berhasil merangkum ${parsedLogs.length} Laporan Harian!`, { id: syncToast });
+        } catch (err: any) {
+            console.error("Sync error:", err);
+            toast.error(`Gagal sinkron data: ${err.message}`, { id: syncToast });
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    // Merging activity helper
+    const handleMergeActivity = (sourceIdx: number, targetIdx: number) => {
+        if (sourceIdx === targetIdx) return;
+        const copy = [...weeklyActivitiesThisWeek];
+        const source = copy[sourceIdx];
+        const target = copy[targetIdx];
+
+        const sourceVolNum = parseFloat(source.volume);
+        const targetVolNum = parseFloat(target.volume);
+
+        let newVol = target.volume;
+        if (!isNaN(sourceVolNum) && !isNaN(targetVolNum)) {
+            const unitMatch = target.volume.match(/[a-zA-Z3²]+/);
+            const unit = unitMatch ? ` ${unitMatch[0]}` : "";
+            newVol = `${(targetVolNum + sourceVolNum).toFixed(1).replace(/\.0$/, "")}${unit}`;
+        } else if (source.volume && source.volume !== "—" && !target.volume.includes(source.volume)) {
+            newVol = target.volume && target.volume !== "—" ? `${target.volume}, ${source.volume}` : source.volume;
+        }
+
+        copy[targetIdx] = {
+            ...target,
+            volume: newVol
+        };
+
+        copy.splice(sourceIdx, 1);
+        setWeeklyActivitiesThisWeek(copy);
+        toast.success(`Berhasil menggabungkan ke #${targetIdx + 1}`);
     };
 
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -471,6 +876,11 @@ function EditorContentComponent() {
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        if (photos.length >= 18) {
+            toast.error("Maksimal 18 foto dokumentasi pada Laporan Mingguan Utama. Foto selebihnya tersimpan pada lampiran Laporan Harian.");
+            return;
+        }
 
         setUploadingPhoto(true);
         try {
@@ -507,105 +917,26 @@ function EditorContentComponent() {
         setPhotos(copy);
     };
 
-    // Helpers for dynamic work items
-    const handleAddWorkItem = () => {
-        setWorkItems([...workItems, { description: "", position: "", volume: "" }]);
-    };
-
-    const handleRemoveWorkItem = (index: number) => {
-        if (workItems.length === 1) {
-            setWorkItems([{ description: "", position: "", volume: "" }]);
-            return;
+    const togglePhotoSelection = (p: { url: string; caption: string }) => {
+        const exists = photos.some(item => item.url === p.url);
+        if (exists) {
+            setPhotos(photos.filter(item => item.url !== p.url));
+        } else {
+            if (photos.length >= 18) {
+                toast.error("Maksimal 18 foto dokumentasi pada Laporan Mingguan Utama.");
+                return;
+            }
+            setPhotos([...photos, { url: p.url, caption: p.caption }]);
         }
-        setWorkItems(workItems.filter((_, i) => i !== index));
-    };
-
-    const handleWorkItemChange = (index: number, key: keyof typeof workItems[0], val: string) => {
-        const copy = [...workItems];
-        copy[index][key] = val;
-        setWorkItems(copy);
-    };
-
-    const handleAddWeatherItem = () => {
-        setWeatherItems(prev => {
-            if (prev.length === 0) {
-                return [{ timeRange: "08.00 - 09.00", condition: "cerah" }];
-            }
-            const lastRange = prev[prev.length - 1].timeRange;
-            const match = lastRange.match(/(\d{2})[\.:](\d{2})\s*-\s*(\d{2})[\.:](\d{2})/);
-            if (match) {
-                const endHour = parseInt(match[3]);
-                const nextStart = endHour.toString().padStart(2, "0") + ".00";
-                const nextEnd = (endHour + 1).toString().padStart(2, "0") + ".00";
-                return [...prev, { timeRange: `${nextStart} - ${nextEnd}`, condition: "cerah" }];
-            }
-            return [...prev, { timeRange: "", condition: "cerah" }];
-        });
-    };
-
-    const getSummarizedWeather = (items: { timeRange: string; condition: string }[]) => {
-        if (!items || items.length === 0) return [];
-        
-        const summarized: { timeRange: string; condition: string; duration: number }[] = [];
-        let currentBlock: any = null;
-        
-        items.forEach((item) => {
-            const match = item.timeRange.match(/(\d{2})[\.:](\d{2})\s*-\s*(\d{2})[\.:](\d{2})/);
-            const condition = item.condition || "cerah";
-            
-            if (match) {
-                const startStr = `${match[1]}.${match[2]}`;
-                const endStr = `${match[3]}.${match[4]}`;
-                const duration = parseFloat(match[3]) - parseFloat(match[1]) || 1;
-                
-                if (!currentBlock) {
-                    currentBlock = { start: startStr, end: endStr, condition, duration };
-                } else if (currentBlock.condition === condition) {
-                    currentBlock.end = endStr;
-                    currentBlock.duration += duration;
-                } else {
-                    summarized.push({
-                        timeRange: `${currentBlock.start} - ${currentBlock.end}`,
-                        condition: currentBlock.condition,
-                        duration: currentBlock.duration
-                    });
-                    currentBlock = { start: startStr, end: endStr, condition, duration };
-                }
-            } else {
-                if (currentBlock) {
-                    summarized.push({
-                        timeRange: `${currentBlock.start} - ${currentBlock.end}`,
-                        condition: currentBlock.condition,
-                        duration: currentBlock.duration
-                    });
-                    currentBlock = null;
-                }
-                summarized.push({
-                    timeRange: item.timeRange || "—",
-                    condition,
-                    duration: 1
-                });
-            }
-        });
-        
-        if (currentBlock) {
-            summarized.push({
-                timeRange: `${currentBlock.start} - ${currentBlock.end}`,
-                condition: currentBlock.condition,
-                duration: currentBlock.duration
-            });
-        }
-        
-        return summarized;
     };
 
     const handleSave = async () => {
         if (!selectedProjectId) {
-            alert("Please select a project.");
+            alert("Pilih proyek terlebih dahulu.");
             return;
         }
         if (!title) {
-            alert("Please enter a report title.");
+            alert("Masukkan judul laporan.");
             return;
         }
 
@@ -638,25 +969,8 @@ function EditorContentComponent() {
                     documentId,
                     revision,
                     workItems,
-                    personnel: {
-                        projectManager: pm,
-                        siteManager: sm,
-                        supervisor: sv,
-                        mandor: md,
-                        tukang: tk,
-                        pekerja: pk,
-                        operator: op
-                    },
-                    workHours: {
-                        reguler: shiftReguler ? parseFloat(shiftReguler) : 0,
-                        ot1: shiftOt1 ? parseFloat(shiftOt1) : 0,
-                        ot2: shiftOt2 ? parseFloat(shiftOt2) : 0,
-                        ot3: shiftOt3 ? parseFloat(shiftOt3) : 0,
-                        // Backward compatibility:
-                        shift1: shiftReguler ? parseFloat(shiftReguler) : 0,
-                        shift2: shiftOt1 ? parseFloat(shiftOt1) : 0,
-                        shift3: shiftOt2 ? parseFloat(shiftOt2) : 0
-                    },
+                    personnel: { projectManager: pm, siteManager: sm, supervisor: sv, mandor: md, tukang: tk, pekerja: pk, operator: op },
+                    workHours: { reguler: shiftReguler ? parseFloat(shiftReguler) : 0, ot1: shiftOt1 ? parseFloat(shiftOt1) : 0, ot2: shiftOt2 ? parseFloat(shiftOt2) : 0, ot3: shiftOt3 ? parseFloat(shiftOt3) : 0 },
                     weatherItems,
                     notes,
                     approvedBy,
@@ -668,6 +982,45 @@ function EditorContentComponent() {
                     nextActions
                 };
                 finalContent = JSON.stringify(templateData);
+            } else if (reportType === "weekly") {
+                const weeklyTemplateData = {
+                    startDate,
+                    endDate,
+                    weekNumber,
+                    dayNumber: dayNumber ? parseInt(dayNumber) : null,
+                    totalDays: totalDays ? parseInt(totalDays) : null,
+                    remainingDays: remainingDays ? parseInt(remainingDays) : null,
+                    workPackage,
+                    documentId: documentId || `LM-${weekNumber.padStart(2, "0")}-01`,
+                    revision,
+                    locationOverride,
+                    progressLastWeek,
+                    progressThisWeek,
+                    progressTotal,
+                    progressRemaining,
+                    summaryText,
+                    catatanUmum,
+                    avgStaffInti,
+                    avgTukangPekerja,
+                    avgTotalPersonel,
+                    personelSummaryText,
+                    personelWeeklyGrid,
+                    weatherHourlyGrid,
+                    kendalaItems,
+                    effectiveHoursTable,
+                    waktuKerjaSummaryText,
+                    weatherSummaryTable,
+                    weatherSummaryText,
+                    weeklyActivitiesThisWeek,
+                    weeklyActivitiesNextWeek,
+                    attachedDailyReports,
+                    approvedBy,
+                    approvedByRole,
+                    preparedBy,
+                    preparedByRole,
+                    photos
+                };
+                finalContent = JSON.stringify(weeklyTemplateData);
             }
 
             const payload = {
@@ -675,9 +1028,9 @@ function EditorContentComponent() {
                 report_type: reportType,
                 title,
                 report_date: reportDate,
-                progress: parseFloat(progress) || 0,
+                progress: parseFloat(progressTotal) || parseFloat(progress) || 0,
                 status,
-                manpower_count: reportType === "daily" ? computedManpower : null,
+                manpower_count: reportType === "daily" ? computedManpower : parseInt(avgTotalPersonel) || null,
                 weather_condition: reportType === "daily" ? summaryWeather : null,
                 content: finalContent || null,
                 updated_at: new Date().toISOString(),
@@ -686,31 +1039,27 @@ function EditorContentComponent() {
             const { data: { user } } = await supabase.auth.getUser();
 
             if (!reportId) {
-                // Insert
                 const { error } = await supabase.from("project_reports").insert({
                     ...payload,
                     created_by: user?.id
                 });
                 if (error) throw error;
             } else {
-                // Update
                 const { error } = await supabase.from("project_reports").update(payload).eq("id", reportId);
                 if (error) throw error;
             }
 
-            // Redirect back
             router.push(`/flow/reports/${reportType}`);
         } catch (err: any) {
             console.error("Error saving report:", err);
-            alert(`Failed to save report: ${err.message || err.details || JSON.stringify(err)}`);
+            alert(`Gagal menyimpan laporan: ${err.message || err.details || JSON.stringify(err)}`);
         } finally {
             setIsSaving(false);
         }
     };
 
     const currentProject = projects.find(p => p.id === selectedProjectId);
-    
-    // Format date string for template preview (e.g. Wednesday, 13-Nov-2024 or similar)
+
     const getFormattedDate = () => {
         if (!reportDate) return "-";
         try {
@@ -721,50 +1070,94 @@ function EditorContentComponent() {
         }
     };
 
+    const getPeriodFormattedDate = () => {
+        if (!startDate || !endDate) return "-";
+        try {
+            const d1 = new Date(startDate).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: '2-digit' }).replace(/\./g, '');
+            const d2 = new Date(endDate).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: '2-digit' }).replace(/\./g, '');
+            return `${d1} s.d. ${d2}`;
+        } catch(e) {
+            return `${startDate} s.d. ${endDate}`;
+        }
+    };
+
     const getDayName = () => {
         if (!reportDate) return "-";
         try {
-            const date = new Date(reportDate);
-            return date.toLocaleDateString("id-ID", { weekday: 'long' });
-        } catch(e) {
-            return "-";
-        }
+            return new Date(reportDate).toLocaleDateString("id-ID", { weekday: 'long' });
+        } catch(e) { return "-"; }
     };
 
     const getDayDateOnly = () => {
         if (!reportDate) return "-";
         try {
-            const date = new Date(reportDate);
-            return date.toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: '2-digit' }).replace(/\./g, '');
-        } catch(e) {
-            return "-";
-        }
+            return new Date(reportDate).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: '2-digit' }).replace(/\./g, '');
+        } catch(e) { return "-"; }
     };
 
-    const getDayOfWeekNumber = (dateStr: string) => {
-        if (!dateStr) return "01";
-        const date = new Date(dateStr);
-        const day = date.getDay(); // 0 is Sunday, 6 is Saturday
-        return (day + 1).toString().padStart(2, "0");
-    };
+    // Shared Header Renderer for Adidaya Document Standard
+    const renderPageHeader = (headerTypeLabel: string, pageDocCode: string, subLabel: string) => (
+        <div className="flex items-center gap-4 border-b-2 border-neutral-900 pb-3">
+            {/* Left: Logo */}
+            <div className="flex items-center shrink-0">
+                <img src="/logo-adidaya-red.svg" alt="Adidaya" className="h-8 w-auto object-contain filter brightness-0" />
+            </div>
 
-    const getWeekOfYear = (dateStr: string) => {
-        if (!dateStr) return "01";
-        const date = new Date(dateStr);
-        const startOfYear = new Date(date.getFullYear(), 0, 1);
-        const diff = date.getTime() - startOfYear.getTime();
-        const oneDay = 24 * 60 * 60 * 1000;
-        const dayOfYear = Math.floor(diff / oneDay) + 1;
-        const week = Math.ceil((dayOfYear + startOfYear.getDay()) / 7);
-        return week.toString().padStart(2, "0");
-    };
+            {/* Center: Project Info */}
+            <div className="flex-1 pl-4 border-l border-neutral-300 space-y-0.5">
+                <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest">Proyek</div>
+                <div className="flex items-center gap-2">
+                    {currentProject?.project_code && (
+                        <span className="inline-block px-1.5 py-0.5 bg-neutral-900 text-white text-[7px] font-black uppercase tracking-widest rounded-sm leading-none shrink-0">
+                            {currentProject.project_code}
+                        </span>
+                    )}
+                    <span className="font-extrabold text-[11px] text-neutral-900 tracking-tight uppercase leading-tight">
+                        {currentProject?.name || "NAMA PROYEK"}
+                    </span>
+                </div>
+                <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest pt-1">Lokasi</div>
+                <div className="text-[8px] font-semibold text-neutral-700 uppercase leading-tight">
+                    {locationOverride || currentProject?.location || "—"}
+                </div>
+                <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest pt-1">Tahap Pekerjaan</div>
+                <div className="text-[7.5px] font-bold text-neutral-800 uppercase leading-tight">{workPackage || "—"}</div>
+            </div>
 
-    const weatherOptions = [
-        { value: "", label: "-- Select Weather --" },
-        { value: "cerah", label: "Cerah" },
-        { value: "berawan", label: "Berawan" },
-        { value: "hujan", label: "Hujan" }
-    ];
+            {/* Right: Stamp Box */}
+            <div className="w-[130px] shrink-0 border border-neutral-300 rounded-sm flex flex-col items-center justify-between p-2 text-center bg-neutral-50/50">
+                <div className="font-black text-[34px] text-neutral-900 leading-none tracking-tighter">{headerTypeLabel}</div>
+                <div className="text-[5px] font-black text-neutral-500 uppercase tracking-[0.15em] leading-none">{subLabel}</div>
+                <div className="w-full border-t border-neutral-300 my-1" />
+                <div className="font-black text-[12px] text-neutral-900 tracking-tight leading-none">{pageDocCode}</div>
+                <div className="w-full border-t border-neutral-200 my-1" />
+                <div className="w-full grid grid-cols-2 gap-x-1 text-[5px] text-neutral-500">
+                    <span className="text-left font-bold">TGL LAPORAN</span>
+                    <span className="text-right font-bold">REV</span>
+                    <span className="text-left font-black text-neutral-800">{getDayDateOnly()}</span>
+                    <span className="text-right font-black text-neutral-800">{revision || "00"}</span>
+                </div>
+            </div>
+        </div>
+    );
+
+    // Shared Date Meta Row Renderer
+    const renderWeeklyDateMetaRow = () => (
+        <div className="grid grid-cols-5 border border-neutral-300 rounded overflow-hidden text-center">
+            {[
+                { label: "Periode", value: getPeriodFormattedDate() },
+                { label: "Minggu Ke-", value: weekNumber ? weekNumber.padStart(2, "0") : "01" },
+                { label: "Hari Ke-", value: dayNumber || "—" },
+                { label: "Total Hari", value: totalDays || "—" },
+                { label: "Sisa Hari", value: remainingDays || "—" },
+            ].map((cell, i) => (
+                <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                    <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{cell.label}</div>
+                    <div className="text-[8px] font-bold text-neutral-800 py-1">{cell.value}</div>
+                </div>
+            ))}
+        </div>
+    );
 
     const handleExportPdf = async () => {
         if (!selectedProjectId) {
@@ -782,7 +1175,6 @@ function EditorContentComponent() {
         const exportToast = toast.loading("Sedang memproses ekspor dokumen PDF...");
 
         try {
-            // Clone preview element
             const clone = previewElement.cloneNode(true) as HTMLElement;
             clone.style.width = "794px";
             clone.style.maxWidth = "794px";
@@ -791,7 +1183,16 @@ function EditorContentComponent() {
             clone.style.boxShadow = "none";
             clone.style.border = "none";
 
-            // Convert relative image sources to absolute URLs
+            // Strip drop shadow, outlines and page borders for clean PDF export
+            const pageBreakEls = clone.querySelectorAll(".weekly-page-break, #document-preview-a4 > div");
+            pageBreakEls.forEach((el) => {
+                const htmlEl = el as HTMLElement;
+                htmlEl.style.boxShadow = "none";
+                htmlEl.style.border = "none";
+                htmlEl.style.outline = "none";
+                htmlEl.classList.remove("shadow-xl", "border", "border-neutral-300");
+            });
+
             const images = clone.querySelectorAll("img");
             images.forEach((img) => {
                 const src = img.getAttribute("src");
@@ -800,7 +1201,6 @@ function EditorContentComponent() {
                 }
             });
 
-            // Extract all CSS style tags and link stylesheets
             let stylesHTML = "";
             document.head.querySelectorAll("style, link[rel='stylesheet']").forEach((node) => {
                 if (node.tagName.toLowerCase() === "link") {
@@ -814,7 +1214,6 @@ function EditorContentComponent() {
                 }
             });
 
-            // Wrap inside a complete HTML page
             const fullHTML = `<!DOCTYPE html>
 <html>
 <head>
@@ -827,6 +1226,10 @@ function EditorContentComponent() {
             size: A4 portrait;
             margin: 14mm 0mm 12mm 0mm;
         }
+        * {
+            box-shadow: none !important;
+            -webkit-box-shadow: none !important;
+        }
         body {
             margin: 0;
             padding: 0;
@@ -837,11 +1240,18 @@ function EditorContentComponent() {
         }
         .a4-wrapper {
             width: 794px !important;
-            min-height: 1123px !important;
             margin: 0 auto !important;
             background: #ffffff !important;
             box-shadow: none !important;
             border: none !important;
+        }
+        .weekly-page-break {
+            page-break-after: always !important;
+            break-after: page !important;
+            box-shadow: none !important;
+            border: none !important;
+            outline: none !important;
+            background: #ffffff !important;
         }
     </style>
 </head>
@@ -852,12 +1262,9 @@ function EditorContentComponent() {
 </body>
 </html>`;
 
-            // Call Puppeteer API endpoint
             const response = await fetch("/api/flow/reports/export-pdf", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ html: fullHTML }),
             });
 
@@ -869,7 +1276,6 @@ function EditorContentComponent() {
             const blob = await response.blob();
             const fileName = getGeneratedFilename();
 
-            // Trigger download
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = downloadUrl;
@@ -892,29 +1298,29 @@ function EditorContentComponent() {
         return (
             <div className="h-screen w-full flex flex-col items-center justify-center gap-3 bg-neutral-50 dark:bg-neutral-950">
                 <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
-                <span className="text-sm font-semibold text-neutral-500">Loading Report Editor...</span>
+                <span className="text-sm font-semibold text-neutral-500">Memuat Editor Laporan...</span>
             </div>
         );
     }
 
     return (
         <div className="h-full flex flex-col lg:overflow-hidden space-y-5 pb-6">
-            {/* Top Editor Bar - Transparent Header */}
+            {/* Header Toolbar */}
             <div className="flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
                     <button 
                         onClick={() => router.back()}
                         className="p-2 hover:bg-white/40 dark:hover:bg-neutral-800/40 rounded-full text-neutral-500 border border-neutral-200/50 dark:border-neutral-800/60 bg-white/20 transition-colors"
-                        title="Back"
+                        title="Kembali"
                     >
                         <ArrowLeft className="w-4 h-4 text-neutral-800 dark:text-white" />
                     </button>
                     <div>
                         <h1 className="text-xl font-extrabold text-neutral-900 dark:text-white leading-tight">
-                            {reportId ? `Edit ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report` : `Create New ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report`}
+                            {reportId ? `Edit Laporan ${reportType === "daily" ? "Harian (LH)" : reportType === "weekly" ? "Mingguan (LM)" : "Bulanan"}` : `Buat Laporan ${reportType === "daily" ? "Harian (LH)" : reportType === "weekly" ? "Mingguan (LM)" : "Bulanan"}`}
                         </h1>
                         <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider block mt-0.5">
-                            Reports & Documents Database
+                            Sistem Laporan & Dokumen Proyek Adidaya Studio
                         </span>
                     </div>
                 </div>
@@ -938,15 +1344,15 @@ function EditorContentComponent() {
                     <Button 
                         onClick={handleSave} 
                         disabled={isSaving}
-                        className="bg-red-600 hover:bg-red-700 text-white font-bold"
+                        className="bg-[#0f172a] hover:bg-black text-white font-bold"
                         icon={isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     >
-                        Save Report
+                        Simpan Laporan
                     </Button>
                 </div>
             </div>
 
-            {/* Tab Navigation for Daily */}
+            {/* Daily Tabs */}
             {reportType === "daily" && (
                 <div className="flex border-b border-neutral-200/60 dark:border-neutral-800/60 px-2 overflow-x-auto shrink-0 gap-1">
                     {([
@@ -976,689 +1382,674 @@ function EditorContentComponent() {
                 </div>
             )}
 
-            {/* Split screen content - Double Card Layout */}
+            {/* Weekly Tabs */}
+            {reportType === "weekly" && (
+                <div className="flex border-b border-neutral-200/60 dark:border-neutral-800/60 px-2 overflow-x-auto shrink-0 gap-1">
+                    {([
+                        { key: "general", label: "1. Info & Periode" },
+                        { key: "summary", label: "2. Executive Summary" },
+                        { key: "kegiatan", label: "3. Kegiatan Pekerjaan" },
+                        { key: "personel", label: "4. Personel Harian" },
+                        { key: "cuaca", label: "5. Cuaca 24j & Kendala" },
+                        { key: "dokumentasi", label: "6. Dokumentasi" },
+                        { key: "ttd", label: "7. TTD & Approval" },
+                    ] as const).map(tab => (
+                        <button
+                            key={tab.key}
+                            type="button"
+                            onClick={() => setWeeklyTab(tab.key)}
+                            className={clsx(
+                                "pb-2.5 pt-1 px-3 text-[11px] font-bold uppercase tracking-wider border-b-2 whitespace-nowrap transition-all",
+                                weeklyTab === tab.key
+                                    ? "border-neutral-900 text-neutral-900 dark:text-white font-extrabold"
+                                    : "border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700"
+                            )}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
+            {/* Split Screen Layout */}
             <div className="flex-1 flex flex-col lg:flex-row gap-5 lg:overflow-hidden">
                 
-                {/* Left Card: Form Input Fields */}
+                {/* Left Form Card */}
                 <div className="w-full lg:w-[45%] flex flex-col bg-white dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-800/60 rounded-3xl lg:overflow-y-auto p-6 space-y-6 shadow-sm lg:h-full shrink-0">
-                        
-                        {/* -------------------- DAILY TABS -------------------- */}
-                        {reportType === "daily" && (
-                            <>
-                                {/* TAB 1: INFO UMUM */}
-                                {activeTab === "general" && (
-                                    <div className="space-y-5 animate-in fade-in duration-300">
-                                        {/* Project Selector */}
-                                        <Select
-                                            label="Project *"
-                                            value={selectedProjectId}
-                                            onChange={(val) => {
-                                                setSelectedProjectId(val);
-                                                if (!paramId) {
-                                                    const proj = projects.find(p => p.id === val);
-                                                    if (proj?.location) {
-                                                        setLocationOverride(proj.location);
-                                                    } else {
-                                                        setLocationOverride("");
-                                                    }
-                                                }
-                                            }}
-                                            options={[
-                                                { value: "", label: "-- Pilih Proyek --" },
-                                                ...projects.map(p => ({ value: p.id, label: p.name }))
-                                            ]}
-                                            disabled={!!paramProjectId}
+                    
+                    {/* ==================== DAILY FORMS ==================== */}
+                    {reportType === "daily" && (
+                        <>
+                            {activeTab === "general" && (
+                                <div className="space-y-5 animate-in fade-in duration-300">
+                                    <Select
+                                        label="Proyek *"
+                                        value={selectedProjectId}
+                                        onChange={(val) => {
+                                            setSelectedProjectId(val);
+                                            if (!paramId) {
+                                                const proj = projects.find(p => p.id === val);
+                                                if (proj?.location) setLocationOverride(proj.location);
+                                            }
+                                        }}
+                                        options={[
+                                            { value: "", label: "-- Pilih Proyek --" },
+                                            ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))
+                                        ]}
+                                        disabled={!!paramProjectId}
+                                        required
+                                    />
+                                    <Input
+                                        label="Lokasi Proyek"
+                                        value={locationOverride}
+                                        onChange={(e) => setLocationOverride(e.target.value)}
+                                        placeholder="e.g. Jl. Raya Utama No. 123, Kota"
+                                    />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input
+                                            label="Tanggal Laporan *"
+                                            type="date"
+                                            value={reportDate}
+                                            onChange={(e) => setReportDate(e.target.value)}
                                             required
                                         />
+                                        <Input
+                                            label="Paket / Tahap Pekerjaan"
+                                            value={workPackage}
+                                            onChange={(e) => setWorkPackage(e.target.value)}
+                                            placeholder="e.g. Pekerjaan Persiapan / Struktur"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <Input label="Hari Ke-" type="number" value={dayNumber} onChange={(e) => setDayNumber(e.target.value)} placeholder="e.g. 1" />
+                                        <Input label="Total Hari" type="number" value={totalDays} onChange={(e) => setTotalDays(e.target.value)} placeholder="e.g. 150" />
+                                        <Input label="Sisa Hari" type="number" value={remainingDays} onChange={(e) => setRemainingDays(e.target.value)} placeholder="Auto" readOnly />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input
+                                            label="Kode Dokumen"
+                                            value={documentId}
+                                            onChange={(e) => { setDocumentId(e.target.value); setIsDocIdManuallyEdited(true); }}
+                                            placeholder="LH-01-01"
+                                        />
+                                        <Input
+                                            label="Revisi (REV)"
+                                            value={revision}
+                                            onChange={(e) => setRevision(e.target.value)}
+                                            placeholder="00"
+                                        />
+                                    </div>
+                                    <Input
+                                        label="Judul Laporan"
+                                        value={title}
+                                        onChange={(e) => { setTitle(e.target.value); setIsTitleManuallyEdited(true); }}
+                                        placeholder="Judul laporan harian"
+                                    />
+                                </div>
+                            )}
 
-                                        {/* Project Code Badge & Filename Preview */}
-                                        {selectedProjectId && (() => {
-                                            const proj = projects.find(p => p.id === selectedProjectId);
-                                            return proj ? (
-                                                <div className="flex items-center gap-3 -mt-2">
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 text-[11px] font-black uppercase tracking-widest">
-                                                        {proj.project_code || "—"}
-                                                    </span>
-                                                    <span className="text-[10px] text-neutral-400 font-mono truncate" title={getGeneratedFilename()}>
-                                                        📄 {getGeneratedFilename()}
-                                                    </span>
-                                                </div>
-                                            ) : null;
-                                        })()}
-
-                                        {/* Location under the project badge */}
-                                        <div className="space-y-1 -mt-2">
-                                            <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Lokasi Proyek</label>
-                                            <Input
-                                                label=""
-                                                value={locationOverride || currentProject?.location || ""}
-                                                onChange={(e) => setLocationOverride(e.target.value)}
-                                                placeholder="e.g. Lokasi Proyek"
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <Input
-                                                label="Tanggal Laporan *"
-                                                type="date"
-                                                value={reportDate}
-                                                onChange={(e) => setReportDate(e.target.value)}
-                                                required
-                                            />
-                                            <Input
-                                                label="Revisi (REV)"
-                                                value={revision}
-                                                onChange={(e) => setRevision(e.target.value)}
-                                                placeholder="00"
-                                            />
-                                        </div>
-
-                                        {/* Report Title (auto-generate with override) */}
-                                        <div className="space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Judul Laporan *</label>
-                                                {!isTitleManuallyEdited && (
-                                                    <span className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Auto</span>
-                                                )}
-                                                {isTitleManuallyEdited && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setIsTitleManuallyEdited(false)}
-                                                        className="text-[10px] font-bold text-neutral-400 hover:text-orange-500 uppercase tracking-wider transition-colors"
-                                                    >
-                                                        Reset ke Auto
-                                                    </button>
-                                                )}
-                                            </div>
-                                            <Input
-                                                label=""
-                                                value={title}
-                                                onChange={(e) => { setTitle(e.target.value); setIsTitleManuallyEdited(true); }}
-                                                placeholder="e.g. Laporan Harian Pekerjaan Struktur"
-                                                required
-                                            />
-                                        </div>
-
-                                        <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4 grid grid-cols-3 gap-4">
-                                            <Input
-                                                label="Hari Ke-"
-                                                type="number"
-                                                value={dayNumber}
-                                                onChange={(e) => setDayNumber(e.target.value)}
-                                                placeholder="1"
-                                            />
-                                            <Input
-                                                label="Total Hari"
-                                                type="number"
-                                                value={totalDays}
-                                                onChange={(e) => setTotalDays(e.target.value)}
-                                                placeholder="150"
-                                            />
-                                            <Input
-                                                label="Sisa Hari"
-                                                type="number"
-                                                value={remainingDays}
-                                                disabled
-                                                placeholder="Sisa Hari"
-                                            />
-                                        </div>
-
-                                        <div className="grid grid-cols-3 gap-4">
-                                            <div className="col-span-2">
-                                                <Input
-                                                    label="Tahap / Paket Pekerjaan"
-                                                    value={workPackage}
-                                                    onChange={(e) => setWorkPackage(e.target.value)}
-                                                    placeholder="e.g. Struktur - Persiapan"
-                                                />
-                                            </div>
-                                            {/* Doc ID (auto-generate with override) */}
-                                            <div className="space-y-1">
-                                                <div className="flex items-center justify-between">
-                                                    <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">Doc ID</label>
-                                                    {!isDocIdManuallyEdited ? (
-                                                        <span className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">Auto</span>
-                                                    ) : (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setIsDocIdManuallyEdited(false)}
-                                                            className="text-[10px] font-bold text-neutral-400 hover:text-orange-500 uppercase tracking-wider transition-colors"
-                                                        >
-                                                            Reset
-                                                        </button>
-                                                    )}
-                                                </div>
+                            {activeTab === "workItems" && (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                        <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Uraian Pekerjaan</span>
+                                    </div>
+                                    {workItems.map((item, idx) => (
+                                        <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-black text-neutral-400 w-5 shrink-0">{idx + 1}.</span>
                                                 <Input
                                                     label=""
-                                                    value={documentId}
-                                                    onChange={(e) => { setDocumentId(e.target.value); setIsDocIdManuallyEdited(true); }}
-                                                    placeholder="LH-00-01"
+                                                    value={item.description}
+                                                    onChange={(e) => {
+                                                        const copy = [...workItems];
+                                                        copy[idx].description = e.target.value;
+                                                        setWorkItems(copy);
+                                                    }}
+                                                    placeholder="Deskripsi kegiatan..."
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setWorkItems(workItems.filter((_, i) => i !== idx))}
+                                                    className="text-neutral-300 hover:text-red-500 transition-colors shrink-0"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 pl-7">
+                                                <Input label="Posisi / As" value={item.position} onChange={(e) => { const copy = [...workItems]; copy[idx].position = e.target.value; setWorkItems(copy); }} placeholder="Kolom A1-A3" />
+                                                <Input label="Volume" value={item.volume} onChange={(e) => { const copy = [...workItems]; copy[idx].volume = e.target.value; setWorkItems(copy); }} placeholder="e.g. 10 m3" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-center pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setWorkItems([...workItems, { description: "", position: "", volume: "" }])}
+                                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-orange-600 bg-orange-50/50 rounded-xl border border-dashed border-orange-200"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" /> Tambah Uraian Pekerjaan
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === "personnel" && (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Jumlah Tenaga Kerja</span>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Input label="Project Manager" type="number" value={pmCount} onChange={(e) => setPmCount(e.target.value)} placeholder="0" />
+                                        <Input label="Site Manager" type="number" value={smCount} onChange={(e) => setSmCount(e.target.value)} placeholder="0" />
+                                        <Input label="Supervisor" type="number" value={supervisorCount} onChange={(e) => setSupervisorCount(e.target.value)} placeholder="0" />
+                                        <Input label="Mandor" type="number" value={mandorCount} onChange={(e) => setMandorCount(e.target.value)} placeholder="0" />
+                                        <Input label="Tukang" type="number" value={tukangCount} onChange={(e) => setTukangCount(e.target.value)} placeholder="0" />
+                                        <Input label="Pekerja" type="number" value={pekerjaCount} onChange={(e) => setPekerjaCount(e.target.value)} placeholder="0" />
+                                        <Input label="Operator" type="number" value={operatorCount} onChange={(e) => setOperatorCount(e.target.value)} placeholder="0" />
+                                    </div>
+                                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2 pt-3">Waktu Kerja (Jam)</span>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Input label="Reguler (08.00-16.00)" type="number" value={shiftReguler} onChange={(e) => setShiftReguler(e.target.value)} placeholder="8" />
+                                        <Input label="OT 1 (16.00-18.00)" type="number" value={shiftOt1} onChange={(e) => setShiftOt1(e.target.value)} placeholder="2" />
+                                        <Input label="OT 2 (18.00-22.00)" type="number" value={shiftOt2} onChange={(e) => setShiftOt2(e.target.value)} placeholder="4" />
+                                        <Input label="OT 3 (22.00-08.00)" type="number" value={shiftOt3} onChange={(e) => setShiftOt3(e.target.value)} placeholder="10" />
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === "cuaca" && (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Kondisi Cuaca Lapangan</span>
+                                    <div className="space-y-2">
+                                        {weatherItems.map((w, idx) => (
+                                            <div key={idx} className="flex items-center gap-2">
+                                                <Input label="" value={w.timeRange} onChange={(e) => setWeatherItems(prev => prev.map((item, i) => i === idx ? { ...item, timeRange: e.target.value } : item))} placeholder="08.00 - 09.00" />
+                                                <Select
+                                                    label=""
+                                                    value={w.condition}
+                                                    onChange={(val) => setWeatherItems(prev => prev.map((item, i) => i === idx ? { ...item, condition: val } : item))}
+                                                    options={[{ value: "cerah", label: "Cerah" }, { value: "berawan", label: "Berawan" }, { value: "hujan", label: "Hujan" }]}
                                                 />
                                             </div>
-                                        </div>
+                                        ))}
                                     </div>
-                                )}
+                                </div>
+                            )}
 
-
-                                {/* TAB 2: URAIAN PEKERJAAN */}
-                                {activeTab === "workItems" && (
-                                    <div className="space-y-4 animate-in fade-in duration-300">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Daftar Uraian Pekerjaan</span>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            {workItems.map((item, idx) => (
-                                                <div 
-                                                    key={idx}
-                                                    className="flex items-end gap-3 p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800"
-                                                >
-                                                    <div className="text-xs font-bold text-neutral-400 self-center pl-1 w-6">{idx + 1}.</div>
-                                                    
-                                                    <div className="flex-1">
-                                                        <Input
-                                                            label="Uraian Pekerjaan"
-                                                            value={item.description}
-                                                            onChange={(e) => handleWorkItemChange(idx, "description", e.target.value)}
-                                                            placeholder="e.g. Pembesian sloof beton"
-                                                        />
-                                                    </div>
-                                                    <div className="w-24">
-                                                        <Input
-                                                            label="Lokasi"
-                                                            value={item.position}
-                                                            onChange={(e) => handleWorkItemChange(idx, "position", e.target.value)}
-                                                            placeholder="e.g. Lantai 1 / Zone A"
-                                                        />
-                                                    </div>
-                                                    <div className="flex gap-1 items-end">
-                                                        <div className="w-16">
-                                                            <Input
-                                                                label="Vol"
-                                                                type="number"
-                                                                value={parseVolume(item.volume).value}
-                                                                onChange={(e) => {
-                                                                    const unit = parseVolume(item.volume).unit;
-                                                                    handleWorkItemChange(idx, "volume", e.target.value ? `${e.target.value} ${unit}` : "");
-                                                                }}
-                                                                placeholder="0"
-                                                            />
-                                                        </div>
-                                                        <div className="w-16 mb-0.5">
-                                                            <select
-                                                                className="w-full h-10 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-semibold text-neutral-700 dark:text-neutral-300 px-2 focus:outline-none focus:ring-1 focus:ring-orange-500/50"
-                                                                value={parseVolume(item.volume).unit}
-                                                                onChange={(e) => {
-                                                                    const numVal = parseVolume(item.volume).value;
-                                                                    handleWorkItemChange(idx, "volume", numVal ? `${numVal} ${e.target.value}` : e.target.value);
-                                                                }}
-                                                            >
-                                                                {["m2","m3","ml","hari","btg","zak","unit","pcs","set","ls","titik","bh","lot"].map(u => (
-                                                                    <option key={u} value={u}>{u}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveWorkItem(idx)}
-                                                        className="p-2.5 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 mb-0.5 transition-colors"
-                                                        title="Remove Row"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex justify-center pt-2">
-                                            <Button
-                                                type="button"
-                                                variant="secondary"
-                                                size="sm"
-                                                icon={<Plus className="w-3.5 h-3.5" />}
-                                                onClick={handleAddWorkItem}
-                                                className="w-full sm:w-auto"
-                                            >
-                                                Tambah Item
-                                            </Button>
-                                        </div>
+                            {activeTab === "catatan" && (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Catatan / Kendala</label>
+                                        <textarea
+                                            className="w-full min-h-[120px] p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                                            value={notes}
+                                            onChange={(e) => setNotes(e.target.value)}
+                                            placeholder="Tulis kendala teknis atau isu di lapangan..."
+                                        />
                                     </div>
-                                )}
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Rencana Pekerjaan Lanjutan</label>
+                                        <textarea
+                                            className="w-full min-h-[120px] p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                                            value={nextActions}
+                                            onChange={(e) => setNextActions(e.target.value)}
+                                            placeholder="Rencana pekerjaan besok..."
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
-                                {/* TAB 3: TENAGA & SHIFT */}
-                                {activeTab === "personnel" && (
-                                    <div className="space-y-6 animate-in fade-in duration-300">
-                                        <div>
-                                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block mb-3 border-b border-neutral-100 dark:border-neutral-800 pb-1">Jumlah Personel</span>
+                            {activeTab === "dokumentasi" && (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Dokumentasi Foto Lapangan</span>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {photos.map((photo, idx) => (
+                                            <div key={idx} className="relative rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 group">
+                                                <img src={photo.url} alt={`Foto ${idx+1}`} className="w-full h-28 object-cover" />
+                                                <button type="button" onClick={() => handleRemovePhoto(idx)} className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">×</button>
+                                                <input type="text" placeholder="Keterangan foto..." value={photo.caption} onChange={(e) => handlePhotoCaptionChange(idx, e.target.value)} className="w-full text-xs p-2 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <label className="cursor-pointer border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl p-8 text-center flex flex-col items-center gap-2 hover:border-orange-400">
+                                        <Camera className="w-6 h-6 text-neutral-400" />
+                                        <span className="text-xs font-bold text-neutral-600">{uploadingPhoto ? "Uploading..." : "+ Upload Foto Lapangan"}</span>
+                                        <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+                                    </label>
+                                </div>
+                            )}
 
-                                            {/* Daily log warning banner */}
-                                            {hasDailyLogs === false && (
-                                                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3 rounded-xl mb-4 space-y-2">
-                                                    <div className="flex gap-2 text-amber-800 dark:text-amber-400">
-                                                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                                                        <div className="text-xs">
-                                                            <p className="font-bold">⚠️ Data Daily Log Absensi Kru Belum Terisi!</p>
-                                                            <p className="mt-1 opacity-80">Data tenaga kerja & shift diambil dari <strong>Crew Daily Log</strong>. Belum ada data untuk tanggal &amp; proyek yang dipilih. Isi dahulu di halaman Crew.</p>
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => router.push("/flow/crew")}
-                                                        className="w-full text-xs font-bold text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 py-1.5 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
-                                                    >
-                                                        → Buka Halaman Crew Daily Log
-                                                    </button>
-                                                </div>
-                                            )}
-                                            {isFetchingLogs && (
-                                                <div className="flex items-center gap-2 text-xs text-neutral-500 mb-3">
-                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Mengambil data dari crew log...
-                                                </div>
-                                            )}
+                            {activeTab === "ttd" && (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Tanda Tangan & Persetujuan</span>
+                                    <Input label="Disusun Oleh" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} placeholder="Nama penyusun" />
+                                    <Input label="Jabatan Penyusun" value={preparedByRole} onChange={(e) => setPreparedByRole(e.target.value)} placeholder="Project Officer / Pengawas" />
+                                    <Input label="Disetujui Oleh" value={approvedBy} onChange={(e) => setApprovedBy(e.target.value)} placeholder="Nama penanggung jawab" />
+                                    <Input label="Jabatan Penyetuju" value={approvedByRole} onChange={(e) => setApprovedByRole(e.target.value)} placeholder="Project Manager / Direktur" />
+                                </div>
+                            )}
+                        </>
+                    )}
 
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <Input label="Project Manager" type="number" value={pmCount} onChange={(e) => setPmCount(e.target.value)} placeholder="0" />
-                                                <Input label="Site Manager" type="number" value={smCount} onChange={(e) => setSmCount(e.target.value)} placeholder="0" />
-                                                <Input label="Supervisor" type="number" value={supervisorCount} onChange={(e) => setSupervisorCount(e.target.value)} placeholder="0" />
-                                                <Input label="Mandor" type="number" value={mandorCount} onChange={(e) => setMandorCount(e.target.value)} placeholder="0" />
-                                                <Input label="Tukang" type="number" value={tukangCount} onChange={(e) => setTukangCount(e.target.value)} placeholder="0" />
-                                                <Input label="Pekerja" type="number" value={pekerjaCount} onChange={(e) => setPekerjaCount(e.target.value)} placeholder="0" />
-                                                <Input label="Operator" type="number" value={operatorCount} onChange={(e) => setOperatorCount(e.target.value)} placeholder="0" />
+                    {/* ==================== WEEKLY (LM) FORMS ==================== */}
+                    {reportType === "weekly" && (
+                        <>
+                            {weeklyTab === "general" && (
+                                <div className="space-y-5 animate-in fade-in duration-300">
+                                    {/* Auto Sync Banner */}
+                                    <div className="bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex flex-col gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-neutral-700 dark:text-neutral-300 shrink-0" />
+                                            <div>
+                                                <h4 className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-wider">Auto-Sync Dari Laporan Harian</h4>
+                                                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">Tarik dan rangkum data otomatis dari Laporan Harian (LH) sesuai proyek & periode minggu ini.</p>
                                             </div>
                                         </div>
-
-                                        <div>
-                                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block mb-3 border-b border-neutral-100 dark:border-neutral-800 pb-1">Shift Kerja (Jumlah Jam Rata-rata)</span>
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                                <Input label="Reguler 08.00-16.00" type="number" value={shiftReguler} onChange={(e) => setShiftReguler(e.target.value)} placeholder="0" />
-                                                <Input label="Overtime 1 16.00-18.00" type="number" value={shiftOt1} onChange={(e) => setShiftOt1(e.target.value)} placeholder="0" />
-                                                <Input label="Overtime 2 18.00-22.00" type="number" value={shiftOt2} onChange={(e) => setShiftOt2(e.target.value)} placeholder="0" />
-                                                <Input label="Overtime 3 22.00-08.00" type="number" value={shiftOt3} onChange={(e) => setShiftOt3(e.target.value)} placeholder="0" />
-                                            </div>
-                                        </div>
+                                        <Button
+                                            onClick={handleSyncFromDailyReports}
+                                            disabled={isSyncing}
+                                            className="bg-neutral-900 hover:bg-black text-white font-bold text-xs w-full py-2"
+                                            icon={isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                        >
+                                            {isSyncing ? "Menyinkronkan..." : "Sync Data dari Laporan Harian (LH)"}
+                                        </Button>
                                     </div>
-                                )}
 
-                                {/* TAB: CUACA */}
-                                {activeTab === "cuaca" && (
-                                    <div className="space-y-4 animate-in fade-in duration-300">
+                                    <Select
+                                        label="Proyek *"
+                                        value={selectedProjectId}
+                                        onChange={(val) => {
+                                            setSelectedProjectId(val);
+                                            if (!paramId) {
+                                                const proj = projects.find(p => p.id === val);
+                                                if (proj?.location) setLocationOverride(proj.location);
+                                            }
+                                        }}
+                                        options={[
+                                            { value: "", label: "-- Pilih Proyek --" },
+                                            ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))
+                                        ]}
+                                        disabled={!!paramProjectId}
+                                        required
+                                    />
+
+                                    <Input
+                                        label="Lokasi Proyek"
+                                        value={locationOverride}
+                                        onChange={(e) => setLocationOverride(e.target.value)}
+                                        placeholder="e.g. Jl. Raya Utama No. 123, Kota"
+                                    />
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input
+                                            label="Periode Mulai (Minggu/Senin)"
+                                            type="date"
+                                            value={startDate}
+                                            onChange={(e) => setStartDate(e.target.value)}
+                                        />
+                                        <Input
+                                            label="Periode Selesai (Sabtu/Minggu)"
+                                            type="date"
+                                            value={endDate}
+                                            onChange={(e) => setEndDate(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-4 gap-2">
+                                        <Input label="Minggu Ke-" value={weekNumber} onChange={(e) => setWeekNumber(e.target.value)} placeholder="01" />
+                                        <Input label="Hari Ke-" type="number" value={dayNumber} onChange={(e) => setDayNumber(e.target.value)} placeholder="e.g. 7" />
+                                        <Input label="Total Hari" type="number" value={totalDays} onChange={(e) => setTotalDays(e.target.value)} placeholder="150" />
+                                        <Input label="Sisa Hari" type="number" value={remainingDays} onChange={(e) => setRemainingDays(e.target.value)} placeholder="Auto / Manual" />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input
+                                            label="Tanggal Laporan *"
+                                            type="date"
+                                            value={reportDate}
+                                            onChange={(e) => setReportDate(e.target.value)}
+                                            required
+                                        />
+                                        <Input
+                                            label="Tahap / Paket Pekerjaan"
+                                            value={workPackage}
+                                            onChange={(e) => setWorkPackage(e.target.value)}
+                                            placeholder="Pekerjaan Persiapan / Struktur"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input
+                                            label="Kode Dokumen Cover"
+                                            value={documentId}
+                                            onChange={(e) => { setDocumentId(e.target.value); setIsDocIdManuallyEdited(true); }}
+                                            placeholder="LM-01-01"
+                                        />
+                                        <Input
+                                            label="Revisi (REV)"
+                                            value={revision}
+                                            onChange={(e) => setRevision(e.target.value)}
+                                            placeholder="00"
+                                        />
+                                    </div>
+
+                                    <Input
+                                        label="Judul Laporan Mingguan"
+                                        value={title}
+                                        onChange={(e) => { setTitle(e.target.value); setIsTitleManuallyEdited(true); }}
+                                        placeholder="e.g. Laporan Mingguan Progres Struktur"
+                                    />
+                                </div>
+                            )}
+
+                            {weeklyTab === "summary" && (
+                                <div className="space-y-5 animate-in fade-in duration-300">
+                                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Rekapitulasi Kemajuan Pekerjaan (%)</span>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Input label="Kemajuan Hingga Minggu Lalu (%)" type="number" step="0.001" value={progressLastWeek} onChange={(e) => setProgressLastWeek(e.target.value)} placeholder="0.000" />
+                                        <Input label="Kemajuan Minggu Ini (%)" type="number" step="0.001" value={progressThisWeek} onChange={(e) => setProgressThisWeek(e.target.value)} placeholder="50.000" />
+                                        <Input label="Kemajuan Hingga Minggu Ini (%)" type="number" step="0.001" value={progressTotal} onChange={(e) => setProgressTotal(e.target.value)} placeholder="50.000" />
+                                        <Input label="Sisa Pekerjaan (%)" type="number" step="0.001" value={progressRemaining} onChange={(e) => setProgressRemaining(e.target.value)} placeholder="50.000" />
+                                    </div>
+
+                                    <div className="space-y-1.5 pt-2">
+                                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block">Ringkasan Executive Summary (Narasi Right Box)</label>
+                                        <textarea
+                                            className="w-full min-h-[100px] p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                                            value={summaryText}
+                                            onChange={(e) => setSummaryText(e.target.value)}
+                                            placeholder="Tuliskan narasi pencapaian kemajuan minggu ini..."
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5 pt-2">
+                                        <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block">Catatan / Rekomendasi Umum (Bottom Banner)</label>
+                                        <textarea
+                                            className="w-full min-h-[100px] p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-1 focus:ring-neutral-900"
+                                            value={catatanUmum}
+                                            onChange={(e) => setCatatanUmum(e.target.value)}
+                                            placeholder="Tuliskan catatan evaluasi atau rekomendasi tindakan..."
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {weeklyTab === "kegiatan" && (
+                                <div className="space-y-5 animate-in fade-in duration-300">
+                                    <div className="space-y-3">
                                         <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Kondisi Cuaca Harian</span>
+                                            <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider">Kegiatan Dilaksanakan Minggu Ini</span>
+                                            <span className="text-[10px] text-neutral-400 font-normal">Otomatis tersinkron dari LH (bisa digabungkan)</span>
                                         </div>
-                                        <div className="space-y-2">
-                                            {weatherItems.map((item, idx) => (
-                                                <div key={idx} className="flex items-center gap-2">
+                                        {weeklyActivitiesThisWeek.map((act, idx) => (
+                                            <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
+                                                <div className="flex items-center gap-2">
                                                     <span className="text-xs font-black text-neutral-400 w-5 shrink-0">{idx + 1}.</span>
-                                                    <div className="flex-1">
-                                                        <Input
-                                                            label=""
-                                                            value={item.timeRange}
-                                                            onChange={(e) => setWeatherItems(prev => prev.map((w, i) => i === idx ? { ...w, timeRange: e.target.value } : w))}
-                                                            placeholder="Waktu (e.g. 08.00 - 10.00)"
-                                                        />
-                                                    </div>
-                                                    <div className="w-32 shrink-0">
-                                                        <Select
-                                                            label=""
-                                                            value={item.condition}
-                                                            onChange={(val) => setWeatherItems(prev => prev.map((w, i) => i === idx ? { ...w, condition: val } : w))}
-                                                            options={[
-                                                                { value: "cerah", label: "Cerah" },
-                                                                { value: "berawan", label: "Berawan" },
-                                                                { value: "hujan", label: "Hujan" }
-                                                            ]}
-                                                        />
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setWeatherItems(prev => prev.filter((_, i) => i !== idx))}
-                                                        className="text-neutral-300 hover:text-red-500 transition-colors shrink-0 mt-1"
-                                                        disabled={weatherItems.length <= 1}
-                                                    >
-                                                        <X className="w-4 h-4" />
-                                                    </button>
+                                                    <Input
+                                                        label=""
+                                                        value={act.description}
+                                                        onChange={(e) => {
+                                                            const copy = [...weeklyActivitiesThisWeek];
+                                                            copy[idx].description = e.target.value;
+                                                            setWeeklyActivitiesThisWeek(copy);
+                                                        }}
+                                                        placeholder="Uraian pekerjaan minggu ini..."
+                                                    />
+                                                    <button type="button" onClick={() => setWeeklyActivitiesThisWeek(weeklyActivitiesThisWeek.filter((_, i) => i !== idx))} className="text-neutral-300 hover:text-red-500 shrink-0"><X className="w-4 h-4" /></button>
                                                 </div>
-                                            ))}
-                                        </div>
-                                        <div className="flex justify-center pt-2">
-                                            <button
-                                                type="button"
-                                                onClick={handleAddWeatherItem}
-                                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-orange-600 hover:text-orange-700 bg-orange-50/50 hover:bg-orange-50 rounded-xl border border-dashed border-orange-200 transition-all w-full sm:w-auto"
-                                            >
-                                                <Plus className="w-3.5 h-3.5" /> Tambah Jam
-                                            </button>
-                                        </div>
+                                                <div className="grid grid-cols-3 gap-2 pl-7">
+                                                    <Input label="Durasi" value={act.duration} onChange={(e) => { const copy = [...weeklyActivitiesThisWeek]; copy[idx].duration = e.target.value; setWeeklyActivitiesThisWeek(copy); }} placeholder="7 hari" />
+                                                    <Input label="Posisi/As" value={act.position} onChange={(e) => { const copy = [...weeklyActivitiesThisWeek]; copy[idx].position = e.target.value; setWeeklyActivitiesThisWeek(copy); }} placeholder="Kolom A7-A9" />
+                                                    <Input label="Volume Total" value={act.volume} onChange={(e) => { const copy = [...weeklyActivitiesThisWeek]; copy[idx].volume = e.target.value; setWeeklyActivitiesThisWeek(copy); }} placeholder="8 m3" />
+                                                </div>
+
+                                                {/* Merge Option Dropdown */}
+                                                {weeklyActivitiesThisWeek.length > 1 && (
+                                                    <div className="pl-7 pt-1 flex items-center gap-2 text-xs">
+                                                        <Combine className="w-3.5 h-3.5 text-neutral-400" />
+                                                        <span className="text-[10px] font-semibold text-neutral-400">Gabungkan item ini ke:</span>
+                                                        <select
+                                                            className="text-[11px] p-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded font-medium"
+                                                            onChange={(e) => {
+                                                                if (e.target.value !== "") {
+                                                                    handleMergeActivity(idx, parseInt(e.target.value));
+                                                                    e.target.value = "";
+                                                                }
+                                                            }}
+                                                            defaultValue=""
+                                                        >
+                                                            <option value="" disabled>-- Pilih Item Tujuan --</option>
+                                                            {weeklyActivitiesThisWeek.map((otherAct, otherIdx) => {
+                                                                if (otherIdx === idx) return null;
+                                                                return (
+                                                                    <option key={otherIdx} value={otherIdx}>
+                                                                        #{otherIdx + 1}: {otherAct.description.substring(0, 30)}...
+                                                                    </option>
+                                                                );
+                                                            })}
+                                                        </select>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                        <button type="button" onClick={() => setWeeklyActivitiesThisWeek([...weeklyActivitiesThisWeek, { description: "", duration: "1 hari", position: "", volume: "" }])} className="text-xs font-bold text-neutral-800 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Tambah Kegiatan Minggu Ini</button>
                                     </div>
-                                )}
 
-                                {/* TAB: CATATAN */}
-                                {activeTab === "catatan" && (
-                                    <div className="space-y-5 animate-in fade-in duration-300">
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                                                Catatan / Kendala
-                                            </label>
-                                            <textarea
-                                                className="w-full min-h-[140px] p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-all resize-y"
-                                                value={notes}
-                                                onChange={(e) => setNotes(e.target.value)}
-                                                placeholder="Tulis catatan harian, kendala teknis, atau isu di lapangan..."
-                                            />
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                                                Rencana Pekerjaan Lanjutan
-                                            </label>
-                                            <textarea
-                                                className="w-full min-h-[140px] p-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-sm focus:outline-none focus:ring-1 focus:ring-orange-500/50 transition-all resize-y"
-                                                value={nextActions}
-                                                onChange={(e) => setNextActions(e.target.value)}
-                                                placeholder="Tulis rencana pekerjaan untuk hari berikutnya..."
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* TAB: DOKUMENTASI */}
-                                {activeTab === "dokumentasi" && (
-                                    <div className="space-y-4 animate-in fade-in duration-300">
+                                    <div className="space-y-3 pt-4">
                                         <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Foto Lapangan ({photos.length})</span>
+                                            <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider">Rencana Kegiatan Minggu Depan</span>
+                                            <span className="text-[10px] text-neutral-400 font-normal">Diisi manual</span>
                                         </div>
-                                        {photos.length > 0 ? (
-                                            <>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    {photos.map((photo, idx) => (
-                                                        <div key={idx} className="relative rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 group">
-                                                            <img src={photo.url} alt={`Photo ${idx+1}`} className="w-full h-28 object-cover" />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleRemovePhoto(idx)}
-                                                                className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-sm font-bold hover:bg-red-600"
-                                                            >×</button>
+                                        {weeklyActivitiesNextWeek.map((act, idx) => (
+                                            <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-black text-neutral-400 w-5 shrink-0">{idx + 1}.</span>
+                                                    <Input
+                                                        label=""
+                                                        value={act.description}
+                                                        onChange={(e) => {
+                                                            const copy = [...weeklyActivitiesNextWeek];
+                                                            copy[idx].description = e.target.value;
+                                                            setWeeklyActivitiesNextWeek(copy);
+                                                        }}
+                                                        placeholder="Rencana uraian pekerjaan minggu depan..."
+                                                    />
+                                                    <button type="button" onClick={() => setWeeklyActivitiesNextWeek(weeklyActivitiesNextWeek.filter((_, i) => i !== idx))} className="text-neutral-300 hover:text-red-500 shrink-0"><X className="w-4 h-4" /></button>
+                                                </div>
+                                                <div className="grid grid-cols-3 gap-2 pl-7">
+                                                    <Input label="Durasi" value={act.duration} onChange={(e) => { const copy = [...weeklyActivitiesNextWeek]; copy[idx].duration = e.target.value; setWeeklyActivitiesNextWeek(copy); }} placeholder="7 hari" />
+                                                    <Input label="Posisi/As" value={act.position} onChange={(e) => { const copy = [...weeklyActivitiesNextWeek]; copy[idx].position = e.target.value; setWeeklyActivitiesNextWeek(copy); }} placeholder="Kolom A7-A9" />
+                                                    <Input label="Volume Total" value={act.volume} onChange={(e) => { const copy = [...weeklyActivitiesNextWeek]; copy[idx].volume = e.target.value; setWeeklyActivitiesNextWeek(copy); }} placeholder="8 m3" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <button type="button" onClick={() => setWeeklyActivitiesNextWeek([...weeklyActivitiesNextWeek, { description: "", duration: "1 hari", position: "", volume: "" }])} className="text-xs font-bold text-neutral-800 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Tambah Rencana Minggu Depan</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {weeklyTab === "personel" && (
+                                <div className="space-y-5 animate-in fade-in duration-300">
+                                    <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 flex items-start gap-3">
+                                        <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                                        <div>
+                                            <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300">Otomatis Dari Laporan Harian (LH)</h4>
+                                            <p className="text-[11px] text-amber-700 dark:text-amber-400 leading-relaxed mt-0.5">
+                                                Tabel Laporan Personel Harian (LM-XX-06) terisi dan terakumulasi secara otomatis saat Anda menekan tombol <strong>Sync Data dari Laporan Harian (LH)</strong> pada tab Info & Periode.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Detail Laporan Personel Harian (Senin - Minggu)</span>
+                                    <div className="space-y-3 overflow-x-auto">
+                                        {personelWeeklyGrid.map((row, idx) => (
+                                            <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-neutral-400 w-5">{idx + 1}.</span>
+                                                    <Input label="" value={row.role} onChange={(e) => { const copy = [...personelWeeklyGrid]; copy[idx].role = e.target.value; setPersonelWeeklyGrid(copy); }} placeholder="Nama Peran / Personel" />
+                                                </div>
+                                                <div className="grid grid-cols-7 gap-1 pl-7">
+                                                    {(["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"] as const).map((dayKey, dIdx) => (
+                                                        <div key={dIdx} className="text-center">
+                                                            <span className="text-[9px] font-bold text-neutral-400 uppercase block mb-0.5">{dayKey.substring(0,3)}</span>
                                                             <input
-                                                                type="text"
-                                                                placeholder="Keterangan foto..."
-                                                                value={photo.caption}
-                                                                onChange={(e) => handlePhotoCaptionChange(idx, e.target.value)}
-                                                                className="w-full text-xs p-2 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 focus:outline-none focus:bg-orange-50 dark:focus:bg-orange-950/20 transition-colors"
+                                                                type="number"
+                                                                min={0}
+                                                                className="w-full text-center p-1 border border-neutral-200 dark:border-neutral-700 rounded text-xs bg-white dark:bg-neutral-900 font-bold"
+                                                                value={row[dayKey]}
+                                                                onChange={(e) => {
+                                                                    const copy = [...personelWeeklyGrid];
+                                                                    copy[idx][dayKey] = parseInt(e.target.value) || 0;
+                                                                    setPersonelWeeklyGrid(copy);
+                                                                }}
                                                             />
                                                         </div>
                                                     ))}
                                                 </div>
-                                                <div className="flex justify-center pt-2">
-                                                    <label className="cursor-pointer flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-orange-600 hover:text-orange-700 bg-orange-50/50 hover:bg-orange-50 rounded-xl border border-dashed border-orange-200 transition-all w-full sm:w-auto">
-                                                        <Plus className="w-3.5 h-3.5" />
-                                                        {uploadingPhoto ? "Uploading..." : "Tambah Foto"}
-                                                        <input
-                                                            type="file"
-                                                            accept="image/*"
-                                                            multiple
-                                                            className="hidden"
-                                                            onChange={handlePhotoUpload}
-                                                            disabled={uploadingPhoto}
-                                                        />
-                                                    </label>
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <label className="cursor-pointer border-2 border-dashed border-neutral-200 dark:border-neutral-800 rounded-xl p-10 text-center flex flex-col items-center gap-3 hover:border-orange-400 hover:bg-orange-50/50 dark:hover:border-orange-700 dark:hover:bg-orange-950/10 transition-all">
-                                                <Camera className="w-8 h-8 text-neutral-300" />
-                                                <div>
-                                                    <p className="text-sm font-bold text-neutral-500">Klik untuk upload foto</p>
-                                                    <p className="text-xs text-neutral-400 mt-1">JPG, PNG, HEIC — bisa multi-foto</p>
-                                                </div>
-                                                <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
-                                            </label>
-                                        )}
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
+                                </div>
+                            )}
 
-                                {/* TAB: MATERIAL */}
-                                {activeTab === "material" && (
-                                    <div className="space-y-4 animate-in fade-in duration-300">
-                                        <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
-                                            <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Stok & Penggunaan Material</span>
+                            {weeklyTab === "cuaca" && (
+                                <div className="space-y-5 animate-in fade-in duration-300">
+                                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-2xl p-4 flex items-start gap-3">
+                                        <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                                        <div>
+                                            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Otomatis Dari Laporan Harian (LH)</h4>
+                                            <p className="text-[11px] text-blue-700 dark:text-blue-400 leading-relaxed mt-0.5">
+                                                Matriks Cuaca 24 Jam & Laporan Kendala (LM-XX-07) dipetakan secara otomatis dari catatan kondisi cuaca & kendala harian saat Anda menekan <strong>Sync Data dari Laporan Harian (LH)</strong>.
+                                            </p>
                                         </div>
-                                        <div className="space-y-2">
-                                            {materialItems.map((mat, idx) => (
-                                                <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs font-black text-neutral-400 w-5 shrink-0">{idx + 1}.</span>
-                                                        <Input
-                                                            label=""
-                                                            value={mat.name}
-                                                            onChange={(e) => setMaterialItems(prev => prev.map((m, i) => i === idx ? { ...m, name: e.target.value } : m))}
-                                                            placeholder="Nama material (e.g. Semen, Besi D10, Cat)"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setMaterialItems(prev => prev.filter((_, i) => i !== idx))}
-                                                            className="text-neutral-300 hover:text-red-500 transition-colors shrink-0"
-                                                        >
-                                                            <X className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                    <div className="grid grid-cols-5 gap-2 pl-7">
-                                                        <Select
-                                                            label="Kategori"
-                                                            value={mat.category || "Material"}
-                                                            onChange={(val) => setMaterialItems(prev => prev.map((m, i) => i === idx ? { ...m, category: val } : m))}
-                                                            options={[
-                                                                { value: "Material", label: "Material" },
-                                                                { value: "Alat", label: "Alat" },
-                                                                { value: "Jasa", label: "Jasa" },
-                                                            ]}
-                                                        />
-                                                        <Select
-                                                            label="Satuan"
-                                                            value={mat.unit}
-                                                            onChange={(val) => setMaterialItems(prev => prev.map((m, i) => i === idx ? { ...m, unit: val } : m))}
-                                                            options={[
-                                                                { value: "unit", label: "unit" }, { value: "m²", label: "m²" },
-                                                                { value: "m³", label: "m³" }, { value: "kg", label: "kg" },
-                                                                { value: "ton", label: "ton" }, { value: "btg", label: "btg" },
-                                                                { value: "zak", label: "zak" }, { value: "ls", label: "ls" },
-                                                                { value: "pcs", label: "pcs" }, { value: "set", label: "set" },
-                                                                { value: "ltr", label: "ltr" },
-                                                            ]}
-                                                        />
-                                                        <Input label="Masuk" type="number" value={mat.incoming}
-                                                            onChange={(e) => setMaterialItems(prev => prev.map((m, i) => i === idx ? { ...m, incoming: e.target.value } : m))}
-                                                            placeholder="0" />
-                                                        <Input label="Terpakai" type="number" value={mat.outgoing}
-                                                            onChange={(e) => setMaterialItems(prev => prev.map((m, i) => i === idx ? { ...m, outgoing: e.target.value } : m))}
-                                                            placeholder="0" />
-                                                        <Input label="Sisa/Stok" type="number" value={mat.stock}
-                                                            onChange={(e) => setMaterialItems(prev => prev.map((m, i) => i === idx ? { ...m, stock: e.target.value } : m))}
-                                                            placeholder="0" />
-                                                    </div>
+                                    </div>
+
+                                    <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Detail Laporan Kendala Lapangan</span>
+                                    <div className="space-y-3">
+                                        {kendalaItems.map((k, idx) => (
+                                            <div key={idx} className="p-3 bg-neutral-50 dark:bg-neutral-800/30 rounded-xl border border-neutral-100 dark:border-neutral-800 space-y-2">
+                                                <div className="flex items-center gap-2">
+                                                    <Input label="Tanggal" type="date" value={k.date} onChange={(e) => { const copy = [...kendalaItems]; copy[idx].date = e.target.value; setKendalaItems(copy); }} />
+                                                    <button type="button" onClick={() => setKendalaItems(kendalaItems.filter((_, i) => i !== idx))} className="text-neutral-300 hover:text-red-500 shrink-0"><X className="w-4 h-4" /></button>
                                                 </div>
-                                            ))}
+                                                <Input label="Uraian Kendala / Masalah" value={k.problem} onChange={(e) => { const copy = [...kendalaItems]; copy[idx].problem = e.target.value; setKendalaItems(copy); }} placeholder="e.g. Hujan lebat mengguyur area bor pile..." />
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Input label="Solusi" value={k.solution} onChange={(e) => { const copy = [...kendalaItems]; copy[idx].solution = e.target.value; setKendalaItems(copy); }} placeholder="Solusi penanganan..." />
+                                                    <Input label="Rekomendasi" value={k.recommendation} onChange={(e) => { const copy = [...kendalaItems]; copy[idx].recommendation = e.target.value; setKendalaItems(copy); }} placeholder="Rekomendasi..." />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <button type="button" onClick={() => setKendalaItems([...kendalaItems, { date: "", problem: "", solution: "", recommendation: "" }])} className="text-xs font-bold text-neutral-800 flex items-center gap-1"><Plus className="w-3.5 h-3.5" /> Tambah Kendala Lapangan</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {weeklyTab === "dokumentasi" && (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                        <div>
+                                            <span className="text-xs font-bold text-neutral-900 dark:text-white uppercase tracking-wider block">Dokumentasi Foto Mingguan Utama</span>
+                                            <span className="text-[10px] text-neutral-400 font-semibold">Tersedia {photos.length}/18 foto terpilih (Maksimal 18 Foto)</span>
                                         </div>
-                                        <div className="flex justify-center pt-2">
+                                        {allDailyPhotos.length > 0 && (
                                             <button
                                                 type="button"
-                                                onClick={() => setMaterialItems(prev => [...prev, { name: "", category: "Material", unit: "unit", incoming: "", outgoing: "", stock: "" }])}
-                                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-orange-600 hover:text-orange-700 bg-orange-50/50 hover:bg-orange-50 rounded-xl border border-dashed border-orange-200 transition-all w-full sm:w-auto"
+                                                onClick={() => setIsPhotoPickerOpen(true)}
+                                                className="px-3 py-1.5 bg-neutral-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm hover:bg-black"
                                             >
-                                                <Plus className="w-3.5 h-3.5" /> Tambah Material / Alat / Jasa
+                                                <Grid className="w-3.5 h-3.5" /> Pilih Dari LH ({allDailyPhotos.length})
                                             </button>
-                                        </div>
+                                        )}
                                     </div>
-                                )}
 
-                                {/* TAB: TTD */}
-                                {activeTab === "ttd" && (
-                                    <div className="space-y-5 animate-in fade-in duration-300">
-                                        <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Tanda Tangan & Persetujuan</span>
-                                        <div className="grid grid-cols-1 gap-4">
-                                            <Input
-                                                label="Disusun Oleh"
-                                                value={preparedBy}
-                                                onChange={(e) => setPreparedBy(e.target.value)}
-                                                placeholder="Nama penyusun laporan"
-                                            />
-                                            <Input
-                                                label="Jabatan Penyusun"
-                                                value={preparedByRole}
-                                                onChange={(e) => setPreparedByRole(e.target.value)}
-                                                placeholder="Project Officer / Pengawas"
-                                            />
-                                            <Input
-                                                label="Disetujui Oleh"
-                                                value={approvedBy}
-                                                onChange={(e) => setApprovedBy(e.target.value)}
-                                                placeholder="Nama yang menyetujui"
-                                            />
-                                            <Input
-                                                label="Jabatan Penyetuju"
-                                                value={approvedByRole}
-                                                onChange={(e) => setApprovedByRole(e.target.value)}
-                                                placeholder="Project Manager / Direktur"
-                                            />
-                                        </div>
-                                        <div className="bg-neutral-50 dark:bg-neutral-800/40 rounded-xl p-4 text-xs text-neutral-500 border border-neutral-100 dark:border-neutral-800">
-                                            💡 Tanda tangan fisik dibubuhkan pada dokumen cetak PDF.
-                                        </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {photos.map((photo, idx) => (
+                                            <div key={idx} className="relative rounded-xl overflow-hidden border border-neutral-200 dark:border-neutral-800 group">
+                                                <img src={photo.url} alt={`Foto ${idx+1}`} className="w-full h-28 object-cover" />
+                                                <button type="button" onClick={() => handleRemovePhoto(idx)} className="absolute top-2 right-2 bg-black/60 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm">×</button>
+                                                <input type="text" placeholder="Keterangan foto..." value={photo.caption} onChange={(e) => handlePhotoCaptionChange(idx, e.target.value)} className="w-full text-xs p-2 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900" />
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
-                            </>
-                        )}
-
-                        {/* -------------------- WEEKLY & MONTHLY FORM -------------------- */}
-                        {reportType !== "daily" && (
-                            <div className="space-y-5">
-                                <Select
-                                    label="Project *"
-                                    value={selectedProjectId}
-                                    onChange={(val) => setSelectedProjectId(val)}
-                                    options={[
-                                        { value: "", label: "-- Select Project --" },
-                                        ...projects.map(p => ({ value: p.id, label: p.name }))
-                                    ]}
-                                    disabled={!!paramProjectId}
-                                    required
-                                />
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input
-                                        label="Report Date *"
-                                        type="date"
-                                        value={reportDate}
-                                        onChange={(e) => setReportDate(e.target.value)}
-                                        required
-                                    />
-                                    <Input
-                                        label="Physical Progress (%) *"
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        value={progress}
-                                        onChange={(e) => setProgress(e.target.value)}
-                                        required
-                                    />
-                                </div>
-
-                                <Input
-                                    label="Report Title *"
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="e.g. Laporan Mingguan Progres Struktur"
-                                    required
-                                />
-
-                                <Select
-                                    label="Status *"
-                                    value={status}
-                                    onChange={(val) => setStatus(val as ReportStatus)}
-                                    options={[
-                                        { value: "on-track", label: "On Track" },
-                                        { value: "delayed", label: "Delayed" },
-                                        { value: "critical", label: "Critical" },
-                                        { value: "completed", label: "Completed" },
-                                    ]}
-                                />
-
-                                <div className="space-y-1.5 pt-2">
-                                    <label className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
-                                        Content Description
+                                    <label className={clsx(
+                                        "cursor-pointer border-2 border-dashed rounded-xl p-6 text-center flex flex-col items-center gap-2 transition-colors",
+                                        photos.length >= 18 ? "border-neutral-200 opacity-50 cursor-not-allowed" : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400"
+                                    )}>
+                                        <Camera className="w-6 h-6 text-neutral-400" />
+                                        <span className="text-xs font-bold text-neutral-600">
+                                            {photos.length >= 18 ? "Maksimal 18 foto tercapai" : uploadingPhoto ? "Uploading..." : "+ Upload Foto Baru Lapangan"}
+                                        </span>
+                                        <input type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoUpload} disabled={uploadingPhoto || photos.length >= 18} />
                                     </label>
-                                    <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden min-h-[300px]">
-                                        <RichTextEditor value={editorContent} onChange={setEditorContent} />
-                                    </div>
+                                </div>
+                            )}
+
+                            {weeklyTab === "ttd" && (
+                                <div className="space-y-4 animate-in fade-in duration-300">
+                                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block border-b border-neutral-100 dark:border-neutral-800 pb-2">Tanda Tangan & Persetujuan Mingguan</span>
+                                    <Input label="Disusun Oleh" value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} placeholder="Nama penyusun laporan" />
+                                    <Input label="Jabatan Penyusun" value={preparedByRole} onChange={(e) => setPreparedByRole(e.target.value)} placeholder="Project Officer / Pengawas" />
+                                    <Input label="Disetujui Oleh" value={approvedBy} onChange={(e) => setApprovedBy(e.target.value)} placeholder="Nama yang menyetujui" />
+                                    <Input label="Jabatan Penyetuju" value={approvedByRole} onChange={(e) => setApprovedByRole(e.target.value)} placeholder="Project Manager / Direktur" />
+                                </div>
+                            )}
+                        </>
+                    )}
+
+                    {/* ==================== MONTHLY FORMS ==================== */}
+                    {reportType === "monthly" && (
+                        <div className="space-y-5">
+                            <Select
+                                label="Proyek *"
+                                value={selectedProjectId}
+                                onChange={(val) => setSelectedProjectId(val)}
+                                options={[
+                                    { value: "", label: "-- Pilih Proyek --" },
+                                    ...projects.map(p => ({ value: p.id, label: p.name }))
+                                ]}
+                                disabled={!!paramProjectId}
+                                required
+                            />
+                            <div className="grid grid-cols-2 gap-4">
+                                <Input label="Tanggal Laporan *" type="date" value={reportDate} onChange={(e) => setReportDate(e.target.value)} required />
+                                <Input label="Progres Fisik (%) *" type="number" min={0} max={100} value={progress} onChange={(e) => setProgress(e.target.value)} required />
+                            </div>
+                            <Input label="Judul Laporan *" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Laporan Bulanan Progres Struktur" required />
+                            <Select
+                                label="Status *"
+                                value={status}
+                                onChange={(val) => setStatus(val as ReportStatus)}
+                                options={[
+                                    { value: "on-track", label: "On Track" },
+                                    { value: "delayed", label: "Delayed" },
+                                    { value: "critical", label: "Critical" },
+                                    { value: "completed", label: "Completed" },
+                                ]}
+                            />
+                            <div className="space-y-1.5 pt-2">
+                                <label className="text-xs font-semibold text-neutral-500 uppercase tracking-wider block">Deskripsi Laporan</label>
+                                <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden min-h-[300px]">
+                                    <RichTextEditor value={editorContent} onChange={setEditorContent} />
                                 </div>
                             </div>
-                        )}
-                </div>
-
-                {/* Right Card Panel: Live Document Preview */}
-                <div className="flex-1 w-full bg-neutral-100/80 dark:bg-neutral-900/40 border border-neutral-200/50 dark:border-neutral-800/60 rounded-3xl lg:overflow-y-auto flex flex-col items-center gap-0 shadow-sm lg:h-full py-6 px-4">
-                    
-                    {/* Filename Watermark Label - OUTSIDE the A4 */}
-                    {reportType === "daily" && (
-                        <div className="text-[10px] text-neutral-400 font-mono mb-2 px-2 tracking-tight text-center">
-                            📄 {getGeneratedFilename()}
                         </div>
                     )}
 
-                    {/* ===================== A4 Document (single flowing page) ===================== */}
-                    <div
-                        id="document-preview-a4"
-                        className="bg-white text-neutral-800 shadow-xl w-full max-w-[680px] shrink-0"
-                        style={{ padding: "28px 32px", fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}
-                    >
-                        {reportType === "daily" ? (
-                            <div className="flex flex-col gap-3">
+                </div>
 
-                                {/* ── HEADER ── */}
-                                <div className="flex items-center gap-4 border-b-2 border-neutral-900 pb-3">
-                                    {/* Left: Logo */}
-                                    <div className="flex items-center shrink-0">
-                                        <img src="/logo-adidaya-red.svg" alt="Adidaya" className="h-8 w-auto object-contain filter brightness-0" />
-                                    </div>
+                {/* Right Card: Live Document Preview */}
+                <div className="flex-1 w-full bg-neutral-100/80 dark:bg-neutral-900/40 border border-neutral-200/50 dark:border-neutral-800/60 rounded-3xl lg:overflow-y-auto flex flex-col items-center gap-6 shadow-sm lg:h-full py-6 px-4">
+                    
+                    <div className="text-[10px] text-neutral-400 font-mono tracking-tight text-center">
+                        📄 {getGeneratedFilename()}
+                    </div>
 
-                                    {/* Center: Project Info */}
-                                    <div className="flex-1 pl-4 border-l border-neutral-300 space-y-0.5">
-                                        <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest">Proyek</div>
-                                        <div className="flex items-center gap-2">
-                                            {currentProject?.project_code && (
-                                                <span className="inline-block px-1.5 py-0.5 bg-neutral-900 text-white text-[7px] font-black uppercase tracking-widest rounded-sm leading-none shrink-0">
-                                                    {currentProject.project_code}
-                                                </span>
-                                            )}
-                                            <span className="font-extrabold text-[11px] text-neutral-900 tracking-tight uppercase leading-tight">
-                                                {currentProject?.name || "NAMA PROYEK"}
-                                            </span>
-                                        </div>
-                                        <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest pt-1">Lokasi</div>
-                                        <div className="text-[8px] font-semibold text-neutral-700 uppercase leading-tight">
-                                            {locationOverride || currentProject?.location || "—"}
-                                        </div>
-                                        <div className="text-[6px] font-bold text-neutral-400 uppercase tracking-widest pt-1">Tahap Pekerjaan</div>
-                                        <div className="text-[7.5px] font-bold text-neutral-800 uppercase leading-tight">{workPackage || "—"}</div>
-                                    </div>
+                    <div id="document-preview-a4" className="w-full max-w-[680px]">
+                        
+                        {/* ===================== DAILY PREVIEW (1 Page) ===================== */}
+                        {reportType === "daily" && (
+                            <div className="bg-white text-neutral-800 shadow-xl w-full p-8 flex flex-col gap-3" style={{ fontFamily: "Arial, sans-serif", boxSizing: "border-box" }}>
+                                {renderPageHeader("LH", documentId || "LH-00-01", "Laporan Harian")}
 
-                                    {/* Right: LH + Doc ID */}
-                                    <div className="w-[130px] shrink-0 border border-neutral-300 rounded-sm flex flex-col items-center justify-between p-2 text-center bg-neutral-50/50">
-                                        <div className="font-black text-[34px] text-neutral-900 leading-none tracking-tighter">LH</div>
-                                        <div className="text-[5px] font-black text-neutral-500 uppercase tracking-[0.15em] leading-none">Laporan Harian</div>
-                                        <div className="w-full border-t border-neutral-300 my-1" />
-                                        <div className="font-black text-[12px] text-neutral-900 tracking-tight leading-none">{documentId || "LHS-00-01"}</div>
-                                        <div className="w-full border-t border-neutral-200 my-1" />
-                                        <div className="w-full grid grid-cols-2 gap-x-1 text-[5px] text-neutral-500">
-                                            <span className="text-left font-bold">TGL LAPORAN</span>
-                                            <span className="text-right font-bold">REV</span>
-                                            <span className="text-left font-black text-neutral-800">{getDayDateOnly()}</span>
-                                            <span className="text-right font-black text-neutral-800">{revision || "00"}</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* ── DATE META ROW ── */}
+                                {/* Date Meta */}
                                 <div className="grid grid-cols-5 border border-neutral-300 rounded overflow-hidden text-center">
                                     {[
                                         { label: "Hari", value: getDayName() },
@@ -1674,10 +2065,8 @@ function EditorContentComponent() {
                                     ))}
                                 </div>
 
-                                {/* ── MAIN TABLES ROW ── */}
+                                {/* Main Tables */}
                                 <div className="flex gap-3">
-
-                                    {/* Left: Uraian Pekerjaan */}
                                     <div className="flex-1">
                                         <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Uraian Pekerjaan</div>
                                         <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
@@ -1698,241 +2087,664 @@ function EditorContentComponent() {
                                                         <td className="p-1 text-center text-neutral-800 font-bold">{item.volume || ""}</td>
                                                     </tr>
                                                 ))}
-                                                {/* Pad to minimum 14 rows to align with Personel, Waktu Kerja, and Cuaca tables */}
-                                                {Array.from({ length: Math.max(0, 14 - workItems.length) }).map((_, i) => (
-                                                    <tr key={`pad-${i}`} className="border-b border-neutral-100 h-5">
-                                                        <td className="border-r border-neutral-200"></td>
-                                                        <td className="border-r border-neutral-200"></td>
-                                                        <td className="border-r border-neutral-200"></td>
-                                                        <td></td>
-                                                    </tr>
-                                                ))}
                                             </tbody>
                                         </table>
                                     </div>
 
-                                    {/* Right: Personel + Shift + Cuaca stacked */}
                                     <div className="w-[200px] shrink-0 flex flex-col gap-2">
-
-                                        {/* Personel */}
                                         <div>
                                             <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Personel</div>
                                             <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
                                                 <tbody className="text-[6px]">
                                                     {[
-                                                        ["Project Manager", pmCount],
-                                                        ["Site Manager", smCount],
-                                                        ["Supervisor", supervisorCount],
-                                                        ["Mandor", mandorCount],
-                                                        ["Tukang", tukangCount],
-                                                        ["Pekerja", pekerjaCount],
-                                                        ["Operator", operatorCount],
+                                                        ["Project Manager", pmCount], ["Site Manager", smCount], ["Supervisor", supervisorCount],
+                                                        ["Mandor", mandorCount], ["Tukang", tukangCount], ["Pekerja", pekerjaCount], ["Operator", operatorCount]
                                                     ].map(([label, val], i) => (
                                                         <tr key={i} className="border-b border-neutral-200">
                                                             <td className="p-0.5 pl-1.5 border-r border-neutral-200 text-neutral-600 font-semibold">{label}</td>
                                                             <td className="p-0.5 text-center font-black text-neutral-900 w-8">{val || "0"}</td>
                                                         </tr>
                                                     ))}
-                                                    <tr className="bg-neutral-100">
-                                                        <td className="p-1 text-[6px] font-black text-neutral-800 border-r border-neutral-200">Total</td>
-                                                        <td className="p-1 text-center text-[7px] font-black text-neutral-900">
-                                                            {[pmCount, smCount, supervisorCount, mandorCount, tukangCount, pekerjaCount, operatorCount].reduce((a, v) => a + (parseInt(v) || 0), 0)}
-                                                        </td>
-                                                    </tr>
                                                 </tbody>
                                             </table>
-                                        </div>
-
-                                        {/* Shift */}
-                                        <div>
-                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Waktu Kerja</div>
-                                            <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
-                                                <tbody className="text-[6px]">
-                                                    {[
-                                                        ["Reguler 08.00–16.00", shiftReguler],
-                                                        ["OT 1 16.00–18.00", shiftOt1],
-                                                        ["OT 2 18.00–22.00", shiftOt2],
-                                                        ["OT 3 22.00–08.00", shiftOt3],
-                                                    ].map(([label, val], i) => (
-                                                        <tr key={i} className="border-b border-neutral-200">
-                                                            <td className="p-0.5 pl-1.5 border-r border-neutral-200 text-neutral-600 font-semibold">{label}</td>
-                                                            <td className="p-0.5 text-center font-black text-neutral-900 w-12">{val || "0"} Jam</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        {/* Cuaca */}
-                                        <div>
-                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Cuaca</div>
-                                            <table className="w-full text-center border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
-                                                <thead>
-                                                    <tr className="bg-neutral-50 border-b border-neutral-300 text-[5px] font-extrabold text-neutral-500 uppercase">
-                                                        <th className="p-1 text-left pl-1.5 border-r border-neutral-300">Waktu</th>
-                                                        <th className="p-0.5 border-r border-neutral-300 w-8">☀</th>
-                                                        <th className="p-0.5 border-r border-neutral-300 w-8">⛅</th>
-                                                        <th className="p-0.5 border-r border-neutral-300 w-8">🌧</th>
-                                                        <th className="p-0.5 w-8">Durasi</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="text-[6.5px] font-bold text-neutral-900">
-                                                    {getSummarizedWeather(weatherItems).map((item, idx) => (
-                                                        <tr key={idx} className="border-b border-neutral-200">
-                                                            <td className="p-0.5 text-left pl-1.5 border-r border-neutral-200 bg-neutral-50 text-[6px] font-bold">{item.timeRange}</td>
-                                                            <td className="p-0.5 border-r border-neutral-200">{item.condition === "cerah" ? "✓" : ""}</td>
-                                                            <td className="p-0.5 border-r border-neutral-200">{item.condition === "berawan" ? "✓" : ""}</td>
-                                                            <td className="p-0.5 border-r border-neutral-200">{item.condition === "hujan" ? "✓" : ""}</td>
-                                                            <td className="p-0.5 text-[6px] text-neutral-500">{item.duration} Jam</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                {/* Material Log */}
-                                <div>
-                                    <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Material / Alat / Jasa Lapangan</div>
-                                    <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
-                                        <thead>
-                                            <tr className="bg-neutral-50 border-b border-neutral-300 text-[6px] font-extrabold text-neutral-500 uppercase">
-                                                <th className="p-1 w-5 text-center border-r border-neutral-300">No</th>
-                                                <th className="p-1 w-14 border-r border-neutral-300">Kategori</th>
-                                                <th className="p-1 border-r border-neutral-300">Nama Material / Alat / Jasa</th>
-                                                <th className="p-1 w-10 text-center border-r border-neutral-300">Satuan</th>
-                                                <th className="p-1 w-12 text-center border-r border-neutral-300">Masuk</th>
-                                                <th className="p-1 w-12 text-center border-r border-neutral-300">Keluar / Terpakai</th>
-                                                <th className="p-1 w-12 text-center">Sisa / Stok</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {materialItems.map((mat, idx) => (
-                                                <tr key={idx} className="border-b border-neutral-200 text-[6.5px]">
-                                                    <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{idx + 1}</td>
-                                                    <td className="p-1 border-r border-neutral-200 text-neutral-600 font-semibold uppercase">{mat.category || "Material"}</td>
-                                                    <td className="p-1 border-r border-neutral-200 font-bold text-neutral-800">{mat.name || ""}</td>
-                                                    <td className="p-1 text-center border-r border-neutral-200 text-neutral-600">{mat.unit || ""}</td>
-                                                    <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-800">{mat.incoming || ""}</td>
-                                                    <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-800">{mat.outgoing || ""}</td>
-                                                    <td className="p-1 text-center font-bold text-neutral-800">{mat.stock || ""}</td>
-                                                </tr>
-                                            ))}
-                                            {Array.from({ length: Math.max(0, 5 - materialItems.length) }).map((_, i) => (
-                                                <tr key={`mpad-${i}`} className="border-b border-neutral-100 h-5">
-                                                    <td className="border-r border-neutral-200"></td><td className="border-r border-neutral-200"></td>
-                                                    <td className="border-r border-neutral-200"></td><td className="border-r border-neutral-200"></td>
-                                                    <td className="border-r border-neutral-200"></td><td className="border-r border-neutral-200"></td>
-                                                    <td></td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Documentation Photos */}
-                                <div>
-                                    <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Dokumentasi Lapangan</div>
-                                    <div className="border border-neutral-300 border-t-0 p-2">
-                                        {photos.length > 0 ? (
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {photos.slice(0, 6).map((p, idx) => (
-                                                    <div key={idx} className="space-y-0.5">
-                                                        <img src={p.url} crossOrigin="anonymous" alt={`Foto ${idx + 1}`} className="w-full rounded-sm border border-neutral-200" style={{ aspectRatio: "4/3", objectFit: "cover" }} />
-                                                        {p.caption && <p className="text-[5.5px] text-neutral-500 font-semibold leading-tight">{p.caption}</p>}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="h-16 flex items-center justify-center text-[6px] text-neutral-300 italic border border-dashed border-neutral-200 rounded">[ Belum ada foto dokumentasi ]</div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Notes + Next Actions side by side */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="flex flex-col">
-                                        <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Catatan / Kendala</div>
-                                        <div className="border border-neutral-300 border-t-0 p-2 min-h-[60px]">
-                                            <div className="text-[6.5px] text-neutral-700 font-semibold leading-relaxed whitespace-pre-wrap">{notes || "—"}</div>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col">
-                                        <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Rencana Pekerjaan Lanjutan</div>
-                                        <div className="border border-neutral-300 border-t-0 p-2 min-h-[60px]">
-                                            <div className="text-[6.5px] text-neutral-700 font-semibold leading-relaxed whitespace-pre-wrap">{nextActions || "—"}</div>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Signatures */}
-                                <div className="mt-2">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="flex flex-col items-center text-center gap-2">
-                                            <div className="text-[7px] font-bold text-neutral-600 uppercase tracking-wider">Disetujui Oleh</div>
-                                            <div className="w-full border border-neutral-300 rounded h-16 bg-neutral-50/50"></div>
-                                            <div className="w-full border-t border-neutral-300 pt-1.5">
-                                                <div className="text-[8px] font-black text-neutral-900">{approvedBy || "( Nama Terang )"}</div>
-                                                <div className="text-[6px] font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{approvedByRole || "Project Manager / Direktur"}</div>
-                                            </div>
+                                <div className="grid grid-cols-2 gap-3 mt-4">
+                                    <div className="text-center border-t border-neutral-300 pt-2">
+                                        <div className="text-[7px] font-bold text-neutral-500 uppercase">Disetujui Oleh</div>
+                                        <div className="h-10"></div>
+                                        <div className="text-[8px] font-black text-neutral-900">{approvedBy || "( Nama Terang )"}</div>
+                                        <div className="text-[6px] text-neutral-500">{approvedByRole || "Project Manager"}</div>
+                                    </div>
+                                    <div className="text-center border-t border-neutral-300 pt-2">
+                                        <div className="text-[7px] font-bold text-neutral-500 uppercase">Disusun Oleh</div>
+                                        <div className="h-10"></div>
+                                        <div className="text-[8px] font-black text-neutral-900">{preparedBy || "( Nama Terang )"}</div>
+                                        <div className="text-[6px] text-neutral-500">{preparedByRole || "Pengawas"}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ===================== WEEKLY PREVIEW (Multi-Page LM Code Format: LM-XX-YY) ===================== */}
+                        {reportType === "weekly" && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                
+                                {/* ---------------- PAGE 1: COVER (LM-XX-01) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(1), "Laporan Mingguan")}
+
+                                    {/* Center Title Box */}
+                                    <div className="text-center my-auto space-y-4 px-4 py-12">
+                                        <div className="font-extrabold text-[12px] text-neutral-400 uppercase tracking-widest">PROYEK</div>
+                                        <div className="font-black text-[20px] text-neutral-900 uppercase tracking-wide leading-tight">
+                                            {workPackage || "PEKERJAAN PEMBANGUNAN"}
                                         </div>
-                                        <div className="flex flex-col items-center text-center gap-2">
+                                        <div className="font-black text-[24px] text-neutral-900 uppercase tracking-tight leading-tight">
+                                            {currentProject?.name || "NAMA PROYEK"}
+                                        </div>
+                                        <div className="font-bold text-[10px] text-neutral-600 uppercase tracking-wider max-w-lg mx-auto leading-relaxed pt-2">
+                                            {locationOverride || currentProject?.location || "—"}
+                                        </div>
+
+                                        <div className="pt-16 font-extrabold text-[11px] text-neutral-900 tracking-widest uppercase">
+                                            ADIDAYA STUDIO
+                                        </div>
+                                    </div>
+
+                                    {/* Signatures Box */}
+                                    <div className="grid grid-cols-2 gap-3 border-t border-neutral-300 pt-4 text-center">
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-[7px] font-bold text-neutral-600 uppercase tracking-wider">Disetujui Oleh</div>
+                                            <div className="w-full border border-neutral-300 rounded h-16 bg-neutral-50/50 my-2"></div>
+                                            <div className="text-[8px] font-black text-neutral-900">{approvedBy || "( Nama Terang )"}</div>
+                                            <div className="text-[6px] font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{approvedByRole || "Project Manager / Direktur"}</div>
+                                        </div>
+                                        <div className="flex flex-col items-center">
                                             <div className="text-[7px] font-bold text-neutral-600 uppercase tracking-wider">Disusun Oleh</div>
-                                            <div className="w-full border border-neutral-300 rounded h-16 bg-neutral-50/50"></div>
-                                            <div className="w-full border-t border-neutral-300 pt-1.5">
-                                                <div className="text-[8px] font-black text-neutral-900">{preparedBy || "( Nama Terang )"}</div>
-                                                <div className="text-[6px] font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{preparedByRole || "Project Officer / Pengawas"}</div>
-                                            </div>
+                                            <div className="w-full border border-neutral-300 rounded h-16 bg-neutral-50/50 my-2"></div>
+                                            <div className="text-[8px] font-black text-neutral-900">{preparedBy || "( Nama Terang )"}</div>
+                                            <div className="text-[6px] font-bold text-neutral-500 uppercase tracking-wider mt-0.5">{preparedByRole || "Project Officer / Pengawas"}</div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="text-[5px] text-neutral-300 text-center mt-4 pt-1">{getGeneratedFilename()}</div>
+
+                                {/* ---------------- PAGE 2: EXECUTIVE SUMMARY (LM-XX-02) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(2), "Executive Summary")}
+                                    {renderWeeklyDateMetaRow()}
+
+                                    {/* Section Banner */}
+                                    <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                        EXECUTIVE SUMMARY
+                                    </div>
+
+                                    {/* 2-Column Content */}
+                                    <div className="flex gap-3">
+                                        
+                                        {/* Left Column Tables */}
+                                        <div className="w-1/2 flex flex-col gap-2.5 text-[6.5px]">
+                                            
+                                            {/* A. Kemajuan Pekerjaan */}
+                                            <div>
+                                                <div className="font-extrabold text-[7px] text-neutral-900 uppercase border-b border-neutral-300 pb-0.5 mb-1">A. KEMAJUAN PEKERJAAN</div>
+                                                <table className="w-full text-left border border-neutral-300" style={{ borderCollapse: "collapse" }}>
+                                                    <tbody>
+                                                        <tr className="border-b border-neutral-200"><td className="p-1 text-neutral-700 font-semibold">Kemajuan Hingga Minggu Lalu</td><td className="p-1 text-right font-bold text-neutral-900">{progressLastWeek} %</td></tr>
+                                                        <tr className="border-b border-neutral-200"><td className="p-1 text-neutral-700 font-semibold">Kemajuan Minggu Ini</td><td className="p-1 text-right font-bold text-neutral-900">{progressThisWeek} %</td></tr>
+                                                        <tr className="border-b border-neutral-200 bg-neutral-100"><td className="p-1 font-black text-neutral-900">Kemajuan Hingga Minggu Ini</td><td className="p-1 text-right font-black text-neutral-900">{progressTotal} %</td></tr>
+                                                        <tr><td className="p-1 text-neutral-700 font-semibold">Sisa Pekerjaan</td><td className="p-1 text-right font-bold text-neutral-900">{progressRemaining} %</td></tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {/* B. Personel */}
+                                            <div>
+                                                <div className="font-extrabold text-[7px] text-neutral-900 uppercase border-b border-neutral-300 pb-0.5 mb-1">B. RATA-RATA JUMLAH PERSONEL</div>
+                                                <table className="w-full text-left border border-neutral-300" style={{ borderCollapse: "collapse" }}>
+                                                    <tbody>
+                                                        <tr className="border-b border-neutral-200"><td className="p-1 text-neutral-700 font-semibold">Staf Inti</td><td className="p-1 text-right font-bold text-neutral-900">{avgStaffInti} orang/hari</td></tr>
+                                                        <tr className="border-b border-neutral-200"><td className="p-1 text-neutral-700 font-semibold">Tukang dan Pekerja</td><td className="p-1 text-right font-bold text-neutral-900">{avgTukangPekerja} orang/hari</td></tr>
+                                                        <tr className="bg-neutral-100"><td className="p-1 font-black text-neutral-900">Total</td><td className="p-1 text-right font-black text-neutral-900">{avgTotalPersonel} orang/hari</td></tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {/* C. Waktu Kerja Efektif */}
+                                            <div>
+                                                <div className="font-extrabold text-[7px] text-neutral-900 uppercase border-b border-neutral-300 pb-0.5 mb-1">C. WAKTU KERJA EFEKTIF</div>
+                                                <table className="w-full text-left border border-neutral-300" style={{ borderCollapse: "collapse" }}>
+                                                    <tbody>
+                                                        {effectiveHoursTable.map((h, i) => (
+                                                            <tr key={i} className="border-b border-neutral-200">
+                                                                <td className="p-0.5 pl-1 font-semibold text-neutral-700">{h.day}</td>
+                                                                <td className="p-0.5 text-center text-neutral-600">{h.totalHours} jam</td>
+                                                                <td className="p-0.5 text-right pr-1 font-bold text-neutral-900">efektif {h.effectiveHours} jam</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {/* D. Cuaca */}
+                                            <div>
+                                                <div className="font-extrabold text-[7px] text-neutral-900 uppercase border-b border-neutral-300 pb-0.5 mb-1">D. CUACA</div>
+                                                <table className="w-full text-left border border-neutral-300" style={{ borderCollapse: "collapse" }}>
+                                                    <tbody>
+                                                        {weatherSummaryTable.map((w, i) => (
+                                                            <tr key={i} className="border-b border-neutral-200">
+                                                                <td className="p-1 font-semibold text-neutral-700">{w.condition}</td>
+                                                                <td className="p-1 text-center text-neutral-600">{w.hours} jam</td>
+                                                                <td className="p-1 text-right font-bold text-neutral-900">ekuivalen {w.days} hari</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                        {/* Right Summary Box */}
+                                        <div className="w-1/2 flex flex-col gap-2 border border-neutral-300 p-2.5 text-[7px] leading-relaxed bg-neutral-50/50">
+                                            <div className="font-extrabold text-[8px] text-neutral-900 uppercase border-b border-neutral-300 pb-1">SUMMARY</div>
+                                            <p className="text-neutral-800 font-semibold">{summaryText || "—"}</p>
+                                            <p className="text-neutral-800 font-semibold">{personelSummaryText || "—"}</p>
+                                            <p className="text-neutral-800 font-semibold">{waktuKerjaSummaryText || "—"}</p>
+                                            <p className="text-neutral-800 font-semibold">{weatherSummaryText || "—"}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Bottom Catatan / Rekomendasi Umum */}
+                                    <div className="mt-auto space-y-0.5">
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            CATATAN / REKOMENDASI UMUM
+                                        </div>
+                                        <div className="border border-neutral-300 border-t-0 p-2 text-[7px] text-neutral-800 min-h-[60px] whitespace-pre-wrap">
+                                            {catatanUmum || "— (Belum ada catatan atau rekomendasi khusus) —"}
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                {/* ---------------- PAGE 3: WBS (LM-XX-03) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(3), "Work Breakdown Structure")}
+                                    {renderWeeklyDateMetaRow()}
+
+                                    <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                        WORK BREAKDOWN STRUCTURE (WBS)
+                                    </div>
+
+                                    <div className="border border-neutral-300 border-t-0 flex-1 flex flex-col items-center justify-center p-10 text-center bg-neutral-50/40 rounded-b-sm">
+                                        <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3 border border-neutral-200">
+                                            <FileText className="w-6 h-6 text-neutral-600" />
+                                        </div>
+                                        <span className="px-2.5 py-0.5 bg-neutral-900 text-white text-[7px] font-black uppercase tracking-widest rounded-full mb-2">
+                                            STRUKTUR RINCIAN KERJA PROYEK
+                                        </span>
+                                        <h3 className="text-[12px] font-black text-neutral-900 uppercase tracking-wide">Lampiran Work Breakdown Structure (WBS)</h3>
+                                        <p className="text-[8px] text-neutral-600 font-medium max-w-md mt-2 leading-relaxed">
+                                            Halaman ini dialokasikan untuk pemetaan rincian struktur paket pekerjaan utama, hierarki sub-pekerjaan, serta indikator pencapaian fisik secara sistematis. Rincian tabel WBS interaktif akan disajikan secara otomatis pada modul jadwal proyek berikutnya.
+                                        </p>
+                                    </div>
+                                </div>
+
+
+                                {/* ---------------- PAGE 4: KURVA S (LM-XX-04) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(4), "Kurva S")}
+                                    {renderWeeklyDateMetaRow()}
+
+                                    <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                        GRAFIK PROGRES FISIK (KURVA S)
+                                    </div>
+
+                                    <div className="border border-neutral-300 border-t-0 flex-1 flex flex-col items-center justify-center p-10 text-center bg-neutral-50/40 rounded-b-sm">
+                                        <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3 border border-neutral-200">
+                                            <CalendarCheck className="w-6 h-6 text-neutral-600" />
+                                        </div>
+                                        <span className="px-2.5 py-0.5 bg-neutral-900 text-white text-[7px] font-black uppercase tracking-widest rounded-full mb-2">
+                                            VISUALISASI KURVA S RENCANA VS REALISASI
+                                        </span>
+                                        <h3 className="text-[12px] font-black text-neutral-900 uppercase tracking-wide">Grafik Kemajuan Fisik Kumulatif</h3>
+                                        <p className="text-[8px] text-neutral-600 font-medium max-w-md mt-2 leading-relaxed">
+                                            Halaman ini dialokasikan khusus untuk grafik Kurva S (S-Curve) perbandingan rencana bobot vs realisasi kumulatif fisik per minggu. Visualisasi Kurva S dinamis akan terintegrasi langsung dengan modul jadwal dan master progres proyek.
+                                        </p>
+                                    </div>
+                                </div>
+
+
+                                {/* ---------------- PAGE 5: KEGIATAN PEKERJAAN (LM-XX-05) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(5), "Kegiatan Pekerjaan")}
+                                    {renderWeeklyDateMetaRow()}
+
+                                    <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                        LAPORAN KEGIATAN PEKERJAAN
+                                    </div>
+
+                                    {/* Table 1: KEGIATAN MINGGU INI */}
+                                    <div className="space-y-0.5">
+                                        <div className="bg-neutral-800 text-white font-bold text-[7px] py-0.5 px-2 uppercase tracking-wider">
+                                            KEGIATAN YANG DILAKSANAKAN MINGGU INI
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 border-t-0 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
+                                            <thead>
+                                                <tr className="bg-neutral-50 border-b border-neutral-300 font-extrabold text-neutral-500 uppercase">
+                                                    <th className="p-1 w-5 text-center border-r border-neutral-300">NO.</th>
+                                                    <th className="p-1 border-r border-neutral-300">URAIAN PEKERJAAN</th>
+                                                    <th className="p-1 w-16 text-center border-r border-neutral-300">DURASI</th>
+                                                    <th className="p-1 w-20 border-r border-neutral-300">POSISI/AS</th>
+                                                    <th className="p-1 w-16 text-center">VOLUME TOTAL</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {weeklyActivitiesThisWeek.map((act, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{i+1}</td>
+                                                        <td className="p-1 border-r border-neutral-200 font-bold text-neutral-900">{act.description || "—"}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-semibold">{act.duration || "—"}</td>
+                                                        <td className="p-1 border-r border-neutral-200 text-neutral-700">{act.position || "—"}</td>
+                                                        <td className="p-1 text-center font-bold text-neutral-900">{act.volume || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                                {weeklyActivitiesThisWeek.length === 0 && (
+                                                    <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Belum ada data kegiatan minggu ini.</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Table 2: RENCANA MINGGU DEPAN */}
+                                    <div className="space-y-0.5 pt-3">
+                                        <div className="bg-neutral-800 text-white font-bold text-[7px] py-0.5 px-2 uppercase tracking-wider">
+                                            RENCANA KEGIATAN MINGGU DEPAN
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 border-t-0 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
+                                            <thead>
+                                                <tr className="bg-neutral-50 border-b border-neutral-300 font-extrabold text-neutral-500 uppercase">
+                                                    <th className="p-1 w-5 text-center border-r border-neutral-300">NO.</th>
+                                                    <th className="p-1 border-r border-neutral-300">URAIAN PEKERJAAN</th>
+                                                    <th className="p-1 w-16 text-center border-r border-neutral-300">DURASI</th>
+                                                    <th className="p-1 w-20 border-r border-neutral-300">POSISI/AS</th>
+                                                    <th className="p-1 w-16 text-center">VOLUME TOTAL</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {weeklyActivitiesNextWeek.map((act, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{i+1}</td>
+                                                        <td className="p-1 border-r border-neutral-200 font-bold text-neutral-900">{act.description || "—"}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-semibold">{act.duration || "—"}</td>
+                                                        <td className="p-1 border-r border-neutral-200 text-neutral-700">{act.position || "—"}</td>
+                                                        <td className="p-1 text-center font-bold text-neutral-900">{act.volume || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                                {weeklyActivitiesNextWeek.length === 0 && (
+                                                    <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Belum ada data rencana minggu depan.</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+
+                                {/* ---------------- PAGE 6: LAPORAN PERSONEL (LM-XX-06) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(6), "Laporan Personel")}
+                                    {renderWeeklyDateMetaRow()}
+
+                                    <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                        LAPORAN PERSONEL
+                                    </div>
+
+                                    <table className="w-full text-left border border-neutral-300 text-[6px]" style={{ borderCollapse: "collapse" }}>
+                                        <thead>
+                                            <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase text-center">
+                                                <th className="p-1 w-5 border-r border-neutral-300" rowSpan={2}>NO.</th>
+                                                <th className="p-1 border-r border-neutral-300 text-left" rowSpan={2}>PERSONEL</th>
+                                                <th className="p-1 w-12 border-r border-neutral-300" rowSpan={2}>SATUAN</th>
+                                                <th className="p-0.5 border-r border-neutral-300" colSpan={7}>HARI & TANGGAL</th>
+                                                <th className="p-1 w-12 border-l border-neutral-300" rowSpan={2}>JUMLAH</th>
+                                            </tr>
+                                            <tr className="bg-neutral-50 border-b border-neutral-300 font-bold text-neutral-500 text-center text-[5.5px]">
+                                                <th className="p-0.5 border-r border-neutral-200">SENIN<br/>1</th>
+                                                <th className="p-0.5 border-r border-neutral-200">SELASA<br/>2</th>
+                                                <th className="p-0.5 border-r border-neutral-200">RABU<br/>3</th>
+                                                <th className="p-0.5 border-r border-neutral-200">KAMIS<br/>4</th>
+                                                <th className="p-0.5 border-r border-neutral-200">JUMAT<br/>5</th>
+                                                <th className="p-0.5 border-r border-neutral-200">SABTU<br/>6</th>
+                                                <th className="p-0.5 border-r border-neutral-300">MINGGU<br/>7</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {personelWeeklyGrid.map((row, i) => {
+                                                const rowTotal = row.senin + row.selasa + row.rabu + row.kamis + row.jumat + row.sabtu + row.minggu;
+                                                return (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{i + 1}</td>
+                                                        <td className="p-1 border-r border-neutral-200 font-bold text-neutral-800">{row.role}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200 text-neutral-500">{row.unit}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200">{row.senin || 0}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200">{row.selasa || 0}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200">{row.rabu || 0}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200">{row.kamis || 0}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200">{row.jumat || 0}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200">{row.sabtu || 0}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-300">{row.minggu || 0}</td>
+                                                        <td className="p-1 text-center font-black text-neutral-900 bg-neutral-50/50">{rowTotal}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr className="bg-neutral-100 font-black text-neutral-900 text-center border-t border-neutral-300">
+                                                <td colSpan={3} className="p-1 text-right pr-2 border-r border-neutral-300 uppercase">JUMLAH</td>
+                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.senin, 0)}</td>
+                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.selasa, 0)}</td>
+                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.rabu, 0)}</td>
+                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.kamis, 0)}</td>
+                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.jumat, 0)}</td>
+                                                <td className="p-1 border-r border-neutral-200">{personelWeeklyGrid.reduce((a, r) => a + r.sabtu, 0)}</td>
+                                                <td className="p-1 border-r border-neutral-300">{personelWeeklyGrid.reduce((a, r) => a + r.minggu, 0)}</td>
+                                                <td className="p-1 bg-neutral-200 text-neutral-900">{personelWeeklyGrid.reduce((a, r) => a + r.senin + r.selasa + r.rabu + r.kamis + r.jumat + r.sabtu + r.minggu, 0)}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+
+                                {/* ---------------- PAGE 7: LAPORAN CUACA (LM-XX-07) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(7), "Laporan Cuaca")}
+                                    {renderWeeklyDateMetaRow()}
+
+                                    <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                        LAPORAN CUACA
+                                    </div>
+
+                                    {/* 24h Weather Table Matrix */}
+                                    <table className="w-full text-left border border-neutral-300 text-[5.5px]" style={{ borderCollapse: "collapse" }}>
+                                        <thead>
+                                            <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase text-center">
+                                                <th className="p-0.5 w-10 border-r border-neutral-300">JAM</th>
+                                                <th className="p-0.5 border-r border-neutral-200">SENIN<br/>1</th>
+                                                <th className="p-0.5 border-r border-neutral-200">SELASA<br/>2</th>
+                                                <th className="p-0.5 border-r border-neutral-200">RABU<br/>3</th>
+                                                <th className="p-0.5 border-r border-neutral-200">KAMIS<br/>4</th>
+                                                <th className="p-0.5 border-r border-neutral-200">JUMAT<br/>5</th>
+                                                <th className="p-0.5 border-r border-neutral-200">SABTU<br/>6</th>
+                                                <th className="p-0.5 border-r border-neutral-300">MINGGU<br/>7</th>
+                                                <th className="p-0.5 border-l border-neutral-300">KETERANGAN</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {weatherHourlyGrid.map((row, i) => (
+                                                <tr key={i} className="border-b border-neutral-200 text-center">
+                                                    <td className="p-0.5 font-bold text-neutral-600 border-r border-neutral-200 bg-neutral-50/50">{row.hour}</td>
+                                                    {(["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"] as const).map((dayKey, dIdx) => {
+                                                        const val = row[dayKey] || "C";
+                                                        return (
+                                                            <td key={dIdx} className={clsx(
+                                                                "p-0.5 border-r border-neutral-200 font-black text-[6px]",
+                                                                val === "C" ? "bg-amber-100/70 text-amber-800" : val === "B" ? "bg-neutral-100 text-neutral-800" : "bg-blue-100/80 text-blue-900"
+                                                            )}>
+                                                                {val}
+                                                            </td>
+                                                        );
+                                                    })}
+                                                    <td className="p-0.5 text-left text-neutral-500 pl-1">{row.keterangan || ""}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        <tfoot>
+                                            {(["C", "B", "H"] as const).map((code, cIdx) => {
+                                                const label = code === "C" ? "CERAH C" : code === "B" ? "BERAWAN B" : "HUJAN H";
+                                                const counts = ["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"].map(
+                                                    dk => weatherHourlyGrid.filter(r => (r as any)[dk] === code).length
+                                                );
+                                                const totalCount = counts.reduce((a, b) => a + b, 0);
+                                                return (
+                                                    <tr key={cIdx} className="font-extrabold text-[6px] text-center border-t border-neutral-200">
+                                                        <td className="p-1 text-left font-black text-neutral-800 bg-neutral-100 border-r border-neutral-300">{label}</td>
+                                                        {counts.map((cnt, i) => (
+                                                            <td key={i} className="p-1 border-r border-neutral-200 font-bold">{cnt}</td>
+                                                        ))}
+                                                        <td className="p-1 font-black text-neutral-900 bg-neutral-100">{totalCount}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                            <tr className="font-black text-[6px] text-center border-t border-neutral-300 bg-neutral-100">
+                                                <td className="p-1 text-left uppercase border-r border-neutral-300">TOTAL</td>
+                                                <td className="p-1 border-r border-neutral-200">24</td>
+                                                <td className="p-1 border-r border-neutral-200">24</td>
+                                                <td className="p-1 border-r border-neutral-200">24</td>
+                                                <td className="p-1 border-r border-neutral-200">24</td>
+                                                <td className="p-1 border-r border-neutral-200">24</td>
+                                                <td className="p-1 border-r border-neutral-200">24</td>
+                                                <td className="p-1 border-r border-neutral-300">24</td>
+                                                <td className="p-1 bg-neutral-200">168</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+
+
+                                {/* ---------------- PAGE 8: LAPORAN KENDALA (LM-XX-08) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(8), "Laporan Kendala")}
+                                    {renderWeeklyDateMetaRow()}
+
+                                    <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                        LAPORAN KENDALA
+                                    </div>
+
+                                    <table className="w-full text-left border border-neutral-300 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
+                                        <thead>
+                                            <tr className="bg-neutral-50 border-b border-neutral-300 font-extrabold text-neutral-500 uppercase">
+                                                <th className="p-1 w-5 text-center border-r border-neutral-300">NO.</th>
+                                                <th className="p-1 w-20 text-center border-r border-neutral-300">TANGGAL</th>
+                                                <th className="p-1 border-r border-neutral-300">URAIAN KENDALA / MASALAH</th>
+                                                <th className="p-1 border-r border-neutral-300">SOLUSI</th>
+                                                <th className="p-1">REKOMENDASI</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {kendalaItems.map((k, i) => (
+                                                <tr key={i} className="border-b border-neutral-200">
+                                                    <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{i + 1}</td>
+                                                    <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-800">{k.date || "—"}</td>
+                                                    <td className="p-1 border-r border-neutral-200 text-neutral-900 font-semibold">{k.problem || "—"}</td>
+                                                    <td className="p-1 border-r border-neutral-200 text-neutral-700">{k.solution || "—"}</td>
+                                                    <td className="p-1 text-neutral-700">{k.recommendation || "—"}</td>
+                                                </tr>
+                                            ))}
+                                            {kendalaItems.length === 0 && (
+                                                <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Tidak ada catatan kendala lapangan minggu ini.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+
+                                {/* ---------------- PAGE 9: DOKUMENTASI (LM-XX-09) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(9), "Dokumentasi Pekerjaan")}
+                                    {renderWeeklyDateMetaRow()}
+
+                                    <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                        DOKUMENTASI FOTO MINGGUAN
+                                    </div>
+
+                                    <div className="border border-neutral-300 border-t-0 p-3">
+                                        {photos.length > 0 ? (
+                                            <div className="grid grid-cols-2 gap-3">
+                                                {photos.map((p, idx) => (
+                                                    <div key={idx} className="space-y-1">
+                                                        <img src={p.url} crossOrigin="anonymous" alt={`Dokumentasi ${idx+1}`} className="w-full rounded border border-neutral-200" style={{ aspectRatio: "4/3", objectFit: "cover" }} />
+                                                        {p.caption && <p className="text-[6px] text-neutral-600 font-bold text-center">{p.caption}</p>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="h-40 flex items-center justify-center text-[7px] text-neutral-300 italic border border-dashed border-neutral-200">
+                                                [ Belum ada foto dokumentasi disinkronkan ]
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+
+                                {/* ---------------- PAGE 10: LAMPIRAN (LM-XX-10) ---------------- */}
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    {renderPageHeader("LM", getWeeklyPageDocCode(10), "Lampiran Laporan Harian")}
+                                    {renderWeeklyDateMetaRow()}
+
+                                    <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                        LAMPIRAN LAPORAN HARIAN (PERIODE MINGGU KE-{weekNumber.padStart(2,'0')})
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <table className="w-full text-left border border-neutral-300 border-t-0 text-[6.5px]" style={{ borderCollapse: "collapse" }}>
+                                            <thead>
+                                                <tr className="bg-neutral-50 border-b border-neutral-300 font-extrabold text-neutral-500 uppercase">
+                                                    <th className="p-1 w-5 text-center border-r border-neutral-300">NO</th>
+                                                    <th className="p-1 w-24 border-r border-neutral-300">TANGGAL LAPORAN</th>
+                                                    <th className="p-1 border-r border-neutral-300">JUDUL LAPORAN HARIAN</th>
+                                                    <th className="p-1 w-16 text-center border-r border-neutral-300">MANPOWER</th>
+                                                    <th className="p-1 w-16 text-center">PROGRES (%)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {attachedDailyReports.map((lh, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-bold text-neutral-400">{i+1}</td>
+                                                        <td className="p-1 border-r border-neutral-200 font-bold text-neutral-900">{lh.report_date}</td>
+                                                        <td className="p-1 border-r border-neutral-200 text-neutral-800">{lh.title}</td>
+                                                        <td className="p-1 text-center border-r border-neutral-200 font-bold">{lh.manpowerCount || "0"} org</td>
+                                                        <td className="p-1 text-center font-bold text-neutral-900">{lh.progress || 0} %</td>
+                                                    </tr>
+                                                ))}
+                                                {attachedDailyReports.length === 0 && (
+                                                    <tr><td colSpan={5} className="p-3 text-center text-neutral-300 italic">Belum ada Laporan Harian disinkronkan untuk periode ini.</td></tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                </div>
 
                             </div>
-                        ) : (
-                            /* WEEKLY / MONTHLY PREVIEW */
-                            <div className="h-full flex flex-col justify-between">
+                        )}
+
+                        {/* ===================== MONTHLY PREVIEW ===================== */}
+                        {reportType === "monthly" && (
+                            <div className="bg-white text-neutral-800 shadow-xl w-full p-8 flex flex-col justify-between" style={{ minHeight: "920px", fontFamily: "Arial, sans-serif" }}>
                                 <div>
                                     <div className="border-b border-neutral-800 pb-3 mb-4 flex items-center justify-between">
                                         <div className="flex items-center gap-2.5">
                                             <img src="/logo-adidaya-red.svg" alt="Adidaya" className="w-5 h-5 object-contain filter brightness-0" />
                                             <div>
                                                 <h1 className="font-black text-[11px] text-neutral-900 tracking-wider">ADIDAYA STUDIO</h1>
-                                                <p className="text-[6px] text-neutral-400 font-bold uppercase tracking-widest leading-none mt-0.5">Laporan Rekapitulasi Progres</p>
+                                                <p className="text-[6px] text-neutral-400 font-bold uppercase tracking-widest leading-none mt-0.5">Laporan Rekapitulasi Progres Bulanan</p>
                                             </div>
                                         </div>
-                                        <span className="inline-block px-2 py-0.5 text-[6px] font-black uppercase tracking-widest rounded bg-neutral-900 text-white leading-none">{reportType}</span>
+                                        <span className="inline-block px-2 py-0.5 text-[6px] font-black uppercase tracking-widest rounded bg-neutral-900 text-white leading-none">MONTHLY</span>
                                     </div>
-                                    <div className="bg-neutral-50 p-2.5 rounded-lg border border-neutral-200 mb-4 grid grid-cols-2 gap-3 text-[7px] font-semibold text-neutral-600 leading-normal">
+                                    <div className="bg-neutral-50 p-2.5 rounded-lg border border-neutral-200 mb-4 grid grid-cols-2 gap-3 text-[7px] font-semibold text-neutral-600">
                                         <div>
-                                            <span className="text-[5px] font-bold text-neutral-400 block uppercase tracking-wider">Proyek</span>
+                                            <span className="text-[5px] font-bold text-neutral-400 block uppercase">Proyek</span>
                                             <span className="text-[8px] font-bold text-neutral-800 uppercase block">{currentProject?.name || "—"}</span>
                                         </div>
                                         <div>
-                                            <span className="text-[5px] font-bold text-neutral-400 block uppercase tracking-wider">Tanggal</span>
+                                            <span className="text-[5px] font-bold text-neutral-400 block uppercase">Tanggal</span>
                                             <span className="text-[8px] font-bold text-neutral-800 block">{getFormattedDate()}</span>
                                         </div>
-                                        <div>
-                                            <span className="text-[5px] font-bold text-neutral-400 block uppercase tracking-wider">Judul</span>
-                                            <span className="text-[8px] font-bold text-neutral-800 block">{title || "JUDUL LAPORAN"}</span>
-                                        </div>
                                     </div>
-                                    <div className="prose prose-sm max-w-none text-neutral-800 text-[8px] leading-relaxed font-sans" dangerouslySetInnerHTML={{ __html: editorContent || "<p>Belum ada isi laporan.</p>" }} />
-                                </div>
-                                <div className="border-t border-neutral-200 pt-4 mt-6 grid grid-cols-2 text-center text-[7px] font-semibold text-neutral-600">
-                                    <div><span>Disetujui oleh,</span><div className="h-12"></div><span className="font-extrabold text-neutral-900 text-[8px] block">{approvedBy || "( Nama Terang )"}</span><span className="text-[5px] text-neutral-400 font-bold uppercase tracking-wider block">{approvedByRole || "Manajer Proyek"}</span></div>
-                                    <div><span>Disusun oleh,</span><div className="h-12"></div><span className="font-extrabold text-neutral-900 text-[8px] block">{preparedBy || "( Nama Terang )"}</span><span className="text-[5px] text-neutral-400 font-bold uppercase tracking-wider block">{preparedByRole || "Pengawas Lapangan"}</span></div>
+                                    <div className="prose prose-sm max-w-none text-neutral-800 text-[8px] leading-relaxed" dangerouslySetInnerHTML={{ __html: editorContent || "<p>Belum ada isi laporan.</p>" }} />
                                 </div>
                             </div>
                         )}
-                    </div>
 
+                    </div>
 
                 </div>
 
             </div>
+
+            {/* ===================== PHOTO PICKER MODAL (Max 18 Photos) ===================== */}
+            {isPhotoPickerOpen && (
+                <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl space-y-0">
+                        {/* Header */}
+                        <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50">
+                            <div>
+                                <h3 className="text-base font-extrabold text-neutral-900 dark:text-white">Pilih Foto Dari Laporan Harian</h3>
+                                <p className="text-xs text-neutral-400 font-semibold mt-0.5">Pilih foto mana yang ingin dimasukkan ke Laporan Mingguan Utama (Maksimal 18 Foto).</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <span className={clsx(
+                                    "px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border",
+                                    photos.length >= 18 
+                                        ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400" 
+                                        : "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 border-neutral-200"
+                                )}>
+                                    {photos.length} / 18 Terpilih
+                                </span>
+                                <button onClick={() => setIsPhotoPickerOpen(false)} className="p-2 text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-full"><X className="w-5 h-5" /></button>
+                            </div>
+                        </div>
+
+                        {/* Photo Grid */}
+                        <div className="p-6 overflow-y-auto flex-1 grid grid-cols-3 gap-4">
+                            {allDailyPhotos.map((p, idx) => {
+                                const isSelected = photos.some(item => item.url === p.url);
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => togglePhotoSelection(p)}
+                                        className={clsx(
+                                            "relative rounded-2xl overflow-hidden border-2 cursor-pointer transition-all group",
+                                            isSelected 
+                                                ? "border-neutral-900 dark:border-white ring-2 ring-neutral-900/20" 
+                                                : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 opacity-70 hover:opacity-100"
+                                        )}
+                                    >
+                                        <img src={p.url} alt={`Photo ${idx}`} className="w-full h-36 object-cover" />
+                                        <div className="absolute top-2 right-2">
+                                            {isSelected ? (
+                                                <div className="bg-neutral-900 text-white rounded-full p-1 shadow-md">
+                                                    <CheckCircle2 className="w-4 h-4" />
+                                                </div>
+                                            ) : (
+                                                <div className="w-6 h-6 rounded-full border-2 border-white bg-black/40" />
+                                            )}
+                                        </div>
+                                        <div className="p-2 bg-white dark:bg-neutral-900 border-t border-neutral-100 dark:border-neutral-800 text-[10px]">
+                                            <span className="font-bold text-neutral-800 dark:text-neutral-200 block truncate">{p.caption || "Tanpa Keterangan"}</span>
+                                            {p.dateStr && <span className="text-[9px] text-neutral-400 block mt-0.5">{p.dateStr}</span>}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between bg-neutral-50/50 dark:bg-neutral-900/50">
+                            <span className="text-xs font-semibold text-neutral-500">Foto selebihnya tetap aman tersimpan pada lampiran Laporan Harian.</span>
+                            <Button onClick={() => setIsPhotoPickerOpen(false)} className="bg-neutral-900 hover:bg-black text-white font-bold text-xs px-6 py-2">
+                                Selesai Pilih Foto
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
@@ -1948,4 +2760,3 @@ export default function ReportsEditorPage() {
         </Suspense>
     );
 }
-
