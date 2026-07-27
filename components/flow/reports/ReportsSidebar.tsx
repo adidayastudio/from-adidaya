@@ -24,7 +24,9 @@ import {
     Mail,
     CheckSquare,
     Sliders,
-    Leaf
+    Leaf,
+    Landmark,
+    Truck
 } from "lucide-react";
 
 interface SidebarGroup {
@@ -50,43 +52,45 @@ const SIDEBAR_GROUPS: SidebarGroup[] = [
             { label: "Daily Reports", path: "/flow/reports/daily", type: "daily", icon: Calendar },
             { label: "Weekly Reports", path: "/flow/reports/weekly", type: "weekly", icon: FileText },
             { label: "Monthly Reports", path: "/flow/reports/monthly", type: "monthly", icon: CalendarCheck },
-            { label: "Schedule & S-Curve", path: "/flow/reports/editor?type=schedule", type: "schedule", icon: TrendingUp },
+            { label: "Schedule & S-Curve", path: "/flow/reports/schedule", type: "schedule", icon: TrendingUp },
         ]
     },
     {
         cluster: "Cost & Logistics",
         items: [
-            { label: "Cost & Budget", path: "/flow/reports/editor?type=cost", type: "cost", icon: DollarSign },
-            { label: "Manpower & Payroll", path: "/flow/reports/editor?type=manpower", type: "manpower", icon: Users },
-            { label: "Procurement & Stock", path: "/flow/reports/editor?type=procurement", type: "procurement", icon: Package },
+            { label: "Cost & Budget", path: "/flow/reports/cost", type: "cost", icon: DollarSign },
+            { label: "Manpower & Payroll", path: "/flow/reports/manpower", type: "manpower", icon: Users },
+            { label: "Procurement & Stock", path: "/flow/reports/procurement", type: "procurement", icon: Package },
+            { label: "Finance Register", path: "/flow/reports/finance", type: "finance", icon: Landmark },
+            { label: "Equipment & Asset", path: "/flow/reports/resources", type: "resources", icon: Truck },
         ]
     },
     {
         cluster: "QA/QC, HSE & Risk",
         items: [
-            { label: "Quality (QA/QC)", path: "/flow/reports/editor?type=quality", type: "quality", icon: ShieldCheck },
-            { label: "Safety (HSE/K3)", path: "/flow/reports/editor?type=safety", type: "safety", icon: HardHat },
-            { label: "Issue & Risk", path: "/flow/reports/editor?type=issue_risk", type: "issue_risk", icon: AlertOctagon },
+            { label: "Quality (QA/QC)", path: "/flow/reports/quality", type: "quality", icon: ShieldCheck },
+            { label: "Safety (HSE/K3)", path: "/flow/reports/safety", type: "safety", icon: HardHat },
+            { label: "Issue & Risk", path: "/flow/reports/issue_risk", type: "issue_risk", icon: AlertOctagon },
         ]
     },
     {
-        cluster: "Governance & Exec",
+        cluster: "Governance, Contract & Exec",
         items: [
-            { label: "Document Control", path: "/flow/reports/editor?type=doc_control", type: "doc_control", icon: FileSpreadsheet },
-            { label: "Change Order (VO)", path: "/flow/reports/editor?type=change_order", type: "change_order", icon: FileDiff },
-            { label: "Executive Report", path: "/flow/reports/editor?type=executive", type: "executive", icon: Award },
+            { label: "Document Control (DOC)", path: "/flow/reports/doc_control", type: "doc_control", icon: FileSpreadsheet },
+            { label: "Change Order (CCO)", path: "/flow/reports/change_order", type: "change_order", icon: FileDiff },
+            { label: "MOU & Contract (MOU)", path: "/flow/reports/mou_contract", type: "mou_contract", icon: FileCheck },
+            { label: "Executive Report (EXE)", path: "/flow/reports/executive", type: "executive", icon: Award },
         ]
     },
     {
         cluster: "Site Ops & Formal",
         items: [
-            { label: "Site Survey", path: "/flow/reports/editor?type=site_survey", type: "site_survey", icon: MapPin },
-            { label: "Minute of Meeting", path: "/flow/reports/editor?type=mom", type: "mom", icon: MessageSquare },
-            { label: "MOU & Contract", path: "/flow/reports/editor?type=mou_contract", type: "mou_contract", icon: FileCheck },
-            { label: "Memo & Notice", path: "/flow/reports/editor?type=memo_correspondence", type: "memo_correspondence", icon: Mail },
-            { label: "Punch List (BAST)", path: "/flow/reports/editor?type=punch_list", type: "punch_list", icon: CheckSquare },
-            { label: "Commissioning", path: "/flow/reports/editor?type=commissioning", type: "commissioning", icon: Sliders },
-            { label: "Environmental", path: "/flow/reports/editor?type=environmental", type: "environmental", icon: Leaf },
+            { label: "Site Survey (SUR)", path: "/flow/reports/site_survey", type: "site_survey", icon: MapPin },
+            { label: "Minute of Meeting (MOM)", path: "/flow/reports/mom", type: "mom", icon: MessageSquare },
+            { label: "Memo & Notice (NOT)", path: "/flow/reports/memo_correspondence", type: "memo_correspondence", icon: Mail },
+            { label: "Punch List BAST (PCH)", path: "/flow/reports/punch_list", type: "punch_list", icon: CheckSquare },
+            { label: "Commissioning (COM)", path: "/flow/reports/commissioning", type: "commissioning", icon: Sliders },
+            { label: "Environmental (ENV)", path: "/flow/reports/environmental", type: "environmental", icon: Leaf },
         ]
     }
 ];

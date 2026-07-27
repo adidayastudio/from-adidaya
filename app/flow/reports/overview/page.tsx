@@ -37,7 +37,9 @@ import {
     Mail,
     CheckSquare,
     Sliders,
-    Leaf
+    Leaf,
+    Landmark,
+    Truck
 } from "lucide-react";
 import clsx from "clsx";
 import { ExtendedReportType, ReportCluster } from "@/types/project";
@@ -130,6 +132,26 @@ const REPORT_DEFINITIONS: ReportTypeDef[] = [
         icon: <Package className="w-5 h-5" />,
         color: "text-amber-600 dark:text-amber-400",
         bgColor: "bg-amber-100 dark:bg-amber-950/40"
+    },
+    {
+        type: "finance",
+        cluster: "financial_resources",
+        clusterLabel: "Cost & Resources",
+        title: "Finance Register",
+        description: "Pencatatan transaksi kas/bank, jurnal, piutang-hutang & rekonsiliasi.",
+        icon: <Landmark className="w-5 h-5" />,
+        color: "text-emerald-600 dark:text-emerald-400",
+        bgColor: "bg-emerald-100 dark:bg-emerald-950/40"
+    },
+    {
+        type: "resources",
+        cluster: "financial_resources",
+        clusterLabel: "Cost & Resources",
+        title: "Equipment & Asset Register",
+        description: "Inventarisasi alat berat, log operasi HM, servis & demobilisasi.",
+        icon: <Truck className="w-5 h-5" />,
+        color: "text-blue-600 dark:text-blue-400",
+        bgColor: "bg-blue-100 dark:bg-blue-950/40"
     },
 
     // Cluster 3: Quality, HSE & Risk Engine
@@ -372,7 +394,7 @@ export default function ReportsOverviewPage() {
     // Counts for stats cards
     const totalCount = reports.length;
     const progressCount = reports.filter(r => ["daily", "weekly", "monthly", "schedule"].includes(r.reportType || "")).length;
-    const financialCount = reports.filter(r => ["cost", "manpower", "procurement"].includes(r.reportType || "")).length;
+    const financialCount = reports.filter(r => ["cost", "manpower", "procurement", "finance", "resources"].includes(r.reportType || "")).length;
     const qualitySafetyCount = reports.filter(r => ["quality", "safety", "issue_risk"].includes(r.reportType || "")).length;
 
     const getStatusIcon = (status: ReportStatus) => {
