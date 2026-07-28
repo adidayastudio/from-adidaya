@@ -1147,42 +1147,37 @@ function EditorContentComponent() {
         agenda: string; date: string; location: string; meetingType: string;
         startTime: string; endTime: string;
     }>({
-        agenda: "Rapat Koordinasi Mingguan Progres & Review Technical Issues",
+        agenda: "",
         date: new Date().toISOString().split('T')[0],
-        location: "Meeting Room Site Office & Hybrid Zoom Platform",
-        meetingType: "Weekly Progress & Technical Alignment",
-        startTime: "09:00",
-        endTime: "11:00"
+        location: "",
+        meetingType: "",
+        startTime: "",
+        endTime: ""
     });
     const [momParticipants, setMomParticipants] = useState<{
         name: string; company: string; position: string; presence: string;
     }[]>([
-        { name: "Ir. Ahmad Subagyo", company: "PT Adidaya Studio", position: "Project Manager", presence: "Hadir / Present" },
-        { name: "Doni Prasetyo, ST", company: "PT Cipta Konsultan MK", position: "Team Leader MK", presence: "Hadir / Present" },
-        { name: "Hendra Wijaya", company: "PT Utama Subkon", position: "Site Manager", presence: "Hadir / Present" }
+        { name: "", company: "", position: "", presence: "Hadir / Present" }
     ]);
     const [momDiscussions, setMomDiscussions] = useState<{
         topic: string; discussion: string; reference: string; concern: string;
     }[]>([
-        { topic: "Perubahan Metode Pengecoran Pier 3", discussion: "Disetujui penggunaan beton cepat kering K-500 dengan admixture retarder", reference: "RFI-CIV-042 & Shop Drawing ST-03", concern: "Potensi kenaikan biaya unit beton Rp 85.000/m3" },
-        { topic: "Progress Pengadaan Material MEP", discussion: "Vendor Chiller mengonfirmasi shipment tiba di port tanggal 15 Agustus", reference: "PO-MEP-008", concern: "Kesiapan ruang AHU sebelum unit tiba" }
+        { topic: "", discussion: "", reference: "", concern: "" }
     ]);
     const [momDecisions, setMomDecisions] = useState<{
         decision: string; direction: string; authority: string;
     }[]>([
-        { decision: "Menyetujui revisi spesifikasi beton K-500 Pier 3", direction: "Segera terbitkan Variation Order (VO-003)", authority: "Owner / Client Representative" },
-        { decision: "Penambahan shift kerja malam untuk pembesian Zona B", direction: "K3 memastikan pencahayaan min. 200 Lux di site", authority: "Project Manager / MK" }
+        { decision: "", direction: "", authority: "" }
     ]);
     const [momActions, setMomActions] = useState<{
         action: string; pic: string; dueDate: string; priority: string; status: string;
     }[]>([
-        { action: "Submit Shop Drawing Pondasi Pier 3 Revised", pic: "Ir. Hendra (Structural Lead)", dueDate: "2026-08-03", priority: "High", status: "In Progress" },
-        { action: "Pembersihan & Prep Ruang AHU Lantai 2", pic: "Pak Budi (MEP Subcon)", dueDate: "2026-08-10", priority: "Medium", status: "Open" }
+        { action: "", pic: "", dueDate: "", priority: "Medium", status: "Open" }
     ]);
     const [momPrevActions, setMomPrevActions] = useState<{
         previousItem: string; currentStatus: string; carryOver: string; closure: string;
     }[]>([
-        { previousItem: "Pembersihan Lahan Zona B & Cut-Fill", currentStatus: "Selesai 100%", carryOver: "Tidak", closure: "Closed" }
+        { previousItem: "", currentStatus: "", carryOver: "Tidak", closure: "Closed" }
     ]);
     const [momApprovals, setMomApprovals] = useState<{
         type: "disusun" | "dicek" | "mengetahui" | "disetujui"; name: string; role: string;
