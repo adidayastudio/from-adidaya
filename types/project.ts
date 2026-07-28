@@ -352,14 +352,19 @@ export type ExtendedReportType =
     | "doc_control"
     | "change_order"
     | "executive"
-    // Cluster 5: Site Operations & Formal Docs
+    // Cluster 5: Site Operations & Communication
     | "site_survey"
     | "mom"
-    | "mou_contract"
+    | "field_notice"
     | "memo_correspondence"
     | "punch_list"
     | "commissioning"
-    | "environmental";
+    | "environmental"
+    | "people_register"
+    | "people"
+    | "clock_attendance"
+    | "clock"
+    | "mou_contract";
 
 export interface ReportTypeDefinition {
     type: ExtendedReportType;

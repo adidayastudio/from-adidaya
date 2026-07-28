@@ -40,7 +40,10 @@ import {
     Leaf,
     Landmark,
     Truck,
-    ArrowRight
+    UserCheck,
+    ArrowRight,
+    RotateCcw,
+    Download
 } from "lucide-react";
 import clsx from "clsx";
 import { ExtendedReportType, ReportCluster } from "@/types/project";
@@ -219,13 +222,13 @@ const REPORT_DEFINITIONS: ReportTypeDef[] = [
         bgColor: "bg-violet-100 dark:bg-violet-950/40"
     },
 
-    // Cluster 5: Site Operations & Formal Docs
+    // Cluster 5: Site Operations & Communication
     {
         type: "site_survey",
         cluster: "site_formal",
         clusterLabel: "Site Ops & Formal",
         title: "Site Survey & Assessment Report",
-        description: "Survei topografi, geoteknik, kondisi eksisting & drone visual.",
+        description: "Survei topografi, geoteknik, titik BM & elevasi, dan temuan kendala site.",
         icon: <MapPin className="w-5 h-5" />,
         color: "text-pink-600 dark:text-pink-400",
         bgColor: "bg-pink-100 dark:bg-pink-950/40"
@@ -235,37 +238,27 @@ const REPORT_DEFINITIONS: ReportTypeDef[] = [
         cluster: "site_formal",
         clusterLabel: "Site Ops & Formal",
         title: "Minute of Meeting (MOM)",
-        description: "Risalah rapat koordinasi, action items, PIC & target penyelesaian.",
+        description: "Risalah rapat koordinasi, pembahasan agenda, keputusan & action items.",
         icon: <MessageSquare className="w-5 h-5" />,
         color: "text-fuchsia-600 dark:text-fuchsia-400",
         bgColor: "bg-fuchsia-100 dark:bg-fuchsia-950/40"
     },
     {
-        type: "mou_contract",
+        type: "field_notice",
         cluster: "site_formal",
         clusterLabel: "Site Ops & Formal",
-        title: "MOU & Contractual Report",
-        description: "Matriks LOI, MOU, kontrak subkon & addendum perjanjian.",
-        icon: <FileCheck className="w-5 h-5" />,
-        color: "text-slate-600 dark:text-slate-400",
-        bgColor: "bg-slate-100 dark:bg-slate-950/40"
-    },
-    {
-        type: "memo_correspondence",
-        cluster: "site_formal",
-        clusterLabel: "Site Ops & Formal",
-        title: "Memo Internal & Official Notice",
-        description: "Surat instruksi lapangan, memo internal & surat teguran (SP).",
+        title: "Field Notice & Memo (NOT)",
+        description: "Surat instruksi dinas lapangan, notice perbaikan, dan tanggapan formal.",
         icon: <Mail className="w-5 h-5" />,
-        color: "text-gray-600 dark:text-gray-400",
-        bgColor: "bg-gray-100 dark:bg-gray-950/40"
+        color: "text-rose-600 dark:text-rose-400",
+        bgColor: "bg-rose-100 dark:bg-rose-950/40"
     },
     {
         type: "punch_list",
         cluster: "site_formal",
         clusterLabel: "Site Ops & Formal",
-        title: "Handover & Punch List Report",
-        description: "Daftar defect BAST I & II per area lengkap dengan foto perbaikan.",
+        title: "Punch List & Handover Report",
+        description: "Daftar defect BAST I & II per area, repair tracking & verifikasi.",
         icon: <CheckSquare className="w-5 h-5" />,
         color: "text-emerald-700 dark:text-emerald-300",
         bgColor: "bg-emerald-150 dark:bg-emerald-900/40"
@@ -275,7 +268,7 @@ const REPORT_DEFINITIONS: ReportTypeDef[] = [
         cluster: "site_formal",
         clusterLabel: "Site Ops & Formal",
         title: "Commissioning & Testing Report",
-        description: "Pengujian sistem MEP, genset, fire alarm & fasilitas bangunan.",
+        description: "Pengujian sistem MEP, genset, fire alarm, functional test & sertifikasi.",
         icon: <Sliders className="w-5 h-5" />,
         color: "text-blue-700 dark:text-blue-300",
         bgColor: "bg-blue-150 dark:bg-blue-900/40"
@@ -285,10 +278,30 @@ const REPORT_DEFINITIONS: ReportTypeDef[] = [
         cluster: "site_formal",
         clusterLabel: "Site Ops & Formal",
         title: "Environmental & Waste Report",
-        description: "Pengelolaan limbah konstruksi, tingkat kebisingan & AMDAL.",
+        description: "Pengelolaan limbah B3/non-B3, pemantauan kebisingan, debu & AMDAL.",
         icon: <Leaf className="w-5 h-5" />,
         color: "text-lime-600 dark:text-lime-400",
         bgColor: "bg-lime-100 dark:bg-lime-950/40"
+    },
+    {
+        type: "people_register",
+        cluster: "site_formal",
+        clusterLabel: "Site Ops & Formal",
+        title: "People & HR Register (PPL)",
+        description: "Register personel tim proyek, struktur organisasi, sertifikasi SKA & presensi.",
+        icon: <UserCheck className="w-5 h-5" />,
+        color: "text-purple-600 dark:text-purple-400",
+        bgColor: "bg-purple-100 dark:bg-purple-950/40"
+    },
+    {
+        type: "clock_attendance",
+        cluster: "site_formal",
+        clusterLabel: "Site Ops & Formal",
+        title: "Clock & Attendance Register (CLK)",
+        description: "Log presensi jam kerja, toleransi keterlambatan, lembur & persetujuan supervisor.",
+        icon: <Clock className="w-5 h-5" />,
+        color: "text-cyan-600 dark:text-cyan-400",
+        bgColor: "bg-cyan-100 dark:bg-cyan-950/40"
     }
 ];
 
@@ -325,28 +338,28 @@ const CLUSTER_GROUPS: ClusterGroupDef[] = [
         id: "quality_safety_risk",
         label: "QA/QC, HSE & Risk",
         description: "Inspeksi mutu, keselamatan kerja (K3) & manajemen risiko",
-        icon: <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />,
-        badgeBg: "bg-indigo-100/80 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400",
-        hoverBorder: "hover:border-indigo-500/70 dark:hover:border-indigo-400/70",
-        textHover: "group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+        icon: <ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />,
+        badgeBg: "bg-purple-100/80 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400",
+        hoverBorder: "hover:border-purple-500/70 dark:hover:border-purple-400/70",
+        textHover: "group-hover:text-purple-600 dark:group-hover:text-purple-400"
     },
     {
         id: "governance_change",
         label: "Governance & Exec",
         description: "Kontrol dokumen, klaim/variasi (VO/CO) & eksekutif summary",
-        icon: <Award className="w-4 h-4 text-amber-600 dark:text-amber-400" />,
-        badgeBg: "bg-amber-100/80 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400",
-        hoverBorder: "hover:border-amber-500/70 dark:hover:border-amber-400/70",
-        textHover: "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+        icon: <Award className="w-4 h-4 text-orange-600 dark:text-orange-400" />,
+        badgeBg: "bg-orange-100/80 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400",
+        hoverBorder: "hover:border-orange-500/70 dark:hover:border-orange-400/70",
+        textHover: "group-hover:text-orange-600 dark:group-hover:text-orange-400"
     },
     {
         id: "site_formal",
         label: "Site Ops & Formal Docs",
         description: "Survei lapangan, MOM, surat resmi, BAST & commissioning",
-        icon: <MapPin className="w-4 h-4 text-teal-600 dark:text-teal-400" />,
-        badgeBg: "bg-teal-100/80 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400",
-        hoverBorder: "hover:border-teal-500/70 dark:hover:border-teal-400/70",
-        textHover: "group-hover:text-teal-600 dark:group-hover:text-teal-400"
+        icon: <MapPin className="w-4 h-4 text-rose-500 dark:text-rose-400" />,
+        badgeBg: "bg-rose-100/80 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400",
+        hoverBorder: "hover:border-rose-400/70 dark:hover:border-rose-400/70",
+        textHover: "group-hover:text-rose-600 dark:group-hover:text-rose-400"
     }
 ];
 
@@ -361,11 +374,11 @@ export default function ReportsOverviewPage() {
     const [modalSearch, setModalSearch] = useState<string>("");
 
 
-    // Filter States
+    // Filter & Sort States
     const [searchVal, setSearchVal] = useState("");
     const [selectedProject, setSelectedProject] = useState("");
     const [selectedCluster, setSelectedCluster] = useState("");
-    const [selectedStatus, setSelectedStatus] = useState("");
+    const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "title_asc">("date_desc");
 
     const fetchDropdownProjects = async () => {
         try {
@@ -445,7 +458,15 @@ export default function ReportsOverviewPage() {
         router.push(`/flow/reports/editor?id=${report.id}&type=${report.reportType || "weekly"}`);
     };
 
-    // Filtering logic
+    const handleExportClick = (report: MappedReport) => {
+        router.push(`/flow/reports/editor?id=${report.id}&type=${report.reportType || "daily"}&export=pdf`);
+    };
+
+    const handleReviseClick = (report: MappedReport) => {
+        router.push(`/flow/reports/editor?id=${report.id}&type=${report.reportType || "daily"}&mode=revision`);
+    };
+
+    // Filtering & Sorting logic
     const filteredReports = reports.filter(r => {
         const matchesSearch = r.title.toLowerCase().includes(searchVal.toLowerCase()) || 
                               r.projectName.toLowerCase().includes(searchVal.toLowerCase()) ||
@@ -453,9 +474,14 @@ export default function ReportsOverviewPage() {
         
         const matchesProject = selectedProject === "" || selectedProject === "all" || r.projectId === selectedProject;
         const matchesCluster = selectedCluster === "" || selectedCluster === "all" || r.reportCategory === selectedCluster;
-        const matchesStatus = selectedStatus === "" || selectedStatus === "all" || r.status === selectedStatus;
 
-        return matchesSearch && matchesProject && matchesCluster && matchesStatus;
+        return matchesSearch && matchesProject && matchesCluster;
+    });
+
+    const sortedReports = [...filteredReports].sort((a, b) => {
+        if (sortBy === "date_asc") return (a.reportDate || "").localeCompare(b.reportDate || "");
+        if (sortBy === "title_asc") return (a.title || "").localeCompare(b.title || "");
+        return (b.reportDate || "").localeCompare(a.reportDate || "");
     });
 
     // Counts for stats cards
@@ -494,25 +520,35 @@ export default function ReportsOverviewPage() {
         }
     };
 
-    const getTypeBadge = (type?: string) => {
-        const found = REPORT_DEFINITIONS.find(d => d.type === type);
-        if (!found) {
-            return (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                    <FileText className="w-3.5 h-3.5" />
-                    {type || "Report"}
-                </span>
-            );
+    const getClusterTheme = (cluster?: ReportCluster) => {
+        switch (cluster) {
+            case "progress_control":
+                return "bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800/60";
+            case "financial_resources":
+                return "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/60";
+            case "quality_safety_risk":
+                return "bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800/60";
+            case "governance_change":
+                return "bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-800/60";
+            case "site_formal":
+                return "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/60";
+            default:
+                return "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700";
         }
+    };
+
+    const getTypeBadge = (type?: string, category?: ReportCluster) => {
+        const found = REPORT_DEFINITIONS.find(d => d.type === type);
+        const cluster = category || found?.cluster || "progress_control";
+        const themeClass = getClusterTheme(cluster);
 
         return (
             <span className={clsx(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-current/20",
-                found.bgColor,
-                found.color
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-2xs",
+                themeClass
             )}>
-                {found.icon}
-                {found.title.split(" ")[0]}
+                {found?.icon || <FileText className="w-3.5 h-3.5" />}
+                {type || "Report"}
             </span>
         );
     };
@@ -696,14 +732,14 @@ export default function ReportsOverviewPage() {
             <div className="space-y-4 pt-2">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div>
-                        <h3 className="text-lg font-black text-neutral-900 dark:text-white">Daftar Laporan Terimpan</h3>
+                        <h3 className="text-lg font-black text-neutral-900 dark:text-white">Daftar Laporan Tersimpan</h3>
                         <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
                             Arsip dan riwayat seluruh dokumen laporan proyek yang telah dibuat
                         </p>
                     </div>
                 </div>
 
-                {/* Filter Section */}
+                {/* Filter & Sort Section */}
                 <div className="bg-white/50 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/60 rounded-3xl p-4 shadow-sm space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                         <div className="relative">
@@ -741,29 +777,27 @@ export default function ReportsOverviewPage() {
                         />
 
                         <Select
-                            value={selectedStatus}
-                            onChange={(val) => setSelectedStatus(val)}
-                            placeholder="Select Status"
+                            value={sortBy}
+                            onChange={(val) => setSortBy(val as any)}
+                            placeholder="Urutkan"
                             options={[
-                                { value: "all", label: "All Statuses" },
-                                { value: "on-track", label: "On Track" },
-                                { value: "delayed", label: "Delayed" },
-                                { value: "critical", label: "Critical" },
-                                { value: "completed", label: "Completed" },
+                                { value: "date_desc", label: "Terbaru (Tanggal ↓)" },
+                                { value: "date_asc", label: "Terlama (Tanggal ↑)" },
+                                { value: "title_asc", label: "Judul (A - Z)" },
                             ]}
                         />
                     </div>
                 </div>
 
-                {/* Main Table Content */}
-                <div className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-3xl shadow-sm overflow-hidden">
+                {/* Main Table Content & Mobile Cards */}
+                <div className="bg-transparent md:bg-white dark:md:bg-neutral-900 border-none md:border md:border-neutral-100 dark:md:border-neutral-800 rounded-3xl shadow-none md:shadow-sm overflow-hidden">
                     {isLoading ? (
-                        <div className="p-16 flex flex-col items-center justify-center gap-3">
+                        <div className="p-16 flex flex-col items-center justify-center gap-3 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800">
                             <Loader2 className="w-8 h-8 animate-spin text-neutral-400" />
                             <span className="text-sm font-semibold text-neutral-500">Loading reports database...</span>
                         </div>
-                    ) : filteredReports.length === 0 ? (
-                        <div className="p-16 flex flex-col items-center justify-center text-center gap-3">
+                    ) : sortedReports.length === 0 ? (
+                        <div className="p-16 flex flex-col items-center justify-center text-center gap-3 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800">
                             <div className="bg-neutral-50 dark:bg-neutral-800 p-4 rounded-full">
                                 <FileText className="w-8 h-8 text-neutral-400" />
                             </div>
@@ -771,82 +805,164 @@ export default function ReportsOverviewPage() {
                             <p className="text-sm text-neutral-500 max-w-xs">No reports match your filters. Select a template above to generate a new report.</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-900/30">
-                                        <th className="p-4 pl-6">Report Title</th>
-                                        <th className="p-4">Project</th>
-                                        <th className="p-4">Type</th>
-                                        <th className="p-4">Date</th>
-                                        <th className="p-4 text-center">Progress</th>
-                                        <th className="p-4">Status</th>
-                                        <th className="p-4 pr-6 text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredReports.map((report) => (
-                                        <tr 
-                                            key={report.id}
-                                            className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/40 dark:hover:bg-neutral-900/20 transition-colors align-middle"
-                                        >
-                                            <td className="p-4 pl-6">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-extrabold text-neutral-800 dark:text-white">{report.title}</span>
-                                                    <span className="text-[10px] text-neutral-400 mt-0.5">ID: {report.id.substring(0, 8)}...</span>
-                                                </div>
-                                            </td>
-                                            <td className="p-4 text-sm font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-tight">
+                        <>
+                            {/* Mobile Card List View */}
+                            <div className="block md:hidden space-y-3">
+                                {sortedReports.map((report) => (
+                                    <div 
+                                        key={report.id}
+                                        className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-md border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl p-4 shadow-sm space-y-2.5"
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span 
+                                                onClick={() => handleEditClick(report)}
+                                                className="text-xs font-black text-neutral-900 dark:text-white uppercase truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                title="Buka Editor Laporan"
+                                            >
                                                 {report.projectName}
-                                            </td>
-                                            <td className="p-4 text-sm font-medium">
-                                                {getTypeBadge(report.reportType)}
-                                            </td>
-                                            <td className="p-4 text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                                            </span>
+                                            {getTypeBadge(report.reportType, report.reportCategory)}
+                                        </div>
+
+                                        <div 
+                                            onClick={() => handleEditClick(report)}
+                                            className="cursor-pointer"
+                                            title="Buka Editor Laporan"
+                                        >
+                                            <h4 className="text-sm font-extrabold text-neutral-900 dark:text-white leading-snug hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                                {report.title}
+                                            </h4>
+                                            <span className="text-[10px] font-mono text-neutral-400">ID: {report.id.substring(0, 8)}...</span>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-1">
+                                            <span className="text-xs font-semibold text-neutral-500">
                                                 {report.reportDate ? new Date(report.reportDate).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' }) : "-"}
-                                            </td>
-                                            <td className="p-4 text-center">
-                                                <span className="inline-block px-2.5 py-1 text-xs font-black rounded-full bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/20">
-                                                    {report.progress}%
-                                                </span>
-                                            </td>
-                                            <td className="p-4">
-                                                <span className={clsx(
-                                                    "inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border",
-                                                    getStatusStyle(report.status)
-                                                )}>
-                                                    {getStatusIcon(report.status)}
-                                                    <span>{report.status.replace("-", " ")}</span>
-                                                </span>
-                                            </td>
-                                            <td className="p-4 pr-6 text-right whitespace-nowrap">
-                                                <div className="flex items-center justify-end gap-1.5">
-                                                    <button 
-                                                        onClick={() => handleEditClick(report)}
-                                                        className="p-2 text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                                                        title="Edit Report"
-                                                    >
-                                                        <Edit3 className="w-4 h-4" />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleDelete(report.id)}
-                                                        className="p-2 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
-                                                        title="Delete Report"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            </span>
+
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => handleEditClick(report)}
+                                                    className="p-1.5 rounded-xl border border-neutral-200/80 dark:border-neutral-700/80 bg-white/80 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 shadow-2xs hover:bg-neutral-100"
+                                                    title="Edit Laporan"
+                                                >
+                                                    <Edit3 className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleExportClick(report)}
+                                                    className="p-1.5 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-2xs hover:bg-blue-100"
+                                                    title="Export PDF"
+                                                >
+                                                    <Download className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleReviseClick(report)}
+                                                    className="p-1.5 rounded-xl border border-purple-200 dark:border-purple-900/40 bg-purple-50/70 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 shadow-2xs hover:bg-purple-100"
+                                                    title="Buat Revisi Laporan"
+                                                >
+                                                    <RotateCcw className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(report.id)}
+                                                    className="p-1.5 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 shadow-2xs hover:bg-rose-100"
+                                                    title="Delete Report"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-900/30">
+                                            <th className="p-4 pl-6">Report Title</th>
+                                            <th className="p-4">Project</th>
+                                            <th className="p-4">Type</th>
+                                            <th className="p-4">Date</th>
+                                            <th className="p-4 pr-6 text-right">Actions</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody>
+                                        {sortedReports.map((report) => (
+                                            <tr 
+                                                key={report.id}
+                                                className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/40 dark:hover:bg-neutral-900/20 transition-colors align-middle"
+                                            >
+                                                <td className="p-4 pl-6">
+                                                    <div 
+                                                        onClick={() => handleEditClick(report)}
+                                                        className="flex flex-col cursor-pointer group/title"
+                                                        title="Buka Editor Laporan"
+                                                    >
+                                                        <span className="text-sm font-extrabold text-neutral-800 dark:text-white group-hover/title:text-blue-600 dark:group-hover/title:text-blue-400 transition-colors">{report.title}</span>
+                                                        <span className="text-[10px] text-neutral-400 mt-0.5">ID: {report.id.substring(0, 8)}...</span>
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <span 
+                                                        onClick={() => handleEditClick(report)}
+                                                        className="text-sm font-semibold text-neutral-600 dark:text-neutral-400 uppercase tracking-tight cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                                        title="Buka Editor Laporan"
+                                                    >
+                                                        {report.projectName}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 text-sm font-medium">
+                                                    {getTypeBadge(report.reportType, report.reportCategory)}
+                                                </td>
+                                                <td className="p-4 text-sm font-bold text-neutral-700 dark:text-neutral-300">
+                                                    {report.reportDate ? new Date(report.reportDate).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' }) : "-"}
+                                                </td>
+                                                <td className="p-4 pr-6 text-right whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <button
+                                                            onClick={() => handleEditClick(report)}
+                                                            className="p-2 rounded-xl border border-neutral-200/80 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-white transition-all shadow-2xs"
+                                                            title="Edit Report"
+                                                        >
+                                                            <Edit3 className="w-4 h-4" />
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => handleExportClick(report)}
+                                                            className="p-2 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all shadow-2xs"
+                                                            title="Export PDF"
+                                                        >
+                                                            <Download className="w-4 h-4" />
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => handleReviseClick(report)}
+                                                            className="p-2 rounded-xl border border-purple-200 dark:border-purple-900/40 bg-purple-50/70 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-all shadow-2xs"
+                                                            title="Buat Revisi Laporan"
+                                                        >
+                                                            <RotateCcw className="w-4 h-4" />
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => handleDelete(report.id)}
+                                                            className="p-2 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all shadow-2xs"
+                                                            title="Delete Report"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>
         </div>
     );
 }
-
 

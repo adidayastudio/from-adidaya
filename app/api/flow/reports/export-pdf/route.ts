@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         const pdfBuffer = await page.pdf({
             format: "A4",
             printBackground: true,
-            displayHeaderFooter: true,
+            displayHeaderFooter: false,
             headerTemplate: `<span style="font-size: 0px;"></span>`,
             footerTemplate: `
                 <div style="font-size: 7px; font-family: Arial, sans-serif; width: 100%; margin: 0 10mm; display: flex; justify-content: flex-end; align-items: center; color: #4b5563;">

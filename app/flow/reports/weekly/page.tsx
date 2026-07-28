@@ -14,12 +14,14 @@ import {
     Trash2, 
     Edit3,
     Download,
-    Copy,
+    RotateCcw,
     FileText,
     Briefcase,
     CheckCircle2,
     Clock,
-    AlertTriangle
+    AlertTriangle,
+    List,
+    FolderTree
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -50,10 +52,12 @@ export default function WeeklyReportsPage() {
     const [projects, setProjects] = useState<{ id: string; name: string; code: string }[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Filters
+    // Advanced Controls: Search, Project Filter, Status Filter, Sort & Grouping
     const [searchVal, setSearchVal] = useState("");
     const [selectedProject, setSelectedProject] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("");
+    const [sortBy, setSortBy] = useState<"date_desc" | "date_asc" | "title_asc" | "progress_desc">("date_desc");
+    const [groupBy, setGroupBy] = useState<"none" | "project">("none");
 
     const fetchDropdownProjects = async () => {
         try {
@@ -89,9 +93,12 @@ export default function WeeklyReportsPage() {
                     } catch (e) {}
                 }
 
-                const startDate = parsedContent.startDate ? new Date(parsedContent.startDate).toLocaleDateString("id-ID", { day: '2-digit', month: 'short' }) : "";
-                const endDate = parsedContent.endDate ? new Date(parsedContent.endDate).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' }) : "";
-                const periodeStr = startDate && endDate ? `${startDate} - ${endDate}` : r.report_date;
+                const reportDateObj = r.report_date ? new Date(r.report_date) : new Date();
+                const startDateObj = new Date(reportDateObj);
+                startDateObj.setDate(startDateObj.getDate() - 6);
+
+                const formatDateShort = (d: Date) => d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+                const periodeStr = `${formatDateShort(startDateObj)} - ${formatDateShort(reportDateObj)}`;
 
                 return {
                     id: r.id,
@@ -108,10 +115,10 @@ export default function WeeklyReportsPage() {
                     updatedAt: r.updated_at,
                     projectName: r.projects?.project_name || "Unknown Project",
                     projectCode: r.projects?.project_code || "",
-                    documentId: parsedContent.documentId || `LM-${(parsedContent.weekNumber || '01').padStart(2, '0')}-01`,
+                    documentId: parsedContent.documentId || "RWK-00-01",
                     revision: parsedContent.revision || "00",
-                    weekNumber: parsedContent.weekNumber || "01",
-                    periodeStr
+                    weekNumber: parsedContent.weekNumber || "1",
+                    periodeStr,
                 };
             });
 
@@ -158,7 +165,8 @@ export default function WeeklyReportsPage() {
     const filteredReports = reports.filter(r => {
         const matchesSearch = r.title.toLowerCase().includes(searchVal.toLowerCase()) || 
                               r.projectName.toLowerCase().includes(searchVal.toLowerCase()) ||
-                              r.documentId.toLowerCase().includes(searchVal.toLowerCase());
+                              r.documentId.toLowerCase().includes(searchVal.toLowerCase()) ||
+                              r.projectCode.toLowerCase().includes(searchVal.toLowerCase());
         
         const matchesProject = selectedProject === "" || selectedProject === "all" || r.projectId === selectedProject;
         const matchesStatus = selectedStatus === "" || selectedStatus === "all" || r.status === selectedStatus;
@@ -166,57 +174,170 @@ export default function WeeklyReportsPage() {
         return matchesSearch && matchesProject && matchesStatus;
     });
 
-    const totalReports = filteredReports.length;
-    const activeProjectsCount = new Set(filteredReports.map(r => r.projectId)).size;
-    const avgProgress = totalReports > 0 
-        ? Math.round(filteredReports.reduce((acc, curr) => acc + curr.progress, 0) / totalReports) 
-        : 0;
+    const sortedReports = [...filteredReports].sort((a, b) => {
+        if (sortBy === "date_asc") return a.reportDate.localeCompare(b.reportDate);
+        if (sortBy === "title_asc") return a.title.localeCompare(b.title);
+        if (sortBy === "progress_desc") return b.progress - a.progress;
+        return b.reportDate.localeCompare(a.reportDate);
+    });
+
+    const groupedProjectsMap = sortedReports.reduce((acc, report) => {
+        const key = report.projectName || "Tanpa Proyek";
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(report);
+        return acc;
+    }, {} as Record<string, MappedReport[]>);
 
     const getStatusStyle = (status: string) => {
         switch (status) {
-            case "on-track": return "bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30";
-            case "delayed": return "bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-100 dark:border-amber-900/30";
-            case "critical": return "bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 border-rose-100 dark:border-rose-900/30";
-            case "completed": return "bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-900/30";
-            default: return "bg-neutral-50 text-neutral-600 border-neutral-200";
+            case "on-track":
+                return "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800";
+            case "delayed":
+                return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800";
+            case "critical":
+                return "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800";
+            case "completed":
+                return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800";
+            default:
+                return "bg-neutral-50 text-neutral-600 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700";
         }
     };
+
+    const totalReports = reports.length;
+    const avgProgress = reports.length > 0 
+        ? Math.round(reports.reduce((acc, r) => acc + r.progress, 0) / reports.length) 
+        : 0;
+
+    const renderRow = (report: MappedReport) => (
+        <tr 
+            key={report.id}
+            className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30 transition-colors align-middle"
+        >
+            <td className="p-4 pl-6">
+                <div 
+                    onClick={() => handleEditClick(report)}
+                    className="flex flex-col cursor-pointer group/doc"
+                    title="Buka Editor Laporan"
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 bg-blue-900 text-white text-[9px] font-black rounded-md uppercase tracking-wider group-hover/doc:bg-blue-700 transition-colors">
+                            {report.documentId}
+                        </span>
+                        {report.revision && (
+                            <span className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-[9px] font-extrabold rounded">
+                                REV {report.revision}
+                            </span>
+                        )}
+                    </div>
+                    <span className="text-sm font-extrabold text-neutral-800 dark:text-white mt-1 group-hover/doc:text-blue-600 dark:group-hover/doc:text-blue-400 transition-colors">{report.title}</span>
+                </div>
+            </td>
+            <td className="p-4">
+                <div 
+                    onClick={() => handleEditClick(report)}
+                    className="flex items-center gap-2 cursor-pointer group/proj"
+                    title="Buka Editor Laporan"
+                >
+                    {report.projectCode ? (
+                        <span className="inline-flex items-center px-2 py-0.5 bg-neutral-200/80 dark:bg-neutral-800/80 border border-neutral-300/60 dark:border-neutral-700/60 text-neutral-700 dark:text-neutral-300 text-[10px] font-black uppercase rounded-md tracking-wider shadow-2xs shrink-0">
+                            {report.projectCode}
+                        </span>
+                    ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 text-[10px] font-black uppercase rounded-md shrink-0">
+                            PRJ
+                        </span>
+                    )}
+                    <span className="text-xs font-extrabold text-neutral-800 dark:text-neutral-200 uppercase truncate max-w-[150px] group-hover/proj:text-blue-600 dark:group-hover/proj:text-blue-400 transition-colors" title={report.projectName}>
+                        {report.projectName}
+                    </span>
+                </div>
+            </td>
+            <td className="p-4 whitespace-nowrap text-xs text-neutral-500 font-semibold">
+                {report.periodeStr}
+            </td>
+            <td className="p-4">
+                <div className="flex items-center gap-2">
+                    <div className="w-16 bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden">
+                        <div className="bg-blue-600 h-full rounded-full" style={{ width: `${Math.min(100, report.progress)}%` }} />
+                    </div>
+                    <span className="text-xs font-bold text-neutral-800 dark:text-white">{report.progress}%</span>
+                </div>
+            </td>
+            <td className="p-4">
+                <span className={clsx(
+                    "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border shadow-sm uppercase text-[10px]",
+                    getStatusStyle(report.status)
+                )}>
+                    <span>{report.status.replace("-", " ")}</span>
+                </span>
+            </td>
+            <td className="p-4 pr-6 text-right whitespace-nowrap">
+                <div className="flex items-center justify-end gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => handleEditClick(report)}
+                        className="p-2 rounded-xl border border-neutral-200/80 dark:border-neutral-700/80 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-white transition-all shadow-2xs"
+                        title="Edit Laporan"
+                    >
+                        <Edit3 className="w-4 h-4" />
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => handleExportClick(report)}
+                        className="p-2 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all shadow-2xs"
+                        title="Export PDF"
+                    >
+                        <Download className="w-4 h-4" />
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => handleReviseClick(report)}
+                        className="p-2 rounded-xl border border-purple-200 dark:border-purple-900/40 bg-purple-50/70 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition-all shadow-2xs"
+                        title="Buat Revisi Laporan"
+                    >
+                        <RotateCcw className="w-4 h-4" />
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => handleDelete(report.id)}
+                        className="p-2 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-all shadow-2xs"
+                        title="Hapus Laporan"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    );
 
     return (
         <div className="w-full space-y-6">
             <StandardPageHeader
-                title="Laporan Mingguan (Weekly / LM)"
+                title="Laporan Mingguan (Weekly)"
                 subtitle="Kelola laporan mingguan konstruksi, rekap progres fisik, cetak PDF, dan buat revisi."
                 action={
-                    <Button onClick={handleCreateClick} className="bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 text-white font-bold text-xs" icon={<Plus className="w-4 h-4" />}>
-                        + Laporan Mingguan Baru
+                    <Button onClick={handleCreateClick} className="bg-blue-600 hover:bg-blue-700 border-blue-600 hover:border-blue-700 text-white font-bold text-xs shadow-xs" icon={<Plus className="w-4 h-4" />}>
+                        Laporan Baru
                     </Button>
                 }
             />
 
-            {/* Weekly Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-5 shadow-sm flex items-center gap-4">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="bg-white/60 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/60 dark:border-neutral-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
                     <div className="bg-blue-500/10 p-3 rounded-2xl">
                         <FileText className="w-6 h-6 text-blue-500" />
                     </div>
                     <div>
-                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">Total Laporan LM</span>
+                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">Total Laporan</span>
                         <span className="text-2xl font-black text-neutral-900 dark:text-white leading-none">{totalReports}</span>
                     </div>
                 </div>
 
-                <div className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-5 shadow-sm flex items-center gap-4">
-                    <div className="bg-emerald-500/10 p-3 rounded-2xl">
-                        <Briefcase className="w-6 h-6 text-emerald-500" />
-                    </div>
-                    <div>
-                        <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest block">Proyek Aktif</span>
-                        <span className="text-2xl font-black text-neutral-900 dark:text-white leading-none">{activeProjectsCount}</span>
-                    </div>
-                </div>
-
-                <div className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-3xl p-5 shadow-sm flex items-center gap-4">
+                <div className="bg-white/60 dark:bg-neutral-900/50 backdrop-blur-sm border border-neutral-200/60 dark:border-neutral-800 p-5 rounded-3xl flex items-center gap-4 shadow-sm">
                     <div className="bg-purple-500/10 p-3 rounded-2xl">
                         <CheckCircle2 className="w-6 h-6 text-purple-500" />
                     </div>
@@ -227,8 +348,8 @@ export default function WeeklyReportsPage() {
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="bg-white/50 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/60 rounded-3xl p-4 shadow-sm flex flex-col md:flex-row gap-3">
+            {/* Advanced Control Toolbar: Filters, Sort & Grouping */}
+            <div className="bg-white/50 dark:bg-neutral-900/40 backdrop-blur-md border border-neutral-200/50 dark:border-neutral-800/60 rounded-3xl p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
                 <div className="relative flex-1">
                     <Input
                         placeholder="Cari judul laporan, proyek, atau nomor..."
@@ -239,116 +360,342 @@ export default function WeeklyReportsPage() {
                     <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-3" />
                 </div>
 
-                <Select
-                    value={selectedProject}
-                    onChange={(val) => setSelectedProject(val)}
-                    placeholder="Pilih Proyek"
-                    options={[
-                        { value: "all", label: "Semua Proyek" },
-                        ...projects.map(p => ({ value: p.id, label: p.code ? `[${p.code}] ${p.name}` : p.name }))
-                    ]}
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                    <Select
+                        value={selectedProject}
+                        onChange={(val) => setSelectedProject(val)}
+                        placeholder="Filter Proyek"
+                        options={[
+                            { value: "all", label: "Semua Proyek" },
+                            ...projects.map(p => ({ value: p.id, label: p.code ? `[${p.code}] ${p.name}` : p.name }))
+                        ]}
+                    />
 
-                <Select
-                    value={selectedStatus}
-                    onChange={(val) => setSelectedStatus(val)}
-                    placeholder="Pilih Status"
-                    options={[
-                        { value: "all", label: "Semua Status" },
-                        { value: "on-track", label: "On Track" },
-                        { value: "delayed", label: "Delayed" },
-                        { value: "critical", label: "Critical" },
-                        { value: "completed", label: "Completed" },
-                    ]}
-                />
+                    <Select
+                        value={selectedStatus}
+                        onChange={(val) => setSelectedStatus(val)}
+                        placeholder="Filter Status"
+                        options={[
+                            { value: "all", label: "Semua Status" },
+                            { value: "on-track", label: "On Track" },
+                            { value: "delayed", label: "Delayed" },
+                            { value: "critical", label: "Critical" },
+                            { value: "completed", label: "Completed" },
+                        ]}
+                    />
+
+                    <Select
+                        value={sortBy}
+                        onChange={(val) => setSortBy(val as any)}
+                        placeholder="Urutkan"
+                        options={[
+                            { value: "date_desc", label: "Terbaru (Tanggal ↓)" },
+                            { value: "date_asc", label: "Terlama (Tanggal ↑)" },
+                            { value: "title_asc", label: "Judul (A - Z)" },
+                            { value: "progress_desc", label: "Progres Tertinggi" },
+                        ]}
+                    />
+
+                    <div className="flex items-center bg-neutral-100 dark:bg-neutral-800/80 p-1 rounded-2xl border border-neutral-200/80 dark:border-neutral-700/60">
+                        <button
+                            type="button"
+                            onClick={() => setGroupBy("none")}
+                            title="Tampilan Tabel Flat"
+                            className={clsx(
+                                "p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer",
+                                groupBy === "none"
+                                    ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-2xs"
+                                    : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+                            )}
+                        >
+                            <List className="w-4 h-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setGroupBy("project")}
+                            title="Kelompokkan Berdasarkan Proyek"
+                            className={clsx(
+                                "p-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center cursor-pointer",
+                                groupBy === "project"
+                                    ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-2xs"
+                                    : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+                            )}
+                        >
+                            <FolderTree className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            {/* List */}
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 rounded-3xl shadow-sm overflow-hidden">
+            {/* List Table & Mobile Cards */}
+            <div className="bg-transparent md:bg-white dark:md:bg-neutral-900 border-none md:border md:border-neutral-100 dark:md:border-neutral-800 rounded-3xl shadow-none md:shadow-sm overflow-hidden">
                 {isLoading ? (
-                    <div className="p-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-neutral-400 animate-spin" /></div>
-                ) : filteredReports.length === 0 ? (
-                    <div className="p-16 flex flex-col items-center justify-center text-center gap-3">
+                    <div className="p-16 flex justify-center bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800"><Loader2 className="w-8 h-8 animate-spin text-neutral-400" /></div>
+                ) : sortedReports.length === 0 ? (
+                    <div className="p-16 flex flex-col items-center justify-center text-center gap-3 bg-white dark:bg-neutral-900 rounded-3xl border border-neutral-100 dark:border-neutral-800">
                         <FileText className="w-8 h-8 text-neutral-300" />
                         <span className="text-sm font-semibold text-neutral-500">Belum ada Laporan Mingguan yang dibuat.</span>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-900/30">
-                                    <th className="p-4 pl-6">Dokumen & Judul</th>
-                                    <th className="p-4">Proyek</th>
-                                    <th className="p-4">Periode</th>
-                                    <th className="p-4">Progres</th>
-                                    <th className="p-4">Status</th>
-                                    <th className="p-4 pr-6 text-right">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredReports.map((report) => (
-                                    <tr 
-                                        key={report.id}
-                                        className="border-b border-neutral-100 dark:border-neutral-800 hover:bg-neutral-50/40 dark:hover:bg-neutral-900/20 transition-colors align-middle"
-                                    >
-                                        <td className="p-4 pl-6">
-                                            <div className="flex flex-col">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="px-2 py-0.5 bg-blue-900 text-white text-[9px] font-black rounded-md uppercase tracking-wider">
-                                                        {report.documentId}
-                                                    </span>
-                                                    {report.revision && (
-                                                        <span className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 text-[9px] font-extrabold rounded">
-                                                            REV {report.revision}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <span className="text-sm font-extrabold text-neutral-800 dark:text-white mt-1">{report.title}</span>
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <span className="text-xs font-bold text-neutral-700 dark:text-neutral-300 uppercase block">{report.projectName}</span>
-                                        </td>
-                                        <td className="p-4 whitespace-nowrap text-xs text-neutral-500">
-                                            {report.periodeStr}
-                                        </td>
-                                        <td className="p-4">
+                    <>
+                        {/* Mobile Card List View */}
+                        <div className="block md:hidden space-y-3">
+                            {groupBy === "project" ? (
+                                Object.entries(groupedProjectsMap).map(([projName, projReports]) => (
+                                    <div key={projName} className="space-y-3">
+                                        <div className="flex items-center justify-between bg-white/70 dark:bg-neutral-900/70 backdrop-blur-md border border-neutral-200/60 dark:border-neutral-800/60 p-3 rounded-2xl shadow-2xs">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-16 bg-neutral-100 dark:bg-neutral-800 h-1.5 rounded-full overflow-hidden">
-                                                    <div className="bg-blue-600 h-full rounded-full" style={{ width: `${Math.min(100, report.progress)}%` }} />
-                                                </div>
-                                                <span className="text-xs font-bold text-neutral-800 dark:text-white">{report.progress}%</span>
+                                                <Briefcase className="w-4 h-4 text-neutral-500" />
+                                                <span className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white">
+                                                    {projName}
+                                                </span>
+                                                {projReports[0]?.projectCode && (
+                                                    <span className="px-2 py-0.5 bg-neutral-200/80 dark:bg-neutral-800/80 border border-neutral-300/60 dark:border-neutral-700/60 text-neutral-700 dark:text-neutral-300 text-[10px] font-black rounded-md uppercase tracking-wider shadow-2xs">
+                                                        {projReports[0].projectCode}
+                                                    </span>
+                                                )}
                                             </div>
-                                        </td>
-                                        <td className="p-4">
-                                            <span className={clsx(
-                                                "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border shadow-sm uppercase text-[10px]",
-                                                getStatusStyle(report.status)
-                                            )}>
-                                                <span>{report.status.replace("-", " ")}</span>
+                                            <span className="text-[10px] font-extrabold text-neutral-600 dark:text-neutral-400 px-2 py-0.5 bg-white/90 dark:bg-neutral-800/90 rounded-md border border-neutral-200/70 dark:border-neutral-700 shadow-2xs">
+                                                {projReports.length} Dokumen
                                             </span>
-                                        </td>
-                                        <td className="p-4 pr-6 text-right whitespace-nowrap">
-                                            <div className="flex items-center justify-end gap-1.5">
-                                                <button onClick={() => handleExportClick(report)} title="Cetak / Export PDF" className="p-2 text-neutral-500 hover:text-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors">
-                                                    <Download className="w-4 h-4" />
+                                        </div>
+                                        {projReports.map(report => (
+                                            <div 
+                                                key={report.id}
+                                                className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-md border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl p-4 shadow-sm space-y-2.5"
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div 
+                                                        onClick={() => handleEditClick(report)}
+                                                        className="flex items-center gap-2 cursor-pointer group/proj min-w-0"
+                                                        title="Buka Editor Laporan"
+                                                    >
+                                                        {report.projectCode ? (
+                                                            <span className="inline-flex items-center px-2 py-0.5 bg-neutral-200/80 dark:bg-neutral-800/80 border border-neutral-300/60 dark:border-neutral-700/60 text-neutral-700 dark:text-neutral-300 text-[10px] font-black uppercase rounded-md tracking-wider shadow-2xs shrink-0">
+                                                                {report.projectCode}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 text-[10px] font-black uppercase rounded-md shrink-0">
+                                                                PRJ
+                                                            </span>
+                                                        )}
+                                                        <span className="text-xs font-black text-neutral-900 dark:text-white uppercase truncate group-hover/proj:text-blue-600 dark:group-hover/proj:text-blue-400 transition-colors">
+                                                            {report.projectName}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                                                            {report.documentId}
+                                                        </span>
+                                                        {report.revision && (
+                                                            <span className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 text-[10px] font-black uppercase rounded">
+                                                                REV {report.revision}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div 
+                                                    onClick={() => handleEditClick(report)}
+                                                    className="cursor-pointer"
+                                                    title="Buka Editor Laporan"
+                                                >
+                                                    <h4 className="text-sm font-extrabold text-neutral-900 dark:text-white leading-snug hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                                        {report.title}
+                                                    </h4>
+                                                    <p className="text-xs font-semibold text-neutral-500 mt-0.5">
+                                                        Periode: {report.periodeStr}
+                                                    </p>
+                                                </div>
+
+                                                <div className="flex items-center justify-between pt-1">
+                                                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                                                        Progres: {report.progress}%
+                                                    </span>
+
+                                                    <div className="flex items-center gap-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleEditClick(report)}
+                                                            className="p-1.5 rounded-xl border border-neutral-200/80 dark:border-neutral-700/80 bg-white/80 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 shadow-2xs hover:bg-neutral-100"
+                                                            title="Edit Laporan"
+                                                        >
+                                                            <Edit3 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleExportClick(report)}
+                                                            className="p-1.5 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-2xs hover:bg-blue-100"
+                                                            title="Export PDF"
+                                                        >
+                                                            <Download className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleReviseClick(report)}
+                                                            className="p-1.5 rounded-xl border border-purple-200 dark:border-purple-900/40 bg-purple-50/70 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 shadow-2xs hover:bg-purple-100"
+                                                            title="Buat Revisi Laporan"
+                                                        >
+                                                            <RotateCcw className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDelete(report.id)}
+                                                            className="p-1.5 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 shadow-2xs hover:bg-rose-100"
+                                                            title="Hapus Laporan"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))
+                            ) : (
+                                sortedReports.map(report => (
+                                    <div 
+                                        key={report.id}
+                                        className="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-md border border-neutral-200/60 dark:border-neutral-800/60 rounded-2xl p-4 shadow-sm space-y-2.5"
+                                    >
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div 
+                                                onClick={() => handleEditClick(report)}
+                                                className="flex items-center gap-2 cursor-pointer group/proj min-w-0"
+                                                title="Buka Editor Laporan"
+                                            >
+                                                {report.projectCode ? (
+                                                    <span className="inline-flex items-center px-2 py-0.5 bg-neutral-200/80 dark:bg-neutral-800/80 border border-neutral-300/60 dark:border-neutral-700/60 text-neutral-700 dark:text-neutral-300 text-[10px] font-black uppercase rounded-md tracking-wider shadow-2xs shrink-0">
+                                                        {report.projectCode}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-500 text-[10px] font-black uppercase rounded-md shrink-0">
+                                                        PRJ
+                                                    </span>
+                                                )}
+                                                <span className="text-xs font-black text-neutral-900 dark:text-white uppercase truncate group-hover/proj:text-blue-600 dark:group-hover/proj:text-blue-400 transition-colors">
+                                                    {report.projectName}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                <span className="text-xs font-bold text-neutral-900 dark:text-white">
+                                                    {report.documentId}
+                                                </span>
+                                                {report.revision && (
+                                                    <span className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 text-[10px] font-black uppercase rounded">
+                                                        REV {report.revision}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div 
+                                            onClick={() => handleEditClick(report)}
+                                            className="cursor-pointer"
+                                            title="Buka Editor Laporan"
+                                        >
+                                            <h4 className="text-sm font-extrabold text-neutral-900 dark:text-white leading-snug hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                                {report.title}
+                                            </h4>
+                                            <p className="text-xs font-semibold text-neutral-500 mt-0.5">
+                                                Periode: {report.periodeStr}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-1">
+                                            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                                                Progres: {report.progress}%
+                                            </span>
+
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEditClick(report)}
+                                                    className="p-1.5 rounded-xl border border-neutral-200/80 dark:border-neutral-700/80 bg-white/80 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 shadow-2xs hover:bg-neutral-100"
+                                                    title="Edit Laporan"
+                                                >
+                                                    <Edit3 className="w-3.5 h-3.5" />
                                                 </button>
-                                                <button onClick={() => handleReviseClick(report)} title="Buat Revisi (Duplicate with REV+1)" className="p-2 text-neutral-500 hover:text-purple-600 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors">
-                                                    <Copy className="w-4 h-4" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleExportClick(report)}
+                                                    className="p-1.5 rounded-xl border border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 shadow-2xs hover:bg-blue-100"
+                                                    title="Export PDF"
+                                                >
+                                                    <Download className="w-3.5 h-3.5" />
                                                 </button>
-                                                <button onClick={() => handleEditClick(report)} title="Edit Laporan" className="p-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-                                                    <Edit3 className="w-4 h-4" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleReviseClick(report)}
+                                                    className="p-1.5 rounded-xl border border-purple-200 dark:border-purple-900/40 bg-purple-50/70 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 shadow-2xs hover:bg-purple-100"
+                                                    title="Buat Revisi Laporan"
+                                                >
+                                                    <RotateCcw className="w-3.5 h-3.5" />
                                                 </button>
-                                                <button onClick={() => handleDelete(report.id)} title="Hapus Laporan" className="p-2 text-neutral-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
-                                                    <Trash2 className="w-4 h-4" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDelete(report.id)}
+                                                    className="p-1.5 rounded-xl border border-rose-200 dark:border-rose-900/40 bg-rose-50/70 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 shadow-2xs hover:bg-rose-100"
+                                                    title="Hapus Laporan"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
-                                        </td>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-neutral-100 dark:border-neutral-800 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-900/30">
+                                        <th className="p-4 pl-6">Dokumen & Judul</th>
+                                        <th className="p-4">Proyek</th>
+                                        <th className="p-4">Periode</th>
+                                        <th className="p-4">Progres</th>
+                                        <th className="p-4">Status</th>
+                                        <th className="p-4 pr-6 text-right">Aksi</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {groupBy === "project" ? (
+                                        Object.entries(groupedProjectsMap).map(([projName, projReports]) => (
+                                            <React.Fragment key={projName}>
+                                                <tr className="bg-neutral-100/70 dark:bg-neutral-800/60 border-y border-neutral-200/80 dark:border-neutral-700/80">
+                                                    <td colSpan={6} className="py-2.5 px-6">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                <Briefcase className="w-4 h-4 text-neutral-500" />
+                                                                <span className="text-xs font-black uppercase tracking-wider text-neutral-900 dark:text-white">
+                                                                    {projName}
+                                                                </span>
+                                                                {projReports[0]?.projectCode && (
+                                                                    <span className="px-2 py-0.5 bg-neutral-200/80 dark:bg-neutral-800/80 border border-neutral-300/60 dark:border-neutral-700/60 text-neutral-700 dark:text-neutral-300 text-[10px] font-black rounded-md uppercase tracking-wider shadow-2xs">
+                                                                        {projReports[0].projectCode}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-[10px] font-extrabold text-neutral-600 dark:text-neutral-400 px-2 py-0.5 bg-white dark:bg-neutral-900 rounded-md border border-neutral-200/70 dark:border-neutral-800 shadow-2xs">
+                                                                {projReports.length} Dokumen
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                {projReports.map(report => renderRow(report))}
+                                            </React.Fragment>
+                                        ))
+                                    ) : (
+                                        sortedReports.map(report => renderRow(report))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
         </div>

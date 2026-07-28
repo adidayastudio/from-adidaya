@@ -1,5 +1,28 @@
 "use client";
 
+// MOM Preview helper functions
+const getPresenceColor = (presence?: string) => {
+    const val = (presence || "").toLowerCase();
+    if (val.includes("absen") || val.includes("absent")) return "text-rose-600 dark:text-rose-400";
+    if (val.includes("diwakilkan") || val.includes("proxy") || val.includes("represented")) return "text-purple-600 dark:text-purple-400";
+    return "text-emerald-600 dark:text-emerald-400";
+};
+
+const getStatusColor = (status?: string) => {
+    const val = (status || "").toLowerCase();
+    if (val.includes("progress")) return "text-blue-600 dark:text-blue-400";
+    if (val.includes("closed")) return "text-emerald-600 dark:text-emerald-400";
+    return "text-neutral-400 dark:text-neutral-500";
+};
+
+const getPriorityColor = (priority?: string) => {
+    const val = (priority || "").toLowerCase();
+    if (val.includes("urgent")) return "text-rose-600 dark:text-rose-400 font-extrabold";
+    if (val.includes("high")) return "text-orange-500 dark:text-orange-400 font-bold";
+    if (val.includes("medium")) return "text-blue-500 dark:text-blue-400 font-bold";
+    return "text-neutral-400 dark:text-neutral-500 font-normal";
+};
+
 import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -1067,6 +1090,391 @@ function EditorContentComponent() {
         { type: "disetujui", name: "", role: "Chief Executive Officer (CEO)" },
     ]);
 
+    // --- CLUSTER 5: SITE OPERATIONS & COMMUNICATION STATES ---
+
+    // 17. SUR — SITE SURVEY & ASSESSMENT
+    const [surActiveTab, setSurActiveTab] = useState<"setup" | "sur_bm" | "sur_measurements" | "sur_constraints" | "sur_deliverables">("setup");
+    const [surLangMode, setSurLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
+    const [surScope, setSurScope] = useState<{
+        purpose: string; area: string; method: string; equipment: string; team: string;
+    }>({
+        purpose: "Survei Topografi & Batas Lahan Eksisting / Topographical & Boundary Survey",
+        area: "Zona A & B Site utama proyek (Luas 15.000 m²)",
+        method: "GPS RTK GNSS & Total Station Photogrammetry Drone",
+        equipment: "Hi-Target V200 GNSS RTK, Leica TS07 Total Station, DJI Mavic 3 Enterprise",
+        team: "Ir. Hendra (Team Leader), Budi (Surveyor), Eko (Cad Drafter)"
+    });
+    const [surBMs, setSurBMs] = useState<{
+        code: string; x: string; y: string; elevation: string; datum: string; verification: string;
+    }[]>([
+        { code: "BM-01", x: "712450.125", y: "9245100.850", elevation: "+15.250 m", datum: "WGS84 / EGM96", verification: "Verifikasi BPN & Pilar Beton" },
+        { code: "BM-02", x: "712580.400", y: "9245190.310", elevation: "+15.820 m", datum: "WGS84 / EGM96", verification: "Verifikasi BPN & Pilar Beton" }
+    ]);
+    const [surMeasurements, setSurMeasurements] = useState<{
+        pointId: string; x: string; y: string; z: string; condition: string; tolerance: string; status: string;
+    }[]>([
+        { pointId: "P-101", x: "712455.50", y: "9245105.20", z: "+15.280 m", condition: "Lahan Rawa Tergenang Air", tolerance: "±5 mm", status: "Pass" },
+        { pointId: "P-102", x: "712460.10", y: "9245112.80", z: "+15.310 m", condition: "Area Tanah Keras", tolerance: "±5 mm", status: "Pass" }
+    ]);
+    const [surConstraints, setSurConstraints] = useState<{
+        conflict: string; utility: string; access: string; limitation: string;
+    }>({
+        conflict: "Overlap batas lahan 0.5m di sisi timur dengan warga",
+        utility: "Kabel Fiber Optic Telkom & Pipa Air PDAM eksisting dia. 6 inch",
+        access: "Jalan masuk darurat sempit (Lebar 3.5m, butuh perkerasan)",
+        limitation: "Kondisi tanah lunak rawa di sisi selatan butuh perlakuan khusus"
+    });
+    const [surDeliverables, setSurDeliverables] = useState<{
+        designImplications: string; requiredAction: string; surveyDrawingNo: string; dataOutput: string;
+    }>({
+        designImplications: "Peninggian pelevelan tanah dasar (Cut & Fill) rata-rata +0.50m",
+        requiredAction: "Relokasi jalur pipa PDAM & Land Clearing area rawa",
+        surveyDrawingNo: "DWG-SUR-2026-001 Rev A",
+        dataOutput: "Raw Point Cloud (.LAS), Kontur Topografi (.DXF), CSV Coordinates"
+    });
+    const [surApprovals, setSurApprovals] = useState<{
+        type: "disusun" | "dicek" | "mengetahui" | "disetujui"; name: string; role: string;
+    }[]>([
+        { type: "disusun", name: "", role: "Chief Surveyor / Geodetic Engineer" },
+        { type: "dicek", name: "", role: "Site Engineer / MK" },
+        { type: "disetujui", name: "", role: "Project Manager" }
+    ]);
+
+    // 18. MOM — MINUTES OF MEETING
+    const [momActiveTab, setMomActiveTab] = useState<"setup" | "mom_discussion" | "mom_decisions" | "mom_actions" | "mom_prev_actions">("setup");
+    const [momLangMode, setMomLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
+    const [momDetails, setMomDetails] = useState<{
+        agenda: string; date: string; location: string; meetingType: string;
+        startTime: string; endTime: string;
+    }>({
+        agenda: "Rapat Koordinasi Mingguan Progres & Review Technical Issues",
+        date: new Date().toISOString().split('T')[0],
+        location: "Meeting Room Site Office & Hybrid Zoom Platform",
+        meetingType: "Weekly Progress & Technical Alignment",
+        startTime: "09:00",
+        endTime: "11:00"
+    });
+    const [momParticipants, setMomParticipants] = useState<{
+        name: string; company: string; position: string; presence: string;
+    }[]>([
+        { name: "Ir. Ahmad Subagyo", company: "PT Adidaya Studio", position: "Project Manager", presence: "Hadir / Present" },
+        { name: "Doni Prasetyo, ST", company: "PT Cipta Konsultan MK", position: "Team Leader MK", presence: "Hadir / Present" },
+        { name: "Hendra Wijaya", company: "PT Utama Subkon", position: "Site Manager", presence: "Hadir / Present" }
+    ]);
+    const [momDiscussions, setMomDiscussions] = useState<{
+        topic: string; discussion: string; reference: string; concern: string;
+    }[]>([
+        { topic: "Perubahan Metode Pengecoran Pier 3", discussion: "Disetujui penggunaan beton cepat kering K-500 dengan admixture retarder", reference: "RFI-CIV-042 & Shop Drawing ST-03", concern: "Potensi kenaikan biaya unit beton Rp 85.000/m3" },
+        { topic: "Progress Pengadaan Material MEP", discussion: "Vendor Chiller mengonfirmasi shipment tiba di port tanggal 15 Agustus", reference: "PO-MEP-008", concern: "Kesiapan ruang AHU sebelum unit tiba" }
+    ]);
+    const [momDecisions, setMomDecisions] = useState<{
+        decision: string; direction: string; authority: string;
+    }[]>([
+        { decision: "Menyetujui revisi spesifikasi beton K-500 Pier 3", direction: "Segera terbitkan Variation Order (VO-003)", authority: "Owner / Client Representative" },
+        { decision: "Penambahan shift kerja malam untuk pembesian Zona B", direction: "K3 memastikan pencahayaan min. 200 Lux di site", authority: "Project Manager / MK" }
+    ]);
+    const [momActions, setMomActions] = useState<{
+        action: string; pic: string; dueDate: string; priority: string; status: string;
+    }[]>([
+        { action: "Submit Shop Drawing Pondasi Pier 3 Revised", pic: "Ir. Hendra (Structural Lead)", dueDate: "2026-08-03", priority: "High", status: "In Progress" },
+        { action: "Pembersihan & Prep Ruang AHU Lantai 2", pic: "Pak Budi (MEP Subcon)", dueDate: "2026-08-10", priority: "Medium", status: "Open" }
+    ]);
+    const [momPrevActions, setMomPrevActions] = useState<{
+        previousItem: string; currentStatus: string; carryOver: string; closure: string;
+    }[]>([
+        { previousItem: "Pembersihan Lahan Zona B & Cut-Fill", currentStatus: "Selesai 100%", carryOver: "Tidak", closure: "Closed" }
+    ]);
+    const [momApprovals, setMomApprovals] = useState<{
+        type: "disusun" | "dicek" | "mengetahui" | "disetujui"; name: string; role: string;
+    }[]>([
+        { type: "disusun", name: "", role: "Notulis / Project Secretary" },
+        { type: "dicek", name: "", role: "Lead Engineer / MK" },
+        { type: "disetujui", name: "", role: "Project Manager" }
+    ]);
+
+    // 19. NOT — FIELD NOTICE & MEMO
+    const [notActiveTab, setNotActiveTab] = useState<"setup" | "not_observation" | "not_required_action" | "not_response" | "not_closure">("setup");
+    const [notLangMode, setNotLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
+    const [notIdentity, setNotIdentity] = useState<{
+        recipient: string; subject: string; relatedContract: string; relatedRef: string; classification: string;
+    }>({
+        recipient: "PT Utama Subkon Structure",
+        subject: "Instruksi Perbaikan Pekerjaan Bekisting & Pembesian Balok B-12",
+        relatedContract: "SPK-003/ADIDAYA/CIV/2026",
+        relatedRef: "RFI-CIV-088 & Drawing ST-B12",
+        classification: "Site Instruction / Notice of Defect"
+    });
+    const [notObservations, setNotObservations] = useState<{
+        existingCondition: string; violation: string; instruction: string; requiredStandard: string;
+    }>({
+        existingCondition: "Jarak sengkang pembesian balok B-12 terpasang 200mm di area tumpuan",
+        violation: "Ketidaksesuaian dengan gambar kerja yang mensyaratkan jarak sengkang 100mm",
+        instruction: "Bongkar ulang bekisting sisi kanan & tambahkan sengkang D10-100mm sesuai detail ST-B12",
+        requiredStandard: "SNI 2847:2019 Persyaratan Beton Struktural & Spesifikasi Teknis Pasal 4.2"
+    });
+    const [notRequiredActions, setNotRequiredActions] = useState<{
+        correctiveWork: string; responsibleParty: string; deadline: string; workRestriction: string;
+    }>({
+        correctiveWork: "Penambahan sengkang balok B-12 & inspeksi ulang bersama MK sebelum pengecoran",
+        responsibleParty: "Mandor Pembesian (Pak Yudi) / Subkon Structure",
+        deadline: "2026-08-01 (Sebelum Pengecoran Jam 14.00)",
+        workRestriction: "Hold Point: Dilarang melakukan pengecoran beton sebelum NCR/Notice diklasifikasikan Closed"
+    });
+    const [notResponses, setNotResponses] = useState<{
+        contractorResponse: string; proposedAction: string; commitmentDate: string;
+    }>({
+        contractorResponse: "Menerima notice & instruksi lapangan. Kesalahan terjadi karena kelalaian tukang.",
+        proposedAction: "Mobilisasi tim pembesian tambahan untuk perbaikan sengkang B-12 jam 08.00 WIB",
+        commitmentDate: "2026-08-01 Pukul 11.00 WIB Siap Inspeksi Ulang"
+    });
+    const [notClosure, setNotClosure] = useState<{
+        siteVerification: string; complianceResult: string; closureStatus: string; closureDate: string;
+    }>({
+        siteVerification: "Inspeksi ulang tanggal 01 Aug jam 11.30 WIB: Sengkang D10-100mm terpasang rapi & sesuai gambar",
+        complianceResult: "Complied / Sesuai Spesifikasi Teknis",
+        closureStatus: "Closed",
+        closureDate: "2026-08-01"
+    });
+    const [notApprovals, setNotApprovals] = useState<{
+        type: "disusun" | "dicek" | "mengetahui" | "disetujui"; name: string; role: string;
+    }[]>([
+        { type: "disusun", name: "", role: "Field Inspector / QAQC Engineer" },
+        { type: "dicek", name: "", role: "Site Engineer MK" },
+        { type: "disetujui", name: "", role: "Site Manager" }
+    ]);
+
+    // 20. PCH — PUNCH LIST & HANDOVER
+    const [pchActiveTab, setPchActiveTab] = useState<"setup" | "pch_items" | "pch_repairs" | "pch_verification" | "pch_closeout">("setup");
+    const [pchLangMode, setPchLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
+    const [pchScope, setPchScope] = useState<{
+        areaSystem: string; inspectionStage: string; handoverPackage: string; inspectionTeam: string;
+    }>({
+        areaSystem: "Gedung Utama Lantai 1 & 2 (Area Arsitektur & MEP)",
+        inspectionStage: "Pre-Handover / Inspection PHO (BAST 1)",
+        handoverPackage: "Package A-01 (Sipil, Arsitektur, Plumbing & Elektrikal)",
+        inspectionTeam: "Tim Gabungan Owner, Konsultan MK, Main Contractor & Subkon Finishing"
+    });
+    const [pchItems, setPchItems] = useState<{
+        roomArea: string; defect: string; category: string; severity: string; responsibleParty: string;
+    }[]>([
+        { roomArea: "Lantai 1 — Room 102 (Office)", defect: "Cat dinding mengelupas di sudut timur & kusen jendela bergores", category: "Architectural", severity: "Minor", responsibleParty: "CV Cat Indah" },
+        { roomArea: "Lantai 2 — Koridor Utama", defect: "Armatur lampu Downlight LED 14W padam 2 unit", category: "MEP / Electrical", severity: "Minor", responsibleParty: "PT Elek Cipta" }
+    ]);
+    const [pchRepairs, setPchRepairs] = useState<{
+        repairMethod: string; targetDate: string; actualCompletion: string; evidence: string;
+    }[]>([
+        { repairMethod: "Pengecatan ulang 2 lapis & amplas kusen aluminium", targetDate: "2026-08-04", actualCompletion: "2026-08-03", evidence: "FOTO-REPAIR-102.JPG" },
+        { repairMethod: "Penggantian driver LED & lampu Downlight baru", targetDate: "2026-08-02", actualCompletion: "2026-08-02", evidence: "FOTO-REPAIR-LED.JPG" }
+    ]);
+    const [pchVerifications, setPchVerifications] = useState<{
+        reinspectionDate: string; passFail: string; outstandingItem: string; verifiedBy: string;
+    }[]>([
+        { reinspectionDate: "2026-08-04", passFail: "Pass", outstandingItem: "Nihil / Zero Defect Remaining", verifiedBy: "Ir. Doni (Inspector MK)" }
+    ]);
+    const [pchCloseout, setPchCloseout] = useState<{
+        handoverStatus: string; exceptions: string; warrantyStart: string; bastReference: string;
+    }>({
+        handoverStatus: "Disetujui Penuh / Fully Approved",
+        exceptions: "Pekerjaan garansi pemeliharaan berlaku untuk seluruh item defect yang diperbaiki",
+        warrantyStart: "05 Agustus 2026 (Masa Pemeliharaan 180 Hari)",
+        bastReference: "BAST-01/ADIDAYA-CIPTA/2026"
+    });
+    const [pchApprovals, setPchApprovals] = useState<{
+        type: "disusun" | "dicek" | "mengetahui" | "disetujui"; name: string; role: string;
+    }[]>([
+        { type: "disusun", name: "", role: "QAQC Engineer" },
+        { type: "dicek", name: "", role: "Chief Inspector MK" },
+        { type: "disetujui", name: "", role: "Project Director / Client Representative" }
+    ]);
+
+    // 21. COM — COMMISSIONING & TESTING
+    const [comActiveTab, setComActiveTab] = useState<"setup" | "com_precom" | "com_functional" | "com_failures" | "com_certification">("setup");
+    const [comLangMode, setComLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
+    const [comPlan, setComPlan] = useState<{
+        system: string; equipment: string; methodStatement: string; testStandard: string; prerequisites: string;
+    }>({
+        system: "Sistem Proteksi Kebakaran (Fire Hydrant & Sprinkler)",
+        equipment: "Jockey Pump, Electric Main Pump 750 GPM, Diesel Backup Pump",
+        methodStatement: "MS-MEP-COM-004 Testing & Commissioning Hydrant",
+        testStandard: "NFPA 20 (Standard for Fire Pumps) & SNI 03-1745-2000",
+        prerequisites: "Pipe Hydrotest 15 Bar Passed, Power Energized, Reservoir Full Water"
+    });
+    const [comPreCom, setComPreCom] = useState<{
+        installationCheck: string; calibration: string; flushingCleaning: string; energisationReadiness: string;
+    }>({
+        installationCheck: "Inspeksi Visual & Kelengkapan Valve / Gauge Sesuai Single Line Diagram",
+        calibration: "Pressure Gauge & Flow Meter Memiliki Sertifikat Kalibrasi Valid KAN",
+        flushingCleaning: "Flushing Pipa Hydrant Selesai (Water Cleanliness Verified)",
+        energisationReadiness: "Panel Utama Hydrant Power ON & Interlock System Active"
+    });
+    const [comFunctionalTests, setComFunctionalTests] = useState<{
+        parameter: string; target: string; actual: string; tolerance: string; passFail: string;
+    }[]>([
+        { parameter: "Tekanan Kerja Utama Main Pump", target: "10.0 Bar", actual: "10.2 Bar", tolerance: "±0.5 Bar", passFail: "Pass" },
+        { parameter: "Debit Aliran Air (Flow Rate)", target: "750 GPM", actual: "765 GPM", tolerance: "±5%", passFail: "Pass" },
+        { parameter: "Auto Start Jockey Pump saat pressure drop", target: "8.5 Bar", actual: "8.4 Bar", tolerance: "±0.2 Bar", passFail: "Pass" }
+    ]);
+    const [comFailures, setComFailures] = useState<{
+        failure: string; rootCause: string; correctiveAction: string; retestDate: string;
+    }[]>([
+        { failure: "Pressure Switch Diesel Backup Pump terlambat respons 4 detik", rootCause: "Pengaturan pressure setting switch terlalu tinggi", correctiveAction: "Kalibrasi ulang spring setting pressure switch oleh teknisi vendor", retestDate: "2026-08-02" }
+    ]);
+    const [comCertification, setComCertification] = useState<{
+        finalResult: string; certificate: string; training: string; omManual: string; acceptedBy: string;
+    }>({
+        finalResult: "PASSED / Lolos Komisioning & Pengujian",
+        certificate: "CERT-COM-HYD-2026-012",
+        training: "Pelatihan Operator Building Management Selesai (5 Peserta)",
+        omManual: "Dokumen O&M Manual Hardcopy & Softcopy Terverifikasi",
+        acceptedBy: "Dinas Pemadam Kebakaran / Client Maintenance Team"
+    });
+    const [comApprovals, setComApprovals] = useState<{
+        type: "disusun" | "dicek" | "mengetahui" | "disetujui"; name: string; role: string;
+    }[]>([
+        { type: "disusun", name: "", role: "Commissioning Engineer / Specialist" },
+        { type: "dicek", name: "", role: "Lead MEP Engineer MK" },
+        { type: "disetujui", name: "", role: "Building Management Lead / Client" }
+    ]);
+
+    // 22. ENV — ENVIRONMENTAL REPORT
+    const [envActiveTab, setEnvActiveTab] = useState<"setup" | "env_monitoring" | "env_controls" | "env_incidents" | "env_compliance">("setup");
+    const [envLangMode, setEnvLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
+    const [envAspects, setEnvAspects] = useState<{
+        activity: string; aspect: string; potentialImpact: string; applicableRequirement: string;
+    }[]>([
+        { activity: "Pekerjaan Galian & Transportasi Tanah", aspect: "Ceceran Tanah & Debu Jalan", potentialImpact: "Polusi Udara & Gangguan Pernapasan Warga", applicableRequirement: "AMDAL / PERMEN LHK No. 14 Tahun 2020" },
+        { activity: "Operasi Alat Berat & Pengecoran", aspect: "Bising Engine & Emisi Gas Buang", potentialImpact: "Peningkatan Tingkat Kebisingan Lingkungan", applicableRequirement: "Kepmen LH No. 48/1996 Baku Tingkat Kebisingan" }
+    ]);
+    const [envMonitoring, setEnvMonitoring] = useState<{
+        noise: string; dust: string; water: string; waste: string; measurementResult: string;
+    }>({
+        noise: "62.5 dB(A) — Di bawah Baku Mutu (Limit Max 70 dB)",
+        dust: "115 µg/Nm³ TSP — Di bawah Baku Mutu (Limit Max 230 µg/Nm³)",
+        water: "pH 7.2 | TSS 42 mg/L — Effluent Pit Sesuai Standar",
+        waste: "Limbah B3: 120 kg (Oli Bekas/Majun) | Non-B3: 4.5 Ton Sisa Kayu/Beton",
+        measurementResult: "Seluruh Hasil Pengukuran Memenuhi Baku Mutu Lingkungan"
+    });
+    const [envControls, setEnvControls] = useState<{
+        mitigation: string; wasteSegregation: string; disposal: string; housekeeping: string;
+    }>({
+        mitigation: "Penyiraman jalan akses 4x sehari & pemasangan paranet penahan debu 4m",
+        wasteSegregation: "Pemisahan TPS 3 Warna (Organik, Anorganik, Limbah B3)",
+        disposal: "Pengangkutan limbah B3 oleh PT Wasteco Berizin MenLH",
+        housekeeping: "Pembersihan rutin sedimen drainase site & bak kontrol oli"
+    });
+    const [envIncidents, setEnvIncidents] = useState<{
+        complaintSource: string; environmentalIncident: string; investigation: string; response: string;
+    }[]>([
+        { complaintSource: "Warga RT 03 / Local Resident", environmentalIncident: "Debu beterbangan saat truk melintas", investigation: "Truk tanah tidak menutup terpal dengan rapat", response: "Teguran keras kepada driver & kewajiban terpal 100% rapat" }
+    ]);
+    const [envCompliance, setEnvCompliance] = useState<{
+        limit: string; result: string; noncompliance: string; correctiveAction: string; closure: string;
+    }>({
+        limit: "PERMEN LHK & dokumen UKL-UPL Proyek",
+        result: "Compliance Rate 98.2%",
+        noncompliance: "1 Temuan Minor (Tutup tempat sampah B3 terbuka)",
+        correctiveAction: "Pemasangan kuncian otomatis pada drum TPS B3",
+        closure: "Closed / Selesai Verifikasi 28 Juli 2026"
+    });
+    const [envApprovals, setEnvApprovals] = useState<{
+        type: "disusun" | "dicek" | "mengetahui" | "disetujui"; name: string; role: string;
+    }[]>([
+        { type: "disusun", name: "", role: "HSE & Environmental Officer" },
+        { type: "dicek", name: "", role: "HSE Manager" },
+        { type: "disetujui", name: "", role: "Site Manager" }
+    ]);
+
+    // 23. PPL — PEOPLE REGISTER
+    const [pplActiveTab, setPplActiveTab] = useState<"setup" | "ppl_personnel" | "ppl_competency" | "ppl_assignment" | "ppl_emergency">("setup");
+    const [pplLangMode, setPplLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
+    const [pplMaskSensitiveInPdf, setPplMaskSensitiveInPdf] = useState<boolean>(true);
+    const [pplOrg, setPplOrg] = useState<{
+        company: string; team: string; reportingLine: string; position: string;
+    }>({
+        company: "PT Adidaya Konstruksi Utama",
+        team: "Project Engineering & Construction Operations",
+        reportingLine: "Project Director -> Project Manager -> Site Engineer",
+        position: "Manajemen Site & Tim Pelaksana Proyek"
+    });
+    const [pplPersonnel, setPplPersonnel] = useState<{
+        empId: string; name: string; role: string; employer: string; contact: string;
+    }[]>([
+        { empId: "EMP-001", name: "Ir. Budi Santoso", role: "Site Engineer Structure", employer: "PT Adidaya", contact: "0812-3456-7890" },
+        { empId: "EMP-002", name: "Ahmad Rivaldi, ST", role: "HSE Coordinator", employer: "PT Adidaya", contact: "0813-9876-5432" },
+        { empId: "EMP-003", name: "Siti Rahma, A.Md", role: "Doc Control & Admin", employer: "PT Adidaya", contact: "0815-1122-3344" }
+    ]);
+    const [pplCompetencies, setPplCompetencies] = useState<{
+        skill: string; licence: string; certificate: string; expiry: string; training: string;
+    }[]>([
+        { skill: "Ahli K3 Konstruksi Utama", licence: "SKA K3 1.2.003", certificate: "CERT-2025-992", expiry: "2028-12-31", training: "Advanced HSE & Risk Management" },
+        { skill: "Ahli Teknik Bangunan Gedung", licence: "SKA Struktur Madya", certificate: "CERT-2024-118", expiry: "2027-06-30", training: "Building Code & Seismic Design" }
+    ]);
+    const [pplAssignments, setPplAssignments] = useState<{
+        mobilisation: string; workArea: string; shift: string; supervisor: string; status: string;
+    }[]>([
+        { mobilisation: "2026-01-15", workArea: "Zona A Structure & Tower", shift: "Shift Pagi / Day Shift", supervisor: "Ir. Ahmad (PM)", status: "Active" },
+        { mobilisation: "2026-02-01", workArea: "All Project Sites (Safety Supervision)", shift: "Shift Pagi / Day Shift", supervisor: "Ir. Ahmad (PM)", status: "Active" }
+    ]);
+    const [pplEmergencyOffboarding, setPplEmergencyOffboarding] = useState<{
+        emergencyContact: string; medicalNoteAccess: string; demobilisation: string; siteAccessDeactivation: string;
+    }>({
+        emergencyContact: "Istri: Ny. Ratna (0812-9988-7766) — Jakarta Selatan",
+        medicalNoteAccess: "Golongan Darah O+ | Bebas Riwayat Penyakit Kronis",
+        demobilisation: "Rencana Demobilisasi: 31 Januari 2027",
+        siteAccessDeactivation: "Badge RFID #A-102 Active (Akses Main Gate & Tower)"
+    });
+    const [pplApprovals, setPplApprovals] = useState<{
+        type: "disusun" | "dicek" | "mengetahui" | "disetujui"; name: string; role: string;
+    }[]>([
+        { type: "disusun", name: "", role: "HR & Site Admin" },
+        { type: "dicek", name: "", role: "Site Manager" },
+        { type: "disetujui", name: "", role: "Project Manager" }
+    ]);
+
+    // 24. CLK — CLOCK & ATTENDANCE
+    const [clkActiveTab, setClkActiveTab] = useState<"setup" | "clk_records" | "clk_exceptions" | "clk_overtime" | "clk_approval">("setup");
+    const [clkLangMode, setClkLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
+    const [clkSetup, setClkSetup] = useState<{
+        deviceSource: string; workCalendar: string; shift: string; geofenceLocation: string; tolerance: string;
+    }>({
+        deviceSource: "Mobile GPS App & Biometric Fingerprint Main Gate",
+        workCalendar: "6 Hari Kerja (Senin - Sabtu)",
+        shift: "Shift Pagi: 08.00 - 17.00 WIB | Shift Malam: 20.00 - 05.00 WIB",
+        geofenceLocation: "Radius 150m dari Koordinat Site Office (-6.200, 106.816)",
+        tolerance: "Toleransi Keterlambatan Max 15 Menit"
+    });
+    const [clkRecords, setClkRecords] = useState<{
+        empName: string; clockIn: string; clockOut: string; breakTime: string; source: string; location: string;
+    }[]>([
+        { empName: "Budi Santoso", clockIn: "07:48 WIB", clockOut: "17:15 WIB", breakTime: "1.0 Jam", source: "Mobile GPS App", location: "Main Gate Zone A" },
+        { empName: "Ahmad Rivaldi", clockIn: "07:55 WIB", clockOut: "17:30 WIB", breakTime: "1.0 Jam", source: "Biometric Fingerprint", location: "Site Office" }
+    ]);
+    const [clkExceptions, setClkExceptions] = useState<{
+        late: string; earlyLeave: string; missingClock: string; duplicate: string; manualCorrection: string;
+    }[]>([
+        { late: "Hendra (Terlambat 20 Min)", earlyLeave: "Tidak ada", missingClock: "Clock-out lupa tap out", duplicate: "Nihil", manualCorrection: "Koreksi manual disetujui Supervisor karena tugas luar site" }
+    ]);
+    const [clkOvertimes, setClkOvertimes] = useState<{
+        overtimeRequest: string; approvedHours: string; workReason: string; approver: string;
+    }[]>([
+        { overtimeRequest: "OT-2026-088 (Tim Cor)", approvedHours: "3.5 Jam / Hours", workReason: "Lanjut pengecoran balok B-12 hingga selesai", approver: "Ir. Doni (Site Manager)" }
+    ]);
+    const [clkApproval, setClkApproval] = useState<{
+        supervisorVerification: string; lockPeriod: string; exportToPayroll: string; approvalStatus: string;
+    }>({
+        supervisorVerification: "Terverifikasi 100% oleh Site Manager & HR Admin",
+        lockPeriod: "Locked (Periode Presensi 21-27 Juli 2026)",
+        exportToPayroll: "Exported to Payroll Module (.CSV / API Linked)",
+        approvalStatus: "Approved / Disetujui"
+    });
+    const [clkApprovals, setClkApprovals] = useState<{
+        type: "disusun" | "dicek" | "mengetahui" | "disetujui"; name: string; role: string;
+    }[]>([
+        { type: "disusun", name: "", role: "Payroll & Presensi Officer" },
+        { type: "dicek", name: "", role: "HR Manager" },
+        { type: "disetujui", name: "", role: "Site Manager" }
+    ]);
+
     // Load active projects
     useEffect(() => {
         const fetchProjects = async () => {
@@ -1465,6 +1873,120 @@ function EditorContentComponent() {
                                     setIsTitleManuallyEdited(true); setIsDocIdManuallyEdited(true);
                                 } else setEditorContent(data.content || "");
                             } catch(e) { setEditorContent(data.content || ""); }
+                        } else if (data.report_type === "site_survey") {
+                            try {
+                                const parsed = JSON.parse(data.content || "");
+                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                    setSurLangMode(parsed.surLangMode || "bilingual");
+                                    if (parsed.surScope) setSurScope(parsed.surScope);
+                                    if (parsed.surBMs && Array.isArray(parsed.surBMs)) setSurBMs(parsed.surBMs);
+                                    if (parsed.surMeasurements && Array.isArray(parsed.surMeasurements)) setSurMeasurements(parsed.surMeasurements);
+                                    if (parsed.surConstraints) setSurConstraints(parsed.surConstraints);
+                                    if (parsed.surDeliverables) setSurDeliverables(parsed.surDeliverables);
+                                    if (parsed.surApprovals && Array.isArray(parsed.surApprovals)) setSurApprovals(parsed.surApprovals);
+                                    setIsTitleManuallyEdited(true); setIsDocIdManuallyEdited(true);
+                                } else setEditorContent(data.content || "");
+                            } catch(e) { setEditorContent(data.content || ""); }
+                        } else if (data.report_type === "mom") {
+                            try {
+                                const parsed = JSON.parse(data.content || "");
+                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                    setMomLangMode(parsed.momLangMode || "bilingual");
+                                    if (parsed.momDetails) setMomDetails(parsed.momDetails);
+                                    if (parsed.momParticipants && Array.isArray(parsed.momParticipants)) setMomParticipants(parsed.momParticipants);
+                                    if (parsed.momDiscussions && Array.isArray(parsed.momDiscussions)) setMomDiscussions(parsed.momDiscussions);
+                                    if (parsed.momDecisions && Array.isArray(parsed.momDecisions)) setMomDecisions(parsed.momDecisions);
+                                    if (parsed.momActions && Array.isArray(parsed.momActions)) setMomActions(parsed.momActions);
+                                    if (parsed.momPrevActions && Array.isArray(parsed.momPrevActions)) setMomPrevActions(parsed.momPrevActions);
+                                    if (parsed.momApprovals && Array.isArray(parsed.momApprovals)) setMomApprovals(parsed.momApprovals);
+                                    setIsTitleManuallyEdited(true); setIsDocIdManuallyEdited(true);
+                                } else setEditorContent(data.content || "");
+                            } catch(e) { setEditorContent(data.content || ""); }
+                        } else if (["field_notice", "memo_correspondence"].includes(data.report_type)) {
+                            try {
+                                const parsed = JSON.parse(data.content || "");
+                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                    setNotLangMode(parsed.notLangMode || "bilingual");
+                                    if (parsed.notIdentity) setNotIdentity(parsed.notIdentity);
+                                    if (parsed.notObservations) setNotObservations(parsed.notObservations);
+                                    if (parsed.notRequiredActions) setNotRequiredActions(parsed.notRequiredActions);
+                                    if (parsed.notResponses) setNotResponses(parsed.notResponses);
+                                    if (parsed.notClosure) setNotClosure(parsed.notClosure);
+                                    if (parsed.notApprovals && Array.isArray(parsed.notApprovals)) setNotApprovals(parsed.notApprovals);
+                                    setIsTitleManuallyEdited(true); setIsDocIdManuallyEdited(true);
+                                } else setEditorContent(data.content || "");
+                            } catch(e) { setEditorContent(data.content || ""); }
+                        } else if (data.report_type === "punch_list") {
+                            try {
+                                const parsed = JSON.parse(data.content || "");
+                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                    setPchLangMode(parsed.pchLangMode || "bilingual");
+                                    if (parsed.pchScope) setPchScope(parsed.pchScope);
+                                    if (parsed.pchItems && Array.isArray(parsed.pchItems)) setPchItems(parsed.pchItems);
+                                    if (parsed.pchRepairs && Array.isArray(parsed.pchRepairs)) setPchRepairs(parsed.pchRepairs);
+                                    if (parsed.pchVerifications && Array.isArray(parsed.pchVerifications)) setPchVerifications(parsed.pchVerifications);
+                                    if (parsed.pchCloseout) setPchCloseout(parsed.pchCloseout);
+                                    if (parsed.pchApprovals && Array.isArray(parsed.pchApprovals)) setPchApprovals(parsed.pchApprovals);
+                                    setIsTitleManuallyEdited(true); setIsDocIdManuallyEdited(true);
+                                } else setEditorContent(data.content || "");
+                            } catch(e) { setEditorContent(data.content || ""); }
+                        } else if (data.report_type === "commissioning") {
+                            try {
+                                const parsed = JSON.parse(data.content || "");
+                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                    setComLangMode(parsed.comLangMode || "bilingual");
+                                    if (parsed.comPlan) setComPlan(parsed.comPlan);
+                                    if (parsed.comPreCom) setComPreCom(parsed.comPreCom);
+                                    if (parsed.comFunctionalTests && Array.isArray(parsed.comFunctionalTests)) setComFunctionalTests(parsed.comFunctionalTests);
+                                    if (parsed.comFailures && Array.isArray(parsed.comFailures)) setComFailures(parsed.comFailures);
+                                    if (parsed.comCertification) setComCertification(parsed.comCertification);
+                                    if (parsed.comApprovals && Array.isArray(parsed.comApprovals)) setComApprovals(parsed.comApprovals);
+                                    setIsTitleManuallyEdited(true); setIsDocIdManuallyEdited(true);
+                                } else setEditorContent(data.content || "");
+                            } catch(e) { setEditorContent(data.content || ""); }
+                        } else if (data.report_type === "environmental") {
+                            try {
+                                const parsed = JSON.parse(data.content || "");
+                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                    setEnvLangMode(parsed.envLangMode || "bilingual");
+                                    if (parsed.envAspects && Array.isArray(parsed.envAspects)) setEnvAspects(parsed.envAspects);
+                                    if (parsed.envMonitoring) setEnvMonitoring(parsed.envMonitoring);
+                                    if (parsed.envControls) setEnvControls(parsed.envControls);
+                                    if (parsed.envIncidents && Array.isArray(parsed.envIncidents)) setEnvIncidents(parsed.envIncidents);
+                                    if (parsed.envCompliance) setEnvCompliance(parsed.envCompliance);
+                                    if (parsed.envApprovals && Array.isArray(parsed.envApprovals)) setEnvApprovals(parsed.envApprovals);
+                                    setIsTitleManuallyEdited(true); setIsDocIdManuallyEdited(true);
+                                } else setEditorContent(data.content || "");
+                            } catch(e) { setEditorContent(data.content || ""); }
+                        } else if (["people_register", "people"].includes(data.report_type)) {
+                            try {
+                                const parsed = JSON.parse(data.content || "");
+                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                    setPplLangMode(parsed.pplLangMode || "bilingual");
+                                    if (typeof parsed.pplMaskSensitiveInPdf === "boolean") setPplMaskSensitiveInPdf(parsed.pplMaskSensitiveInPdf);
+                                    if (parsed.pplOrg) setPplOrg(parsed.pplOrg);
+                                    if (parsed.pplPersonnel && Array.isArray(parsed.pplPersonnel)) setPplPersonnel(parsed.pplPersonnel);
+                                    if (parsed.pplCompetencies && Array.isArray(parsed.pplCompetencies)) setPplCompetencies(parsed.pplCompetencies);
+                                    if (parsed.pplAssignments && Array.isArray(parsed.pplAssignments)) setPplAssignments(parsed.pplAssignments);
+                                    if (parsed.pplEmergencyOffboarding) setPplEmergencyOffboarding(parsed.pplEmergencyOffboarding);
+                                    if (parsed.pplApprovals && Array.isArray(parsed.pplApprovals)) setPplApprovals(parsed.pplApprovals);
+                                    setIsTitleManuallyEdited(true); setIsDocIdManuallyEdited(true);
+                                } else setEditorContent(data.content || "");
+                            } catch(e) { setEditorContent(data.content || ""); }
+                        } else if (["clock_attendance", "clock"].includes(data.report_type)) {
+                            try {
+                                const parsed = JSON.parse(data.content || "");
+                                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                    setClkLangMode(parsed.clkLangMode || "bilingual");
+                                    if (parsed.clkSetup) setClkSetup(parsed.clkSetup);
+                                    if (parsed.clkRecords && Array.isArray(parsed.clkRecords)) setClkRecords(parsed.clkRecords);
+                                    if (parsed.clkExceptions && Array.isArray(parsed.clkExceptions)) setClkExceptions(parsed.clkExceptions);
+                                    if (parsed.clkOvertimes && Array.isArray(parsed.clkOvertimes)) setClkOvertimes(parsed.clkOvertimes);
+                                    if (parsed.clkApproval) setClkApproval(parsed.clkApproval);
+                                    if (parsed.clkApprovals && Array.isArray(parsed.clkApprovals)) setClkApprovals(parsed.clkApprovals);
+                                    setIsTitleManuallyEdited(true); setIsDocIdManuallyEdited(true);
+                                } else setEditorContent(data.content || "");
+                            } catch(e) { setEditorContent(data.content || ""); }
                         } else {
                             setEditorContent(data.content || "");
                         }
@@ -1541,15 +2063,74 @@ function EditorContentComponent() {
         return `${enStr} / ${idStr}`;
     };
 
+    const getLangNode = getLangText;
+
     const getReportMeta = (type: string) => {
         return REPORT_PREFIX_MAP[type] || { code: "DOC", title: "Laporan Proyek" };
     };
 
+    const getEditorTheme = (typeStr: string) => {
+        const t = typeStr.toLowerCase();
+        
+        // 1. Progress & Schedule -> Blue
+        if (["daily", "weekly", "monthly", "schedule"].includes(t)) {
+            return {
+                saveBtnClass: "bg-blue-600 hover:bg-blue-700 text-white font-bold border-blue-600 shadow-xs",
+                tabActiveClass: "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm",
+                numActiveClass: "bg-blue-600 text-white",
+                countActiveClass: "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400",
+                globeClass: "text-blue-600 dark:text-blue-400"
+            };
+        }
+        
+        // 2. Cost & Resources -> Emerald (Green)
+        if (["cost", "manpower", "procurement", "finance", "resources"].includes(t)) {
+            return {
+                saveBtnClass: "bg-emerald-600 hover:bg-emerald-700 text-white font-bold border-emerald-600 shadow-xs",
+                tabActiveClass: "bg-white dark:bg-neutral-800 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/60 shadow-sm",
+                numActiveClass: "bg-emerald-600 text-white",
+                countActiveClass: "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400",
+                globeClass: "text-emerald-600 dark:text-emerald-400"
+            };
+        }
+        
+        // 3. QA/QC, HSE & Risk -> Purple
+        if (["quality", "safety", "issue_risk"].includes(t)) {
+            return {
+                saveBtnClass: "bg-purple-600 hover:bg-purple-700 text-white font-bold border-purple-600 shadow-xs",
+                tabActiveClass: "bg-white dark:bg-neutral-800 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/60 shadow-sm",
+                numActiveClass: "bg-purple-600 text-white",
+                countActiveClass: "bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400",
+                globeClass: "text-purple-600 dark:text-purple-400"
+            };
+        }
+        
+        // 4. Governance & Exec -> Orange
+        if (["doc_control", "change_order", "executive"].includes(t)) {
+            return {
+                saveBtnClass: "bg-orange-600 hover:bg-orange-700 text-white font-bold border-orange-600 shadow-xs",
+                tabActiveClass: "bg-white dark:bg-neutral-800 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-900/60 shadow-sm",
+                numActiveClass: "bg-orange-600 text-white",
+                countActiveClass: "bg-orange-50 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400",
+                globeClass: "text-orange-600 dark:text-orange-400"
+            };
+        }
+        
+        // 5. Site Ops & Formal Docs -> Soft Rose Pink
+        return {
+            saveBtnClass: "bg-rose-500 hover:bg-rose-600 text-white font-bold border-rose-500 shadow-xs",
+            tabActiveClass: "bg-white dark:bg-neutral-800 text-rose-500 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 shadow-sm",
+            numActiveClass: "bg-rose-500 text-white",
+            countActiveClass: "bg-rose-50 dark:bg-rose-950/60 text-rose-500 dark:text-rose-400",
+            globeClass: "text-rose-500 dark:text-rose-400"
+        };
+    };
+
     interface ReportTabDef {
         generalTitle: string;
-        summaryTitleShort: string;
-        itemsTitleShort: string;
-        notesTitleShort: string;
+        summaryTitleShort?: string;
+        itemsTitleShort?: string;
+        notesTitleShort?: string;
         summaryTitle: string;
         summaryFields: {
             metric1Label: string;
@@ -2655,6 +3236,38 @@ function EditorContentComponent() {
                 finalContent = JSON.stringify({
                     exeLangMode, exeHealth, exeHighlights, exeStrategicRisks, exeForecast, exeDecisions, exeApprovals
                 });
+            } else if (reportType === "site_survey") {
+                finalContent = JSON.stringify({
+                    surLangMode, surScope, surBMs, surMeasurements, surConstraints, surDeliverables, surApprovals
+                });
+            } else if (reportType === "mom") {
+                finalContent = JSON.stringify({
+                    momLangMode, momDetails, momParticipants, momDiscussions, momDecisions, momActions, momPrevActions, momApprovals
+                });
+            } else if (["field_notice", "memo_correspondence"].includes(reportType)) {
+                finalContent = JSON.stringify({
+                    notLangMode, notIdentity, notObservations, notRequiredActions, notResponses, notClosure, notApprovals
+                });
+            } else if (reportType === "punch_list") {
+                finalContent = JSON.stringify({
+                    pchLangMode, pchScope, pchItems, pchRepairs, pchVerifications, pchCloseout, pchApprovals
+                });
+            } else if (reportType === "commissioning") {
+                finalContent = JSON.stringify({
+                    comLangMode, comPlan, comPreCom, comFunctionalTests, comFailures, comCertification, comApprovals
+                });
+            } else if (reportType === "environmental") {
+                finalContent = JSON.stringify({
+                    envLangMode, envAspects, envMonitoring, envControls, envIncidents, envCompliance, envApprovals
+                });
+            } else if (["people_register", "people"].includes(reportType)) {
+                finalContent = JSON.stringify({
+                    pplLangMode, pplMaskSensitiveInPdf, pplOrg, pplPersonnel, pplCompetencies, pplAssignments, pplEmergencyOffboarding, pplApprovals
+                });
+            } else if (["clock_attendance", "clock"].includes(reportType)) {
+                finalContent = JSON.stringify({
+                    clkLangMode, clkSetup, clkRecords, clkExceptions, clkOvertimes, clkApproval, clkApprovals
+                });
             }
 
             const getCategoryForReportType = (typeStr: string): string => {
@@ -3003,6 +3616,8 @@ function EditorContentComponent() {
         }
     };
 
+    const editorTheme = getEditorTheme(reportType);
+
     if (isLoading) {
         return (
             <div className="h-screen w-full flex flex-col items-center justify-center gap-3 bg-neutral-50 dark:bg-neutral-950">
@@ -3053,7 +3668,7 @@ function EditorContentComponent() {
                     <Button 
                         onClick={handleSave} 
                         disabled={isSaving}
-                        className="bg-[#0f172a] hover:bg-black text-white font-bold"
+                        className={editorTheme.saveBtnClass}
                         icon={isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     >
                         Simpan Laporan
@@ -3087,14 +3702,14 @@ function EditorContentComponent() {
                                     className={clsx(
                                         "px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive
-                                            ? "bg-white dark:bg-neutral-800 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-900/60 shadow-sm"
+                                            ? editorTheme.tabActiveClass
                                             : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}
                                 >
                                     <span className={clsx(
                                         "w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0",
                                         isActive
-                                            ? "bg-orange-600 text-white"
+                                            ? editorTheme.numActiveClass
                                             : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300"
                                     )}>
                                         {tab.num}
@@ -3104,7 +3719,7 @@ function EditorContentComponent() {
                                         <span className={clsx(
                                             "px-1.5 py-0.2 text-[10px] font-black rounded-md",
                                             isActive
-                                                ? "bg-orange-50 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400"
+                                                ? editorTheme.countActiveClass
                                                 : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500"
                                         )}>
                                             {tab.count}
@@ -3115,7 +3730,7 @@ function EditorContentComponent() {
                         })}
                     </div>
                     <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
-                        <Globe className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
+                        <Globe className={clsx("w-4 h-4 shrink-0", editorTheme.globeClass)} />
                         <div className="flex items-center gap-1">
                             {[
                                 { key: "bilingual", label: "Bilingual" },
@@ -3166,14 +3781,14 @@ function EditorContentComponent() {
                                     className={clsx(
                                         "px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive
-                                            ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm"
+                                            ? editorTheme.tabActiveClass
                                             : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}
                                 >
                                     <span className={clsx(
                                         "w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0",
                                         isActive
-                                            ? "bg-blue-600 text-white"
+                                            ? editorTheme.numActiveClass
                                             : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300"
                                     )}>
                                         {tab.num}
@@ -3183,7 +3798,7 @@ function EditorContentComponent() {
                                         <span className={clsx(
                                             "px-1.5 py-0.2 text-[10px] font-black rounded-md",
                                             isActive
-                                                ? "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400"
+                                                ? editorTheme.countActiveClass
                                                 : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500"
                                         )}>
                                             {tab.count}
@@ -3194,7 +3809,7 @@ function EditorContentComponent() {
                         })}
                     </div>
                     <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
-                        <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                        <Globe className={clsx("w-4 h-4 shrink-0", editorTheme.globeClass)} />
                         <div className="flex items-center gap-1">
                             {[
                                 { key: "bilingual", label: "Bilingual" },
@@ -3756,8 +4371,320 @@ function EditorContentComponent() {
                 </div>
             )}
 
-            {/* Extended Reports ISO Domain Tabs (excludes daily, weekly, monthly, schedule, cluster 2, 3 & 4 types) */}
-            {!["daily", "weekly", "monthly", "schedule", "cost", "manpower", "procurement", "finance", "resources", "quality", "safety", "issue_risk", "doc_control", "change_order", "mou_contract", "executive"].includes(reportType) && (
+            {/* ==================== SUR (SITE SURVEY) TABS & LANGUAGE SWITCHER ==================== */}
+            {reportType === "site_survey" && (
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "setup", num: "1", label: "Survey Scope" },
+                            { key: "sur_bm", num: "2", label: "Control Points & BM", count: surBMs.length },
+                            { key: "sur_measurements", num: "3", label: "Field Measurements", count: surMeasurements.length },
+                            { key: "sur_constraints", num: "4", label: "Findings & Constraints" },
+                            { key: "sur_deliverables", num: "5", label: "Recommendation & Deliverables" },
+                        ].map(tab => {
+                            const isActive = surActiveTab === tab.key;
+                            return (
+                                <button key={tab.key} type="button" onClick={(e) => { setSurActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive ? "bg-white dark:bg-neutral-800 text-pink-600 dark:text-pink-400 border-pink-200 dark:border-pink-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}>
+                                    <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-pink-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (<span className={clsx("px-1.5 py-0.2 text-[10px] font-black rounded-md", isActive ? "bg-pink-50 dark:bg-pink-950/60 text-pink-600 dark:text-pink-400" : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500")}>{tab.count}</span>)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                        <Globe className="w-4 h-4 text-pink-600 dark:text-pink-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                            {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
+                                <button key={lang.key} type="button" onClick={() => setSurLangMode(lang.key as any)}
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                        surLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                    )}>{lang.label}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== MOM (MINUTES OF MEETING) TABS & LANGUAGE SWITCHER ==================== */}
+            {reportType === "mom" && (
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "setup", num: "1", label: "Meeting Details & Participants", count: momParticipants.length },
+                            { key: "mom_discussion", num: "2", label: "Agenda Discussion", count: momDiscussions.length },
+                            { key: "mom_decisions", num: "3", label: "Decisions", count: momDecisions.length },
+                            { key: "mom_actions", num: "4", label: "Action Items", count: momActions.length },
+                            { key: "mom_prev_actions", num: "5", label: "Previous Review", count: momPrevActions.length },
+                        ].map(tab => {
+                            const isActive = momActiveTab === tab.key;
+                            return (
+                                <button key={tab.key} type="button" onClick={(e) => { setMomActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive ? "bg-white dark:bg-neutral-800 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-200 dark:border-fuchsia-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}>
+                                    <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-fuchsia-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (<span className={clsx("px-1.5 py-0.2 text-[10px] font-black rounded-md", isActive ? "bg-fuchsia-50 dark:bg-fuchsia-950/60 text-fuchsia-600 dark:text-fuchsia-400" : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500")}>{tab.count}</span>)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                        <Globe className="w-4 h-4 text-fuchsia-600 dark:text-fuchsia-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                            {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
+                                <button key={lang.key} type="button" onClick={() => setMomLangMode(lang.key as any)}
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                        momLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                    )}>{lang.label}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== NOT (FIELD NOTICE & MEMO) TABS & LANGUAGE SWITCHER ==================== */}
+            {["field_notice", "memo_correspondence"].includes(reportType) && (
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "setup", num: "1", label: "Notice Identity" },
+                            { key: "not_observation", num: "2", label: "Observation or Instruction" },
+                            { key: "not_required_action", num: "3", label: "Required Action" },
+                            { key: "not_response", num: "4", label: "Response" },
+                            { key: "not_closure", num: "5", label: "Verification & Closure" },
+                        ].map(tab => {
+                            const isActive = notActiveTab === tab.key;
+                            return (
+                                <button key={tab.key} type="button" onClick={(e) => { setNotActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive ? "bg-white dark:bg-neutral-800 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}>
+                                    <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-rose-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
+                                    <span>{tab.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                        <Globe className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                            {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
+                                <button key={lang.key} type="button" onClick={() => setNotLangMode(lang.key as any)}
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                        notLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                    )}>{lang.label}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== PCH (PUNCH LIST & HANDOVER) TABS & LANGUAGE SWITCHER ==================== */}
+            {reportType === "punch_list" && (
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "setup", num: "1", label: "Handover Scope" },
+                            { key: "pch_items", num: "2", label: "Punch Items", count: pchItems.length },
+                            { key: "pch_repairs", num: "3", label: "Repair Tracking", count: pchRepairs.length },
+                            { key: "pch_verification", num: "4", label: "Verification", count: pchVerifications.length },
+                            { key: "pch_closeout", num: "5", label: "BAST & Closeout" },
+                        ].map(tab => {
+                            const isActive = pchActiveTab === tab.key;
+                            return (
+                                <button key={tab.key} type="button" onClick={(e) => { setPchActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive ? "bg-white dark:bg-neutral-800 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}>
+                                    <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-emerald-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (<span className={clsx("px-1.5 py-0.2 text-[10px] font-black rounded-md", isActive ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400" : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500")}>{tab.count}</span>)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                        <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                            {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
+                                <button key={lang.key} type="button" onClick={() => setPchLangMode(lang.key as any)}
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                        pchLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                    )}>{lang.label}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== COM (COMMISSIONING & TESTING) TABS & LANGUAGE SWITCHER ==================== */}
+            {reportType === "commissioning" && (
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "setup", num: "1", label: "System & Test Plan" },
+                            { key: "com_precom", num: "2", label: "Pre-Commissioning" },
+                            { key: "com_functional", num: "3", label: "Functional Test", count: comFunctionalTests.length },
+                            { key: "com_failures", num: "4", label: "Failure & Rectification", count: comFailures.length },
+                            { key: "com_certification", num: "5", label: "Acceptance & Certification" },
+                        ].map(tab => {
+                            const isActive = comActiveTab === tab.key;
+                            return (
+                                <button key={tab.key} type="button" onClick={(e) => { setComActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}>
+                                    <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (<span className={clsx("px-1.5 py-0.2 text-[10px] font-black rounded-md", isActive ? "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400" : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500")}>{tab.count}</span>)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                        <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                            {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
+                                <button key={lang.key} type="button" onClick={() => setComLangMode(lang.key as any)}
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                        comLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                    )}>{lang.label}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== ENV (ENVIRONMENTAL REPORT) TABS & LANGUAGE SWITCHER ==================== */}
+            {reportType === "environmental" && (
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "setup", num: "1", label: "Environmental Aspects", count: envAspects.length },
+                            { key: "env_monitoring", num: "2", label: "Monitoring Results" },
+                            { key: "env_controls", num: "3", label: "Control Measures" },
+                            { key: "env_incidents", num: "4", label: "Complaint & Incident", count: envIncidents.length },
+                            { key: "env_compliance", num: "5", label: "Compliance & Follow-Up" },
+                        ].map(tab => {
+                            const isActive = envActiveTab === tab.key;
+                            return (
+                                <button key={tab.key} type="button" onClick={(e) => { setEnvActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive ? "bg-white dark:bg-neutral-800 text-lime-600 dark:text-lime-400 border-lime-200 dark:border-lime-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}>
+                                    <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-lime-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (<span className={clsx("px-1.5 py-0.2 text-[10px] font-black rounded-md", isActive ? "bg-lime-50 dark:bg-lime-950/60 text-lime-600 dark:text-lime-400" : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500")}>{tab.count}</span>)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                        <Globe className="w-4 h-4 text-lime-600 dark:text-lime-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                            {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
+                                <button key={lang.key} type="button" onClick={() => setEnvLangMode(lang.key as any)}
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                        envLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                    )}>{lang.label}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== PPL (PEOPLE REGISTER) TABS & LANGUAGE SWITCHER ==================== */}
+            {["people_register", "people"].includes(reportType) && (
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "setup", num: "1", label: "Organisation Structure" },
+                            { key: "ppl_personnel", num: "2", label: "Personnel Master", count: pplPersonnel.length },
+                            { key: "ppl_competency", num: "3", label: "Competency & Certification", count: pplCompetencies.length },
+                            { key: "ppl_assignment", num: "4", label: "Project Assignment", count: pplAssignments.length },
+                            { key: "ppl_emergency", num: "5", label: "Emergency & Offboarding" },
+                        ].map(tab => {
+                            const isActive = pplActiveTab === tab.key;
+                            return (
+                                <button key={tab.key} type="button" onClick={(e) => { setPplActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive ? "bg-white dark:bg-neutral-800 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}>
+                                    <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-purple-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (<span className={clsx("px-1.5 py-0.2 text-[10px] font-black rounded-md", isActive ? "bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400" : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500")}>{tab.count}</span>)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        {/* Sensitive Data PDF Restriction Toggle */}
+                        <button type="button" onClick={() => setPplMaskSensitiveInPdf(!pplMaskSensitiveInPdf)}
+                            className={clsx("px-2.5 py-1 text-[10px] font-extrabold rounded-full transition-all border flex items-center gap-1 cursor-pointer",
+                                pplMaskSensitiveInPdf ? "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300" : "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            )}>
+                            <span>{pplMaskSensitiveInPdf ? "🔒 Sensitive PDF Masked" : "🔓 Unmasked PDF"}</span>
+                        </button>
+                        <div className="flex items-center gap-2 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                            <Globe className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                            <div className="flex items-center gap-1">
+                                {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
+                                    <button key={lang.key} type="button" onClick={() => setPplLangMode(lang.key as any)}
+                                        className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                            pplLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                        )}>{lang.label}</button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================== CLK (CLOCK & ATTENDANCE) TABS & LANGUAGE SWITCHER ==================== */}
+            {["clock_attendance", "clock"].includes(reportType) && (
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "setup", num: "1", label: "Attendance Setup" },
+                            { key: "clk_records", num: "2", label: "Clock Records", count: clkRecords.length },
+                            { key: "clk_exceptions", num: "3", label: "Exceptions", count: clkExceptions.length },
+                            { key: "clk_overtime", num: "4", label: "Overtime Requests", count: clkOvertimes.length },
+                            { key: "clk_approval", num: "5", label: "Attendance Approval" },
+                        ].map(tab => {
+                            const isActive = clkActiveTab === tab.key;
+                            return (
+                                <button key={tab.key} type="button" onClick={(e) => { setClkActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive ? "bg-white dark:bg-neutral-800 text-cyan-600 dark:text-cyan-400 border-cyan-200 dark:border-cyan-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}>
+                                    <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-cyan-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (<span className={clsx("px-1.5 py-0.2 text-[10px] font-black rounded-md", isActive ? "bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400" : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500")}>{tab.count}</span>)}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                        <Globe className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                            {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
+                                <button key={lang.key} type="button" onClick={() => setClkLangMode(lang.key as any)}
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                        clkLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                    )}>{lang.label}</button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Extended Reports ISO Domain Tabs (excludes daily, weekly, monthly, schedule, cluster 2, 3, 4 & 5 types) */}
+            {!["daily", "weekly", "monthly", "schedule", "cost", "manpower", "procurement", "finance", "resources", "quality", "safety", "issue_risk", "doc_control", "change_order", "mou_contract", "executive", "site_survey", "mom", "field_notice", "memo_correspondence", "punch_list", "commissioning", "environmental", "people_register", "people", "clock_attendance", "clock"].includes(reportType) && (
                 <div className="flex border-b border-neutral-200/60 dark:border-neutral-800/60 px-2 overflow-x-auto shrink-0 gap-1">
                     {[
                         { key: "general", label: "1. Info & Periode" },
@@ -3769,7 +4696,7 @@ function EditorContentComponent() {
                         <button
                             key={tab.key}
                             type="button"
-                            onClick={() => setWeeklyTab(tab.key)}
+                            onClick={() => setWeeklyTab(tab.key as any)}
                             className={clsx(
                                 "pb-2.5 pt-1 px-3 text-[11px] font-bold uppercase tracking-wider border-b-2 whitespace-nowrap transition-all",
                                 weeklyTab === tab.key
@@ -4580,7 +5507,7 @@ function EditorContentComponent() {
                                 </div>
                             )}
                         </>
-                    ) : ["cost", "manpower", "procurement", "finance", "resources", "quality", "safety", "issue_risk", "doc_control", "change_order", "mou_contract", "executive"].includes(reportType) ? (
+                    ) : ["cost", "manpower", "procurement", "finance", "resources", "quality", "safety", "issue_risk", "doc_control", "change_order", "mou_contract", "executive", "site_survey", "mom", "field_notice", "memo_correspondence", "punch_list", "commissioning", "environmental", "people_register", "people", "clock_attendance", "clock"].includes(reportType) ? (
                         <>
                             {/* ==================== CLUSTER 2 & 3 BILINGUAL FORMS ==================== */}
 
@@ -6147,30 +7074,893 @@ function EditorContentComponent() {
                                             )}
                                         </>
                                     )}
-                        </>
-                    ) : (reportType === "weekly" || reportType === "monthly" || !["daily", "schedule", "cost", "manpower", "procurement", "finance", "resources", "quality", "safety", "issue_risk", "doc_control", "change_order", "mou_contract", "executive"].includes(reportType)) ? (
-                        <>
-                            {weeklyTab === "general" && (
-                                <div className="space-y-5 animate-in fade-in duration-300">
-                                    {/* Auto Sync Banner */}
-                                    <div className="bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex flex-col gap-3">
-                                            <Sparkles className="w-4 h-4 text-neutral-700 dark:text-neutral-300 shrink-0" />
-                                            <div>
-                                                <h4 className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-wider">Auto-Sync Dari Laporan Harian</h4>
-                                                <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">Tarik dan rangkum data otomatis dari Laporan Harian (LH) sesuai proyek & periode minggu ini.</p>
-                                            </div>
-                                        </div>
-                                        <Button
-                                            onClick={handleSyncFromDailyReports}
-                                            disabled={isSyncing}
-                                            className="bg-neutral-900 hover:bg-black text-white font-bold text-xs w-full py-2"
-                                            icon={isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                                        >
-                                            {isSyncing ? "Menyinkronkan..." : "Sync Data dari Laporan Harian (LH)"}
-                                        </Button>
 
-                                    <Select
-                                        label="Proyek *"
+                                    {/* ====================== SUR (SITE SURVEY) FORMS ====================== */}
+                                    {reportType === "site_survey" && (
+                                        <>
+                                            {surActiveTab === "setup" && (
+                                                <div className="space-y-5 animate-in fade-in duration-300">
+                                                    <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                                        <span className="text-xs font-black text-pink-600 dark:text-pink-400 uppercase tracking-wider">1. Survey Scope / Lingkup & Tim Survei</span>
+                                                        <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">SUR-SCOPE</span>
+                                                    </div>
+                                                    <Select label="Proyek / Project *" value={selectedProjectId} onChange={(val) => { setSelectedProjectId(val); if (!paramId) { const proj = projects.find(p => p.id === val); if (proj?.location) setLocationOverride(proj.location); } }} options={[{ value: "", label: "-- Pilih Proyek / Select Project --" }, ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))]} disabled={!!paramProjectId} required />
+                                                    <Input label="Tujuan Survei / Purpose" value={surScope.purpose} onChange={(e) => setSurScope({ ...surScope, purpose: e.target.value })} placeholder="Survei topografi & batas lahan" />
+                                                    <Input label="Area / Lokasi Survei" value={surScope.area} onChange={(e) => setSurScope({ ...surScope, area: e.target.value })} placeholder="Zona A & B Site utama" />
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <Input label="Metode Survei / Method" value={surScope.method} onChange={(e) => setSurScope({ ...surScope, method: e.target.value })} placeholder="GPS RTK GNSS & Drone" />
+                                                                <Input label="Peralatan / Equipment" value={surScope.equipment} onChange={(e) => setSurScope({ ...surScope, equipment: e.target.value })} placeholder="Hi-Target RTK & Total Station" />
+                                                            </div>
+                                                            <Input label="Tim Survei / Survey Team" value={surScope.team} onChange={(e) => setSurScope({ ...surScope, team: e.target.value })} placeholder="Ir. Hendra (Lead Surveyor)" />
+
+                                                            {/* Approvals */}
+                                                            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">Tanda Tangan / Approvals ({surApprovals.length}/4)</span>
+                                                                    {surApprovals.length < 4 && (<button type="button" onClick={() => { const typeOrder = ["disusun", "dicek", "mengetahui", "disetujui"] as const; const usedTypes = surApprovals.map(a => a.type); const nextType = typeOrder.find(t => !usedTypes.includes(t)) || "mengetahui"; const newArr = [...surApprovals, { type: nextType as any, name: "", role: "" }]; setSurApprovals(newArr); }} className="text-[11px] font-bold text-pink-600 hover:underline flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Tambah TTD</button>)}
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {surApprovals.map((app, idx) => (
+                                                                        <div key={idx} className="p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-2.5">
+                                                                            <div className="flex items-center justify-between"><span className="text-[10px] font-black text-neutral-400 uppercase">TTD #{idx + 1}</span>{surApprovals.length > 1 && (<button type="button" onClick={() => setSurApprovals(surApprovals.filter((_, i) => i !== idx))} className="text-neutral-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>)}</div>
+                                                                            <div className="grid grid-cols-3 gap-2">
+                                                                                <Select label="Peran" value={app.type} onChange={(val) => setSurApprovals(surApprovals.map((item, i) => i === idx ? { ...item, type: val as any } : item))} options={[{ value: "disusun", label: "Disusun Oleh" }, { value: "dicek", label: "Dicek Oleh" }, { value: "mengetahui", label: "Mengetahui" }, { value: "disetujui", label: "Disetujui Oleh" }]} />
+                                                                                <Input label="Nama" value={app.name} onChange={(e) => setSurApprovals(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))} placeholder="Nama" />
+                                                                                <Input label="Jabatan" value={app.role} onChange={(e) => setSurApprovals(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))} placeholder="Jabatan" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {surActiveTab === "sur_bm" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-pink-600 uppercase tracking-wider">2. Control Points & Benchmarks ({surBMs.length})</span></div>
+                                                            {surBMs.map((bm, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-pink-600 uppercase">Benchmark #{idx + 1} ({bm.code})</span>{surBMs.length > 1 && (<button type="button" onClick={() => setSurBMs(surBMs.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <div className="grid grid-cols-2 gap-2.5">
+                                                                        <Input label="Kode BM" value={bm.code} onChange={(e) => setSurBMs(prev => prev.map((it, i) => i === idx ? { ...it, code: e.target.value } : it))} placeholder="BM-01" />
+                                                                        <Input label="Elevasi Z" value={bm.elevation} onChange={(e) => setSurBMs(prev => prev.map((it, i) => i === idx ? { ...it, elevation: e.target.value } : it))} placeholder="+15.250 m" />
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 gap-2.5">
+                                                                        <Input label="Koordinat X (Easting)" value={bm.x} onChange={(e) => setSurBMs(prev => prev.map((it, i) => i === idx ? { ...it, x: e.target.value } : it))} placeholder="712450.125" />
+                                                                        <Input label="Koordinat Y (Northing)" value={bm.y} onChange={(e) => setSurBMs(prev => prev.map((it, i) => i === idx ? { ...it, y: e.target.value } : it))} placeholder="9245100.850" />
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 gap-2.5">
+                                                                        <Input label="Reference Datum" value={bm.datum} onChange={(e) => setSurBMs(prev => prev.map((it, i) => i === idx ? { ...it, datum: e.target.value } : it))} placeholder="WGS84 / EGM96" />
+                                                                        <Input label="Verifikasi" value={bm.verification} onChange={(e) => setSurBMs(prev => prev.map((it, i) => i === idx ? { ...it, verification: e.target.value } : it))} placeholder="Verified by BPN" />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setSurBMs([...surBMs, { code: `BM-0${surBMs.length + 1}`, x: "", y: "", elevation: "", datum: "WGS84", verification: "Verified" }])} className="w-full py-2.5 text-xs font-bold text-pink-600 flex items-center justify-center gap-1.5 bg-pink-50/80 rounded-xl border border-pink-200/60 hover:bg-pink-100/60 transition-colors"><Plus className="w-4 h-4" /> Tambah Benchmark / Add BM</button>
+                                                        </div>
+                                                    )}
+
+                                                    {surActiveTab === "sur_measurements" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-pink-600 uppercase tracking-wider">3. Field Measurements ({surMeasurements.length})</span></div>
+                                                            {surMeasurements.map((m, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-pink-600 uppercase">Point #{idx + 1} ({m.pointId})</span>{surMeasurements.length > 1 && (<button type="button" onClick={() => setSurMeasurements(surMeasurements.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <Input label="Point / Grid ID" value={m.pointId} onChange={(e) => setSurMeasurements(prev => prev.map((it, i) => i === idx ? { ...it, pointId: e.target.value } : it))} placeholder="P-101" />
+                                                                        <Input label="Coords X" value={m.x} onChange={(e) => setSurMeasurements(prev => prev.map((it, i) => i === idx ? { ...it, x: e.target.value } : it))} placeholder="712455.50" />
+                                                                        <Input label="Coords Y" value={m.y} onChange={(e) => setSurMeasurements(prev => prev.map((it, i) => i === idx ? { ...it, y: e.target.value } : it))} placeholder="9245105.20" />
+                                                                    </div>
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <Input label="Elevasi Z" value={m.z} onChange={(e) => setSurMeasurements(prev => prev.map((it, i) => i === idx ? { ...it, z: e.target.value } : it))} placeholder="+15.280 m" />
+                                                                        <Input label="Toleransi" value={m.tolerance} onChange={(e) => setSurMeasurements(prev => prev.map((it, i) => i === idx ? { ...it, tolerance: e.target.value } : it))} placeholder="±5 mm" />
+                                                                        <Select label="Status" value={m.status} onChange={(val) => setSurMeasurements(prev => prev.map((it, i) => i === idx ? { ...it, status: val } : it))} options={[{ value: "Pass", label: "Pass" }, { value: "Fail", label: "Fail" }, { value: "Re-check", label: "Re-check" }]} />
+                                                                    </div>
+                                                                    <Input label="Kondisi Eksisting" value={m.condition} onChange={(e) => setSurMeasurements(prev => prev.map((it, i) => i === idx ? { ...it, condition: e.target.value } : it))} placeholder="Lahan Rawa Tergenang Air" />
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setSurMeasurements([...surMeasurements, { pointId: `P-10${surMeasurements.length + 1}`, x: "", y: "", z: "", condition: "", tolerance: "±5 mm", status: "Pass" }])} className="w-full py-2.5 text-xs font-bold text-pink-600 flex items-center justify-center gap-1.5 bg-pink-50/80 rounded-xl border border-pink-200/60 hover:bg-pink-100/60 transition-colors"><Plus className="w-4 h-4" /> Tambah Titik Ukur / Add Point</button>
+                                                        </div>
+                                                    )}
+
+                                                    {surActiveTab === "sur_constraints" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-pink-600 uppercase tracking-wider">4. Findings & Constraints / Temuan & Kendala Lapangan</span></div>
+                                                            <Input label="Conflict / Konflik Batas Lahan" value={surConstraints.conflict} onChange={(e) => setSurConstraints({ ...surConstraints, conflict: e.target.value })} placeholder="Overlap batas lahan dengan warga" />
+                                                            <Input label="Existing Utility / Utilitas Eksisting" value={surConstraints.utility} onChange={(e) => setSurConstraints({ ...surConstraints, utility: e.target.value })} placeholder="Kabel Fiber Optic & Pipa PDAM" />
+                                                            <Input label="Access / Aksesibilitas Site" value={surConstraints.access} onChange={(e) => setSurConstraints({ ...surConstraints, access: e.target.value })} placeholder="Jalan masuk darurat sempit" />
+                                                            <Input label="Site Limitation / Keterbatasan Topografi" value={surConstraints.limitation} onChange={(e) => setSurConstraints({ ...surConstraints, limitation: e.target.value })} placeholder="Kondisi tanah lunak rawa" />
+                                                        </div>
+                                                    )}
+
+                                                    {surActiveTab === "sur_deliverables" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-pink-600 uppercase tracking-wider">5. Recommendation & Deliverables / Rekomendasi & Output</span></div>
+                                                            <Input label="Design Implications / Dampak Terhadap Desain" value={surDeliverables.designImplications} onChange={(e) => setSurDeliverables({ ...surDeliverables, designImplications: e.target.value })} placeholder="Peninggian tanah dasar Cut & Fill" />
+                                                            <Input label="Required Action / Tindakan Lanjutan" value={surDeliverables.requiredAction} onChange={(e) => setSurDeliverables({ ...surDeliverables, requiredAction: e.target.value })} placeholder="Relokasi pipa PDAM & Land clearing" />
+                                                            <Input label="Survey Drawing No. / No. Gambar Hasil Survei" value={surDeliverables.surveyDrawingNo} onChange={(e) => setSurDeliverables({ ...surDeliverables, surveyDrawingNo: e.target.value })} placeholder="DWG-SUR-2026-001 Rev A" />
+                                                            <Input label="Data Output / Format Berkas Raw" value={surDeliverables.dataOutput} onChange={(e) => setSurDeliverables({ ...surDeliverables, dataOutput: e.target.value })} placeholder="Raw Point Cloud (.LAS), DXF, CSV" />
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* ====================== MOM (MINUTES OF MEETING) FORMS ====================== */}
+                                            {reportType === "mom" && (
+                                                <>
+                                                    {momActiveTab === "setup" && (
+                                                        <div className="space-y-5 animate-in fade-in duration-300">
+                                                            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                                                <span className="text-xs font-black text-fuchsia-600 dark:text-fuchsia-400 uppercase tracking-wider">1. Meeting Details & Participants / Detail Rapat & Peserta</span>
+                                                                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">MOM-SETUP</span>
+                                                            </div>
+                                                            <Select label="Proyek / Project *" value={selectedProjectId} onChange={(val) => { setSelectedProjectId(val); if (!paramId) { const proj = projects.find(p => p.id === val); if (proj?.location) setLocationOverride(proj.location); } }} options={[{ value: "", label: "-- Pilih Proyek / Select Project --" }, ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))]} disabled={!!paramProjectId} required />
+                                                            <Input label="Agenda Rapat / Agenda" value={momDetails.agenda} onChange={(e) => setMomDetails({ ...momDetails, agenda: e.target.value })} placeholder="Rapat koordinasi mingguan progres" />
+                                                            <div className="grid grid-cols-3 gap-3">
+                                                                <Input label="Tanggal / Date" type="date" value={momDetails.date} onChange={(e) => setMomDetails({ ...momDetails, date: e.target.value })} />
+                                                                <Input label="Jam Mulai / Start Time" type="time" value={momDetails.startTime || ""} onChange={(e) => setMomDetails({ ...momDetails, startTime: e.target.value })} />
+                                                                <Input label="Jam Selesai / End Time" type="time" value={momDetails.endTime || ""} onChange={(e) => setMomDetails({ ...momDetails, endTime: e.target.value })} />
+                                                            </div>
+                                                            {momDetails.startTime && momDetails.endTime && momDetails.startTime > momDetails.endTime && (
+                                                                <div className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 mt-0.5 px-1 animate-in fade-in duration-200">
+                                                                    ⚠️ Jam selesai tidak boleh mendahului jam mulai / End time cannot be earlier than start time
+                                                                </div>
+                                                            )}
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <Input label="Location/Platform / Lokasi/Platform" value={momDetails.location} onChange={(e) => setMomDetails({ ...momDetails, location: e.target.value })} placeholder="Tulis lokasi atau platform rapat..." />
+                                                                <Input label="Jenis Rapat / Meeting Type" value={momDetails.meetingType} onChange={(e) => setMomDetails({ ...momDetails, meetingType: e.target.value })} placeholder="Weekly Progress" />
+                                                            </div>
+
+                                                            <div className="space-y-3 pt-2 border-t border-neutral-100 dark:border-neutral-800">
+                                                                <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider block">Daftar Peserta Rapat ({momParticipants.length})</span>
+                                                                {momParticipants.map((p, idx) => (
+                                                                    <div key={idx} className="p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-2">
+                                                                        <div className="flex items-center justify-between"><span className="text-[10px] font-bold text-fuchsia-600 uppercase">Peserta #{idx + 1}</span>{momParticipants.length > 1 && (<button type="button" onClick={() => setMomParticipants(momParticipants.filter((_, i) => i !== idx))} className="text-neutral-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>)}</div>
+                                                                        <div className="grid grid-cols-4 gap-2">
+                                                                            <Input label="Nama" value={p.name} onChange={(e) => setMomParticipants(prev => prev.map((it, i) => i === idx ? { ...it, name: e.target.value } : it))} placeholder="Nama Peserta" />
+                                                                            <Input label="Company/Institution / Perusahaan/Instansi" value={p.company} onChange={(e) => setMomParticipants(prev => prev.map((it, i) => i === idx ? { ...it, company: e.target.value } : it))} placeholder="Perusahaan" />
+                                                                            <Input label="Position/Role / Jabatan/Peran" value={p.position} onChange={(e) => setMomParticipants(prev => prev.map((it, i) => i === idx ? { ...it, position: e.target.value } : it))} placeholder="Jabatan" />
+                                                                            <Select label="Kehadiran" value={p.presence} onChange={(val) => setMomParticipants(prev => prev.map((it, i) => i === idx ? { ...it, presence: val } : it))} options={[{ value: "Hadir / Present", label: "Hadir" }, { value: "Absen / Absent", label: "Absen" }, { value: "Diwakilkan / Proxy", label: "Diwakilkan" }]} />
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                                <button type="button" onClick={() => setMomParticipants([...momParticipants, { name: "", company: "", position: "", presence: "Hadir / Present" }])} className="w-full py-2 text-xs font-bold text-fuchsia-600 bg-fuchsia-50/80 rounded-xl border border-fuchsia-200/60 hover:bg-fuchsia-100 flex items-center justify-center gap-1.5"><Plus className="w-3.5 h-3.5" /> Tambah Peserta / Add Participant</button>
+                                                            </div>
+
+                                                            {/* Approvals */}
+                                                            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">Tanda Tangan / Approvals ({momApprovals.length}/4)</span>
+                                                                    {momApprovals.length < 4 && (<button type="button" onClick={() => { const typeOrder = ["disusun", "dicek", "mengetahui", "disetujui"] as const; const usedTypes = momApprovals.map(a => a.type); const nextType = typeOrder.find(t => !usedTypes.includes(t)) || "mengetahui"; const newArr = [...momApprovals, { type: nextType as any, name: "", role: "" }]; setMomApprovals(newArr); }} className="text-[11px] font-bold text-fuchsia-600 hover:underline flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Tambah TTD</button>)}
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {momApprovals.map((app, idx) => (
+                                                                        <div key={idx} className="p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-2.5">
+                                                                            <div className="flex items-center justify-between"><span className="text-[10px] font-black text-neutral-400 uppercase">TTD #{idx + 1}</span>{momApprovals.length > 1 && (<button type="button" onClick={() => setMomApprovals(momApprovals.filter((_, i) => i !== idx))} className="text-neutral-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>)}</div>
+                                                                            <div className="grid grid-cols-3 gap-2">
+                                                                                <Select label="Peran" value={app.type} onChange={(val) => setMomApprovals(momApprovals.map((item, i) => i === idx ? { ...item, type: val as any } : item))} options={[{ value: "disusun", label: "Disusun Oleh" }, { value: "dicek", label: "Dicek Oleh" }, { value: "mengetahui", label: "Mengetahui" }, { value: "disetujui", label: "Disetujui Oleh" }]} />
+                                                                                <Input label="Nama" value={app.name} onChange={(e) => setMomApprovals(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))} placeholder="Nama" />
+                                                                                <Input label="Jabatan" value={app.role} onChange={(e) => setMomApprovals(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))} placeholder="Jabatan" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {momActiveTab === "mom_discussion" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-fuchsia-600 uppercase tracking-wider">2. Agenda Discussion / Pembahasan Agenda ({momDiscussions.length})</span></div>
+                                                            {momDiscussions.map((d, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-fuchsia-600 uppercase">Topic #{idx + 1}</span>{momDiscussions.length > 1 && (<button type="button" onClick={() => setMomDiscussions(momDiscussions.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Topik Pembahasan / Topic" value={d.topic} onChange={(e) => setMomDiscussions(prev => prev.map((it, i) => i === idx ? { ...it, topic: e.target.value } : it))} placeholder="Metode Pengecoran Pier 3" />
+                                                                    <Input label="Detail Diskusi / Discussion" value={d.discussion} onChange={(e) => setMomDiscussions(prev => prev.map((it, i) => i === idx ? { ...it, discussion: e.target.value } : it))} placeholder="Penggunaan beton cepat kering K-500" />
+                                                                    <div className="grid grid-cols-2 gap-2.5">
+                                                                        <Input label="Referensi / Reference" value={d.reference} onChange={(e) => setMomDiscussions(prev => prev.map((it, i) => i === idx ? { ...it, reference: e.target.value } : it))} placeholder="RFI-CIV-042" />
+                                                                        <Input label="Concern/Issue / Isu Utama" value={d.concern} onChange={(e) => setMomDiscussions(prev => prev.map((it, i) => i === idx ? { ...it, concern: e.target.value } : it))} placeholder="Potensi kenaikan biaya" />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setMomDiscussions([...momDiscussions, { topic: "", discussion: "", reference: "", concern: "" }])} className="w-full py-2.5 text-xs font-bold text-fuchsia-600 flex items-center justify-center gap-1.5 bg-fuchsia-50/80 rounded-xl border border-fuchsia-200/60 hover:bg-fuchsia-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Pembahasan / Add Discussion</button>
+                                                        </div>
+                                                    )}
+
+                                                    {momActiveTab === "mom_decisions" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-fuchsia-600 uppercase tracking-wider">3. Decisions / Keputusan Rapat ({momDecisions.length})</span></div>
+                                                            {momDecisions.map((dec, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-fuchsia-600 uppercase">Keputusan #{idx + 1}</span>{momDecisions.length > 1 && (<button type="button" onClick={() => setMomDecisions(momDecisions.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Keputusan Rapat / Decision" value={dec.decision} onChange={(e) => setMomDecisions(prev => prev.map((it, i) => i === idx ? { ...it, decision: e.target.value } : it))} placeholder="Menyetujui revisi K-500" />
+                                                                    <div className="grid grid-cols-2 gap-2.5">
+                                                                        <Input label="Arah Disetujui / Approved Direction" value={dec.direction} onChange={(e) => setMomDecisions(prev => prev.map((it, i) => i === idx ? { ...it, direction: e.target.value } : it))} placeholder="Terbitkan Variation Order" />
+                                                                        <Input label="Pemberi Keputusan / Authority" value={dec.authority} onChange={(e) => setMomDecisions(prev => prev.map((it, i) => i === idx ? { ...it, authority: e.target.value } : it))} placeholder="Owner Representative" />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setMomDecisions([...momDecisions, { decision: "", direction: "", authority: "" }])} className="w-full py-2.5 text-xs font-bold text-fuchsia-600 flex items-center justify-center gap-1.5 bg-fuchsia-50/80 rounded-xl border border-fuchsia-200/60 hover:bg-fuchsia-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Keputusan / Add Decision</button>
+                                                        </div>
+                                                    )}
+
+                                                    {momActiveTab === "mom_actions" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-fuchsia-600 uppercase tracking-wider">4. Action Items ({momActions.length})</span></div>
+                                                            {momActions.map((act, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-fuchsia-600 uppercase">Action Item #{idx + 1}</span>{momActions.length > 1 && (<button type="button" onClick={() => setMomActions(momActions.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Action Item Detail" value={act.action} onChange={(e) => setMomActions(prev => prev.map((it, i) => i === idx ? { ...it, action: e.target.value } : it))} placeholder="Submit Shop Drawing Revised" />
+                                                                    <div className="grid grid-cols-4 gap-2">
+                                                                        <Input label="PIC" value={act.pic} onChange={(e) => setMomActions(prev => prev.map((it, i) => i === idx ? { ...it, pic: e.target.value } : it))} placeholder="Ir. Hendra" />
+                                                                        <Input label="Target Due Date" type="date" value={act.dueDate} onChange={(e) => setMomActions(prev => prev.map((it, i) => i === idx ? { ...it, dueDate: e.target.value } : it))} />
+                                                                        <Select label="Priority" value={act.priority} onChange={(val) => setMomActions(prev => prev.map((it, i) => i === idx ? { ...it, priority: val } : it))} options={[{ value: "High", label: "High" }, { value: "Medium", label: "Medium" }, { value: "Low", label: "Low" }]} />
+                                                                        <Select label="Status" value={act.status} onChange={(val) => setMomActions(prev => prev.map((it, i) => i === idx ? { ...it, status: val } : it))} options={[{ value: "Open", label: "Open" }, { value: "In Progress", label: "In Progress" }, { value: "Closed", label: "Closed" }]} />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setMomActions([...momActions, { action: "", pic: "", dueDate: "", priority: "Medium", status: "Open" }])} className="w-full py-2.5 text-xs font-bold text-fuchsia-600 flex items-center justify-center gap-1.5 bg-fuchsia-50/80 rounded-xl border border-fuchsia-200/60 hover:bg-fuchsia-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Action Item / Add Action</button>
+                                                        </div>
+                                                    )}
+
+                                                    {momActiveTab === "mom_prev_actions" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-fuchsia-600 uppercase tracking-wider">5. Previous Actions Review / Tinjauan Action Item Rapat Lalu ({momPrevActions.length})</span></div>
+                                                            {momPrevActions.map((pa, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-fuchsia-600 uppercase">Previous Item #{idx + 1}</span>{momPrevActions.length > 1 && (<button type="button" onClick={() => setMomPrevActions(momPrevActions.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Item Rapat Sebelumnya" value={pa.previousItem} onChange={(e) => setMomPrevActions(prev => prev.map((it, i) => i === idx ? { ...it, previousItem: e.target.value } : it))} placeholder="Pembersihan Lahan Zona B" />
+                                                                    <div className="grid grid-cols-3 gap-2.5">
+                                                                        <Input label="Status Terkini" value={pa.currentStatus} onChange={(e) => setMomPrevActions(prev => prev.map((it, i) => i === idx ? { ...it, currentStatus: e.target.value } : it))} placeholder="Selesai 100%" />
+                                                                        <Select label="Carry-Over" value={pa.carryOver} onChange={(val) => setMomPrevActions(prev => prev.map((it, i) => i === idx ? { ...it, carryOver: val } : it))} options={[{ value: "Tidak", label: "Tidak" }, { value: "Ya", label: "Ya" }]} />
+                                                                        <Select label="Closure Status" value={pa.closure} onChange={(val) => setMomPrevActions(prev => prev.map((it, i) => i === idx ? { ...it, closure: val } : it))} options={[{ value: "Closed", label: "Closed" }, { value: "Open", label: "Open" }]} />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setMomPrevActions([...momPrevActions, { previousItem: "", currentStatus: "", carryOver: "Tidak", closure: "Closed" }])} className="w-full py-2.5 text-xs font-bold text-fuchsia-600 flex items-center justify-center gap-1.5 bg-fuchsia-50/80 rounded-xl border border-fuchsia-200/60 hover:bg-fuchsia-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Review Rapat Lalu / Add Previous Review</button>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* ====================== NOT (FIELD NOTICE & MEMO) FORMS ====================== */}
+                                            {["field_notice", "memo_correspondence"].includes(reportType) && (
+                                                <>
+                                                    {notActiveTab === "setup" && (
+                                                        <div className="space-y-5 animate-in fade-in duration-300">
+                                                            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                                                <span className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-wider">1. Notice Identity / Identitas Notice & Surat</span>
+                                                                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">NOT-SETUP</span>
+                                                            </div>
+                                                            <Select label="Proyek / Project *" value={selectedProjectId} onChange={(val) => { setSelectedProjectId(val); if (!paramId) { const proj = projects.find(p => p.id === val); if (proj?.location) setLocationOverride(proj.location); } }} options={[{ value: "", label: "-- Pilih Proyek / Select Project --" }, ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))]} disabled={!!paramProjectId} required />
+                                                            <Input label="Recipient / Penerima Notice" value={notIdentity.recipient} onChange={(e) => setNotIdentity({ ...notIdentity, recipient: e.target.value })} placeholder="PT Utama Subkon Structure" />
+                                                            <Input label="Subject / Perihal Notice" value={notIdentity.subject} onChange={(e) => setNotIdentity({ ...notIdentity, subject: e.target.value })} placeholder="Instruksi perbaikan bekisting" />
+                                                            <div className="grid grid-cols-3 gap-3">
+                                                                <Input label="Kontrak Terkait" value={notIdentity.relatedContract} onChange={(e) => setNotIdentity({ ...notIdentity, relatedContract: e.target.value })} placeholder="SPK-003/2026" />
+                                                                <Input label="Referi Drawing/RFI" value={notIdentity.relatedRef} onChange={(e) => setNotIdentity({ ...notIdentity, relatedRef: e.target.value })} placeholder="RFI-CIV-088" />
+                                                                <Input label="Klasifikasi Notice" value={notIdentity.classification} onChange={(e) => setNotIdentity({ ...notIdentity, classification: e.target.value })} placeholder="Site Instruction / Defect Notice" />
+                                                            </div>
+
+                                                            {/* Approvals */}
+                                                            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">Tanda Tangan / Approvals ({notApprovals.length}/4)</span>
+                                                                    {notApprovals.length < 4 && (<button type="button" onClick={() => { const typeOrder = ["disusun", "dicek", "mengetahui", "disetujui"] as const; const usedTypes = notApprovals.map(a => a.type); const nextType = typeOrder.find(t => !usedTypes.includes(t)) || "mengetahui"; const newArr = [...notApprovals, { type: nextType as any, name: "", role: "" }]; setNotApprovals(newArr); }} className="text-[11px] font-bold text-rose-600 hover:underline flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Tambah TTD</button>)}
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {notApprovals.map((app, idx) => (
+                                                                        <div key={idx} className="p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-2.5">
+                                                                            <div className="flex items-center justify-between"><span className="text-[10px] font-black text-neutral-400 uppercase">TTD #{idx + 1}</span>{notApprovals.length > 1 && (<button type="button" onClick={() => setNotApprovals(notApprovals.filter((_, i) => i !== idx))} className="text-neutral-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>)}</div>
+                                                                            <div className="grid grid-cols-3 gap-2">
+                                                                                <Select label="Peran" value={app.type} onChange={(val) => setNotApprovals(notApprovals.map((item, i) => i === idx ? { ...item, type: val as any } : item))} options={[{ value: "disusun", label: "Disusun Oleh" }, { value: "dicek", label: "Dicek Oleh" }, { value: "mengetahui", label: "Mengetahui" }, { value: "disetujui", label: "Disetujui Oleh" }]} />
+                                                                                <Input label="Nama" value={app.name} onChange={(e) => setNotApprovals(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))} placeholder="Nama" />
+                                                                                <Input label="Jabatan" value={app.role} onChange={(e) => setNotApprovals(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))} placeholder="Jabatan" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {notActiveTab === "not_observation" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-rose-600 uppercase tracking-wider">2. Observation or Instruction / Temuan & Instruksi</span></div>
+                                                            <Input label="Existing Condition / Kondisi Eksisting Lapangan" value={notObservations.existingCondition} onChange={(e) => setNotObservations({ ...notObservations, existingCondition: e.target.value })} placeholder="Jarak sengkang terpasang 200mm" />
+                                                            <Input label="Violation/Deviation / Pelanggaran Spesifikasi" value={notObservations.violation} onChange={(e) => setNotObservations({ ...notObservations, violation: e.target.value })} placeholder="Ketidaksesuaian dengan gambar ST-B12" />
+                                                            <Input label="Instruction / Instruksi Kerja" value={notObservations.instruction} onChange={(e) => setNotObservations({ ...notObservations, instruction: e.target.value })} placeholder="Bongkar & tambahkan sengkang D10-100" />
+                                                            <Input label="Required Standard / Standar Acuan" value={notObservations.requiredStandard} onChange={(e) => setNotObservations({ ...notObservations, requiredStandard: e.target.value })} placeholder="SNI 2847:2019" />
+                                                        </div>
+                                                    )}
+
+                                                    {notActiveTab === "not_required_action" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-rose-600 uppercase tracking-wider">3. Required Action / Perbaikan yang Wajib Dilakukan</span></div>
+                                                            <Input label="Corrective Work / Pekerjaan Perbaikan" value={notRequiredActions.correctiveWork} onChange={(e) => setNotRequiredActions({ ...notRequiredActions, correctiveWork: e.target.value })} placeholder="Penambahan sengkang & re-inspeksi" />
+                                                            <Input label="Responsible Party / Penanggung Jawab" value={notRequiredActions.responsibleParty} onChange={(e) => setNotRequiredActions({ ...notRequiredActions, responsibleParty: e.target.value })} placeholder="Subkon Structure" />
+                                                            <Input label="Deadline / Batas Waktu" value={notRequiredActions.deadline} onChange={(e) => setNotRequiredActions({ ...notRequiredActions, deadline: e.target.value })} placeholder="01 Aug 2026 Jam 14.00" />
+                                                            <Input label="Work Restriction / Pembatasan Pekerjaan" value={notRequiredActions.workRestriction} onChange={(e) => setNotRequiredActions({ ...notRequiredActions, workRestriction: e.target.value })} placeholder="Hold Point: Stop Pengecoran" />
+                                                        </div>
+                                                    )}
+
+                                                    {notActiveTab === "not_response" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-rose-600 uppercase tracking-wider">4. Response / Tanggapan Kontraktor</span></div>
+                                                            <Input label="Contractor Response / Tanggapan" value={notResponses.contractorResponse} onChange={(e) => setNotResponses({ ...notResponses, contractorResponse: e.target.value })} placeholder="Menerima notice & instruksi" />
+                                                            <Input label="Proposed Action / Rencana Tindakan" value={notResponses.proposedAction} onChange={(e) => setNotResponses({ ...notResponses, proposedAction: e.target.value })} placeholder="Mobilisasi tim perbaikan" />
+                                                            <Input label="Commitment Date / Komitmen Selesai" value={notResponses.commitmentDate} onChange={(e) => setNotResponses({ ...notResponses, commitmentDate: e.target.value })} placeholder="01 Aug Pukul 11.00 WIB" />
+                                                        </div>
+                                                    )}
+
+                                                    {notActiveTab === "not_closure" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-rose-600 uppercase tracking-wider">5. Verification & Closure / Verifikasi & Penutupan</span></div>
+                                                            <Input label="Site Verification / Hasil Verifikasi" value={notClosure.siteVerification} onChange={(e) => setNotClosure({ ...notClosure, siteVerification: e.target.value })} placeholder="Inspeksi ulang: Sengkang D10-100 terpasang" />
+                                                            <Input label="Compliance Result / Hasil Kepatuhan" value={notClosure.complianceResult} onChange={(e) => setNotClosure({ ...notClosure, complianceResult: e.target.value })} placeholder="Complied / Sesuai Spesifikasi" />
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <Select label="Closure Status" value={notClosure.closureStatus} onChange={(val) => setNotClosure({ ...notClosure, closureStatus: val })} options={[{ value: "Closed", label: "Closed" }, { value: "Open", label: "Open" }, { value: "Pending", label: "Pending" }]} />
+                                                                <Input label="Closure Date" type="date" value={notClosure.closureDate} onChange={(e) => setNotClosure({ ...notClosure, closureDate: e.target.value })} />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* ====================== PCH (PUNCH LIST & HANDOVER) FORMS ====================== */}
+                                            {reportType === "punch_list" && (
+                                                <>
+                                                    {pchActiveTab === "setup" && (
+                                                        <div className="space-y-5 animate-in fade-in duration-300">
+                                                            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                                                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">1. Handover Scope / Lingkup Serah Terima & Tim</span>
+                                                                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">PCH-SETUP</span>
+                                                            </div>
+                                                            <Select label="Proyek / Project *" value={selectedProjectId} onChange={(val) => { setSelectedProjectId(val); if (!paramId) { const proj = projects.find(p => p.id === val); if (proj?.location) setLocationOverride(proj.location); } }} options={[{ value: "", label: "-- Pilih Proyek / Select Project --" }, ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))]} disabled={!!paramProjectId} required />
+                                                            <Input label="Area / Sistem Handover" value={pchScope.areaSystem} onChange={(e) => setPchScope({ ...pchScope, areaSystem: e.target.value })} placeholder="Gedung Utama Lantai 1 & 2" />
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <Input label="Inspection Stage / Tahap" value={pchScope.inspectionStage} onChange={(e) => setPchScope({ ...pchScope, inspectionStage: e.target.value })} placeholder="Inspection PHO (BAST 1)" />
+                                                                <Input label="Handover Package / Paket" value={pchScope.handoverPackage} onChange={(e) => setPchScope({ ...pchScope, handoverPackage: e.target.value })} placeholder="Package A-01" />
+                                                            </div>
+                                                            <Input label="Inspection Team / Tim Inspektor" value={pchScope.inspectionTeam} onChange={(e) => setPchScope({ ...pchScope, inspectionTeam: e.target.value })} placeholder="Tim Owner, MK, Maincon & Subkon" />
+
+                                                            {/* Approvals */}
+                                                            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">Tanda Tangan / Approvals ({pchApprovals.length}/4)</span>
+                                                                    {pchApprovals.length < 4 && (<button type="button" onClick={() => { const typeOrder = ["disusun", "dicek", "mengetahui", "disetujui"] as const; const usedTypes = pchApprovals.map(a => a.type); const nextType = typeOrder.find(t => !usedTypes.includes(t)) || "mengetahui"; const newArr = [...pchApprovals, { type: nextType as any, name: "", role: "" }]; setPchApprovals(newArr); }} className="text-[11px] font-bold text-emerald-600 hover:underline flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Tambah TTD</button>)}
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {pchApprovals.map((app, idx) => (
+                                                                        <div key={idx} className="p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-2.5">
+                                                                            <div className="flex items-center justify-between"><span className="text-[10px] font-black text-neutral-400 uppercase">TTD #{idx + 1}</span>{pchApprovals.length > 1 && (<button type="button" onClick={() => setPchApprovals(pchApprovals.filter((_, i) => i !== idx))} className="text-neutral-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>)}</div>
+                                                                            <div className="grid grid-cols-3 gap-2">
+                                                                                <Select label="Peran" value={app.type} onChange={(val) => setPchApprovals(pchApprovals.map((item, i) => i === idx ? { ...item, type: val as any } : item))} options={[{ value: "disusun", label: "Disusun Oleh" }, { value: "dicek", label: "Dicek Oleh" }, { value: "mengetahui", label: "Mengetahui" }, { value: "disetujui", label: "Disetujui Oleh" }]} />
+                                                                                <Input label="Nama" value={app.name} onChange={(e) => setPchApprovals(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))} placeholder="Nama" />
+                                                                                <Input label="Jabatan" value={app.role} onChange={(e) => setPchApprovals(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))} placeholder="Jabatan" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {pchActiveTab === "pch_items" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-emerald-600 uppercase tracking-wider">2. Punch Items / Daftar Defect ({pchItems.length})</span></div>
+                                                            {pchItems.map((pi, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-emerald-600 uppercase">Defect Item #{idx + 1}</span>{pchItems.length > 1 && (<button type="button" onClick={() => setPchItems(pchItems.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Room / Area" value={pi.roomArea} onChange={(e) => setPchItems(prev => prev.map((it, i) => i === idx ? { ...it, roomArea: e.target.value } : it))} placeholder="Lantai 1 — Room 102" />
+                                                                    <Input label="Deskripsi Defect / Temuan" value={pi.defect} onChange={(e) => setPchItems(prev => prev.map((it, i) => i === idx ? { ...it, defect: e.target.value } : it))} placeholder="Cat dinding mengelupas" />
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <Input label="Kategori" value={pi.category} onChange={(e) => setPchItems(prev => prev.map((it, i) => i === idx ? { ...it, category: e.target.value } : it))} placeholder="Architectural" />
+                                                                        <Select label="Severity" value={pi.severity} onChange={(val) => setPchItems(prev => prev.map((it, i) => i === idx ? { ...it, severity: val } : it))} options={[{ value: "Critical", label: "Critical" }, { value: "Major", label: "Major" }, { value: "Minor", label: "Minor" }]} />
+                                                                        <Input label="Responsible Party" value={pi.responsibleParty} onChange={(e) => setPchItems(prev => prev.map((it, i) => i === idx ? { ...it, responsibleParty: e.target.value } : it))} placeholder="Subkon Cat" />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setPchItems([...pchItems, { roomArea: "", defect: "", category: "Architectural", severity: "Minor", responsibleParty: "" }])} className="w-full py-2.5 text-xs font-bold text-emerald-600 flex items-center justify-center gap-1.5 bg-emerald-50/80 rounded-xl border border-emerald-200/60 hover:bg-emerald-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Defect / Add Punch Item</button>
+                                                        </div>
+                                                    )}
+
+                                                    {pchActiveTab === "pch_repairs" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-emerald-600 uppercase tracking-wider">3. Repair Tracking / Pelacakan Perbaikan ({pchRepairs.length})</span></div>
+                                                            {pchRepairs.map((rp, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-emerald-600 uppercase">Repair Item #{idx + 1}</span>{pchRepairs.length > 1 && (<button type="button" onClick={() => setPchRepairs(pchRepairs.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Metode Perbaikan / Repair Method" value={rp.repairMethod} onChange={(e) => setPchRepairs(prev => prev.map((it, i) => i === idx ? { ...it, repairMethod: e.target.value } : it))} placeholder="Pengecatan ulang 2 lapis" />
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <Input label="Target Date" type="date" value={rp.targetDate} onChange={(e) => setPchRepairs(prev => prev.map((it, i) => i === idx ? { ...it, targetDate: e.target.value } : it))} />
+                                                                        <Input label="Actual Completion" type="date" value={rp.actualCompletion} onChange={(e) => setPchRepairs(prev => prev.map((it, i) => i === idx ? { ...it, actualCompletion: e.target.value } : it))} />
+                                                                        <Input label="Bukti / Evidence" value={rp.evidence} onChange={(e) => setPchRepairs(prev => prev.map((it, i) => i === idx ? { ...it, evidence: e.target.value } : it))} placeholder="FOTO-REPAIR.JPG" />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setPchRepairs([...pchRepairs, { repairMethod: "", targetDate: "", actualCompletion: "", evidence: "" }])} className="w-full py-2.5 text-xs font-bold text-emerald-600 flex items-center justify-center gap-1.5 bg-emerald-50/80 rounded-xl border border-emerald-200/60 hover:bg-emerald-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Tracking Perbaikan / Add Repair</button>
+                                                        </div>
+                                                    )}
+
+                                                    {pchActiveTab === "pch_verification" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-emerald-600 uppercase tracking-wider">4. Verification / Verifikasi Ulang ({pchVerifications.length})</span></div>
+                                                            {pchVerifications.map((v, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-emerald-600 uppercase">Verification #{idx + 1}</span>{pchVerifications.length > 1 && (<button type="button" onClick={() => setPchVerifications(pchVerifications.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <div className="grid grid-cols-4 gap-2">
+                                                                        <Input label="Reinspection Date" type="date" value={v.reinspectionDate} onChange={(e) => setPchVerifications(prev => prev.map((it, i) => i === idx ? { ...it, reinspectionDate: e.target.value } : it))} />
+                                                                        <Select label="Hasil" value={v.passFail} onChange={(val) => setPchVerifications(prev => prev.map((it, i) => i === idx ? { ...it, passFail: val } : it))} options={[{ value: "Pass", label: "Pass" }, { value: "Fail", label: "Fail" }, { value: "Re-work", label: "Re-work" }]} />
+                                                                        <Input label="Outstanding Item" value={v.outstandingItem} onChange={(e) => setPchVerifications(prev => prev.map((it, i) => i === idx ? { ...it, outstandingItem: e.target.value } : it))} placeholder="Nihil" />
+                                                                        <Input label="Verified By" value={v.verifiedBy} onChange={(e) => setPchVerifications(prev => prev.map((it, i) => i === idx ? { ...it, verifiedBy: e.target.value } : it))} placeholder="Ir. Doni (MK)" />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setPchVerifications([...pchVerifications, { reinspectionDate: "", passFail: "Pass", outstandingItem: "Nihil", verifiedBy: "" }])} className="w-full py-2.5 text-xs font-bold text-emerald-600 flex items-center justify-center gap-1.5 bg-emerald-50/80 rounded-xl border border-emerald-200/60 hover:bg-emerald-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Verifikasi / Add Verification</button>
+                                                        </div>
+                                                    )}
+
+                                                    {pchActiveTab === "pch_closeout" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-emerald-600 uppercase tracking-wider">5. BAST & Closeout / BAST & Penutupan Formal</span></div>
+                                                            <Input label="Handover Status / Status Serah Terima" value={pchCloseout.handoverStatus} onChange={(e) => setPchCloseout({ ...pchCloseout, handoverStatus: e.target.value })} placeholder="Disetujui Penuh" />
+                                                            <Input label="Exceptions / Catatan Pengecualian" value={pchCloseout.exceptions} onChange={(e) => setPchCloseout({ ...pchCloseout, exceptions: e.target.value })} placeholder="Pekerjaan garansi pemeliharaan" />
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <Input label="Masa Garansi / Warranty Start" value={pchCloseout.warrantyStart} onChange={(e) => setPchCloseout({ ...pchCloseout, warrantyStart: e.target.value })} placeholder="05 Agustus 2026 (180 Hari)" />
+                                                                <Input label="BAST Reference / No. Berkas BAST" value={pchCloseout.bastReference} onChange={(e) => setPchCloseout({ ...pchCloseout, bastReference: e.target.value })} placeholder="BAST-01/ADIDAYA/2026" />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* ====================== COM (COMMISSIONING & TESTING) FORMS ====================== */}
+                                            {reportType === "commissioning" && (
+                                                <>
+                                                    {comActiveTab === "setup" && (
+                                                        <div className="space-y-5 animate-in fade-in duration-300">
+                                                            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                                                <span className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider">1. System & Test Plan / Rencana Pengujian Sistem</span>
+                                                                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">COM-SETUP</span>
+                                                            </div>
+                                                            <Select label="Proyek / Project *" value={selectedProjectId} onChange={(val) => { setSelectedProjectId(val); if (!paramId) { const proj = projects.find(p => p.id === val); if (proj?.location) setLocationOverride(proj.location); } }} options={[{ value: "", label: "-- Pilih Proyek / Select Project --" }, ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))]} disabled={!!paramProjectId} required />
+                                                            <Input label="System / Sistem Uji" value={comPlan.system} onChange={(e) => setComPlan({ ...comPlan, system: e.target.value })} placeholder="Sistem Proteksi Kebakaran (Hydrant)" />
+                                                            <Input label="Equipment & Tag No." value={comPlan.equipment} onChange={(e) => setComPlan({ ...comPlan, equipment: e.target.value })} placeholder="Electric Main Pump 750 GPM" />
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <Input label="Method Statement ID" value={comPlan.methodStatement} onChange={(e) => setComPlan({ ...comPlan, methodStatement: e.target.value })} placeholder="MS-MEP-COM-004" />
+                                                                <Input label="Test Standard / Acuan" value={comPlan.testStandard} onChange={(e) => setComPlan({ ...comPlan, testStandard: e.target.value })} placeholder="NFPA 20 & SNI 03-1745" />
+                                                            </div>
+                                                            <Input label="Prerequisites / Prasyarat Uji" value={comPlan.prerequisites} onChange={(e) => setComPlan({ ...comPlan, prerequisites: e.target.value })} placeholder="Hydrotest Passed, Power Energized" />
+
+                                                            {/* Approvals */}
+                                                            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">Tanda Tangan / Approvals ({comApprovals.length}/4)</span>
+                                                                    {comApprovals.length < 4 && (<button type="button" onClick={() => { const typeOrder = ["disusun", "dicek", "mengetahui", "disetujui"] as const; const usedTypes = comApprovals.map(a => a.type); const nextType = typeOrder.find(t => !usedTypes.includes(t)) || "mengetahui"; const newArr = [...comApprovals, { type: nextType as any, name: "", role: "" }]; setComApprovals(newArr); }} className="text-[11px] font-bold text-blue-600 hover:underline flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Tambah TTD</button>)}
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {comApprovals.map((app, idx) => (
+                                                                        <div key={idx} className="p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-2.5">
+                                                                            <div className="flex items-center justify-between"><span className="text-[10px] font-black text-neutral-400 uppercase">TTD #{idx + 1}</span>{comApprovals.length > 1 && (<button type="button" onClick={() => setComApprovals(comApprovals.filter((_, i) => i !== idx))} className="text-neutral-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>)}</div>
+                                                                            <div className="grid grid-cols-3 gap-2">
+                                                                                <Select label="Peran" value={app.type} onChange={(val) => setComApprovals(comApprovals.map((item, i) => i === idx ? { ...item, type: val as any } : item))} options={[{ value: "disusun", label: "Disusun Oleh" }, { value: "dicek", label: "Dicek Oleh" }, { value: "mengetahui", label: "Mengetahui" }, { value: "disetujui", label: "Disetujui Oleh" }]} />
+                                                                                <Input label="Nama" value={app.name} onChange={(e) => setComApprovals(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))} placeholder="Nama" />
+                                                                                <Input label="Jabatan" value={app.role} onChange={(e) => setComApprovals(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))} placeholder="Jabatan" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {comActiveTab === "com_precom" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-blue-600 uppercase tracking-wider">2. Pre-Commissioning / Check Pra-Komisioning</span></div>
+                                                            <Input label="Installation Check / Inspeksi Visual" value={comPreCom.installationCheck} onChange={(e) => setComPreCom({ ...comPreCom, installationCheck: e.target.value })} placeholder="Inspeksi visual & kelengkapan valve" />
+                                                            <Input label="Calibration Status / Kalibrasi" value={comPreCom.calibration} onChange={(e) => setComPreCom({ ...comPreCom, calibration: e.target.value })} placeholder="Pressure gauge bersertifikat KAN" />
+                                                            <Input label="Flushing & Cleaning" value={comPreCom.flushingCleaning} onChange={(e) => setComPreCom({ ...comPreCom, flushingCleaning: e.target.value })} placeholder="Flushing pipa hydrant selesai" />
+                                                            <Input label="Energisation Readiness / Power On Safe" value={comPreCom.energisationReadiness} onChange={(e) => setComPreCom({ ...comPreCom, energisationReadiness: e.target.value })} placeholder="Panel utama ON & Interlock Active" />
+                                                        </div>
+                                                    )}
+
+                                                    {comActiveTab === "com_functional" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-blue-600 uppercase tracking-wider">3. Functional Test / Pengujian Fungsional ({comFunctionalTests.length})</span></div>
+                                                            {comFunctionalTests.map((ft, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-blue-600 uppercase">Test Parameter #{idx + 1}</span>{comFunctionalTests.length > 1 && (<button type="button" onClick={() => setComFunctionalTests(comFunctionalTests.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Parameter Uji" value={ft.parameter} onChange={(e) => setComFunctionalTests(prev => prev.map((it, i) => i === idx ? { ...it, parameter: e.target.value } : it))} placeholder="Tekanan Kerja Main Pump" />
+                                                                    <div className="grid grid-cols-4 gap-2">
+                                                                        <Input label="Target Specs" value={ft.target} onChange={(e) => setComFunctionalTests(prev => prev.map((it, i) => i === idx ? { ...it, target: e.target.value } : it))} placeholder="10.0 Bar" />
+                                                                        <Input label="Hasil Actual" value={ft.actual} onChange={(e) => setComFunctionalTests(prev => prev.map((it, i) => i === idx ? { ...it, actual: e.target.value } : it))} placeholder="10.2 Bar" />
+                                                                        <Input label="Toleransi" value={ft.tolerance} onChange={(e) => setComFunctionalTests(prev => prev.map((it, i) => i === idx ? { ...it, tolerance: e.target.value } : it))} placeholder="±0.5 Bar" />
+                                                                        <Select label="Hasil Uji" value={ft.passFail} onChange={(val) => setComFunctionalTests(prev => prev.map((it, i) => i === idx ? { ...it, passFail: val } : it))} options={[{ value: "Pass", label: "Pass" }, { value: "Fail", label: "Fail" }]} />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setComFunctionalTests([...comFunctionalTests, { parameter: "", target: "", actual: "", tolerance: "±5%", passFail: "Pass" }])} className="w-full py-2.5 text-xs font-bold text-blue-600 flex items-center justify-center gap-1.5 bg-blue-50/80 rounded-xl border border-blue-200/60 hover:bg-blue-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Parameter Uji / Add Test</button>
+                                                        </div>
+                                                    )}
+
+                                                    {comActiveTab === "com_failures" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-blue-600 uppercase tracking-wider">4. Failure & Rectification / Kegagalan & Perbaikan ({comFailures.length})</span></div>
+                                                            {comFailures.map((fl, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-blue-600 uppercase">Failure #{idx + 1}</span>{comFailures.length > 1 && (<button type="button" onClick={() => setComFailures(comFailures.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Deskripsi Kegagalan / Anomali" value={fl.failure} onChange={(e) => setComFailures(prev => prev.map((it, i) => i === idx ? { ...it, failure: e.target.value } : it))} placeholder="Pressure switch terlambat respons" />
+                                                                    <Input label="Root Cause / Penyebab Utama" value={fl.rootCause} onChange={(e) => setComFailures(prev => prev.map((it, i) => i === idx ? { ...it, rootCause: e.target.value } : it))} placeholder="Setting pressure switch terlalu tinggi" />
+                                                                    <div className="grid grid-cols-2 gap-3">
+                                                                        <Input label="Corrective Action / Perbaikan" value={fl.correctiveAction} onChange={(e) => setComFailures(prev => prev.map((it, i) => i === idx ? { ...it, correctiveAction: e.target.value } : it))} placeholder="Kalibrasi ulang spring setting" />
+                                                                        <Input label="Retest Date / Jadwal Uji Ulang" type="date" value={fl.retestDate} onChange={(e) => setComFailures(prev => prev.map((it, i) => i === idx ? { ...it, retestDate: e.target.value } : it))} />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setComFailures([...comFailures, { failure: "", rootCause: "", correctiveAction: "", retestDate: "" }])} className="w-full py-2.5 text-xs font-bold text-blue-600 flex items-center justify-center gap-1.5 bg-blue-50/80 rounded-xl border border-blue-200/60 hover:bg-blue-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Kegagalan / Add Failure</button>
+                                                        </div>
+                                                    )}
+
+                                                    {comActiveTab === "com_certification" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-blue-600 uppercase tracking-wider">5. Acceptance & Certification / Penerimaan & Sertifikasi</span></div>
+                                                            <Input label="Final Result / Hasil Akhir" value={comCertification.finalResult} onChange={(e) => setComCertification({ ...comCertification, finalResult: e.target.value })} placeholder="PASSED / Lolos Komisioning" />
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <Input label="No. Sertifikat Uji" value={comCertification.certificate} onChange={(e) => setComCertification({ ...comCertification, certificate: e.target.value })} placeholder="CERT-COM-HYD-2026-012" />
+                                                                <Input label="Status Pelatihan / Training" value={comCertification.training} onChange={(e) => setComCertification({ ...comCertification, training: e.target.value })} placeholder="Pelatihan Operator Selesai" />
+                                                            </div>
+                                                            <Input label="Kelengkapan Dokumen O&M Manual" value={comCertification.omManual} onChange={(e) => setComCertification({ ...comCertification, omManual: e.target.value })} placeholder="Dokumen O&M Manual Soft/Hardcopy Complete" />
+                                                            <Input label="Accepted By / Disetujui Oleh" value={comCertification.acceptedBy} onChange={(e) => setComCertification({ ...comCertification, acceptedBy: e.target.value })} placeholder="Dinas Damkar / Client Team" />
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* ====================== ENV (ENVIRONMENTAL REPORT) FORMS ====================== */}
+                                            {reportType === "environmental" && (
+                                                <>
+                                                    {envActiveTab === "setup" && (
+                                                        <div className="space-y-5 animate-in fade-in duration-300">
+                                                            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                                                <span className="text-xs font-black text-lime-600 dark:text-lime-400 uppercase tracking-wider">1. Environmental Aspects / Identifikasi Aspek Lingkungan ({envAspects.length})</span>
+                                                                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">ENV-SETUP</span>
+                                                            </div>
+                                                            <Select label="Proyek / Project *" value={selectedProjectId} onChange={(val) => { setSelectedProjectId(val); if (!paramId) { const proj = projects.find(p => p.id === val); if (proj?.location) setLocationOverride(proj.location); } }} options={[{ value: "", label: "-- Pilih Proyek / Select Project --" }, ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))]} disabled={!!paramProjectId} required />
+                                                            
+                                                            <div className="space-y-3">
+                                                                {envAspects.map((asp, idx) => (
+                                                                    <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                        <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-lime-600 uppercase">Aspect #{idx + 1}</span>{envAspects.length > 1 && (<button type="button" onClick={() => setEnvAspects(envAspects.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                        <Input label="Aktivitas Proyek" value={asp.activity} onChange={(e) => setEnvAspects(prev => prev.map((it, i) => i === idx ? { ...it, activity: e.target.value } : it))} placeholder="Galian & Transportasi Tanah" />
+                                                                        <Input label="Aspek Lingkungan" value={asp.aspect} onChange={(e) => setEnvAspects(prev => prev.map((it, i) => i === idx ? { ...it, aspect: e.target.value } : it))} placeholder="Ceceran Tanah & Debu Jalan" />
+                                                                        <div className="grid grid-cols-2 gap-2.5">
+                                                                            <Input label="Dampak Potensial" value={asp.potentialImpact} onChange={(e) => setEnvAspects(prev => prev.map((it, i) => i === idx ? { ...it, potentialImpact: e.target.value } : it))} placeholder="Polusi Udara" />
+                                                                            <Input label="Acuan Regulasi" value={asp.applicableRequirement} onChange={(e) => setEnvAspects(prev => prev.map((it, i) => i === idx ? { ...it, applicableRequirement: e.target.value } : it))} placeholder="AMDAL / Permen LHK" />
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                                <button type="button" onClick={() => setEnvAspects([...envAspects, { activity: "", aspect: "", potentialImpact: "", applicableRequirement: "AMDAL" }])} className="w-full py-2.5 text-xs font-bold text-lime-600 flex items-center justify-center gap-1.5 bg-lime-50/80 rounded-xl border border-lime-200/60 hover:bg-lime-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Aspek Lingkungan / Add Aspect</button>
+                                                            </div>
+
+                                                            {/* Approvals */}
+                                                            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">Tanda Tangan / Approvals ({envApprovals.length}/4)</span>
+                                                                    {envApprovals.length < 4 && (<button type="button" onClick={() => { const typeOrder = ["disusun", "dicek", "mengetahui", "disetujui"] as const; const usedTypes = envApprovals.map(a => a.type); const nextType = typeOrder.find(t => !usedTypes.includes(t)) || "mengetahui"; const newArr = [...envApprovals, { type: nextType as any, name: "", role: "" }]; setEnvApprovals(newArr); }} className="text-[11px] font-bold text-lime-600 hover:underline flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Tambah TTD</button>)}
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {envApprovals.map((app, idx) => (
+                                                                        <div key={idx} className="p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-2.5">
+                                                                            <div className="flex items-center justify-between"><span className="text-[10px] font-black text-neutral-400 uppercase">TTD #{idx + 1}</span>{envApprovals.length > 1 && (<button type="button" onClick={() => setEnvApprovals(envApprovals.filter((_, i) => i !== idx))} className="text-neutral-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>)}</div>
+                                                                            <div className="grid grid-cols-3 gap-2">
+                                                                                <Select label="Peran" value={app.type} onChange={(val) => setEnvApprovals(envApprovals.map((item, i) => i === idx ? { ...item, type: val as any } : item))} options={[{ value: "disusun", label: "Disusun Oleh" }, { value: "dicek", label: "Dicek Oleh" }, { value: "mengetahui", label: "Mengetahui" }, { value: "disetujui", label: "Disetujui Oleh" }]} />
+                                                                                <Input label="Nama" value={app.name} onChange={(e) => setEnvApprovals(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))} placeholder="Nama" />
+                                                                                <Input label="Jabatan" value={app.role} onChange={(e) => setEnvApprovals(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))} placeholder="Jabatan" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {envActiveTab === "env_monitoring" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-lime-600 uppercase tracking-wider">2. Monitoring Results / Hasil Pemantauan Lingkungan</span></div>
+                                                            <Input label="Noise Monitoring / Tingkat Kebisingan" value={envMonitoring.noise} onChange={(e) => setEnvMonitoring({ ...envMonitoring, noise: e.target.value })} placeholder="62.5 dB(A)" />
+                                                            <Input label="Dust Monitoring / Tingkat Debu" value={envMonitoring.dust} onChange={(e) => setEnvMonitoring({ ...envMonitoring, dust: e.target.value })} placeholder="115 µg/Nm³ TSP" />
+                                                            <Input label="Water Monitoring / Kualitas Air Limbah" value={envMonitoring.water} onChange={(e) => setEnvMonitoring({ ...envMonitoring, water: e.target.value })} placeholder="pH 7.2 | TSS 42 mg/L" />
+                                                            <Input label="Waste Quantity / Volume Limbah B3 & Non-B3" value={envMonitoring.waste} onChange={(e) => setEnvMonitoring({ ...envMonitoring, waste: e.target.value })} placeholder="B3: 120 kg | Non-B3: 4.5 Ton" />
+                                                            <Input label="Measurement Summary / Ringkasan Evaluasi" value={envMonitoring.measurementResult} onChange={(e) => setEnvMonitoring({ ...envMonitoring, measurementResult: e.target.value })} placeholder="Memenuhi Baku Mutu Lingkungan" />
+                                                        </div>
+                                                    )}
+
+                                                    {envActiveTab === "env_controls" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-lime-600 uppercase tracking-wider">3. Control Measures / Pengendalian & Mitigasi Lingkungan</span></div>
+                                                            <Input label="Mitigation / Mitigasi Debu & Bising" value={envControls.mitigation} onChange={(e) => setEnvControls({ ...envControls, mitigation: e.target.value })} placeholder="Penyiraman jalan 4x sehari" />
+                                                            <Input label="Waste Segregation / Pemisahan Sampah" value={envControls.wasteSegregation} onChange={(e) => setEnvControls({ ...envControls, wasteSegregation: e.target.value })} placeholder="Pemisahan TPS 3 warna" />
+                                                            <Input label="Disposal / Pengangkutan Berizin" value={envControls.disposal} onChange={(e) => setEnvControls({ ...envControls, disposal: e.target.value })} placeholder="Pengangkutan oleh PT Wasteco" />
+                                                            <Input label="Housekeeping & Drainage" value={envControls.housekeeping} onChange={(e) => setEnvControls({ ...envControls, housekeeping: e.target.value })} placeholder="Pembersihan rutin sedimen" />
+                                                        </div>
+                                                    )}
+
+                                                    {envActiveTab === "env_incidents" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-lime-600 uppercase tracking-wider">4. Complaint & Incident / Keluhan Warga & Insiden ({envIncidents.length})</span></div>
+                                                            {envIncidents.map((inc, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-lime-600 uppercase">Incident #{idx + 1}</span>{envIncidents.length > 1 && (<button type="button" onClick={() => setEnvIncidents(envIncidents.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Sumber Keluhan / Pelapor" value={inc.complaintSource} onChange={(e) => setEnvIncidents(prev => prev.map((it, i) => i === idx ? { ...it, complaintSource: e.target.value } : it))} placeholder="Warga RT 03" />
+                                                                    <Input label="Insiden Lingkungan" value={inc.environmentalIncident} onChange={(e) => setEnvIncidents(prev => prev.map((it, i) => i === idx ? { ...it, environmentalIncident: e.target.value } : it))} placeholder="Debu beterbangan" />
+                                                                    <Input label="Investigasi Cause" value={inc.investigation} onChange={(e) => setEnvIncidents(prev => prev.map((it, i) => i === idx ? { ...it, investigation: e.target.value } : it))} placeholder="Truk tanah tidak ditutup terpal" />
+                                                                    <Input label="Tindakan Penanganan" value={inc.response} onChange={(e) => setEnvIncidents(prev => prev.map((it, i) => i === idx ? { ...it, response: e.target.value } : it))} placeholder="Teguran driver & terpal rapat" />
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setEnvIncidents([...envIncidents, { complaintSource: "", environmentalIncident: "", investigation: "", response: "" }])} className="w-full py-2.5 text-xs font-bold text-lime-600 flex items-center justify-center gap-1.5 bg-lime-50/80 rounded-xl border border-lime-200/60 hover:bg-lime-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Insiden / Add Incident</button>
+                                                        </div>
+                                                    )}
+
+                                                    {envActiveTab === "env_compliance" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-lime-600 uppercase tracking-wider">5. Compliance & Follow-Up / Kepatuhan & Action Plan</span></div>
+                                                            <Input label="Limit Standard / Acuan Baku Mutu" value={envCompliance.limit} onChange={(e) => setEnvCompliance({ ...envCompliance, limit: e.target.value })} placeholder="PERMEN LHK & UKL-UPL" />
+                                                            <Input label="Compliance Rate %" value={envCompliance.result} onChange={(e) => setEnvCompliance({ ...envCompliance, result: e.target.value })} placeholder="Compliance Rate 98.2%" />
+                                                            <Input label="Noncompliance / Temuan Ketidaksesuaian" value={envCompliance.noncompliance} onChange={(e) => setEnvCompliance({ ...envCompliance, noncompliance: e.target.value })} placeholder="Tutup tempat sampah B3 terbuka" />
+                                                            <Input label="Corrective Action" value={envCompliance.correctiveAction} onChange={(e) => setEnvCompliance({ ...envCompliance, correctiveAction: e.target.value })} placeholder="Kuncian otomatis TPS B3" />
+                                                            <Input label="Closure Status & Date" value={envCompliance.closure} onChange={(e) => setEnvCompliance({ ...envCompliance, closure: e.target.value })} placeholder="Closed 28 Juli 2026" />
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* ====================== PPL (PEOPLE REGISTER) FORMS ====================== */}
+                                            {["people_register", "people"].includes(reportType) && (
+                                                <>
+                                                    {pplActiveTab === "setup" && (
+                                                        <div className="space-y-5 animate-in fade-in duration-300">
+                                                            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                                                <span className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">1. Organisation Structure / Struktur Organisasi Tim</span>
+                                                                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">PPL-SETUP</span>
+                                                            </div>
+                                                            <Select label="Proyek / Project *" value={selectedProjectId} onChange={(val) => { setSelectedProjectId(val); if (!paramId) { const proj = projects.find(p => p.id === val); if (proj?.location) setLocationOverride(proj.location); } }} options={[{ value: "", label: "-- Pilih Proyek / Select Project --" }, ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))]} disabled={!!paramProjectId} required />
+                                                            <Input label="Company / Perusahaan" value={pplOrg.company} onChange={(e) => setPplOrg({ ...pplOrg, company: e.target.value })} placeholder="PT Adidaya Konstruksi Utama" />
+                                                            <Input label="Team / Divisi" value={pplOrg.team} onChange={(e) => setPplOrg({ ...pplOrg, team: e.target.value })} placeholder="Project Engineering & Operations" />
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <Input label="Reporting Line / Jalur Pelaporan" value={pplOrg.reportingLine} onChange={(e) => setPplOrg({ ...pplOrg, reportingLine: e.target.value })} placeholder="PM -> Site Engineer" />
+                                                                <Input label="Position / Jabatan Struktur" value={pplOrg.position} onChange={(e) => setPplOrg({ ...pplOrg, position: e.target.value })} placeholder="Manajemen Site" />
+                                                            </div>
+
+                                                            {/* Approvals */}
+                                                            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">Tanda Tangan / Approvals ({pplApprovals.length}/4)</span>
+                                                                    {pplApprovals.length < 4 && (<button type="button" onClick={() => { const typeOrder = ["disusun", "dicek", "mengetahui", "disetujui"] as const; const usedTypes = pplApprovals.map(a => a.type); const nextType = typeOrder.find(t => !usedTypes.includes(t)) || "mengetahui"; const newArr = [...pplApprovals, { type: nextType as any, name: "", role: "" }]; setPplApprovals(newArr); }} className="text-[11px] font-bold text-purple-600 hover:underline flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Tambah TTD</button>)}
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {pplApprovals.map((app, idx) => (
+                                                                        <div key={idx} className="p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-2.5">
+                                                                            <div className="flex items-center justify-between"><span className="text-[10px] font-black text-neutral-400 uppercase">TTD #{idx + 1}</span>{pplApprovals.length > 1 && (<button type="button" onClick={() => setPplApprovals(pplApprovals.filter((_, i) => i !== idx))} className="text-neutral-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>)}</div>
+                                                                            <div className="grid grid-cols-3 gap-2">
+                                                                                <Select label="Peran" value={app.type} onChange={(val) => setPplApprovals(pplApprovals.map((item, i) => i === idx ? { ...item, type: val as any } : item))} options={[{ value: "disusun", label: "Disusun Oleh" }, { value: "dicek", label: "Dicek Oleh" }, { value: "mengetahui", label: "Mengetahui" }, { value: "disetujui", label: "Disetujui Oleh" }]} />
+                                                                                <Input label="Nama" value={app.name} onChange={(e) => setPplApprovals(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))} placeholder="Nama" />
+                                                                                <Input label="Jabatan" value={app.role} onChange={(e) => setPplApprovals(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))} placeholder="Jabatan" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {pplActiveTab === "ppl_personnel" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-purple-600 uppercase tracking-wider">2. Personnel Master / Data Master Personel ({pplPersonnel.length})</span></div>
+                                                            {pplPersonnel.map((p, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-purple-600 uppercase">Personel #{idx + 1} ({p.empId})</span>{pplPersonnel.length > 1 && (<button type="button" onClick={() => setPplPersonnel(pplPersonnel.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <div className="grid grid-cols-2 gap-2.5">
+                                                                        <Input label="Employee ID" value={p.empId} onChange={(e) => setPplPersonnel(prev => prev.map((it, i) => i === idx ? { ...it, empId: e.target.value } : it))} placeholder="EMP-001" />
+                                                                        <Input label="Nama Lengkap" value={p.name} onChange={(e) => setPplPersonnel(prev => prev.map((it, i) => i === idx ? { ...it, name: e.target.value } : it))} placeholder="Ir. Budi Santoso" />
+                                                                    </div>
+                                                                    <div className="grid grid-cols-3 gap-2.5">
+                                                                        <Input label="Role / Jabatan" value={p.role} onChange={(e) => setPplPersonnel(prev => prev.map((it, i) => i === idx ? { ...it, role: e.target.value } : it))} placeholder="Site Engineer" />
+                                                                        <Input label="Employer / Perusahaan" value={p.employer} onChange={(e) => setPplPersonnel(prev => prev.map((it, i) => i === idx ? { ...it, employer: e.target.value } : it))} placeholder="PT Adidaya" />
+                                                                        <Input label="Kontak Telepon" value={p.contact} onChange={(e) => setPplPersonnel(prev => prev.map((it, i) => i === idx ? { ...it, contact: e.target.value } : it))} placeholder="0812-3456-7890" />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setPplPersonnel([...pplPersonnel, { empId: `EMP-00${pplPersonnel.length + 1}`, name: "", role: "", employer: "PT Adidaya", contact: "" }])} className="w-full py-2.5 text-xs font-bold text-purple-600 flex items-center justify-center gap-1.5 bg-purple-50/80 rounded-xl border border-purple-200/60 hover:bg-purple-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Personel / Add Personnel</button>
+                                                        </div>
+                                                    )}
+
+                                                    {pplActiveTab === "ppl_competency" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-purple-600 uppercase tracking-wider">3. Competency & Certification / Kompetensi & Lisensi SKA ({pplCompetencies.length})</span></div>
+                                                            {pplCompetencies.map((c, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-purple-600 uppercase">Sertifikasi #{idx + 1}</span>{pplCompetencies.length > 1 && (<button type="button" onClick={() => setPplCompetencies(pplCompetencies.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Keahlian / Skill" value={c.skill} onChange={(e) => setPplCompetencies(prev => prev.map((it, i) => i === idx ? { ...it, skill: e.target.value } : it))} placeholder="Ahli K3 Konstruksi Utama" />
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <Input label="Lisensi SKA/SKT" value={c.licence} onChange={(e) => setPplCompetencies(prev => prev.map((it, i) => i === idx ? { ...it, licence: e.target.value } : it))} placeholder="SKA K3 1.2.003" />
+                                                                        <Input label="No. Sertifikat" value={c.certificate} onChange={(e) => setPplCompetencies(prev => prev.map((it, i) => i === idx ? { ...it, certificate: e.target.value } : it))} placeholder="CERT-2025-992" />
+                                                                        <Input label="Expiry Date" type="date" value={c.expiry} onChange={(e) => setPplCompetencies(prev => prev.map((it, i) => i === idx ? { ...it, expiry: e.target.value } : it))} />
+                                                                    </div>
+                                                                    <Input label="Riwayat Pelatihan / Training" value={c.training} onChange={(e) => setPplCompetencies(prev => prev.map((it, i) => i === idx ? { ...it, training: e.target.value } : it))} placeholder="Advanced HSE Training" />
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setPplCompetencies([...pplCompetencies, { skill: "", licence: "", certificate: "", expiry: "", training: "" }])} className="w-full py-2.5 text-xs font-bold text-purple-600 flex items-center justify-center gap-1.5 bg-purple-50/80 rounded-xl border border-purple-200/60 hover:bg-purple-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Sertifikasi / Add Competency</button>
+                                                        </div>
+                                                    )}
+
+                                                    {pplActiveTab === "ppl_assignment" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-purple-600 uppercase tracking-wider">4. Project Assignment / Penugasan Proyek ({pplAssignments.length})</span></div>
+                                                            {pplAssignments.map((a, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-purple-600 uppercase">Assignment #{idx + 1}</span>{pplAssignments.length > 1 && (<button type="button" onClick={() => setPplAssignments(pplAssignments.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <div className="grid grid-cols-2 gap-2.5">
+                                                                        <Input label="Tanggal Mobilisasi" type="date" value={a.mobilisation} onChange={(e) => setPplAssignments(prev => prev.map((it, i) => i === idx ? { ...it, mobilisation: e.target.value } : it))} />
+                                                                        <Input label="Work Area / Zone" value={a.workArea} onChange={(e) => setPplAssignments(prev => prev.map((it, i) => i === idx ? { ...it, workArea: e.target.value } : it))} placeholder="Zona A Structure" />
+                                                                    </div>
+                                                                    <div className="grid grid-cols-3 gap-2.5">
+                                                                        <Input label="Shift Kerja" value={a.shift} onChange={(e) => setPplAssignments(prev => prev.map((it, i) => i === idx ? { ...it, shift: e.target.value } : it))} placeholder="Day Shift" />
+                                                                        <Input label="Supervisor" value={a.supervisor} onChange={(e) => setPplAssignments(prev => prev.map((it, i) => i === idx ? { ...it, supervisor: e.target.value } : it))} placeholder="Ir. Ahmad (PM)" />
+                                                                        <Select label="Status" value={a.status} onChange={(val) => setPplAssignments(prev => prev.map((it, i) => i === idx ? { ...it, status: val } : it))} options={[{ value: "Active", label: "Active" }, { value: "On Leave", label: "On Leave" }, { value: "Demobilized", label: "Demobilized" }]} />
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setPplAssignments([...pplAssignments, { mobilisation: "", workArea: "", shift: "Day Shift", supervisor: "", status: "Active" }])} className="w-full py-2.5 text-xs font-bold text-purple-600 flex items-center justify-center gap-1.5 bg-purple-50/80 rounded-xl border border-purple-200/60 hover:bg-purple-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Penugasan / Add Assignment</button>
+                                                        </div>
+                                                    )}
+
+                                                    {pplActiveTab === "ppl_emergency" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2 flex items-center justify-between">
+                                                                <span className="text-xs font-black text-purple-600 uppercase tracking-wider">5. Emergency & Offboarding (Data Restricted)</span>
+                                                                <button type="button" onClick={() => setPplMaskSensitiveInPdf(!pplMaskSensitiveInPdf)} className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded cursor-pointer border border-amber-200">
+                                                                    {pplMaskSensitiveInPdf ? "🔒 Masked in PDF" : "🔓 Unmasked"}
+                                                                </button>
+                                                            </div>
+                                                            <Input label="Emergency Contact / Kontak Darurat" value={pplEmergencyOffboarding.emergencyContact} onChange={(e) => setPplEmergencyOffboarding({ ...pplEmergencyOffboarding, emergencyContact: e.target.value })} placeholder="Istri: Ny. Ratna (0812-9988-7766)" />
+                                                            <Input label="Medical Note Access / Golongan Darah" value={pplEmergencyOffboarding.medicalNoteAccess} onChange={(e) => setPplEmergencyOffboarding({ ...pplEmergencyOffboarding, medicalNoteAccess: e.target.value })} placeholder="Golongan Darah O+" />
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <Input label="Rencana Demobilisasi" value={pplEmergencyOffboarding.demobilisation} onChange={(e) => setPplEmergencyOffboarding({ ...pplEmergencyOffboarding, demobilisation: e.target.value })} placeholder="31 Januari 2027" />
+                                                                <Input label="Site Access Badge Deactivation" value={pplEmergencyOffboarding.siteAccessDeactivation} onChange={(e) => setPplEmergencyOffboarding({ ...pplEmergencyOffboarding, siteAccessDeactivation: e.target.value })} placeholder="Badge RFID #A-102 Active" />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
+                                            {/* ====================== CLK (CLOCK & ATTENDANCE) FORMS ====================== */}
+                                            {["clock_attendance", "clock"].includes(reportType) && (
+                                                <>
+                                                    {clkActiveTab === "setup" && (
+                                                        <div className="space-y-5 animate-in fade-in duration-300">
+                                                            <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-2">
+                                                                <span className="text-xs font-black text-cyan-600 dark:text-cyan-400 uppercase tracking-wider">1. Attendance Setup / Pengaturan Presensi Lapangan</span>
+                                                                <span className="text-[10px] font-bold text-neutral-400 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded">CLK-SETUP</span>
+                                                            </div>
+                                                            <Select label="Proyek / Project *" value={selectedProjectId} onChange={(val) => { setSelectedProjectId(val); if (!paramId) { const proj = projects.find(p => p.id === val); if (proj?.location) setLocationOverride(proj.location); } }} options={[{ value: "", label: "-- Pilih Proyek / Select Project --" }, ...projects.map(p => ({ value: p.id, label: p.project_code ? `[${p.project_code}] ${p.name}` : p.name }))]} disabled={!!paramProjectId} required />
+                                                            <Input label="Device / Source Presensi" value={clkSetup.deviceSource} onChange={(e) => setClkSetup({ ...clkSetup, deviceSource: e.target.value })} placeholder="Mobile GPS App & Biometric" />
+                                                            <Input label="Work Calendar / Kalender Kerja" value={clkSetup.workCalendar} onChange={(e) => setClkSetup({ ...clkSetup, workCalendar: e.target.value })} placeholder="6 Hari Kerja (Senin - Sabtu)" />
+                                                            <Input label="Shift / Jam Kerja" value={clkSetup.shift} onChange={(e) => setClkSetup({ ...clkSetup, shift: e.target.value })} placeholder="08.00 - 17.00 WIB" />
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <Input label="Geofence Location / Boundary" value={clkSetup.geofenceLocation} onChange={(e) => setClkSetup({ ...clkSetup, geofenceLocation: e.target.value })} placeholder="Radius 150m Site Office" />
+                                                                <Input label="Tolerance / Toleransi Keterlambatan" value={clkSetup.tolerance} onChange={(e) => setClkSetup({ ...clkSetup, tolerance: e.target.value })} placeholder="Max 15 Menit" />
+                                                            </div>
+
+                                                            {/* Approvals */}
+                                                            <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-black text-neutral-800 dark:text-neutral-200 uppercase tracking-wider">Tanda Tangan / Approvals ({clkApprovals.length}/4)</span>
+                                                                    {clkApprovals.length < 4 && (<button type="button" onClick={() => { const typeOrder = ["disusun", "dicek", "mengetahui", "disetujui"] as const; const usedTypes = clkApprovals.map(a => a.type); const nextType = typeOrder.find(t => !usedTypes.includes(t)) || "mengetahui"; const newArr = [...clkApprovals, { type: nextType as any, name: "", role: "" }]; setClkApprovals(newArr); }} className="text-[11px] font-bold text-cyan-600 hover:underline flex items-center gap-1 cursor-pointer"><Plus className="w-3.5 h-3.5" /> Tambah TTD</button>)}
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {clkApprovals.map((app, idx) => (
+                                                                        <div key={idx} className="p-3 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-2.5">
+                                                                            <div className="flex items-center justify-between"><span className="text-[10px] font-black text-neutral-400 uppercase">TTD #{idx + 1}</span>{clkApprovals.length > 1 && (<button type="button" onClick={() => setClkApprovals(clkApprovals.filter((_, i) => i !== idx))} className="text-neutral-400 hover:text-rose-600 p-0.5"><Trash2 className="w-3.5 h-3.5" /></button>)}</div>
+                                                                            <div className="grid grid-cols-3 gap-2">
+                                                                                <Select label="Peran" value={app.type} onChange={(val) => setClkApprovals(clkApprovals.map((item, i) => i === idx ? { ...item, type: val as any } : item))} options={[{ value: "disusun", label: "Disusun Oleh" }, { value: "dicek", label: "Dicek Oleh" }, { value: "mengetahui", label: "Mengetahui" }, { value: "disetujui", label: "Disetujui Oleh" }]} />
+                                                                                <Input label="Nama" value={app.name} onChange={(e) => setClkApprovals(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))} placeholder="Nama" />
+                                                                                <Input label="Jabatan" value={app.role} onChange={(e) => setClkApprovals(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))} placeholder="Jabatan" />
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {clkActiveTab === "clk_records" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-cyan-600 uppercase tracking-wider">2. Clock Records / Log Presensi ({clkRecords.length})</span></div>
+                                                            {clkRecords.map((r, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-cyan-600 uppercase">Record #{idx + 1}</span>{clkRecords.length > 1 && (<button type="button" onClick={() => setClkRecords(clkRecords.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Nama Karyawan" value={r.empName} onChange={(e) => setClkRecords(prev => prev.map((it, i) => i === idx ? { ...it, empName: e.target.value } : it))} placeholder="Budi Santoso" />
+                                                                    <div className="grid grid-cols-4 gap-2">
+                                                                        <Input label="Clock-In" value={r.clockIn} onChange={(e) => setClkRecords(prev => prev.map((it, i) => i === idx ? { ...it, clockIn: e.target.value } : it))} placeholder="07:48 WIB" />
+                                                                        <Input label="Clock-Out" value={r.clockOut} onChange={(e) => setClkRecords(prev => prev.map((it, i) => i === idx ? { ...it, clockOut: e.target.value } : it))} placeholder="17:15 WIB" />
+                                                                        <Input label="Break Time" value={r.breakTime} onChange={(e) => setClkRecords(prev => prev.map((it, i) => i === idx ? { ...it, breakTime: e.target.value } : it))} placeholder="1.0 Jam" />
+                                                                        <Input label="Source" value={r.source} onChange={(e) => setClkRecords(prev => prev.map((it, i) => i === idx ? { ...it, source: e.target.value } : it))} placeholder="Mobile GPS" />
+                                                                    </div>
+                                                                    <Input label="Lokasi Verifikasi" value={r.location} onChange={(e) => setClkRecords(prev => prev.map((it, i) => i === idx ? { ...it, location: e.target.value } : it))} placeholder="Main Gate Zone A" />
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setClkRecords([...clkRecords, { empName: "", clockIn: "", clockOut: "", breakTime: "1.0 Jam", source: "Mobile GPS", location: "" }])} className="w-full py-2.5 text-xs font-bold text-cyan-600 flex items-center justify-center gap-1.5 bg-cyan-50/80 rounded-xl border border-cyan-200/60 hover:bg-cyan-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Log Presensi / Add Record</button>
+                                                        </div>
+                                                    )}
+
+                                                    {clkActiveTab === "clk_exceptions" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-cyan-600 uppercase tracking-wider">3. Exceptions / Pengecualian Presensi ({clkExceptions.length})</span></div>
+                                                            {clkExceptions.map((ex, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-cyan-600 uppercase">Exception #{idx + 1}</span>{clkExceptions.length > 1 && (<button type="button" onClick={() => setClkExceptions(clkExceptions.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <Input label="Terlambat (Late)" value={ex.late} onChange={(e) => setClkExceptions(prev => prev.map((it, i) => i === idx ? { ...it, late: e.target.value } : it))} placeholder="Hendra (Terlambat 20 Min)" />
+                                                                    <Input label="Pulang Awal (Early Leave)" value={ex.earlyLeave} onChange={(e) => setClkExceptions(prev => prev.map((it, i) => i === idx ? { ...it, earlyLeave: e.target.value } : it))} placeholder="Tidak ada" />
+                                                                    <Input label="Missing Clock / Duplicate" value={ex.missingClock} onChange={(e) => setClkExceptions(prev => prev.map((it, i) => i === idx ? { ...it, missingClock: e.target.value } : it))} placeholder="Clock-out lupa tap out" />
+                                                                    <Input label="Koreksi Manual & Approver" value={ex.manualCorrection} onChange={(e) => setClkExceptions(prev => prev.map((it, i) => i === idx ? { ...it, manualCorrection: e.target.value } : it))} placeholder="Disetujui Supervisor" />
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setClkExceptions([...clkExceptions, { late: "", earlyLeave: "Tidak ada", missingClock: "", duplicate: "Nihil", manualCorrection: "" }])} className="w-full py-2.5 text-xs font-bold text-cyan-600 flex items-center justify-center gap-1.5 bg-cyan-50/80 rounded-xl border border-cyan-200/60 hover:bg-cyan-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Pengecualian / Add Exception</button>
+                                                        </div>
+                                                    )}
+
+                                                    {clkActiveTab === "clk_overtime" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-cyan-600 uppercase tracking-wider">4. Overtime / Pengajuan & Log Lembur ({clkOvertimes.length})</span></div>
+                                                            {clkOvertimes.map((ot, idx) => (
+                                                                <div key={idx} className="p-3.5 rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 space-y-3">
+                                                                    <div className="flex items-center justify-between"><span className="text-[11px] font-extrabold text-cyan-600 uppercase">Overtime #{idx + 1}</span>{clkOvertimes.length > 1 && (<button type="button" onClick={() => setClkOvertimes(clkOvertimes.filter((_, i) => i !== idx))} className="p-1 text-neutral-400 hover:text-rose-600"><Trash2 className="w-4 h-4" /></button>)}</div>
+                                                                    <div className="grid grid-cols-2 gap-2.5">
+                                                                        <Input label="Request ID / Pemohon" value={ot.overtimeRequest} onChange={(e) => setClkOvertimes(prev => prev.map((it, i) => i === idx ? { ...it, overtimeRequest: e.target.value } : it))} placeholder="OT-2026-088" />
+                                                                        <Input label="Approved Hours" value={ot.approvedHours} onChange={(e) => setClkOvertimes(prev => prev.map((it, i) => i === idx ? { ...it, approvedHours: e.target.value } : it))} placeholder="3.5 Jam" />
+                                                                    </div>
+                                                                    <Input label="Alasan Lembur / Work Reason" value={ot.workReason} onChange={(e) => setClkOvertimes(prev => prev.map((it, i) => i === idx ? { ...it, workReason: e.target.value } : it))} placeholder="Pengecoran balok B-12" />
+                                                                    <Input label="Approver" value={ot.approver} onChange={(e) => setClkOvertimes(prev => prev.map((it, i) => i === idx ? { ...it, approver: e.target.value } : it))} placeholder="Ir. Doni (Site Manager)" />
+                                                                </div>
+                                                            ))}
+                                                            <button type="button" onClick={() => setClkOvertimes([...clkOvertimes, { overtimeRequest: "", approvedHours: "", workReason: "", approver: "" }])} className="w-full py-2.5 text-xs font-bold text-cyan-600 flex items-center justify-center gap-1.5 bg-cyan-50/80 rounded-xl border border-cyan-200/60 hover:bg-cyan-100 transition-colors"><Plus className="w-4 h-4" /> Tambah Rekap Lembur / Add Overtime</button>
+                                                        </div>
+                                                    )}
+
+                                                    {clkActiveTab === "clk_approval" && (
+                                                        <div className="space-y-4 animate-in fade-in duration-300">
+                                                            <div className="border-b border-neutral-100 dark:border-neutral-800 pb-2"><span className="text-xs font-black text-cyan-600 uppercase tracking-wider">5. Attendance Approval / Persetujuan & Lock Period</span></div>
+                                                            <Input label="Supervisor Verification" value={clkApproval.supervisorVerification} onChange={(e) => setClkApproval({ ...clkApproval, supervisorVerification: e.target.value })} placeholder="Terverifikasi 100%" />
+                                                            <Input label="Lock Period Status" value={clkApproval.lockPeriod} onChange={(e) => setClkApproval({ ...clkApproval, lockPeriod: e.target.value })} placeholder="Locked (Periode 21-27 Juli)" />
+                                                            <Input label="Export to Payroll Status" value={clkApproval.exportToPayroll} onChange={(e) => setClkApproval({ ...clkApproval, exportToPayroll: e.target.value })} placeholder="Exported to Payroll Module" />
+                                                            <Input label="Approval Status" value={clkApproval.approvalStatus} onChange={(e) => setClkApproval({ ...clkApproval, approvalStatus: e.target.value })} placeholder="Approved / Disetujui" />
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+                                        </>
+                                    ) : (reportType === "weekly" || reportType === "monthly" || !["daily", "schedule", "cost", "manpower", "procurement", "finance", "resources", "quality", "safety", "issue_risk", "doc_control", "change_order", "mou_contract", "executive", "site_survey", "mom", "field_notice", "memo_correspondence", "punch_list", "commissioning", "environmental", "people_register", "people", "clock_attendance", "clock"].includes(reportType)) ? (
+                                        <>
+                                            {weeklyTab === "general" && (
+                                                <div className="space-y-5 animate-in fade-in duration-300">
+                                                    {/* Auto Sync Banner */}
+                                                    <div className="bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-4 flex flex-col gap-3">
+                                                        <Sparkles className="w-4 h-4 text-neutral-700 dark:text-neutral-300 shrink-0" />
+                                                        <div>
+                                                            <h4 className="text-xs font-black text-neutral-900 dark:text-white uppercase tracking-wider">Auto-Sync Dari Laporan Harian</h4>
+                                                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-tight">Tarik dan rangkum data otomatis dari Laporan Harian (LH) sesuai proyek & periode minggu ini.</p>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        onClick={handleSyncFromDailyReports}
+                                                        disabled={isSyncing}
+                                                        className="bg-neutral-900 hover:bg-black text-white font-bold text-xs w-full py-2"
+                                                        icon={isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                                    >
+                                                        {isSyncing ? "Menyinkronkan..." : "Sync Data dari Laporan Harian (LH)"}
+                                                    </Button>
+
+                                                    <Select
+                                        label="Proyek / Project *"
                                         value={selectedProjectId}
                                         onChange={(val) => {
                                             setSelectedProjectId(val);
@@ -6857,7 +8647,7 @@ function EditorContentComponent() {
                                     </div>
 
                                     {/* Signatures */}
-                                    <div className="grid grid-cols-2 gap-3 border-t border-neutral-300 pt-4 text-center">
+                                    <div className="grid grid-cols-2 gap-3 border-t border-neutral-300 pt-4 text-center mt-6">
                                         <div className="flex flex-col items-center">
                                             <div className="text-[7px] font-bold text-neutral-600 uppercase tracking-wider">Disetujui Oleh</div>
                                             <div className="w-full border border-neutral-300 rounded h-16 bg-neutral-50/50 my-2"></div>
@@ -9563,6 +11353,931 @@ function EditorContentComponent() {
 
                             </div>
                         )}
+
+                        {/* ===================== SUR (SITE SURVEY) BILINGUAL PREVIEW ===================== */}
+                        {reportType === "site_survey" && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader("SUR", documentId || "SUR-01-01", getLangText(surLangMode, "SITE SURVEY REPORT", "LAPORAN SURVEI LAPANGAN"))}
+                                        <div className="grid grid-cols-4 border border-neutral-300 rounded text-center">
+                                            {[
+                                                { label: getLangText(surLangMode, "PROJECT", "PROYEK"), value: currentProject?.project_code || "PROYEK" },
+                                                { label: getLangText(surLangMode, "BENCHMARKS", "BENCHMARK (BM)"), value: surBMs.length },
+                                                { label: getLangText(surLangMode, "MEASUREMENT POINTS", "TITIK UKUR"), value: surMeasurements.length },
+                                                { label: getLangText(surLangMode, "METHOD", "METODE"), value: surScope.method || "RTK GPS" },
+                                            ].map((c, i) => (
+                                                <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                    <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{c.label}</div>
+                                                    <div className="text-[8px] font-bold text-neutral-800 py-1 truncate px-1">{c.value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            1. {getLangText(surLangMode, "SURVEY SCOPE & TEAM", "LINGKUP & TIM SURVEI")}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50">
+                                            <div><span className="font-bold text-neutral-500">Tujuan:</span> <span className="font-semibold text-neutral-800">{surScope.purpose || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Area:</span> <span className="font-semibold text-neutral-800">{surScope.area || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Peralatan:</span> <span className="font-semibold text-neutral-800">{surScope.equipment || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Tim Survei:</span> <span className="font-semibold text-neutral-800">{surScope.team || "—"}</span></div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>2. {getLangText(surLangMode, "CONTROL POINTS & BENCHMARKS", "TITIK KONTROL & BENCHMARK (BM)")}</span>
+                                            <span className="font-mono">BM: {surBMs.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono">BM CODE</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">EASTING (X)</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">NORTHING (Y)</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-bold">ELEVATION (Z)</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">DATUM</th>
+                                                    <th className="py-1 px-1.5">VERIFICATION</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {surBMs.map((bm, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono font-bold">{bm.code || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono">{bm.x || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono">{bm.y || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono font-bold text-pink-600">{bm.elevation || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300">{bm.datum || "—"}</td>
+                                                        <td className="py-1 px-1.5 font-bold text-emerald-600">{bm.verification || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>3. {getLangText(surLangMode, "FIELD MEASUREMENTS", "PENGUKURAN DETAIL LAPANGAN")}</span>
+                                            <span className="font-mono">POINTS: {surMeasurements.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono">POINT ID</th>
+                                                    <th className="py-1 px-1 border-r border-neutral-300 font-mono text-center">X / Y</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-bold">ELEV (Z)</th>
+                                                    <th className="py-1 px-2 border-r border-neutral-300">EXISTING CONDITION</th>
+                                                    <th className="py-1 px-1 border-r border-neutral-300 text-center">TOLERANCE</th>
+                                                    <th className="py-1 px-1.5 text-center font-bold">STATUS</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {surMeasurements.map((m, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono font-bold">{m.pointId || "—"}</td>
+                                                        <td className="py-1 px-1 border-r border-neutral-300 font-mono text-center">{m.x || "—"} / {m.y || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono font-bold text-neutral-900">{m.z || "—"}</td>
+                                                        <td className="py-1 px-2 border-r border-neutral-300">{m.condition || "—"}</td>
+                                                        <td className="py-1 px-1 border-r border-neutral-300 text-center font-mono">{m.tolerance || "—"}</td>
+                                                        <td className="py-1 px-1.5 text-center font-bold text-emerald-600">{m.status || "Pass"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="grid grid-cols-2 gap-2 text-[6.5px]">
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-pink-600 uppercase border-b border-neutral-200 pb-0.5">4. FINDINGS & CONSTRAINTS</div>
+                                                <div><span className="font-bold">Konflik:</span> {surConstraints.conflict || "Nihil"}</div>
+                                                <div><span className="font-bold">Utilitas:</span> {surConstraints.utility || "Nihil"}</div>
+                                                <div><span className="font-bold">Akses:</span> {surConstraints.access || "Lancar"}</div>
+                                                <div><span className="font-bold">Limitation:</span> {surConstraints.limitation || "Nihil"}</div>
+                                            </div>
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-pink-600 uppercase border-b border-neutral-200 pb-0.5">5. RECOMMENDATIONS & DELIVERABLES</div>
+                                                <div><span className="font-bold">Dampak Desain:</span> {surDeliverables.designImplications || "—"}</div>
+                                                <div><span className="font-bold">Tindakan Wajib:</span> {surDeliverables.requiredAction || "—"}</div>
+                                                <div><span className="font-bold">No. Drawing:</span> {surDeliverables.surveyDrawingNo || "—"}</div>
+                                                <div><span className="font-bold">Output File:</span> {surDeliverables.dataOutput || "—"}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Approvals */}
+                                        <div className={clsx("grid gap-4 border border-neutral-300 rounded p-4 bg-neutral-50/20 text-center mt-2 divide-x divide-neutral-300", surApprovals.length === 1 ? "grid-cols-1" : surApprovals.length === 2 ? "grid-cols-2" : surApprovals.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+                                            {surApprovals.map((app, idx) => (
+                                                <div key={idx} className={clsx("flex flex-col justify-between h-20", idx > 0 && "pl-3")}>
+                                                    <div><div className="text-[6px] font-extrabold text-neutral-400 uppercase">{app.type.toUpperCase()} BY</div><div className="text-[7px] font-bold text-neutral-600 mt-0.5">{app.role || "—"}</div></div>
+                                                    <div><div className="text-[8.5px] font-black text-neutral-900 underline truncate">{app.name || "( .................... )"}</div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-neutral-200 pt-2 text-[6px] text-neutral-400 flex justify-between font-mono">
+                                        <span>ADIDAYA STUDIO — SITE SURVEY (SUR)</span>
+                                        <span>{documentId || "SUR-01-01"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ===================== MOM (MINUTES OF MEETING) BILINGUAL PREVIEW ===================== */}
+                        {reportType === "mom" && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader("MOM", documentId || "MOM-01-01", getLangText(momLangMode, "MINUTES OF MEETING REPORT", "LAPORAN RISALAH RAPAT"))}
+                                         <div className="grid grid-cols-5 border border-neutral-300 rounded text-center">
+                                             {[
+                                                 { label: getLangNode(momLangMode, "Project", "Proyek"), value: currentProject?.project_code || "PROYEK" },
+                                                 { 
+                                                     label: getLangNode(momLangMode, "Date", "Tanggal Rapat"), 
+                                                     value: (() => {
+                                                         if (!momDetails.date) return "—";
+                                                         let val = momDetails.date;
+                                                         if (momDetails.startTime || momDetails.endTime) {
+                                                             val += "\n";
+                                                             if (momDetails.startTime && momDetails.endTime) {
+                                                                 val += `${momDetails.startTime} - ${momDetails.endTime}`;
+                                                             } else {
+                                                                 val += momDetails.startTime || momDetails.endTime;
+                                                             }
+                                                             val += " WIB";
+                                                         }
+                                                         return val;
+                                                     })() 
+                                                 },
+                                                 { label: getLangNode(momLangMode, "Meeting Type", "Tipe Rapat"), value: momDetails.meetingType || "—" },
+                                                 { label: getLangNode(momLangMode, "Participants", "Peserta Rapat"), value: momParticipants.length },
+                                                 { label: getLangNode(momLangMode, "Action Items", "Tindak Lanjut"), value: momActions.length },
+                                             ].map((c, i) => (
+                                                 <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                     <div className="text-[5.5px] font-bold text-neutral-500 bg-neutral-50 border-b border-neutral-200 py-1 px-1 flex flex-col justify-center items-center h-7">{c.label}</div>
+                                                     <div className="text-[7px] font-bold text-neutral-800 py-1 px-1 whitespace-pre-line break-words leading-tight">{c.value}</div>
+                                                 </div>
+                                             ))}
+                                         </div>
+
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            1. {getLangText(momLangMode, "MEETING DETAILS & ATTENDANCE REGISTER", "DETAIL RAPAT & DAFTAR HADIR PESERTA")}
+                                        </div>
+                                         <div className="border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50 space-y-1">
+                                             <div><span className="font-bold text-neutral-500">{getLangNode(momLangMode, "Agenda", "Agenda")}:</span> <span className="font-bold text-neutral-900">{momDetails.agenda || "—"}</span></div>
+                                             <div><span className="font-bold text-neutral-500">{getLangNode(momLangMode, "Location/Platform", "Lokasi/Platform")}:</span> <span className="font-bold text-neutral-900">{momDetails.location || "—"}</span></div>
+                                         </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-bold text-neutral-700">
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">{getLangNode(momLangMode, "Participant Name", "Nama Peserta")}</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">{getLangNode(momLangMode, "Company/Institution", "Perusahaan/Instansi")}</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">{getLangNode(momLangMode, "Position/Role", "Jabatan/Peran")}</th>
+                                                    <th className="py-1 px-1.5 text-center font-bold">{getLangNode(momLangMode, "Attendance", "Kehadiran")}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {momParticipants.map((p, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-bold">{p.name || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300">{p.company || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300">{p.position || "—"}</td>
+                                                        <td className={"py-1 px-1.5 text-center font-bold " + getPresenceColor(p.presence || "Hadir")}>{p.presence || "Hadir"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>2. {getLangNode(momLangMode, "Agenda Discussion & Main Issues", "Pembahasan Agenda & Kendala Utama")}</span>
+                                            <span className="font-mono text-[6.5px] text-neutral-400">Topics / <span className="italic text-neutral-500">Topik</span>: {momDiscussions.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-bold text-neutral-700">
+                                                    <th className="py-1 px-2 border-r border-neutral-300">{getLangNode(momLangMode, "Topic", "Topik")}</th>
+                                                    <th className="py-1 px-2 border-r border-neutral-300">{getLangNode(momLangMode, "Discussion Detail", "Detail Pembahasan")}</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">{getLangNode(momLangMode, "Reference", "Referensi")}</th>
+                                                    <th className="py-1 px-1.5 font-bold">{getLangNode(momLangMode, "Concern/Issue", "Isu Utama")}</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {momDiscussions.map((d, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-2 border-r border-neutral-300 font-bold">{d.topic || "—"}</td>
+                                                        <td className="py-1 px-2 border-r border-neutral-300">{d.discussion || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono">{d.reference || "—"}</td>
+                                                        <td className="py-1 px-1.5 font-bold text-rose-600">{d.concern || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>3. {getLangNode(momLangMode, "Decisions & Approved Directions", "Keputusan & Arah Yang Disetujui")}</span>
+                                            <span className="font-mono text-[6.5px] text-neutral-400">Decisions / <span className="italic text-neutral-500">Keputusan</span>: {momDecisions.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-2 border-r border-neutral-300">KEPUTUSAN RAPAT</th>
+                                                    <th className="py-1 px-2 border-r border-neutral-300">ARAH DISETUJUI</th>
+                                                    <th className="py-1 px-1.5 font-bold">OTORITAS</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {momDecisions.map((dec, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-2 border-r border-neutral-300 font-bold">{dec.decision || "—"}</td>
+                                                        <td className="py-1 px-2 border-r border-neutral-300 text-fuchsia-700 font-semibold">{dec.direction || "—"}</td>
+                                                        <td className="py-1 px-1.5 font-bold text-neutral-800">{dec.authority || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>4. {getLangNode(momLangMode, "Action Items Register & PIC", "Daftar Tindak Lanjut & Penanggung Jawab")}</span>
+                                            <span className="font-mono text-[6.5px] text-neutral-400">Items / <span className="italic text-neutral-500">Tindak Lanjut</span>: {momActions.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-2 border-r border-neutral-300">ACTION ITEM</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">PIC</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono">DUE DATE</th>
+                                                    <th className="py-1 px-1 border-r border-neutral-300 text-center">PRIORITY</th>
+                                                    <th className="py-1 px-1.5 text-center font-bold">STATUS</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {momActions.map((act, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-2 border-r border-neutral-300 font-bold">{act.action || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-semibold text-fuchsia-700">{act.pic || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono">{act.dueDate || "—"}</td>
+                                                        <td className={"py-1 px-1 border-r border-neutral-300 text-center " + getPriorityColor(act.priority || "Medium")}>{act.priority || "Medium"}</td>
+                                                        <td className={"py-1 px-1.5 text-center font-bold " + getStatusColor(act.status || "Open")}>{act.status || "Open"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        {/* Approvals */}
+                                        <div className={clsx("grid gap-4 border border-neutral-300 rounded p-4 bg-neutral-50/20 text-center mt-2 divide-x divide-neutral-300", momApprovals.length === 1 ? "grid-cols-1" : momApprovals.length === 2 ? "grid-cols-2" : momApprovals.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+                                            {momApprovals.map((app, idx) => (
+                                                <div key={idx} className={clsx("flex flex-col justify-between h-20", idx > 0 && "pl-3")}>
+                                                    <div><div className="text-[6px] font-extrabold text-neutral-400 uppercase">{app.type.toUpperCase()} BY</div><div className="text-[7px] font-bold text-neutral-600 mt-0.5">{app.role || "—"}</div></div>
+                                                    <div><div className="text-[8.5px] font-black text-neutral-900 underline truncate">{app.name || "( .................... )"}</div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-neutral-200 pt-2 text-[6px] text-neutral-400 flex justify-between font-mono">
+                                        <span>ADIDAYA STUDIO — MINUTES OF MEETING (MOM)</span>
+                                        <span>{documentId || "MOM-01-01"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ===================== NOT (FIELD NOTICE & MEMO) BILINGUAL PREVIEW ===================== */}
+                        {["field_notice", "memo_correspondence"].includes(reportType) && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader("NOT", documentId || "NOT-01-01", getLangText(notLangMode, "FIELD NOTICE & MEMO CORRESPONDENCE", "SURAT TEGURAN & MEMO LAPANGAN"))}
+                                        <div className="grid grid-cols-4 border border-neutral-300 rounded text-center">
+                                            {[
+                                                { label: getLangText(notLangMode, "RECIPIENT", "PENERIMA NOTICE"), value: notIdentity.recipient || "KONTRAKTOR" },
+                                                { label: getLangText(notLangMode, "SUBJECT", "PERIHAL"), value: notIdentity.subject || "SURAT TEGURAN" },
+                                                { label: getLangText(notLangMode, "CLASSIFICATION", "KLASIFIKASI"), value: notIdentity.classification || "Site Instruction" },
+                                                { label: getLangText(notLangMode, "CLOSURE STATUS", "STATUS PENUTUPAN"), value: notClosure.closureStatus || "Open" },
+                                            ].map((c, i) => (
+                                                <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                    <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{c.label}</div>
+                                                    <div className="text-[8px] font-bold text-neutral-800 py-1 truncate px-1">{c.value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            1. {getLangText(notLangMode, "NOTICE IDENTITY & CONTRACT REFERENCE", "IDENTITAS NOTICE & ACUAN KONTRAK")}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50">
+                                            <div><span className="font-bold text-neutral-500">Penerima:</span> <span className="font-bold text-neutral-900">{notIdentity.recipient || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Kontrak Terkait:</span> <span className="font-mono text-neutral-800">{notIdentity.relatedContract || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Ref RFI/DWG:</span> <span className="font-mono text-neutral-800">{notIdentity.relatedRef || "—"}</span></div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            2. {getLangText(notLangMode, "OBSERVATION OR INSTRUCTION (TEMUAN LAPANGAN)", "TEMUAN & INSTRUKSI PEKERJAAN LAPANGAN")}
+                                        </div>
+                                        <div className="border border-neutral-300 rounded p-2.5 space-y-1.5 text-[6.5px] bg-rose-50/20">
+                                            <div><span className="font-extrabold text-rose-700">Kondisi Eksisting:</span> {notObservations.existingCondition || "—"}</div>
+                                            <div><span className="font-extrabold text-rose-700">Pelanggaran Specs:</span> {notObservations.violation || "—"}</div>
+                                            <div><span className="font-extrabold text-neutral-900">Instruksi Kerja:</span> <span className="font-bold text-neutral-900 underline">{notObservations.instruction || "—"}</span></div>
+                                            <div><span className="font-extrabold text-neutral-500">Standar Acuan:</span> {notObservations.requiredStandard || "—"}</div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            3. {getLangText(notLangMode, "REQUIRED ACTION & RESTRICTION", "TINDAKAN PERBAIKAN & PEMBATASAN PEKERJAAN")}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50">
+                                            <div><span className="font-bold text-neutral-500">Pekerjaan Perbaikan:</span> <span className="font-bold text-neutral-800">{notRequiredActions.correctiveWork || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Penanggung Jawab:</span> <span className="font-bold text-neutral-800">{notRequiredActions.responsibleParty || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Batas Waktu:</span> <span className="font-mono text-rose-600 font-bold">{notRequiredActions.deadline || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Pembatasan Area:</span> <span className="font-bold text-amber-600">{notRequiredActions.workRestriction || "—"}</span></div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            4. {getLangText(notLangMode, "CONTRACTOR RESPONSE & COMMITMENT", "TANGGAPAN & KOMITMEN KONTRAKTOR")}
+                                        </div>
+                                        <div className="border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50 space-y-1">
+                                            <div><span className="font-bold text-neutral-500">Tanggapan Kontraktor:</span> {notResponses.contractorResponse || "Belum ada respon."}</div>
+                                            <div><span className="font-bold text-neutral-500">Rencana Tindakan:</span> {notResponses.proposedAction || "—"}</div>
+                                            <div><span className="font-bold text-neutral-500">Komitmen Selesai:</span> <span className="font-mono font-bold text-emerald-600">{notResponses.commitmentDate || "—"}</span></div>
+                                        </div>
+
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>5. {getLangText(notLangMode, "SITE VERIFICATION & CLOSURE STATUS", "VERIFIKASI LAPANGAN & PENUTUPAN NOTICE")}</span>
+                                            <span className="font-bold text-emerald-300">{notClosure.closureStatus || "Open"}</span>
+                                        </div>
+                                        <div className="border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50 space-y-1">
+                                            <div><span className="font-bold text-neutral-500">Verifikasi Lapangan:</span> {notClosure.siteVerification || "—"}</div>
+                                            <div><span className="font-bold text-neutral-500">Hasil Kepatuhan:</span> <span className="font-bold text-emerald-600">{notClosure.complianceResult || "—"}</span></div>
+                                        </div>
+
+                                        {/* Approvals */}
+                                        <div className={clsx("grid gap-4 border border-neutral-300 rounded p-4 bg-neutral-50/20 text-center mt-2 divide-x divide-neutral-300", notApprovals.length === 1 ? "grid-cols-1" : notApprovals.length === 2 ? "grid-cols-2" : notApprovals.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+                                            {notApprovals.map((app, idx) => (
+                                                <div key={idx} className={clsx("flex flex-col justify-between h-20", idx > 0 && "pl-3")}>
+                                                    <div><div className="text-[6px] font-extrabold text-neutral-400 uppercase">{app.type.toUpperCase()} BY</div><div className="text-[7px] font-bold text-neutral-600 mt-0.5">{app.role || "—"}</div></div>
+                                                    <div><div className="text-[8.5px] font-black text-neutral-900 underline truncate">{app.name || "( .................... )"}</div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-neutral-200 pt-2 text-[6px] text-neutral-400 flex justify-between font-mono">
+                                        <span>ADIDAYA STUDIO — FIELD NOTICE & MEMO (NOT)</span>
+                                        <span>{documentId || "NOT-01-01"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ===================== PCH (PUNCH LIST & HANDOVER) BILINGUAL PREVIEW ===================== */}
+                        {reportType === "punch_list" && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader("PCH", documentId || "PCH-01-01", getLangText(pchLangMode, "PUNCH LIST & HANDOVER REPORT", "LAPORAN PUNCH LIST & SERAH TERIMA"))}
+                                        <div className="grid grid-cols-4 border border-neutral-300 rounded text-center">
+                                            {[
+                                                { label: getLangText(pchLangMode, "AREA / SYSTEM", "AREA HANDOVER"), value: pchScope.areaSystem || "SISTEM UTAMA" },
+                                                { label: getLangText(pchLangMode, "PUNCH ITEMS", "TOTAL DEFECT"), value: pchItems.length },
+                                                { label: getLangText(pchLangMode, "REPAIRS DONE", "PERBAIKAN SELESAI"), value: pchRepairs.length },
+                                                { label: getLangText(pchLangMode, "HANDOVER STATUS", "STATUS BAST"), value: pchCloseout.handoverStatus || "In Progress" },
+                                            ].map((c, i) => (
+                                                <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                    <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{c.label}</div>
+                                                    <div className="text-[8px] font-bold text-neutral-800 py-1 truncate px-1">{c.value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            1. {getLangText(pchLangMode, "HANDOVER SCOPE & INSPECTION STAGE", "LINGKUP SERAH TERIMA & TAHAP INSPEKSI")}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50">
+                                            <div><span className="font-bold text-neutral-500">Tahap Inspeksi:</span> <span className="font-bold text-neutral-900">{pchScope.inspectionStage || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Paket Handover:</span> <span className="font-bold text-neutral-900">{pchScope.handoverPackage || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Tim Inspektor:</span> <span className="font-bold text-neutral-900">{pchScope.inspectionTeam || "—"}</span></div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>2. {getLangText(pchLangMode, "PUNCH LIST / DEFECT REGISTER", "DAFTAR CACAT & PUNCH LIST PEKERJAAN")}</span>
+                                            <span className="font-mono">ITEMS: {pchItems.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">ROOM / AREA</th>
+                                                    <th className="py-1 px-2 border-r border-neutral-300">DESKRIPSI DEFECT</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">KATEGORI</th>
+                                                    <th className="py-1 px-1 border-r border-neutral-300 text-center">SEVERITY</th>
+                                                    <th className="py-1 px-1.5 font-bold">RESPONSIBLE PARTY</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {pchItems.map((pi, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-bold">{pi.roomArea || "—"}</td>
+                                                        <td className="py-1 px-2 border-r border-neutral-300">{pi.defect || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300">{pi.category || "—"}</td>
+                                                        <td className="py-1 px-1 border-r border-neutral-300 text-center font-bold text-rose-600">{pi.severity || "Minor"}</td>
+                                                        <td className="py-1 px-1.5 font-bold text-emerald-700">{pi.responsibleParty || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>3. {getLangText(pchLangMode, "REPAIR TRACKING & BUKTI PERBAIKAN", "REKAP & BUKTI STATUS PERBAIKAN")}</span>
+                                            <span className="font-mono">REPAIRS: {pchRepairs.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-2 border-r border-neutral-300">METODE PERBAIKAN</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono">TARGET DATE</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono">ACTUAL COMPLETION</th>
+                                                    <th className="py-1 px-1.5 font-bold">BUKTI / EVIDENCE</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {pchRepairs.map((rp, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-2 border-r border-neutral-300 font-bold">{rp.repairMethod || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono">{rp.targetDate || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono font-bold text-emerald-600">{rp.actualCompletion || "—"}</td>
+                                                        <td className="py-1 px-1.5 font-mono text-neutral-600">{rp.evidence || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="grid grid-cols-2 gap-2 text-[6.5px]">
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-emerald-600 uppercase border-b border-neutral-200 pb-0.5">4. VERIFICATION RE-INSPECTION</div>
+                                                {pchVerifications.map((v, idx) => (
+                                                    <div key={idx} className="flex justify-between border-b border-neutral-200 last:border-b-0 pb-0.5">
+                                                        <span>Tgl: {v.reinspectionDate || "—"} ({v.verifiedBy})</span>
+                                                        <span className="font-bold text-emerald-600">{v.passFail}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-emerald-600 uppercase border-b border-neutral-200 pb-0.5">5. BAST & CLOSEOUT STATUS</div>
+                                                <div><span className="font-bold">Status Serah Terima:</span> {pchCloseout.handoverStatus || "Disetujui"}</div>
+                                                <div><span className="font-bold">Masa Garansi:</span> {pchCloseout.warrantyStart || "—"}</div>
+                                                <div><span className="font-bold">No. Berkas BAST:</span> {pchCloseout.bastReference || "—"}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Approvals */}
+                                        <div className={clsx("grid gap-4 border border-neutral-300 rounded p-4 bg-neutral-50/20 text-center mt-2 divide-x divide-neutral-300", pchApprovals.length === 1 ? "grid-cols-1" : pchApprovals.length === 2 ? "grid-cols-2" : pchApprovals.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+                                            {pchApprovals.map((app, idx) => (
+                                                <div key={idx} className={clsx("flex flex-col justify-between h-20", idx > 0 && "pl-3")}>
+                                                    <div><div className="text-[6px] font-extrabold text-neutral-400 uppercase">{app.type.toUpperCase()} BY</div><div className="text-[7px] font-bold text-neutral-600 mt-0.5">{app.role || "—"}</div></div>
+                                                    <div><div className="text-[8.5px] font-black text-neutral-900 underline truncate">{app.name || "( .................... )"}</div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-neutral-200 pt-2 text-[6px] text-neutral-400 flex justify-between font-mono">
+                                        <span>ADIDAYA STUDIO — PUNCH LIST & HANDOVER (PCH)</span>
+                                        <span>{documentId || "PCH-01-01"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ===================== COM (COMMISSIONING & TESTING) BILINGUAL PREVIEW ===================== */}
+                        {reportType === "commissioning" && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader("COM", documentId || "COM-01-01", getLangText(comLangMode, "COMMISSIONING & TESTING REPORT", "LAPORAN KOMISIONING & PENGUJIAN SISTEM"))}
+                                        <div className="grid grid-cols-4 border border-neutral-300 rounded text-center">
+                                            {[
+                                                { label: getLangText(comLangMode, "SYSTEM", "SISTEM UJI"), value: comPlan.system || "SISTEM MEP" },
+                                                { label: getLangText(comLangMode, "TEST PARAMETERS", "PARAMETER UJI"), value: comFunctionalTests.length },
+                                                { label: getLangText(comLangMode, "FAILURES LOGGED", "LOG ANOMALI"), value: comFailures.length },
+                                                { label: getLangText(comLangMode, "FINAL RESULT", "HASIL AKHIR"), value: comCertification.finalResult || "PASSED" },
+                                            ].map((c, i) => (
+                                                <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                    <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{c.label}</div>
+                                                    <div className="text-[8px] font-bold text-neutral-800 py-1 truncate px-1">{c.value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            1. {getLangText(comLangMode, "SYSTEM & TEST PLAN SPECIFICATION", "SPESIFIKASI SISTEM & RENCANA PENGUJIAN")}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50">
+                                            <div><span className="font-bold text-neutral-500">Equipment Tag:</span> <span className="font-bold text-neutral-900">{comPlan.equipment || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Method Statement:</span> <span className="font-mono text-neutral-800">{comPlan.methodStatement || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Test Standard:</span> <span className="font-bold text-neutral-900">{comPlan.testStandard || "—"}</span></div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            2. {getLangText(comLangMode, "PRE-COMMISSIONING CHECKLIST STATUS", "STATUS CHECKLIST PRA-KOMISIONING")}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50">
+                                            <div><span className="font-bold text-neutral-500">Inspeksi Visual:</span> {comPreCom.installationCheck || "Complied"}</div>
+                                            <div><span className="font-bold text-neutral-500">Status Kalibrasi:</span> {comPreCom.calibration || "Verified"}</div>
+                                            <div><span className="font-bold text-neutral-500">Flushing / Cleaning:</span> {comPreCom.flushingCleaning || "Pass"}</div>
+                                            <div><span className="font-bold text-neutral-500">Kesiapan Power:</span> {comPreCom.energisationReadiness || "Energized"}</div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>3. {getLangText(comLangMode, "FUNCTIONAL TEST RESULTS", "HASIL PENGUJIAN FUNGSIONAL PARAMETER")}</span>
+                                            <span className="font-mono">TESTS: {comFunctionalTests.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-2 border-r border-neutral-300">PARAMETER UJI</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center">TARGET SPECS</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center font-bold">HASIL ACTUAL</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center">TOLERANSI</th>
+                                                    <th className="py-1 px-1.5 text-center font-bold">HASIL UJI</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {comFunctionalTests.map((ft, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-2 border-r border-neutral-300 font-bold">{ft.parameter || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center">{ft.target || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center font-bold text-blue-600">{ft.actual || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center">{ft.tolerance || "—"}</td>
+                                                        <td className="py-1 px-1.5 text-center font-bold text-emerald-600">{ft.passFail || "Pass"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="grid grid-cols-2 gap-2 text-[6.5px]">
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-blue-600 uppercase border-b border-neutral-200 pb-0.5">4. FAILURE & RECTIFICATION LOG</div>
+                                                {comFailures.map((fl, idx) => (
+                                                    <div key={idx} className="border-b border-neutral-200 last:border-b-0 pb-0.5">
+                                                        <div className="font-bold text-rose-600">{fl.failure || "Anomali"}</div>
+                                                        <div>Cause: {fl.rootCause || "—"} | Action: {fl.correctiveAction || "—"}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-blue-600 uppercase border-b border-neutral-200 pb-0.5">5. ACCEPTANCE & CERTIFICATION</div>
+                                                <div><span className="font-bold">Hasil Akhir:</span> <span className="font-extrabold text-emerald-600">{comCertification.finalResult || "PASSED"}</span></div>
+                                                <div><span className="font-bold">No. Sertifikat:</span> {comCertification.certificate || "—"}</div>
+                                                <div><span className="font-bold">Dokumen O&M:</span> {comCertification.omManual || "Complete"}</div>
+                                                <div><span className="font-bold">Disetujui Oleh:</span> {comCertification.acceptedBy || "—"}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Approvals */}
+                                        <div className={clsx("grid gap-4 border border-neutral-300 rounded p-4 bg-neutral-50/20 text-center mt-2 divide-x divide-neutral-300", comApprovals.length === 1 ? "grid-cols-1" : comApprovals.length === 2 ? "grid-cols-2" : comApprovals.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+                                            {comApprovals.map((app, idx) => (
+                                                <div key={idx} className={clsx("flex flex-col justify-between h-20", idx > 0 && "pl-3")}>
+                                                    <div><div className="text-[6px] font-extrabold text-neutral-400 uppercase">{app.type.toUpperCase()} BY</div><div className="text-[7px] font-bold text-neutral-600 mt-0.5">{app.role || "—"}</div></div>
+                                                    <div><div className="text-[8.5px] font-black text-neutral-900 underline truncate">{app.name || "( .................... )"}</div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-neutral-200 pt-2 text-[6px] text-neutral-400 flex justify-between font-mono">
+                                        <span>ADIDAYA STUDIO — COMMISSIONING & TESTING (COM)</span>
+                                        <span>{documentId || "COM-01-01"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ===================== ENV (ENVIRONMENTAL REPORT) BILINGUAL PREVIEW ===================== */}
+                        {reportType === "environmental" && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader("ENV", documentId || "ENV-01-01", getLangText(envLangMode, "ENVIRONMENTAL MONITORING REPORT", "LAPORAN PEMANTAUAN LINGKUNGAN (K3L)"))}
+                                        <div className="grid grid-cols-4 border border-neutral-300 rounded text-center">
+                                            {[
+                                                { label: getLangText(envLangMode, "ASPECTS IDENTIFIED", "ASPEK TERIDENTIFIKASI"), value: envAspects.length },
+                                                { label: getLangText(envLangMode, "NOISE LEVEL", "KEBISINGAN"), value: envMonitoring.noise || "62 dB(A)" },
+                                                { label: getLangText(envLangMode, "DUST LEVEL", "KADAR DEBU"), value: envMonitoring.dust || "115 µg/Nm³" },
+                                                { label: getLangText(envLangMode, "COMPLIANCE RATE", "KAPATUHAN BAKU MUTU"), value: envCompliance.result || "98.2%" },
+                                            ].map((c, i) => (
+                                                <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                    <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{c.label}</div>
+                                                    <div className="text-[8px] font-bold text-neutral-800 py-1 truncate px-1">{c.value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>1. {getLangText(envLangMode, "ENVIRONMENTAL ASPECTS & IMPACT MATRIX", "MATRIKS ASPEK & DAMPAK LINGKUNGAN")}</span>
+                                            <span className="font-mono">ASPECTS: {envAspects.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-2 border-r border-neutral-300">AKTIVITAS PROYEK</th>
+                                                    <th className="py-1 px-2 border-r border-neutral-300">ASPEK LINGKUNGAN</th>
+                                                    <th className="py-1 px-2 border-r border-neutral-300">DAMPAK POTENSIAL</th>
+                                                    <th className="py-1 px-1.5 font-bold">REGULASI ACUAN</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {envAspects.map((asp, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-2 border-r border-neutral-300 font-bold">{asp.activity || "—"}</td>
+                                                        <td className="py-1 px-2 border-r border-neutral-300 text-lime-700 font-semibold">{asp.aspect || "—"}</td>
+                                                        <td className="py-1 px-2 border-r border-neutral-300">{asp.potentialImpact || "—"}</td>
+                                                        <td className="py-1 px-1.5 font-bold text-neutral-700">{asp.applicableRequirement || "AMDAL"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            2. {getLangText(envLangMode, "MONITORING RESULTS SUMMARY", "RINGKASAN HASIL PENGUKURAN KUALITAS LINGKUNGAN")}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50">
+                                            <div><span className="font-bold text-neutral-500">Tingkat Kebisingan:</span> <span className="font-bold text-neutral-900">{envMonitoring.noise || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Tingkat Debu TSP:</span> <span className="font-bold text-neutral-900">{envMonitoring.dust || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Kualitas Air Limbah:</span> <span className="font-bold text-neutral-900">{envMonitoring.water || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Volume Sampah & B3:</span> <span className="font-bold text-neutral-900">{envMonitoring.waste || "—"}</span></div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            3. {getLangText(envLangMode, "CONTROL & MITIGATION MEASURES", "PENGENDALIAN & MITIGASI FRACTURE LINGKUNGAN")}
+                                        </div>
+                                        <div className="border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50 space-y-1">
+                                            <div><span className="font-bold text-neutral-500">Tindakan Mitigasi:</span> {envControls.mitigation || "Penyiraman rutin"}</div>
+                                            <div><span className="font-bold text-neutral-500">Pemisahan Sampah:</span> {envControls.wasteSegregation || "TPS 3 Warna"}</div>
+                                            <div><span className="font-bold text-neutral-500">Pengangkutan B3:</span> {envControls.disposal || "Pengangkut berizin"}</div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 text-[6.5px]">
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-lime-600 uppercase border-b border-neutral-200 pb-0.5">4. INCIDENTS & COMPLAINTS</div>
+                                                {envIncidents.map((inc, idx) => (
+                                                    <div key={idx} className="border-b border-neutral-200 last:border-b-0 pb-0.5">
+                                                        <div className="font-bold text-rose-600">{inc.environmentalIncident || "Keluhan"} ({inc.complaintSource})</div>
+                                                        <div>Action: {inc.response || "—"}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-lime-600 uppercase border-b border-neutral-200 pb-0.5">5. COMPLIANCE EVALUATION</div>
+                                                <div><span className="font-bold">Baku Mutu Acuan:</span> {envCompliance.limit || "PERMEN LHK"}</div>
+                                                <div><span className="font-bold">Kepatuhan:</span> <span className="font-extrabold text-emerald-600">{envCompliance.result || "98.2%"}</span></div>
+                                                <div><span className="font-bold">Tindakan Perbaikan:</span> {envCompliance.correctiveAction || "—"}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Approvals */}
+                                        <div className={clsx("grid gap-4 border border-neutral-300 rounded p-4 bg-neutral-50/20 text-center mt-2 divide-x divide-neutral-300", envApprovals.length === 1 ? "grid-cols-1" : envApprovals.length === 2 ? "grid-cols-2" : envApprovals.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+                                            {envApprovals.map((app, idx) => (
+                                                <div key={idx} className={clsx("flex flex-col justify-between h-20", idx > 0 && "pl-3")}>
+                                                    <div><div className="text-[6px] font-extrabold text-neutral-400 uppercase">{app.type.toUpperCase()} BY</div><div className="text-[7px] font-bold text-neutral-600 mt-0.5">{app.role || "—"}</div></div>
+                                                    <div><div className="text-[8.5px] font-black text-neutral-900 underline truncate">{app.name || "( .................... )"}</div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-neutral-200 pt-2 text-[6px] text-neutral-400 flex justify-between font-mono">
+                                        <span>ADIDAYA STUDIO — ENVIRONMENTAL REPORT (ENV)</span>
+                                        <span>{documentId || "ENV-01-01"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ===================== PPL (PEOPLE REGISTER) BILINGUAL PREVIEW ===================== */}
+                        {["people_register", "people"].includes(reportType) && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader("PPL", documentId || "PPL-01-01", getLangText(pplLangMode, "PEOPLE & PERSONNEL REGISTER", "REGISTER PERSONEL & MANAJEMEN TIM SITE"))}
+                                        <div className="grid grid-cols-4 border border-neutral-300 rounded text-center">
+                                            {[
+                                                { label: getLangText(pplLangMode, "COMPANY", "PERUSAHAAN"), value: pplOrg.company || "ADIDAYA" },
+                                                { label: getLangText(pplLangMode, "ACTIVE PERSONNEL", "PERSONEL AKTIF"), value: pplPersonnel.length },
+                                                { label: getLangText(pplLangMode, "CERTIFICATIONS", "LISENSI SKA/K3"), value: pplCompetencies.length },
+                                                { label: getLangText(pplLangMode, "DATA PROTECTION", "PROTEKSI DATA"), value: pplMaskSensitiveInPdf ? "RESTRICTED" : "FULL ACCESS" },
+                                            ].map((c, i) => (
+                                                <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                    <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{c.label}</div>
+                                                    <div className="text-[8px] font-bold text-neutral-800 py-1 truncate px-1">{c.value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            1. {getLangText(pplLangMode, "ORGANISATION STRUCTURE & DIVISIONS", "STRUKTUR ORGANISASI & JALUR PELAPORAN")}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50">
+                                            <div><span className="font-bold text-neutral-500">Perusahaan:</span> <span className="font-bold text-neutral-900">{pplOrg.company || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Tim / Divisi:</span> <span className="font-bold text-neutral-900">{pplOrg.team || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Reporting Line:</span> <span className="font-bold text-neutral-900">{pplOrg.reportingLine || "—"}</span></div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>2. {getLangText(pplLangMode, "PERSONNEL MASTER REGISTER", "REGISTER MASTER PERSONEL PROYEK")}</span>
+                                            <span className="font-mono">STAFF: {pplPersonnel.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono">EMP ID</th>
+                                                    <th className="py-1 px-2 border-r border-neutral-300">NAMA PERSONEL</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">ROLE / JABATAN</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">PERUSAHAAN</th>
+                                                    <th className="py-1 px-1.5 font-mono">TELEPON / KONTAK</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {pplPersonnel.map((p, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono font-bold">{p.empId || "—"}</td>
+                                                        <td className="py-1 px-2 border-r border-neutral-300 font-bold">{p.name || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 text-purple-700 font-semibold">{p.role || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300">{p.employer || "—"}</td>
+                                                        <td className="py-1 px-1.5 font-mono text-neutral-600">{p.contact || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>3. {getLangText(pplLangMode, "COMPETENCY & SKA CERTIFICATIONS", "REGISTER LISENSI KEAHLIAN & SERTIFIKASI")}</span>
+                                            <span className="font-mono">CERTS: {pplCompetencies.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-2 border-r border-neutral-300">KEAHLIAN / SKILL</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300">LISENSI SKA/K3</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono">EXPIRY DATE</th>
+                                                    <th className="py-1 px-1.5 font-bold">PELATIHAN</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {pplCompetencies.map((c, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-2 border-r border-neutral-300 font-bold">{c.skill || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono font-bold text-purple-700">{c.licence || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono">{c.expiry || "—"}</td>
+                                                        <td className="py-1 px-1.5">{c.training || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="grid grid-cols-2 gap-2 text-[6.5px]">
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-purple-600 uppercase border-b border-neutral-200 pb-0.5">4. PROJECT ASSIGNMENT & SHIFT</div>
+                                                {pplAssignments.map((a, idx) => (
+                                                    <div key={idx} className="flex justify-between border-b border-neutral-200 last:border-b-0 pb-0.5">
+                                                        <span>{a.workArea || "Area"} ({a.shift})</span>
+                                                        <span className="font-bold text-emerald-600">{a.status}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-purple-600 uppercase border-b border-neutral-200 pb-0.5 flex justify-between">
+                                                    <span>5. EMERGENCY & OFFBOARDING</span>
+                                                    {pplMaskSensitiveInPdf && <span className="text-amber-600 font-mono">[RESTRICTED]</span>}
+                                                </div>
+                                                <div><span className="font-bold">Kontak Darurat:</span> {pplMaskSensitiveInPdf ? "[RESTRICTED / SENSITIVE ROLE ONLY]" : (pplEmergencyOffboarding.emergencyContact || "—")}</div>
+                                                <div><span className="font-bold">Golongan Darah/Medical:</span> {pplMaskSensitiveInPdf ? "[RESTRICTED / SENSITIVE ROLE ONLY]" : (pplEmergencyOffboarding.medicalNoteAccess || "—")}</div>
+                                                <div><span className="font-bold">Demobilisasi:</span> {pplEmergencyOffboarding.demobilisation || "—"}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Approvals */}
+                                        <div className={clsx("grid gap-4 border border-neutral-300 rounded p-4 bg-neutral-50/20 text-center mt-2 divide-x divide-neutral-300", pplApprovals.length === 1 ? "grid-cols-1" : pplApprovals.length === 2 ? "grid-cols-2" : pplApprovals.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+                                            {pplApprovals.map((app, idx) => (
+                                                <div key={idx} className={clsx("flex flex-col justify-between h-20", idx > 0 && "pl-3")}>
+                                                    <div><div className="text-[6px] font-extrabold text-neutral-400 uppercase">{app.type.toUpperCase()} BY</div><div className="text-[7px] font-bold text-neutral-600 mt-0.5">{app.role || "—"}</div></div>
+                                                    <div><div className="text-[8.5px] font-black text-neutral-900 underline truncate">{app.name || "( .................... )"}</div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-neutral-200 pt-2 text-[6px] text-neutral-400 flex justify-between font-mono">
+                                        <span>ADIDAYA STUDIO — PEOPLE REGISTER (PPL)</span>
+                                        <span>{documentId || "PPL-01-01"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ===================== CLK (CLOCK & ATTENDANCE) BILINGUAL PREVIEW ===================== */}
+                        {["clock_attendance", "clock"].includes(reportType) && (
+                            <div className="flex flex-col gap-6" style={{ fontFamily: "Arial, sans-serif" }}>
+                                <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
+                                    <div className="flex flex-col gap-4">
+                                        {renderPageHeader("CLK", documentId || "CLK-01-01", getLangText(clkLangMode, "CLOCK & ATTENDANCE REPORT", "LAPORAN PRESENSI & JAM KERJA LAPANGAN"))}
+                                        <div className="grid grid-cols-4 border border-neutral-300 rounded text-center">
+                                            {[
+                                                { label: getLangText(clkLangMode, "SOURCE", "SUMBER PRESENSI"), value: clkSetup.deviceSource || "GPS APP" },
+                                                { label: getLangText(clkLangMode, "ATTENDANCE RECORDS", "LOG PRESENSI"), value: clkRecords.length },
+                                                { label: getLangText(clkLangMode, "EXCEPTIONS", "PENGECUALIAN"), value: clkExceptions.length },
+                                                { label: getLangText(clkLangMode, "PAYROLL LOCK", "STATUS LOCK PERIOD"), value: clkApproval.lockPeriod || "Locked" },
+                                            ].map((c, i) => (
+                                                <div key={i} className="border-r border-neutral-300 last:border-r-0">
+                                                    <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{c.label}</div>
+                                                    <div className="text-[8px] font-bold text-neutral-800 py-1 truncate px-1">{c.value}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        <div className="bg-neutral-900 text-white font-extrabold text-[8px] py-1 px-2 uppercase tracking-wider rounded-t-sm">
+                                            1. {getLangText(clkLangMode, "ATTENDANCE SETUP & GEOFENCE POLICY", "PENGATURAN PRESENSI & BATAS GEOFENCE")}
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 border border-neutral-300 rounded p-2 text-[6.5px] bg-neutral-50/50">
+                                            <div><span className="font-bold text-neutral-500">Jam Kerja:</span> <span className="font-bold text-neutral-900">{clkSetup.shift || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Geofence Site:</span> <span className="font-bold text-neutral-900">{clkSetup.geofenceLocation || "—"}</span></div>
+                                            <div><span className="font-bold text-neutral-500">Toleransi Late:</span> <span className="font-bold text-neutral-900">{clkSetup.tolerance || "—"}</span></div>
+                                        </div>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>2. {getLangText(clkLangMode, "DAILY CLOCK RECORDS LOG", "LOG KARTU HADIR & PRESENSI HARIAN")}</span>
+                                            <span className="font-mono">RECORDS: {clkRecords.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-2 border-r border-neutral-300">NAMA KARYAWAN</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center">CLOCK-IN</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center">CLOCK-OUT</th>
+                                                    <th className="py-1 px-1 border-r border-neutral-300 font-mono text-center">ISTIRAHAT</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-mono">SOURCE</th>
+                                                    <th className="py-1 px-1.5 font-bold">LOKASI VERIFIKASI</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {clkRecords.map((r, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-2 border-r border-neutral-300 font-bold">{r.empName || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center text-emerald-600 font-bold">{r.clockIn || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono text-center text-rose-600 font-bold">{r.clockOut || "—"}</td>
+                                                        <td className="py-1 px-1 border-r border-neutral-300 font-mono text-center">{r.breakTime || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-mono text-neutral-600">{r.source || "—"}</td>
+                                                        <td className="py-1 px-1.5 font-bold text-neutral-800">{r.location || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="bg-neutral-800 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider rounded-t-sm flex justify-between">
+                                            <span>3. {getLangText(clkLangMode, "EXCEPTIONS & KOREKSI MANUAL", "PENGECUALIAN & KOREKSI MANUAL PRESENSI")}</span>
+                                            <span className="font-mono">LOG: {clkExceptions.length}</span>
+                                        </div>
+                                        <table className="w-full text-left border border-neutral-300 text-[6.5px]">
+                                            <thead>
+                                                <tr className="bg-neutral-100 border-b border-neutral-300 font-extrabold text-neutral-700 uppercase">
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-bold">TERLAMBAT (LATE)</th>
+                                                    <th className="py-1 px-1.5 border-r border-neutral-300 font-bold">PULANG AWAL</th>
+                                                    <th className="py-1 px-2 border-r border-neutral-300">MISSING / DUPLICATE</th>
+                                                    <th className="py-1 px-2 font-bold">KOREKSI MANUAL & APPROVER</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {clkExceptions.map((ex, i) => (
+                                                    <tr key={i} className="border-b border-neutral-200">
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-bold text-rose-600">{ex.late || "—"}</td>
+                                                        <td className="py-1 px-1.5 border-r border-neutral-300 font-bold text-amber-600">{ex.earlyLeave || "—"}</td>
+                                                        <td className="py-1 px-2 border-r border-neutral-300">{ex.missingClock || "—"}</td>
+                                                        <td className="py-1 px-2 font-bold text-cyan-700">{ex.manualCorrection || "—"}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+
+                                        <div className="grid grid-cols-2 gap-2 text-[6.5px]">
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-cyan-600 uppercase border-b border-neutral-200 pb-0.5">4. OVERTIME RECAP</div>
+                                                {clkOvertimes.map((ot, idx) => (
+                                                    <div key={idx} className="flex justify-between border-b border-neutral-200 last:border-b-0 pb-0.5">
+                                                        <span>{ot.overtimeRequest || "OT"} ({ot.workReason})</span>
+                                                        <span className="font-bold text-cyan-700">{ot.approvedHours}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="border border-neutral-300 rounded p-2 bg-neutral-50/50 space-y-1">
+                                                <div className="font-bold text-cyan-600 uppercase border-b border-neutral-200 pb-0.5">5. VERIFICATION & PAYROLL LOCK</div>
+                                                <div><span className="font-bold">Verifikasi SPV:</span> {clkApproval.supervisorVerification || "Terverifikasi"}</div>
+                                                <div><span className="font-bold">Status Lock Period:</span> {clkApproval.lockPeriod || "Locked"}</div>
+                                                <div><span className="font-bold">Export Payroll:</span> {clkApproval.exportToPayroll || "Complete"}</div>
+                                            </div>
+                                        </div>
+
+                                        {/* Approvals */}
+                                        <div className={clsx("grid gap-4 border border-neutral-300 rounded p-4 bg-neutral-50/20 text-center mt-2 divide-x divide-neutral-300", clkApprovals.length === 1 ? "grid-cols-1" : clkApprovals.length === 2 ? "grid-cols-2" : clkApprovals.length === 3 ? "grid-cols-3" : "grid-cols-4")}>
+                                            {clkApprovals.map((app, idx) => (
+                                                <div key={idx} className={clsx("flex flex-col justify-between h-20", idx > 0 && "pl-3")}>
+                                                    <div><div className="text-[6px] font-extrabold text-neutral-400 uppercase">{app.type.toUpperCase()} BY</div><div className="text-[7px] font-bold text-neutral-600 mt-0.5">{app.role || "—"}</div></div>
+                                                    <div><div className="text-[8.5px] font-black text-neutral-900 underline truncate">{app.name || "( .................... )"}</div></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="border-t border-neutral-200 pt-2 text-[6px] text-neutral-400 flex justify-between font-mono">
+                                        <span>ADIDAYA STUDIO — CLOCK & ATTENDANCE (CLK)</span>
+                                        <span>{documentId || "CLK-01-01"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
 
                     </div>
 
