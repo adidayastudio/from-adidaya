@@ -39,7 +39,8 @@ import {
     Sliders,
     Leaf,
     Landmark,
-    Truck
+    Truck,
+    ArrowRight
 } from "lucide-react";
 import clsx from "clsx";
 import { ExtendedReportType, ReportCluster } from "@/types/project";
@@ -291,6 +292,64 @@ const REPORT_DEFINITIONS: ReportTypeDef[] = [
     }
 ];
 
+interface ClusterGroupDef {
+    id: ReportCluster;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+    badgeBg: string;
+    hoverBorder: string;
+    textHover: string;
+}
+
+const CLUSTER_GROUPS: ClusterGroupDef[] = [
+    {
+        id: "progress_control",
+        label: "Progress & Schedule",
+        description: "Laporan kemajuan fisik, kurva-S, milestone & alokasi waktu",
+        icon: <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />,
+        badgeBg: "bg-blue-100/80 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400",
+        hoverBorder: "hover:border-blue-500/70 dark:hover:border-blue-400/70",
+        textHover: "group-hover:text-blue-600 dark:group-hover:text-blue-400"
+    },
+    {
+        id: "financial_resources",
+        label: "Cost & Resources",
+        description: "Pengendalian anggaran, tenaga kerja, material & alat berat",
+        icon: <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />,
+        badgeBg: "bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400",
+        hoverBorder: "hover:border-emerald-500/70 dark:hover:border-emerald-400/70",
+        textHover: "group-hover:text-emerald-600 dark:group-hover:text-emerald-400"
+    },
+    {
+        id: "quality_safety_risk",
+        label: "QA/QC, HSE & Risk",
+        description: "Inspeksi mutu, keselamatan kerja (K3) & manajemen risiko",
+        icon: <ShieldCheck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />,
+        badgeBg: "bg-indigo-100/80 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400",
+        hoverBorder: "hover:border-indigo-500/70 dark:hover:border-indigo-400/70",
+        textHover: "group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+    },
+    {
+        id: "governance_change",
+        label: "Governance & Exec",
+        description: "Kontrol dokumen, klaim/variasi (VO/CO) & eksekutif summary",
+        icon: <Award className="w-4 h-4 text-amber-600 dark:text-amber-400" />,
+        badgeBg: "bg-amber-100/80 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400",
+        hoverBorder: "hover:border-amber-500/70 dark:hover:border-amber-400/70",
+        textHover: "group-hover:text-amber-600 dark:group-hover:text-amber-400"
+    },
+    {
+        id: "site_formal",
+        label: "Site Ops & Formal Docs",
+        description: "Survei lapangan, MOM, surat resmi, BAST & commissioning",
+        icon: <MapPin className="w-4 h-4 text-teal-600 dark:text-teal-400" />,
+        badgeBg: "bg-teal-100/80 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400",
+        hoverBorder: "hover:border-teal-500/70 dark:hover:border-teal-400/70",
+        textHover: "group-hover:text-teal-600 dark:group-hover:text-teal-400"
+    }
+];
+
 export default function ReportsOverviewPage() {
     const router = useRouter();
     const [reports, setReports] = useState<MappedReport[]>([]);
@@ -330,13 +389,21 @@ export default function ReportsOverviewPage() {
                 `)
                 .order("report_date", { ascending: false });
 
-            if (error) throw error;
+            const getCategoryForReportType = (typeStr: string): ReportCluster => {
+                const found = REPORT_DEFINITIONS.find(d => d.type === typeStr);
+                if (found) return found.cluster;
+                if (["daily", "weekly", "monthly", "schedule"].includes(typeStr)) return "progress_control";
+                if (["cost", "manpower", "procurement", "finance", "resources"].includes(typeStr)) return "financial_resources";
+                if (["quality", "safety", "issue_risk"].includes(typeStr)) return "quality_safety_risk";
+                if (["doc_control", "change_order", "executive"].includes(typeStr)) return "governance_change";
+                return "site_formal";
+            };
 
             const mapped = (data || []).map(r => ({
                 id: r.id,
                 projectId: r.project_id,
                 reportType: r.report_type,
-                reportCategory: r.report_category,
+                reportCategory: r.report_category || getCategoryForReportType(r.report_type || ""),
                 title: r.title,
                 reportDate: r.report_date,
                 progress: r.progress,
@@ -485,79 +552,144 @@ export default function ReportsOverviewPage() {
             </div>
 
             {/* SECTION 1: ON-PAGE REPORT GENERATOR TEMPLATE BUTTONS */}
-            <div className="bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800/80 rounded-3xl p-6 shadow-sm space-y-5">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-100 dark:border-neutral-800 pb-4">
-                    <div>
-                        <h3 className="text-lg font-black text-neutral-900 dark:text-white flex items-center gap-2">
-                            <Plus className="w-5 h-5 text-blue-500" />
-                            Report Generator Action Cards
-                        </h3>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium mt-0.5">
-                            Pilih salah satu dari 18 tipe template di bawah untuk membuat laporan proyek baru secara instan
-                        </p>
-                    </div>
+            <div className="space-y-4">
+                {/* Header & Filter Control Bar (Clear Glass Container) */}
+                <div className="bg-white/40 dark:bg-neutral-900/40 backdrop-blur-xl border border-white/60 dark:border-neutral-800/50 rounded-3xl p-5 shadow-sm space-y-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-neutral-200/40 dark:border-neutral-800/40 pb-3.5">
+                        <div className="flex items-center gap-2.5">
+                            <h3 className="text-base font-black text-neutral-900 dark:text-white flex items-center gap-2">
+                                <Plus className="w-4 h-4 text-blue-500" />
+                                Report Generator
+                            </h3>
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-white/60 dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300 border border-neutral-200/50 dark:border-neutral-700/50 shadow-2xs">
+                                {REPORT_DEFINITIONS.length} Template
+                            </span>
+                        </div>
 
-                    <div className="relative w-full md:w-64">
-                        <Input
-                            placeholder="Cari template laporan..."
-                            value={modalSearch}
-                            onChange={(e) => setModalSearch(e.target.value)}
-                            className="pl-9 h-9 text-xs bg-neutral-50 dark:bg-neutral-950"
-                        />
-                        <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-3 top-2.5" />
-                    </div>
-                </div>
-
-                {/* Cluster Filter Tabs */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                    {[
-                        { id: "all", label: "Semua Template (18)" },
-                        { id: "progress_control", label: "Progress & Schedule" },
-                        { id: "financial_resources", label: "Cost & Logistics" },
-                        { id: "quality_safety_risk", label: "QA/QC, HSE & Risk" },
-                        { id: "governance_change", label: "Governance & Exec" },
-                        { id: "site_formal", label: "Site & Formal Docs" },
-                    ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setModalTab(tab.id)}
-                            className={clsx(
-                                "px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200",
-                                modalTab === tab.id
-                                    ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-sm"
-                                    : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                        <div className="relative w-full md:w-64">
+                            <Input
+                                placeholder="Cari template..."
+                                value={modalSearch}
+                                onChange={(e) => setModalSearch(e.target.value)}
+                                className="pl-8 pr-8 h-8 text-xs bg-white/50 dark:bg-neutral-950/50 border-neutral-200/60 dark:border-neutral-800 rounded-xl"
+                            />
+                            <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-2.5" />
+                            {modalSearch && (
+                                <button
+                                    onClick={() => setModalSearch("")}
+                                    className="absolute right-2 top-2 p-0.5 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
                             )}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                        </div>
+                    </div>
+
+                    {/* Cluster Filter Tabs */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                        {[
+                            { id: "all", label: "Semua", count: REPORT_DEFINITIONS.length },
+                            ...CLUSTER_GROUPS.map(cg => ({
+                                id: cg.id,
+                                label: cg.label,
+                                count: REPORT_DEFINITIONS.filter(r => r.cluster === cg.id).length
+                            }))
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setModalTab(tab.id)}
+                                className={clsx(
+                                    "flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-200 border",
+                                    modalTab === tab.id
+                                        ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border-transparent shadow-sm"
+                                        : "bg-white/40 dark:bg-neutral-800/40 text-neutral-600 dark:text-neutral-400 border-neutral-200/50 dark:border-neutral-700/50 hover:bg-white/80 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
+                                )}
+                            >
+                                <span>{tab.label}</span>
+                                <span className={clsx(
+                                    "px-1.5 py-0.2 rounded-full text-[10px] font-bold",
+                                    modalTab === tab.id
+                                        ? "bg-white/20 dark:bg-neutral-900/20 text-white dark:text-neutral-900"
+                                        : "bg-neutral-200/50 dark:bg-neutral-700/50 text-neutral-500 dark:text-neutral-400"
+                                )}>
+                                    {tab.count}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Generator Cards Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 pt-1">
-                    {filteredGeneratorItems.map((def) => (
-                        <button
-                            key={def.type}
-                            onClick={() => router.push(`/flow/reports/editor?type=${def.type}`)}
-                            className="flex flex-col text-left p-4 rounded-2xl border border-neutral-200/80 dark:border-neutral-800/80 hover:border-blue-500 dark:hover:border-blue-400 hover:shadow-md bg-neutral-50/50 dark:bg-neutral-950/40 hover:bg-white dark:hover:bg-neutral-900 transition-all duration-200 group relative overflow-hidden"
+                {/* Rendered Category Cards (Each category in its own clear glass card container) */}
+                {filteredGeneratorItems.length === 0 ? (
+                    <div className="py-10 flex flex-col items-center justify-center text-center space-y-2 bg-white/40 dark:bg-neutral-900/40 backdrop-blur-xl rounded-3xl border border-white/60 dark:border-neutral-800/50 p-6">
+                        <Search className="w-6 h-6 text-neutral-400" />
+                        <p className="text-xs font-bold text-neutral-700 dark:text-neutral-300">Tidak ada template ditemukan</p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => { setModalSearch(""); setModalTab("all"); }}
+                            className="text-[11px] h-7 px-3 mt-1"
                         >
-                            <div className="flex items-center justify-between w-full mb-2.5">
-                                <div className={clsx("p-2.5 rounded-xl group-hover:scale-105 transition-transform", def.bgColor, def.color)}>
-                                    {def.icon}
+                            Reset Filter
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {CLUSTER_GROUPS.filter(cg => modalTab === "all" || modalTab === cg.id).map(cg => {
+                            const groupItems = filteredGeneratorItems.filter(item => item.cluster === cg.id);
+                            if (groupItems.length === 0) return null;
+
+                            return (
+                                <div
+                                    key={cg.id}
+                                    className="bg-white/40 dark:bg-neutral-900/40 backdrop-blur-xl border border-white/60 dark:border-neutral-800/50 rounded-3xl p-5 shadow-sm space-y-3"
+                                >
+                                    {/* Category Title Header (No icon, no divider) */}
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="text-xs font-black text-neutral-900 dark:text-white tracking-tight">
+                                            {cg.label}
+                                        </h4>
+                                        <span className="text-[10px] font-bold text-neutral-400 font-mono">
+                                            ({groupItems.length})
+                                        </span>
+                                    </div>
+
+                                    {/* Group Cards Grid */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5 items-start">
+                                        {groupItems.map(def => (
+                                            <button
+                                                key={def.type}
+                                                onClick={() => router.push(`/flow/reports/editor?type=${def.type}`)}
+                                                className={clsx(
+                                                    "group relative flex flex-col p-2.5 rounded-2xl border border-neutral-200/60 dark:border-neutral-800/60 bg-white/50 dark:bg-neutral-900/50 hover:bg-white dark:hover:bg-neutral-900 hover:shadow-xl hover:scale-[1.02] hover:z-20 transition-all duration-200 text-left overflow-hidden cursor-pointer w-full",
+                                                    cg.hoverBorder
+                                                )}
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <div className={clsx("p-1.5 rounded-lg transition-transform duration-200 group-hover:scale-105 shrink-0", cg.badgeBg)}>
+                                                        {def.icon}
+                                                    </div>
+                                                    <h4 className={clsx("text-[11px] font-bold text-neutral-900 dark:text-white transition-colors leading-tight line-clamp-2 min-w-0", cg.textHover)}>
+                                                        {def.title}
+                                                    </h4>
+                                                </div>
+
+                                                {/* Description expands smoothly on hover */}
+                                                <div className="grid grid-rows-[0fr] group-hover:grid-rows-[1fr] transition-all duration-250 ease-in-out opacity-0 group-hover:opacity-100">
+                                                    <div className="overflow-hidden">
+                                                        <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-normal leading-normal border-t border-neutral-100 dark:border-neutral-800/50 pt-1.5 mt-1.5">
+                                                            {def.description}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-white dark:bg-neutral-800 text-neutral-500 border border-neutral-200/60 dark:border-neutral-700/60">
-                                    {def.clusterLabel}
-                                </span>
-                            </div>
-                            <h4 className="text-xs font-black text-neutral-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                {def.title}
-                            </h4>
-                            <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium leading-relaxed mt-1 line-clamp-2">
-                                {def.description}
-                            </p>
-                        </button>
-                    ))}
-                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
             {/* SECTION 2: DATABASE REPORTS TABLE */}

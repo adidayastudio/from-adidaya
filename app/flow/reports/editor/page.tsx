@@ -188,7 +188,9 @@ function EditorContentComponent() {
         { name: "", category: "Material", unit: "unit", incoming: "", outgoing: "", stock: "" }
     ]);
 
-    // --- WEEKLY (LM) TEMPLATE STATES ---
+    // --- DAILY & WEEKLY TEMPLATE STATES ---
+    const [dailyLangMode, setDailyLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
+    const [weeklyLangMode, setWeeklyLangMode] = useState<"bilingual" | "id" | "en">("bilingual");
     const [weeklyTab, setWeeklyTab] = useState<"general" | "summary" | "kegiatan" | "personel" | "cuaca" | "dokumentasi" | "ttd">("general");
 
     const getPrevSundayDateStr = () => {
@@ -201,6 +203,75 @@ function EditorContentComponent() {
         const d = new Date();
         d.setDate(d.getDate() + (6 - d.getDay())); // Saturday
         return d.toISOString().split('T')[0];
+    };
+
+    const parseWeatherTimeRange = (tr: string) => {
+        if (!tr) return { start: "", end: "" };
+        const parts = tr.split(/\s*[-–—]\s*/);
+        if (parts.length >= 2) {
+            return { start: parts[0].trim(), end: parts[1].trim() };
+        }
+        return { start: tr.trim(), end: tr.trim() };
+    };
+
+    const getAggregatedWeatherItems = (items: { timeRange: string; condition: string }[]) => {
+        if (!items || items.length === 0) return [];
+        
+        const aggregated: { timeRange: string; condition: string; durationHours: number }[] = [];
+        
+        let currentGroup: {
+            condition: string;
+            startTime: string;
+            endTime: string;
+            count: number;
+        } | null = null;
+
+        items.forEach((item) => {
+            const { start, end } = parseWeatherTimeRange(item.timeRange);
+            const cond = item.condition || "cerah";
+            
+            if (!currentGroup) {
+                currentGroup = {
+                    condition: cond,
+                    startTime: start,
+                    endTime: end,
+                    count: 1
+                };
+            } else if (currentGroup.condition === cond) {
+                currentGroup.endTime = end;
+                currentGroup.count += 1;
+            } else {
+                const cg = currentGroup as { condition: string; startTime: string; endTime: string; count: number };
+                const displayRange = cg.startTime && cg.endTime && cg.startTime !== cg.endTime
+                    ? `${cg.startTime} - ${cg.endTime}`
+                    : cg.startTime;
+                aggregated.push({
+                    timeRange: displayRange,
+                    condition: cg.condition,
+                    durationHours: cg.count
+                });
+                currentGroup = {
+                    condition: cond,
+                    startTime: start,
+                    endTime: end,
+                    count: 1
+                };
+            }
+        });
+
+        if (currentGroup) {
+            const cg = currentGroup as { condition: string; startTime: string; endTime: string; count: number };
+            const displayRange = cg.startTime && cg.endTime && cg.startTime !== cg.endTime
+                ? `${cg.startTime} - ${cg.endTime}`
+                : cg.startTime;
+            aggregated.push({
+                timeRange: displayRange,
+                condition: cg.condition,
+                durationHours: cg.count
+            });
+        }
+
+        return aggregated;
     };
 
     const [startDate, setStartDate] = useState(getPrevSundayDateStr());
@@ -1085,6 +1156,7 @@ function EditorContentComponent() {
                                     setPhotos(parsed.photos || []);
                                     setMaterialItems(parsed.materialItems || []);
                                     setNextActions(parsed.nextActions || "");
+                                    setDailyLangMode(parsed.dailyLangMode || "bilingual");
                                     setIsTitleManuallyEdited(true);
                                     setIsDocIdManuallyEdited(true);
                                 } else {
@@ -1112,6 +1184,7 @@ function EditorContentComponent() {
                                     setDocumentId(parsed.documentId || `${prefix}-${formattedPeriod}-01`);
                                     setRevision(parsed.revision || "00");
                                     setLocationOverride(parsed.locationOverride || "");
+                                    setWeeklyLangMode(parsed.weeklyLangMode || "bilingual");
                                     
                                     setProgressLastWeek(parsed.progressLastWeek?.toString() || "0.000");
                                     setProgressThisWeek(parsed.progressThisWeek?.toString() || "0.000");
@@ -2419,10 +2492,11 @@ function EditorContentComponent() {
                 computedManpower = pm + sm + sv + md + tk + pk + op;
 
                 summaryWeather = weatherItems.length > 0 
-                    ? weatherItems.map(w => `${w.timeRange}: ${w.condition}`).join(", ")
+                    ? getAggregatedWeatherItems(weatherItems).map(w => `${w.timeRange}: ${w.condition} (${w.durationHours} Jam)`).join(", ")
                     : "Cerah";
 
                 const templateData = {
+                    dailyLangMode,
                     locationOverride,
                     dayNumber: dayNumber ? parseInt(dayNumber) : null,
                     totalDays: totalDays ? parseInt(totalDays) : null,
@@ -2446,6 +2520,7 @@ function EditorContentComponent() {
                 finalContent = JSON.stringify(templateData);
             } else if (reportType === "weekly" || reportType === "monthly") {
                 const weeklyTemplateData = {
+                    weeklyLangMode,
                     startDate,
                     endDate,
                     weekNumber,
@@ -2590,7 +2665,7 @@ function EditorContentComponent() {
                 return "site_formal";
             };
 
-            const payload = {
+            const payload: any = {
                 project_id: selectedProjectId,
                 report_type: reportType,
                 report_category: getCategoryForReportType(reportType),
@@ -2604,19 +2679,40 @@ function EditorContentComponent() {
                 updated_at: new Date().toISOString(),
             };
 
-
             const { data: { user } } = await supabase.auth.getUser();
 
+            let saveError: any = null;
             if (!reportId) {
                 const { error } = await supabase.from("project_reports").insert({
                     ...payload,
                     created_by: user?.id
                 });
-                if (error) throw error;
+                saveError = error;
             } else {
                 const { error } = await supabase.from("project_reports").update(payload).eq("id", reportId);
-                if (error) throw error;
+                saveError = error;
             }
+
+            // Fallback: If report_category column is missing in the database table schema, retry save without report_category
+            if (saveError && (
+                saveError.message?.includes("report_category") ||
+                saveError.details?.includes("report_category") ||
+                JSON.stringify(saveError).includes("report_category")
+            )) {
+                delete payload.report_category;
+                if (!reportId) {
+                    const { error } = await supabase.from("project_reports").insert({
+                        ...payload,
+                        created_by: user?.id
+                    });
+                    saveError = error;
+                } else {
+                    const { error } = await supabase.from("project_reports").update(payload).eq("id", reportId);
+                    saveError = error;
+                }
+            }
+
+            if (saveError) throw saveError;
 
             router.push(`/flow/reports/${reportType}`);
         } catch (err: any) {
@@ -2758,11 +2854,11 @@ function EditorContentComponent() {
     const renderWeeklyDateMetaRow = () => (
         <div className="grid grid-cols-5 border border-neutral-300 rounded overflow-hidden text-center">
             {[
-                { label: "Periode", value: getPeriodFormattedDate() },
-                { label: reportType === "monthly" ? "Bulan Ke-" : "Minggu Ke-", value: reportType === "monthly" ? (monthNumber ? monthNumber.padStart(2, "0") : "01") : (weekNumber ? weekNumber.padStart(2, "0") : "01") },
-                { label: "Hari Ke-", value: dayNumber || "—" },
-                { label: "Total Hari", value: totalDays || "—" },
-                { label: "Sisa Hari", value: remainingDays || "—" },
+                { label: getLangText(weeklyLangMode, "PERIOD", "PERIODE"), value: getPeriodFormattedDate() },
+                { label: reportType === "monthly" ? getLangText(weeklyLangMode, "MONTH NO.", "BULAN KE-") : getLangText(weeklyLangMode, "WEEK NO.", "MINGGU KE-"), value: reportType === "monthly" ? (monthNumber ? monthNumber.padStart(2, "0") : "01") : (weekNumber ? weekNumber.padStart(2, "0") : "01") },
+                { label: getLangText(weeklyLangMode, "DAY NO.", "HARI KE-"), value: dayNumber || "—" },
+                { label: getLangText(weeklyLangMode, "TOTAL DAYS", "TOTAL HARI"), value: totalDays || "—" },
+                { label: getLangText(weeklyLangMode, "REMAINING", "SISA HARI"), value: remainingDays || "—" },
             ].map((cell, i) => (
                 <div key={i} className="border-r border-neutral-300 last:border-r-0">
                     <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{cell.label}</div>
@@ -2965,74 +3061,168 @@ function EditorContentComponent() {
                 </div>
             </div>
 
-            {/* Daily Tabs */}
+            {/* Daily Tabs & Language Switcher */}
             {reportType === "daily" && (
-                <div className="flex border-b border-neutral-200/60 dark:border-neutral-800/60 px-2 overflow-x-auto shrink-0 gap-1 scroll-smooth">
-                    {([
-                        { key: "general", label: "Info Umum" },
-                        { key: "workItems", label: `Uraian Kerja (${workItems.length})` },
-                        { key: "personnel", label: "Tenaga & Shift" },
-                        { key: "cuaca", label: "Cuaca" },
-                        { key: "material", label: "Material" },
-                        { key: "catatan", label: "Catatan" },
-                        { key: "dokumentasi", label: "Dokumentasi" },
-                        { key: "ttd", label: "TTD" },
-                    ] as const).map(tab => (
-                        <button
-                            key={tab.key}
-                            type="button"
-                            onClick={(e) => {
-                                setActiveTab(tab.key);
-                                e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-                            }}
-                            className={clsx(
-                                "pb-2.5 pt-1 px-3 text-[11px] font-bold uppercase tracking-wider border-b-2 whitespace-nowrap transition-all cursor-pointer",
-                                activeTab === tab.key
-                                    ? "border-orange-500 text-orange-600 dark:text-orange-400 font-extrabold"
-                                    : "border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700"
-                            )}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "general", num: "1", label: "Info Umum" },
+                            { key: "workItems", num: "2", label: "Uraian Kerja", count: workItems.length },
+                            { key: "personnel", num: "3", label: "Tenaga & Shift" },
+                            { key: "cuaca", num: "4", label: "Cuaca" },
+                            { key: "material", num: "5", label: "Material", count: materialItems.length },
+                            { key: "catatan", num: "6", label: "Catatan" },
+                            { key: "dokumentasi", num: "7", label: "Dokumentasi", count: photos.length },
+                            { key: "ttd", num: "8", label: "TTD & Approval" },
+                        ].map(tab => {
+                            const isActive = activeTab === tab.key;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    onClick={(e) => {
+                                        setActiveTab(tab.key as any);
+                                        e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                                    }}
+                                    className={clsx(
+                                        "px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive
+                                            ? "bg-white dark:bg-neutral-800 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-900/60 shadow-sm"
+                                            : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}
+                                >
+                                    <span className={clsx(
+                                        "w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0",
+                                        isActive
+                                            ? "bg-orange-600 text-white"
+                                            : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300"
+                                    )}>
+                                        {tab.num}
+                                    </span>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (
+                                        <span className={clsx(
+                                            "px-1.5 py-0.2 text-[10px] font-black rounded-md",
+                                            isActive
+                                                ? "bg-orange-50 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400"
+                                                : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500"
+                                        )}>
+                                            {tab.count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                        <Globe className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                            {[
+                                { key: "bilingual", label: "Bilingual" },
+                                { key: "id", label: "ID" },
+                                { key: "en", label: "EN" },
+                            ].map(lang => (
+                                <button
+                                    key={lang.key}
+                                    type="button"
+                                    onClick={() => setDailyLangMode(lang.key as any)}
+                                    className={clsx(
+                                        "px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                        dailyLangMode === lang.key
+                                            ? "bg-neutral-900 text-white border-neutral-900 shadow-sm"
+                                            : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                    )}
+                                >
+                                    {lang.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
 
-            {/* Weekly & Monthly Tabs */}
+            {/* Weekly & Monthly Tabs & Language Switcher */}
             {(reportType === "weekly" || reportType === "monthly") && (
-                <div className="flex border-b border-neutral-200/60 dark:border-neutral-800/60 px-2 overflow-x-auto shrink-0 gap-1 scroll-smooth">
-                    {([
-                        { key: "general", label: "1. Info & Periode" },
-                        { key: "summary", label: "2. Executive Summary" },
-                        { key: "kegiatan", label: "3. Kegiatan Pekerjaan" },
-                        { key: "personel", label: "4. Personel Harian" },
-                        { key: "cuaca", label: "5. Cuaca & Kendala" },
-                        { key: "dokumentasi", label: "6. Dokumentasi" },
-                        { key: "ttd", label: "7. TTD & Approval" },
-                    ] as const).map(tab => (
-                        <button
-                            key={tab.key}
-                            type="button"
-                            onClick={(e) => {
-                                setWeeklyTab(tab.key);
-                                e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-                            }}
-                            className={clsx(
-                                "pb-2.5 pt-1 px-3 text-[11px] font-bold uppercase tracking-wider border-b-2 whitespace-nowrap transition-all cursor-pointer",
-                                weeklyTab === tab.key
-                                    ? "border-neutral-900 text-neutral-900 dark:text-white font-extrabold"
-                                    : "border-transparent text-neutral-400 dark:text-neutral-500 hover:text-neutral-700"
-                            )}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
+                        {[
+                            { key: "general", num: "1", label: "Info & Periode" },
+                            { key: "summary", num: "2", label: "Executive Summary" },
+                            { key: "kegiatan", num: "3", label: "Kegiatan Pekerjaan", count: weeklyActivitiesThisWeek.length },
+                            { key: "personel", num: "4", label: reportType === "monthly" ? "Personel Bulanan" : "Personel Harian" },
+                            { key: "cuaca", num: "5", label: "Cuaca & Kendala", count: kendalaItems.length },
+                            { key: "dokumentasi", num: "6", label: "Dokumentasi", count: photos.length },
+                            { key: "ttd", num: "7", label: "TTD & Approval" },
+                        ].map(tab => {
+                            const isActive = weeklyTab === tab.key;
+                            return (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    onClick={(e) => {
+                                        setWeeklyTab(tab.key as any);
+                                        e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+                                    }}
+                                    className={clsx(
+                                        "px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        isActive
+                                            ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm"
+                                            : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
+                                    )}
+                                >
+                                    <span className={clsx(
+                                        "w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0",
+                                        isActive
+                                            ? "bg-blue-600 text-white"
+                                            : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300"
+                                    )}>
+                                        {tab.num}
+                                    </span>
+                                    <span>{tab.label}</span>
+                                    {tab.count !== undefined && (
+                                        <span className={clsx(
+                                            "px-1.5 py-0.2 text-[10px] font-black rounded-md",
+                                            isActive
+                                                ? "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400"
+                                                : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-500"
+                                        )}>
+                                            {tab.count}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                        <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                        <div className="flex items-center gap-1">
+                            {[
+                                { key: "bilingual", label: "Bilingual" },
+                                { key: "id", label: "ID" },
+                                { key: "en", label: "EN" },
+                            ].map(lang => (
+                                <button
+                                    key={lang.key}
+                                    type="button"
+                                    onClick={() => setWeeklyLangMode(lang.key as any)}
+                                    className={clsx(
+                                        "px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
+                                        weeklyLangMode === lang.key
+                                            ? "bg-neutral-900 text-white border-neutral-900 shadow-sm"
+                                            : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
+                                    )}
+                                >
+                                    {lang.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
 
             {/* Schedule Specific Tabs & Language Switcher */}
             {reportType === "schedule" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     
                     {/* Tab Navigation Segmented Pills */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
@@ -3053,7 +3243,7 @@ function EditorContentComponent() {
                                         e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
                                     }}
                                     className={clsx(
-                                        "px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                        "px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive
                                             ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm"
                                             : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
@@ -3084,7 +3274,7 @@ function EditorContentComponent() {
                     </div>
 
                     {/* Separate Language Switcher Card (Clean: No 'BAHASA:' text) */}
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[
@@ -3097,7 +3287,7 @@ function EditorContentComponent() {
                                     type="button"
                                     onClick={() => setSchLangMode(lang.key as any)}
                                     className={clsx(
-                                        "px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                        "px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         schLangMode === lang.key
                                             ? "bg-neutral-900 text-white border-neutral-900 shadow-sm"
                                             : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
@@ -3113,7 +3303,7 @@ function EditorContentComponent() {
 
             {/* ==================== CST (COST & BUDGET) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "cost" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Budget Baseline" },
@@ -3125,7 +3315,7 @@ function EditorContentComponent() {
                             const isActive = cstActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setCstActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3135,12 +3325,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setCstLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         cstLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3151,7 +3341,7 @@ function EditorContentComponent() {
 
             {/* ==================== CRW (MANPOWER & PAYROLL) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "manpower" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Workforce Setup" },
@@ -3163,7 +3353,7 @@ function EditorContentComponent() {
                             const isActive = crwActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setCrwActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3173,12 +3363,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setCrwLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         crwLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3189,7 +3379,7 @@ function EditorContentComponent() {
 
             {/* ==================== PRC (PROCUREMENT & STOCK) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "procurement" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Procurement Plan", count: prcPlanItems.length },
@@ -3201,7 +3391,7 @@ function EditorContentComponent() {
                             const isActive = prcActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setPrcActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3211,12 +3401,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setPrcLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         prcLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3227,7 +3417,7 @@ function EditorContentComponent() {
 
             {/* ==================== FIN (FINANCE REGISTER) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "finance" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Account & Balance" },
@@ -3239,7 +3429,7 @@ function EditorContentComponent() {
                             const isActive = finActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setFinActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3249,12 +3439,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setFinLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         finLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3265,7 +3455,7 @@ function EditorContentComponent() {
 
             {/* ==================== RSC (EQUIPMENT & ASSET) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "resources" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Asset Master", count: rscAssets.length },
@@ -3277,7 +3467,7 @@ function EditorContentComponent() {
                             const isActive = rscActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setRscActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3287,12 +3477,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setRscLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         rscLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3303,7 +3493,7 @@ function EditorContentComponent() {
 
             {/* ==================== QAC (QUALITY CONTROL) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "quality" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Inspection Plan", count: qacPlans.length },
@@ -3315,7 +3505,7 @@ function EditorContentComponent() {
                             const isActive = qacActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setQacActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3325,12 +3515,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setQacLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         qacLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3341,7 +3531,7 @@ function EditorContentComponent() {
 
             {/* ==================== HSE (SAFETY & K3) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "safety" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Workforce & Safe Hours" },
@@ -3353,7 +3543,7 @@ function EditorContentComponent() {
                             const isActive = hseActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setHseActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3363,12 +3553,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setHseLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         hseLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3379,7 +3569,7 @@ function EditorContentComponent() {
 
             {/* ==================== IRK (ISSUE & RISK REGISTER) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "issue_risk" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Risk Identification", count: irkRisks.length },
@@ -3391,7 +3581,7 @@ function EditorContentComponent() {
                             const isActive = irkActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setIrkActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3401,12 +3591,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setIrkLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         irkLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3417,7 +3607,7 @@ function EditorContentComponent() {
 
             {/* ==================== DOC (DOCUMENT CONTROL) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "doc_control" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Document Register", count: docRegister.length },
@@ -3429,7 +3619,7 @@ function EditorContentComponent() {
                             const isActive = docActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setDocActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3439,12 +3629,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setDocLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         docLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3455,7 +3645,7 @@ function EditorContentComponent() {
 
             {/* ==================== CCO (CONTRACT CHANGE ORDER) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "change_order" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Change Initiation" },
@@ -3467,7 +3657,7 @@ function EditorContentComponent() {
                             const isActive = ccoActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setCcoActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3477,12 +3667,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setCcoLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         ccoLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3493,7 +3683,7 @@ function EditorContentComponent() {
 
             {/* ==================== MOU (AGREEMENT & CONTRACT) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "mou_contract" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Parties & Identity" },
@@ -3505,7 +3695,7 @@ function EditorContentComponent() {
                             const isActive = mouActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setMouActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3514,12 +3704,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setMouLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         mouLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -3530,7 +3720,7 @@ function EditorContentComponent() {
 
             {/* ==================== EXE (EXECUTIVE REPORT) TABS & LANGUAGE SWITCHER ==================== */}
             {reportType === "executive" && (
-                <div className="flex flex-col sm:flex-row border-b border-neutral-200/80 dark:border-neutral-800 px-4 py-2 bg-neutral-100/70 dark:bg-neutral-900/80 items-stretch sm:items-center justify-between gap-3 shrink-0">
+                <div className="mx-3 my-1.5 flex flex-col sm:flex-row border border-neutral-200/80 dark:border-neutral-800 px-3.5 py-1.5 bg-neutral-100/80 dark:bg-neutral-900/80 rounded-2xl sm:rounded-full items-stretch sm:items-center justify-between gap-3 shrink-0 shadow-xs">
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scroll-smooth">
                         {[
                             { key: "setup", num: "1", label: "Project Health (RAG)" },
@@ -3542,7 +3732,7 @@ function EditorContentComponent() {
                             const isActive = exeActiveTab === tab.key;
                             return (
                                 <button key={tab.key} type="button" onClick={(e) => { setExeActiveTab(tab.key as any); e.currentTarget.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }); }}
-                                    className={clsx("px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
+                                    className={clsx("px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all whitespace-nowrap flex items-center gap-2 border cursor-pointer",
                                         isActive ? "bg-white dark:bg-neutral-800 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/60 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-white/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-white"
                                     )}>
                                     <span className={clsx("w-4 h-4 rounded-full text-[10px] font-black inline-flex items-center justify-center shrink-0", isActive ? "bg-blue-600 text-white" : "bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300")}>{tab.num}</span>
@@ -3552,12 +3742,12 @@ function EditorContentComponent() {
                             );
                         })}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
+                    <div className="flex items-center gap-2 shrink-0 bg-white dark:bg-neutral-800 px-3 py-1.5 rounded-full border border-neutral-200 dark:border-neutral-700 shadow-sm">
                         <Globe className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
                         <div className="flex items-center gap-1">
                             {[{ key: "bilingual", label: "Bilingual" }, { key: "id", label: "ID" }, { key: "en", label: "EN" }].map(lang => (
                                 <button key={lang.key} type="button" onClick={() => setExeLangMode(lang.key as any)}
-                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-lg transition-all uppercase tracking-wider border cursor-pointer",
+                                    className={clsx("px-2.5 py-1 text-[10px] font-black rounded-full transition-all uppercase tracking-wider border cursor-pointer",
                                         exeLangMode === lang.key ? "bg-neutral-900 text-white border-neutral-900 shadow-sm" : "bg-transparent text-neutral-600 dark:text-neutral-400 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-700/50"
                                     )}>{lang.label}</button>
                             ))}
@@ -5958,7 +6148,7 @@ function EditorContentComponent() {
                                         </>
                                     )}
                         </>
-                    ) : !["daily", "weekly", "monthly", "schedule", "cost", "manpower", "procurement", "finance", "resources", "quality", "safety", "issue_risk", "doc_control", "change_order", "mou_contract", "executive"].includes(reportType) ? (
+                    ) : (reportType === "weekly" || reportType === "monthly" || !["daily", "schedule", "cost", "manpower", "procurement", "finance", "resources", "quality", "safety", "issue_risk", "doc_control", "change_order", "mou_contract", "executive"].includes(reportType)) ? (
                         <>
                             {weeklyTab === "general" && (
                                 <div className="space-y-5 animate-in fade-in duration-300">
@@ -6458,16 +6648,16 @@ function EditorContentComponent() {
                                 
                                 {/* ---------------- LH PAGE 1 ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col gap-3 border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
-                                    {renderPageHeader("RDL", documentId || "RDL-00-01", "Laporan Harian")}
+                                    {renderPageHeader("RDL", documentId || "RDL-00-01", getLangText(dailyLangMode, "DAILY PROGRESS REPORT", "LAPORAN HARIAN"))}
 
                                     {/* Date Meta */}
                                     <div className="grid grid-cols-5 border border-neutral-300 rounded overflow-hidden text-center">
                                         {[
-                                            { label: "Hari", value: getDayName() },
-                                            { label: "Tanggal", value: getDayDateOnly() },
-                                            { label: "Hari Ke-", value: dayNumber || "—" },
-                                            { label: "Total Hari", value: totalDays || "—" },
-                                            { label: "Sisa Hari", value: remainingDays || "—" },
+                                            { label: getLangText(dailyLangMode, "DAY", "HARI"), value: getDayName() },
+                                            { label: getLangText(dailyLangMode, "DATE", "TANGGAL"), value: getDayDateOnly() },
+                                            { label: getLangText(dailyLangMode, "DAY NO.", "HARI KE-"), value: dayNumber || "—" },
+                                            { label: getLangText(dailyLangMode, "TOTAL DAYS", "TOTAL HARI"), value: totalDays || "—" },
+                                            { label: getLangText(dailyLangMode, "REMAINING", "SISA HARI"), value: remainingDays || "—" },
                                         ].map((cell, i) => (
                                             <div key={i} className="border-r border-neutral-300 last:border-r-0">
                                                 <div className="text-[5px] font-extrabold text-neutral-400 uppercase bg-neutral-50 border-b border-neutral-200 py-0.5 px-1">{cell.label}</div>
@@ -6480,7 +6670,7 @@ function EditorContentComponent() {
                                     <div className="flex gap-3">
                                         {/* Uraian Pekerjaan */}
                                         <div className="flex-1">
-                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">Uraian Pekerjaan</div>
+                                            <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider rounded-t-sm">{getLangText(dailyLangMode, "WORK ACTIVITIES & DESCRIPTION", "URAIAN PEKERJAAN")}</div>
                                             <table className="w-full text-left border border-neutral-300 border-t-0" style={{ borderCollapse: "collapse" }}>
                                                 <thead>
                                                     <tr className="bg-neutral-50 border-b border-neutral-300 text-[6px] font-extrabold text-neutral-500 uppercase">
@@ -6569,13 +6759,13 @@ function EditorContentComponent() {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="text-[6px]">
-                                                        {weatherItems.map((w, idx) => (
+                                                        {getAggregatedWeatherItems(weatherItems).map((w, idx) => (
                                                             <tr key={idx} className="border-b border-neutral-200">
                                                                 <td className="p-0.5 pl-1 border-r border-neutral-200 text-neutral-600 font-medium">{w.timeRange}</td>
                                                                 <td className="p-0.5 text-center border-r border-neutral-200 font-black text-neutral-900">{w.condition === "cerah" ? "✓" : ""}</td>
                                                                 <td className="p-0.5 text-center border-r border-neutral-200 font-black text-neutral-900">{w.condition === "berawan" ? "✓" : ""}</td>
                                                                 <td className="p-0.5 text-center border-r border-neutral-200 font-black text-neutral-900">{w.condition === "hujan" ? "✓" : ""}</td>
-                                                                <td className="p-0.5 text-center font-semibold text-neutral-600">1 Jam</td>
+                                                                <td className="p-0.5 text-center font-semibold text-neutral-600">{w.durationHours} Jam</td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
@@ -6693,7 +6883,7 @@ function EditorContentComponent() {
                                 {/* ---------------- PAGE 1: COVER (LM-XX-01 / LB-XX-01) ---------------- */}
                                 <div className="weekly-page-break bg-white text-neutral-900 shadow-xl w-full p-8 flex flex-col justify-between border border-neutral-300" style={{ minHeight: "920px", boxSizing: "border-box" }}>
                                     
-                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(1), reportType === "monthly" ? "Laporan Bulanan" : "Laporan Mingguan")}
+                                    {renderPageHeader(reportType === "monthly" ? "RMN" : "RWK", getReportPageDocCode(1), reportType === "monthly" ? getLangText(weeklyLangMode, "MONTHLY PROGRESS REPORT", "LAPORAN BULANAN") : getLangText(weeklyLangMode, "WEEKLY PROGRESS REPORT", "LAPORAN MINGGUAN"))}
 
                                     {/* Center Title Box */}
                                     <div className="text-center my-auto space-y-4 px-4 py-12">
