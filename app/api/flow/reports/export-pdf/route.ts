@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
+
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
     try {
@@ -9,19 +12,34 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "HTML content is required" }, { status: 400 });
         }
 
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-accelerated-2d-canvas",
-                "--no-first-run",
-                "--no-zygote",
-                "--single-process",
-                "--disable-gpu",
-            ],
-        });
+        let browser;
+        if (process.env.NODE_ENV === "production") {
+            const chromium = require("@sparticuz/chromium");
+            const puppeteer = require("puppeteer-core");
+
+            browser = await puppeteer.launch({
+                args: chromium.args,
+                defaultViewport: chromium.defaultViewport,
+                executablePath: await chromium.executablePath(),
+                headless: chromium.headless,
+                ignoreHTTPSErrors: true,
+            });
+        } else {
+            const puppeteer = require("puppeteer");
+            browser = await puppeteer.launch({
+                headless: true,
+                args: [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-accelerated-2d-canvas",
+                    "--no-first-run",
+                    "--no-zygote",
+                    "--single-process",
+                    "--disable-gpu",
+                ],
+            });
+        }
 
         const page = await browser.newPage();
 
