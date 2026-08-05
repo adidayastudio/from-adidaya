@@ -9,6 +9,8 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { useProject } from "@/components/flow/project-context";
 import { Download, Save, Send, Plus, RotateCcw } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import { useEffect } from "react";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
 import type {
@@ -76,6 +78,99 @@ export default function ProjectSetupWBSPage() {
   // Modals
   const [showAddDiscipline, setShowAddDiscipline] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const [isLoadingWBS, setIsLoadingWBS] = useState(true);
+
+  // Load WBS from database on mount / workspace change
+  useEffect(() => {
+    if (!project?.workspace_id) return;
+    
+    async function loadWBS() {
+      try {
+        setIsLoadingWBS(true);
+        const { data, error } = await supabase
+          .from("work_breakdown_structure")
+          .select("*")
+          .eq("workspace_id", project.workspace_id);
+          
+        if (error) throw error;
+        
+        const dbWbs = data || [];
+        if (dbWbs.length > 0) {
+          const compareWBSCodes = (a: string, b: string): number => {
+            const partsA = a.split('.');
+            const partsB = b.split('.');
+            const minLen = Math.min(partsA.length, partsB.length);
+            for (let i = 0; i < minLen; i++) {
+              const partA = partsA[i];
+              const partB = partsB[i];
+              const numA = parseInt(partA);
+              const numB = parseInt(partB);
+              const isNumA = !isNaN(numA);
+              const isNumB = !isNaN(numB);
+              if (isNumA && isNumB) {
+                if (numA !== numB) return numA - numB;
+              } else if (partA !== partB) {
+                return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
+              }
+            }
+            return partsA.length - partsB.length;
+          };
+
+          const idMap = new Map<string, any>();
+          dbWbs.forEach((item: any) => {
+            idMap.set(item.id, {
+              id: item.id,
+              code: item.code,
+              nameEn: item.name || "",
+              nameId: item.description || "",
+              notes: item.notes || "",
+              children: []
+            });
+          });
+
+          const rootsList: any[] = [];
+          dbWbs.forEach((item: any) => {
+            const node = idMap.get(item.id);
+            if (item.parent_id && idMap.has(item.parent_id)) {
+              idMap.get(item.parent_id).children.push(node);
+            } else {
+              rootsList.push(node);
+            }
+          });
+
+          const sortNodes = (list: any[]) => {
+            list.sort((a, b) => compareWBSCodes(a.code, b.code));
+            list.forEach(node => {
+              if (node.children) sortNodes(node.children);
+            });
+          };
+
+          sortNodes(rootsList);
+
+          const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+          rootsList.sort((a, b) => {
+            const prefixA = a.code.split('.')[0];
+            const prefixB = b.code.split('.')[0];
+            const orderA = ORDER_MAP[prefixA] ?? 999;
+            const orderB = ORDER_MAP[prefixB] ?? 999;
+            return orderA - orderB;
+          });
+
+          // Set the trees
+          setBallparkTree(rootsList);
+          setEstimatesTree(rootsList);
+          setDetailTree(rootsList);
+        }
+      } catch (err) {
+        console.error("Error loading project WBS:", err);
+      } finally {
+        setIsLoadingWBS(false);
+      }
+    }
+    
+    loadWBS();
+  }, [project?.workspace_id]);
 
   // ALL HOOKS MUST BE BEFORE CONDITIONAL RETURNS
   // ballparkWithAddons is now just ballparkTree (addons are inserted into tree directly)
@@ -261,22 +356,90 @@ export default function ProjectSetupWBSPage() {
     setEditState(prev => ({ ...prev, [activeMode]: "pristine" }));
   };
 
+  const saveTreeToDb = async (treeToSave: any[]) => {
+    if (!project?.workspace_id) return;
+    
+    try {
+      setIsLoadingWBS(true);
+      // 1. Delete all current WBS items for this workspace
+      const { error: deleteError } = await supabase
+        .from('work_breakdown_structure')
+        .delete()
+        .eq('workspace_id', project.workspace_id);
+        
+      if (deleteError) throw deleteError;
+      
+      // 2. Recursive insert function
+      const insertNode = async (item: any, parentDbId: string | null = null, indentLevel: number = 0) => {
+        let currentLevel = "structure";
+        if (indentLevel === 0) currentLevel = "structure";
+        else if (indentLevel === 1) currentLevel = "summary";
+        else if (indentLevel === 2) currentLevel = "estimate";
+        else if (indentLevel >= 3) currentLevel = "detail";
+
+        const code = item.code || "NO-CODE";
+        const name = item.nameEn || item.name || "Unnamed";
+        const description = item.nameId || item.description || "";
+        const notes = item.notes || null;
+
+        const { data, error } = await supabase
+          .from("work_breakdown_structure")
+          .insert({
+            id: item.id || crypto.randomUUID(),
+            workspace_id: project.workspace_id,
+            code: code,
+            name: name,
+            level: currentLevel,
+            indent_level: indentLevel,
+            parent_id: parentDbId,
+            description: description,
+            notes: notes,
+            sort_order: parseInt(code.split('.').pop() || "0") || 1
+          })
+          .select('id')
+          .single();
+
+        if (error) throw error;
+
+        const newDbId = data.id;
+        const children = item.children || [];
+        if (children && children.length > 0) {
+          for (const child of children) {
+            await insertNode(child, newDbId, indentLevel + 1);
+          }
+        }
+      };
+
+      // 3. Loop through roots and insert
+      for (const root of treeToSave) {
+        await insertNode(root);
+      }
+      
+      alert("✅ WBS saved successfully to database!");
+    } catch (err: any) {
+      console.error("Error saving WBS tree:", err);
+      alert("❌ Failed to save WBS to database: " + err.message);
+    } finally {
+      setIsLoadingWBS(false);
+    }
+  };
+
   // Save Draft
-  const saveDraft = () => {
+  const saveDraft = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "saved" }));
-    console.log("Draft saved");
+    await saveTreeToDb(rawActiveTree);
   };
 
   // Save Changes
-  const saveChanges = () => {
+  const saveChanges = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "saved" }));
-    console.log("Changes saved");
+    await saveTreeToDb(rawActiveTree);
   };
 
   // Submit WBS
-  const submitWBS = () => {
+  const submitWBS = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "submitted" }));
-    console.log("WBS submitted");
+    await saveTreeToDb(rawActiveTree);
   };
 
   // Add revision
@@ -323,7 +486,7 @@ export default function ProjectSetupWBSPage() {
   }));
 
   // === CONDITIONAL RETURNS (must be after all hooks) ===
-  if (isLoading) {
+  if (isLoading || (project?.workspace_id && isLoadingWBS)) {
     return <GlobalLoading />;
   }
 

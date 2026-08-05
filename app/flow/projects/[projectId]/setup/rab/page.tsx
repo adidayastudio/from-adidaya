@@ -11,6 +11,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Input } from "@/shared/ui/primitives/input/input";
 import { Download, Save, Plus, Send, RotateCcw } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
 
 import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
 import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-estimates";
@@ -21,6 +22,8 @@ import { buildRABFromWBS } from "@/components/flow/projects/project-detail/setup
 import { buildRABEstimates, EstimateValues } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-estimates-builder";
 
 import RABDetailDrawer from "@/components/flow/projects/project-detail/setup/rab/ballpark/RABDetailDrawer";
+import { exportRABToExcel } from "@/lib/flow/rab-excel";
+import { generateRABPDFHTML } from "@/lib/flow/rab-pdf";
 
 import RABSummaryTable from "@/components/flow/projects/project-detail/setup/rab/ballpark/RABSummaryTable";
 import RABDetailSummaryTable from "@/components/flow/projects/project-detail/setup/rab/ballpark/RABDetailSummaryTable";
@@ -149,12 +152,14 @@ export default function ProjectSetupRABPage() {
 
   const [activeMode, setActiveMode] = useState<RABMode>("BALLPARK");
   const [activeView, setActiveView] = useState<RABView>("SUMMARY");
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // RAB STATUS (Logic similar to WBS)
   const [rabStatus, setRabStatus] = useState<RABStatus>("draft"); // draft -> saved -> submitted
 
   const [context, setContext] = useState<RABContext>({
-    buildingClass: (project?.rabClass as any) || "B",
+    buildingClass: ((project?.meta as any)?.rabClass || project?.rabClass || "B") as any,
     area: 1200,
     province: "DKI Jakarta",
     city: "Jakarta Selatan",
@@ -171,18 +176,27 @@ export default function ProjectSetupRABPage() {
 
     // Parse area "1,500 m2" -> 1500
     let area = 1200;
-    if (project.buildingArea) {
-      const num = parseInt(project.buildingArea.replace(/\D/g, ""));
+    const rawArea = (project.meta as any)?.buildingArea || (project as any).buildingArea;
+    if (rawArea) {
+      const num = parseInt(String(rawArea).replace(/\D/g, ""));
       if (!isNaN(num)) area = num;
     }
 
     setContext(prev => ({
       ...prev,
-      buildingClass: (project.rabClass || "B") as any,
+      buildingClass: ((project.meta as any)?.rabClass || project.rabClass || "B") as any,
       area: area,
       province: project.province || "DKI Jakarta",
       city: project.city || "Jakarta Selatan"
     }));
+
+    const meta = project.meta as any;
+    if (meta) {
+      if (meta.priceOverrides) setPriceOverrides(meta.priceOverrides);
+      if (meta.estimateValues) setEstimateValues(meta.estimateValues);
+      if (meta.adjustmentFactor !== undefined) setAdjustmentFactor(meta.adjustmentFactor);
+      if (meta.rabStatus) setRabStatus(meta.rabStatus);
+    }
   }, [project]);
 
   // 🔥 SOURCE OF TRUTH: PRICE OVERRIDE (LEAF PER m²)
@@ -192,6 +206,99 @@ export default function ProjectSetupRABPage() {
   // 🔥 SOURCE OF TRUTH: ESTIMATES (Volume, Unit, Price)
   const [estimateValues, setEstimateValues] = useState<EstimateValues>({});
 
+  const [dbWbsItems, setDbWbsItems] = useState<any[]>([]);
+  const [isLoadingWBS, setIsLoadingWBS] = useState(true);
+
+  // Fetch WBS dynamically from DB matching workspace
+  useEffect(() => {
+    if (!project?.workspace_id) return;
+    
+    async function fetchWbs() {
+      try {
+        setIsLoadingWBS(true);
+        const { data, error } = await supabase
+          .from("work_breakdown_structure")
+          .select("*")
+          .eq("workspace_id", project.workspace_id);
+          
+        if (error) throw error;
+        
+        const dbWbs = data || [];
+        if (dbWbs.length > 0) {
+          const compareWBSCodes = (a: string, b: string): number => {
+            const partsA = a.split('.');
+            const partsB = b.split('.');
+            const minLen = Math.min(partsA.length, partsB.length);
+            for (let i = 0; i < minLen; i++) {
+              const partA = partsA[i];
+              const partB = partsB[i];
+              const numA = parseInt(partA);
+              const numB = parseInt(partB);
+              const isNumA = !isNaN(numA);
+              const isNumB = !isNaN(numB);
+              if (isNumA && isNumB) {
+                if (numA !== numB) return numA - numB;
+              } else if (partA !== partB) {
+                return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
+              }
+            }
+            return partsA.length - partsB.length;
+          };
+
+          const idMap = new Map<string, any>();
+          dbWbs.forEach((item: any) => {
+            idMap.set(item.id, {
+              ...item,
+              nameEn: item.name || "",
+              nameId: item.description || "",
+              children: []
+            });
+          });
+
+          const rootsList: any[] = [];
+          dbWbs.forEach((item: any) => {
+            const node = idMap.get(item.id);
+            if (item.parent_id && idMap.has(item.parent_id)) {
+              idMap.get(item.parent_id).children.push(node);
+            } else {
+              rootsList.push(node);
+            }
+          });
+
+          const sortNodes = (list: any[]) => {
+            list.sort((a, b) => compareWBSCodes(a.code, b.code));
+            list.forEach(node => {
+              if (node.children) sortNodes(node.children);
+            });
+          };
+
+          sortNodes(rootsList);
+
+          const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+          rootsList.sort((a, b) => {
+            const prefixA = a.code.split('.')[0];
+            const prefixB = b.code.split('.')[0];
+            const orderA = ORDER_MAP[prefixA] ?? 999;
+            const orderB = ORDER_MAP[prefixB] ?? 999;
+            return orderA - orderB;
+          });
+
+          setDbWbsItems(rootsList);
+        }
+      } catch (err) {
+        console.error("Error fetching project WBS:", err);
+      } finally {
+        setIsLoadingWBS(false);
+      }
+    }
+    
+    fetchWbs();
+  }, [project?.workspace_id, refreshTrigger]);
+
+  const activeWBS = useMemo(() => {
+    return dbWbsItems.length > 0 ? dbWbsItems : WBS_BALLPARK;
+  }, [dbWbsItems]);
+
 
 
   /* ===== RESET LOGIC ===== */
@@ -199,6 +306,7 @@ export default function ProjectSetupRABPage() {
 
   // Detail Drawer State
   const [selectedDetailItem, setSelectedDetailItem] = useState<RABItem | null>(null);
+  const [activeDrawerTab, setActiveDrawerTab] = useState<"BOQ" | "AHSP">("BOQ");
 
   // Check if modified
   const isPristine =
@@ -281,7 +389,7 @@ export default function ProjectSetupRABPage() {
   // 1. BALLPARK TREE (Per m²)
   const rabTreeBallpark = useMemo(() => {
     const baseTree = buildRABFromWBS({
-      wbs: WBS_BALLPARK,
+      wbs: activeWBS,
       rabClass: context.buildingClass,
       rf: context.rf,
       df: context.df,
@@ -298,12 +406,14 @@ export default function ProjectSetupRABPage() {
     });
 
     return applyPriceOverrides(adjustedTree, priceOverrides);
-  }, [context.buildingClass, context.rf, context.df, priceOverrides, adjustmentFactor]);
+  }, [activeWBS, context.buildingClass, context.rf, context.df, priceOverrides, adjustmentFactor]);
 
   // 2. Build RAB Tree (Estimates)
   const rabTreeEstimates = useMemo(() => {
     // Build base WBS Estimates tree
-    const wbsEstimates = buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA);
+    const wbsEstimates = dbWbsItems.length > 0 
+      ? activeWBS 
+      : buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA);
     // Convert to RAB items with user values + Context Factors
     return buildRABEstimates(wbsEstimates, estimateValues, {
       rabClass: context.buildingClass,
@@ -311,14 +421,18 @@ export default function ProjectSetupRABPage() {
       df: context.df,
       adjustmentFactor: adjustmentFactor
     });
-  }, [estimateValues, context.buildingClass, context.rf, context.df, adjustmentFactor]);
+  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass, context.rf, context.df, adjustmentFactor]);
 
   // 3. Build RAB Tree (Detail Mode - Deep L4/L5)
   const rabTreeDetail = useMemo(() => {
     // Start with WBS Estimates
-    const wbsEstimates = buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA);
+    const wbsEstimates = dbWbsItems.length > 0 
+      ? activeWBS 
+      : buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA);
     // Extend to Detail (L4/L5) matching WBS Detail view
-    const wbsDetail = buildDetailFromEstimates(wbsEstimates);
+    const wbsDetail = dbWbsItems.length > 0 
+      ? activeWBS 
+      : buildDetailFromEstimates(wbsEstimates);
 
     // Map to RAB Items
     // Note: Deep items won't have default prices in wbsDetail, so they rely on estimateValues or default to 0
@@ -328,7 +442,7 @@ export default function ProjectSetupRABPage() {
       df: context.df,
       adjustmentFactor: adjustmentFactor
     });
-  }, [estimateValues, context.buildingClass, context.rf, context.df, adjustmentFactor]);
+  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass, context.rf, context.df, adjustmentFactor]);
 
   // ACTIVE TREE
   const activeTree = useMemo(() => {
@@ -336,6 +450,27 @@ export default function ProjectSetupRABPage() {
     if (activeMode === "DETAIL" && activeView === "BREAKDOWN") return rabTreeDetail;
     return rabTreeEstimates;
   }, [activeMode, activeView, rabTreeBallpark, rabTreeEstimates, rabTreeDetail]);
+
+  // Keep selectedDetailItem in sync with tree updates (like when ahsp_id is assigned/unassigned)
+  useEffect(() => {
+    if (!selectedDetailItem) return;
+    
+    const findItemInTree = (nodes: RABItem[], code: string): RABItem | null => {
+      for (const node of nodes) {
+        if (node.code === code) return node;
+        if (node.children) {
+          const found = findItemInTree(node.children, code);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const updatedItem = findItemInTree(activeTree, selectedDetailItem.code);
+    if (updatedItem) {
+      setSelectedDetailItem(updatedItem);
+    }
+  }, [activeTree, selectedDetailItem?.code]);
 
   /* ===== TOTAL PROJECT COST ===== */
   const totalProjectCost = useMemo(() => {
@@ -391,10 +526,108 @@ export default function ProjectSetupRABPage() {
   }
 
   // Action Handlers
-  const saveDraft = () => setRabStatus("saved");
-  const saveChanges = () => setRabStatus("saved");
-  const submitRAB = () => setRabStatus("submitted"); // Locks editing via isEditing check (if needed)
-  const addRevision = () => setRabStatus("saved"); // Unlocks
+  const saveRABToDb = async (status: RABStatus) => {
+    if (!project) return;
+    try {
+      const updatedMeta = {
+        ...(project.meta || {}),
+        priceOverrides,
+        estimateValues,
+        adjustmentFactor,
+        rabStatus: status,
+      };
+
+      const { error } = await supabase
+        .from("projects")
+        .update({
+          meta: updatedMeta
+        })
+        .eq("id", project.id);
+
+      if (error) throw error;
+      setRabStatus(status);
+      alert(`✅ RAB ${status === "submitted" ? "submitted" : "saved"} successfully!`);
+    } catch (err: any) {
+      console.error("Error saving RAB:", err);
+      alert("❌ Failed to save RAB: " + err.message);
+    }
+  };
+
+  const saveDraft = () => saveRABToDb("saved");
+  const saveChanges = () => saveRABToDb("saved");
+  const submitRAB = () => saveRABToDb("submitted");
+  const addRevision = () => saveRABToDb("saved");
+
+  const handleExportExcel = () => {
+    if (!project) return;
+    const ctx = {
+      projectName: project.project_name || "Proyek Tanpa Nama",
+      projectNo: project.project_number || "-",
+      projectCode: project.project_code || "-",
+      buildingClass: context.buildingClass,
+      area: safeArea,
+      province: context.province,
+      city: context.city,
+      rf: context.rf,
+      df: context.df,
+      adjustmentFactor: adjustmentFactor
+    };
+    exportRABToExcel(
+      activeTree,
+      ctx,
+      activeMode,
+      `RAB_${project.project_code || "Project"}_${activeMode}.xlsx`
+    );
+  };
+
+  const handleExportPDF = async () => {
+    if (!project) return;
+    try {
+      const ctx = {
+        projectName: project.project_name || "Proyek Tanpa Nama",
+        projectNo: project.project_number || "-",
+        projectCode: project.project_code || "-",
+        buildingClass: context.buildingClass,
+        area: safeArea,
+        province: context.province,
+        city: context.city,
+        rf: context.rf,
+        df: context.df,
+        adjustmentFactor: adjustmentFactor,
+        status: rabStatus
+      };
+
+      const htmlContent = generateRABPDFHTML(
+        activeTree,
+        ctx,
+        totalProjectCost,
+        activeMode
+      );
+
+      const response = await fetch("/api/flow/reports/export-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ html: htmlContent })
+      });
+
+      if (!response.ok) throw new Error("Gagal mengekspor PDF");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `RAB_${project.project_code || "Project"}_${activeMode}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error(err);
+      alert("Gagal mengunduh PDF: " + err.message);
+    }
+  };
 
   // Derived check for read-only vs editable mode
   // If status is submitted, we are in "Read Only" until "Add Revision" is clicked.
@@ -402,7 +635,7 @@ export default function ProjectSetupRABPage() {
   const isEditing = rabStatus !== "submitted";
 
   // === CONDITIONAL RETURNS (must be after all hooks) ===
-  if (isLoading) {
+  if (isLoading || (project?.workspace_id && isLoadingWBS)) {
     return <GlobalLoading />;
   }
 
@@ -469,10 +702,36 @@ export default function ProjectSetupRABPage() {
                 className="gap-6"
               />
 
-              <div className="pb-2 flex items-center gap-2">
-                <Button size="sm" variant="secondary" icon={<Download className="w-4 h-4" />}>
-                  Export
-                </Button>
+              <div className="pb-2 flex items-center gap-2 relative">
+                <div className="relative">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setShowExportMenu(!showExportMenu)}
+                    icon={<Download className="w-4 h-4" />}
+                  >
+                    Export
+                  </Button>
+                  {showExportMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                      <div className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[140px] animate-in fade-in slide-in-from-top-1 duration-150">
+                        <button
+                          onClick={() => { handleExportExcel(); setShowExportMenu(false); }}
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-neutral-50 text-neutral-700 font-medium"
+                        >
+                          Excel (.xlsx)
+                        </button>
+                        <button
+                          onClick={() => { handleExportPDF(); setShowExportMenu(false); }}
+                          className="w-full px-4 py-2 text-left text-xs hover:bg-neutral-50 text-neutral-700 font-medium"
+                        >
+                          PDF (.pdf)
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
 
                 {/* Button Flow: Save Draft > Save Changes > Submit RAB > Add Revision */}
                 {rabStatus === "draft" && (
@@ -651,7 +910,10 @@ export default function ProjectSetupRABPage() {
                   mode={activeMode}
                   onPriceCommit={isEditing ? onPriceCommit : undefined}
                   onEstimateCommit={isEditing ? onEstimateCommit : undefined}
-                  onSelect={(item) => setSelectedDetailItem(item)}
+                  onSelect={(item, tab) => {
+                    setSelectedDetailItem(item);
+                    setActiveDrawerTab(tab || "BOQ");
+                  }}
                 />
               )}
             </div>
@@ -677,8 +939,10 @@ export default function ProjectSetupRABPage() {
         isOpen={!!selectedDetailItem}
         onClose={() => setSelectedDetailItem(null)}
         item={selectedDetailItem}
+        initialTab={activeDrawerTab}
         onApply={handleDetailApply}
         onApplyVolume={handleDetailApplyVolume}
+        onReloadWbs={() => setRefreshTrigger(prev => prev + 1)}
       />
 
       <ConfirmModal

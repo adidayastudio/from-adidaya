@@ -56,7 +56,8 @@ export default function DetailCostPage() {
     // Assignment Modal
     const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
     const [activeWbsId, setActiveWbsId] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState("");
+    const [wbsSearchQuery, setWbsSearchQuery] = useState("");
+    const [ahspSearchQuery, setAhspSearchQuery] = useState("");
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     // const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null); // Removed per user request
     const [selectedAhspId, setSelectedAhspId] = useState<string | null>(null); // In modal
@@ -238,9 +239,9 @@ export default function DetailCostPage() {
                 // OR: Filter tree.
 
                 // Let's do simple Filter List if search is present to prioritize finding items.
-                if (searchQuery) {
-                    const matches = node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        node.code.toLowerCase().includes(searchQuery.toLowerCase());
+                if (wbsSearchQuery) {
+                    const matches = node.name.toLowerCase().includes(wbsSearchQuery.toLowerCase()) ||
+                        node.code.toLowerCase().includes(wbsSearchQuery.toLowerCase());
                     if (matches) flat.push(node);
                     if (node.children.length > 0) process(node.children);
                 } else {
@@ -255,7 +256,7 @@ export default function DetailCostPage() {
 
         process(roots);
         return flat;
-    }, [wbsItems, expandedIds, searchQuery, ahspList]);
+    }, [wbsItems, expandedIds, wbsSearchQuery, ahspList]);
 
 
     // --- Actions ---
@@ -263,7 +264,7 @@ export default function DetailCostPage() {
     const openAssignModal = (wbsId: string, currentAhspId?: string) => {
         setActiveWbsId(wbsId);
         setSelectedAhspId(currentAhspId || null);
-        setSearchQuery("");
+        setAhspSearchQuery("");
         setIsAssignModalOpen(true);
     };
 
@@ -297,12 +298,12 @@ export default function DetailCostPage() {
 
     // Filter AHSPs in Modal
     const filteredAhspList = useMemo(() => {
-        if (!searchQuery) return ahspList.slice(0, 50); // Limit initial view
+        if (!ahspSearchQuery) return ahspList.slice(0, 50); // Limit initial view
         return ahspList.filter(a =>
-            a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (a.code && a.code.toLowerCase().includes(searchQuery.toLowerCase()))
+            a.name.toLowerCase().includes(ahspSearchQuery.toLowerCase()) ||
+            (a.code && a.code.toLowerCase().includes(ahspSearchQuery.toLowerCase()))
         ).slice(0, 50);
-    }, [ahspList, searchQuery]);
+    }, [ahspList, ahspSearchQuery]);
 
     // Lookup
     const getAhsp = (id?: string | null) => ahspList.find(a => a.id === id);
@@ -327,8 +328,8 @@ export default function DetailCostPage() {
                         <Input
                             className="pl-9 h-10 text-sm bg-white shadow-sm border-neutral-200"
                             placeholder="Search WBS items..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            value={wbsSearchQuery}
+                            onChange={(e) => setWbsSearchQuery(e.target.value)}
                         />
                     </div>
                     <div className="text-sm text-neutral-500 bg-white px-3 py-1.5 rounded-full border border-neutral-200 shadow-sm">
@@ -380,7 +381,7 @@ export default function DetailCostPage() {
                                                 <div className="flex items-center h-full pt-1" style={{ paddingLeft: `${item.indent_level * 1.5}rem` }}>
                                                     {/* Toggle */}
                                                     <div className="w-5 flex justify-center mr-1 flex-shrink-0">
-                                                        {hasChildren && !searchQuery && (
+                                                        {hasChildren && !wbsSearchQuery && (
                                                             <button onClick={(e) => { e.stopPropagation(); toggleExpand(item.id); }} className="p-0.5 hover:bg-neutral-100 rounded text-neutral-400 hover:text-neutral-600 transition-colors">
                                                                 {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                                                             </button>
@@ -487,8 +488,8 @@ export default function DetailCostPage() {
                                     autoFocus
                                     className="w-full pl-10 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-red/20 focus:border-brand-red transition-all"
                                     placeholder="Search by name or code..."
-                                    value={searchQuery}
-                                    onChange={e => setSearchQuery(e.target.value)}
+                                    value={ahspSearchQuery}
+                                    onChange={e => setAhspSearchQuery(e.target.value)}
                                 />
                             </div>
                         </div>
@@ -541,7 +542,7 @@ export default function DetailCostPage() {
                                             </div>
                                         </div>
                                     ))}
-                                    {ahspList.length > 50 && searchQuery === "" && (
+                                    {ahspList.length > 50 && ahspSearchQuery === "" && (
                                         <div className="text-center py-2 text-xs text-neutral-400 italic">
                                             Showing top 50 of {ahspList.length}. Use search to find more.
                                         </div>

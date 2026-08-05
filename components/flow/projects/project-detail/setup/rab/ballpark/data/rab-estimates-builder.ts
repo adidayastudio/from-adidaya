@@ -97,6 +97,7 @@ function processNode(node: any, values: EstimateValues, context: EstimateContext
     }
 
     const item: RABItem = {
+        id: node.id,
         code: node.code,
         nameEn: node.nameEn,
         nameId: node.nameId,
@@ -104,6 +105,8 @@ function processNode(node: any, values: EstimateValues, context: EstimateContext
         volume: customVal.volume,
         unit: customVal.unit,
         total: total,
+        notes: node.notes,
+        ahsp_id: node.ahsp_id,
         children: childItems.length > 0 ? childItems : undefined
     };
 

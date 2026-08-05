@@ -44,6 +44,7 @@ export type RABContext = {
  * Bilingual, mengikuti WBS
  */
 export type RABItem = {
+  id?: string;           // DB UUID
   code: string;          // S, A, M, I, L, S.1, A.02.01, dst
   nameEn: string;        // English name
   nameId?: string;       // Indonesian name
@@ -51,6 +52,8 @@ export type RABItem = {
   volume?: number;      // ESTIMATES only
   unit?: string;        // ESTIMATES only
   total?: number;       // ESTIMATES: volume * unitPrice
+  notes?: string;       // WBS Spec notes
+  ahsp_id?: string | null; // DB Reference to AHSP Master
   children?: RABItem[]; // Breakdown tree
 };
 

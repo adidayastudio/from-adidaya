@@ -178,6 +178,7 @@ function buildNode(item: WBSItem, portionPerM2: number, rabClass: RABClass): RAB
       code: item.code,
       nameEn: item.nameEn,
       nameId: item.nameId,
+      notes: (item as any).notes,
       unitPrice: leaf, // per m²
       children: [],
     };
@@ -192,6 +193,7 @@ function buildNode(item: WBSItem, portionPerM2: number, rabClass: RABClass): RAB
     code: item.code,
     nameEn: item.nameEn,
     nameId: item.nameId,
+    notes: (item as any).notes,
     unitPrice: portionPerM2, // raw container per m²
     children,
   };

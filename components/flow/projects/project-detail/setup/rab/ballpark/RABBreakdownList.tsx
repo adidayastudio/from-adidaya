@@ -13,7 +13,7 @@ type Props = {
   mode: RABMode;
   onPriceCommit?: (code: string, value: number) => void;
   onEstimateCommit?: (code: string, value: { volume: number; unit: string; unitPrice: number }) => void;
-  onSelect?: (item: RABItem) => void;
+  onSelect?: (item: RABItem, initialTab?: "BOQ" | "AHSP") => void;
 };
 
 export default function RABBreakdownList({
@@ -30,7 +30,7 @@ export default function RABBreakdownList({
     <>
       {items.map((item) => (
         <RABBreakdownNode
-          key={item.code}
+          key={item.id || item.code}
           item={item}
           level={level}
           total={total}

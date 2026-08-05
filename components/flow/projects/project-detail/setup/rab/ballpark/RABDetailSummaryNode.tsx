@@ -26,7 +26,7 @@ export default function RABDetailSummaryNode({ item, totalProject }: Props) {
         <>
             <tr className={`border-b border-neutral-100 last:border-0 hover:bg-neutral-50 ${isL0 ? "bg-neutral-50/50 font-semibold" : ""}`}>
                 {/* CHEVRON (Only for L0) */}
-                <td className="py-2">
+                <td className="py-2 px-4">
                     {isL0 && hasChildren && (
                         <button
                             onClick={() => setOpen(!open)}
@@ -38,7 +38,7 @@ export default function RABDetailSummaryNode({ item, totalProject }: Props) {
                 </td>
 
                 {/* CODE */}
-                <td className="py-2">
+                <td className="py-2 px-4">
                     <div
                         className={`flex items-center justify-center border text-[10px] font-bold ${isL0
                                 ? "w-7 h-7 rounded-full border-neutral-300 bg-neutral-100 text-neutral-600"
@@ -50,7 +50,7 @@ export default function RABDetailSummaryNode({ item, totalProject }: Props) {
                 </td>
 
                 {/* NAME */}
-                <td className="py-2">
+                <td className="py-2 px-4">
                     <div className="leading-tight">
                         <div className="text-neutral-900">{item.nameEn}</div>
                         {item.nameId && <div className="italic text-neutral-400">{item.nameId}</div>}
@@ -60,13 +60,12 @@ export default function RABDetailSummaryNode({ item, totalProject }: Props) {
                 {/* EMPTY COLS (If needed to match breakdown layout, but this is Summary) */}
                 {/* Summary usually simpler: Name | Total | Weight */}
 
-                {/* TOTAL */}
-                <td className="py-2 text-right text-neutral-900">
+                <td className="py-2 px-3 text-right text-neutral-900 whitespace-nowrap">
                     Rp {Math.round(rowTotal).toLocaleString("id-ID")}
                 </td>
 
                 {/* WEIGHT */}
-                <td className="py-2 text-right text-neutral-600">
+                <td className="py-2 px-3 text-right text-neutral-600 pr-6 whitespace-nowrap">
                     {weight.toFixed(2)}%
                 </td>
             </tr>

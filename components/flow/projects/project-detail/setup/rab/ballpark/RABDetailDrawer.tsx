@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { RABItem } from "./types/rab.types";
 import RABDetailBOQ from "./RABDetailBOQ";
@@ -10,14 +10,22 @@ type Props = {
     isOpen: boolean;
     onClose: () => void;
     item: RABItem | null;
+    initialTab?: "BOQ" | "AHSP";
     onApply?: (price: number) => void;
     onApplyVolume?: (volume: number) => void;
+    onReloadWbs?: () => void;
 };
 
 type Tab = "BOQ" | "AHSP";
 
-export default function RABDetailDrawer({ isOpen, onClose, item, onApply, onApplyVolume }: Props) {
+export default function RABDetailDrawer({ isOpen, onClose, item, initialTab, onApply, onApplyVolume, onReloadWbs }: Props) {
     const [tab, setTab] = useState<Tab>("BOQ");
+
+    useEffect(() => {
+        if (isOpen && initialTab) {
+            setTab(initialTab);
+        }
+    }, [isOpen, initialTab]);
 
     if (!item) return null;
 
@@ -26,60 +34,69 @@ export default function RABDetailDrawer({ isOpen, onClose, item, onApply, onAppl
             {/* OVERLAY */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black/20 z-40 backdrop-blur-[1px] transition-opacity"
+                    className="fixed inset-0 bg-neutral-900/15 z-40 backdrop-blur-sm transition-opacity duration-300"
                     onClick={onClose}
                 />
             )}
 
             {/* DRAWER */}
             <div
-                className={`fixed inset-y-0 right-0 w-[600px] bg-white shadow-2xl z-50 transform transition-transform duration-300 flex flex-col ${isOpen ? "translate-x-0" : "translate-x-full"
-                    }`}
+                className={`fixed z-50 bg-white/70 backdrop-blur-3xl border border-white/60 shadow-2xl rounded-[40px] overflow-hidden flex flex-col bottom-6 right-6 top-6 w-[560px] transform transition-all duration-300 ${
+                    isOpen ? "translate-x-0 opacity-100" : "translate-x-12 opacity-0 pointer-events-none"
+                }`}
             >
                 {/* HEADER */}
-                <div className="px-6 py-5 border-b border-neutral-100 flex items-center justify-between bg-neutral-50/50">
+                <div className="px-8 pt-8 pb-5 flex items-center justify-between bg-transparent">
                     <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="text-[10px] font-bold text-neutral-500 bg-white border border-neutral-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <span className="text-[10px] font-black text-neutral-600 bg-white/80 border border-white/80 px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
                                 {item.code}
                             </span>
-                            <span className="text-[10px] text-neutral-400 font-medium">
+                            <span className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
                                 Work Item Detail
                             </span>
                         </div>
-                        <h3 className="text-lg font-bold text-neutral-900 line-clamp-1">
+                        <h3 className="text-xl font-bold text-neutral-900 tracking-tight leading-snug line-clamp-1">
                             {item.nameEn}
                         </h3>
                         {item.nameId && (
-                            <p className="text-sm text-neutral-500 italic truncate">{item.nameId}</p>
+                            <p className="text-xs text-neutral-400 italic font-medium truncate mt-0.5">{item.nameId}</p>
                         )}
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-neutral-400 hover:text-neutral-600 p-2 rounded-full hover:bg-neutral-200/50 transition-colors"
+                        className="w-10 h-10 bg-white/60 border border-black/[0.03] rounded-full flex items-center justify-center active:scale-95 transition-all shadow-sm hover:bg-white"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-5 h-5 text-neutral-500" strokeWidth={1.5} />
                     </button>
                 </div>
 
                 {/* TABS */}
-                <div className="flex border-b border-neutral-200 px-6">
+                <div className="flex gap-2 border-b border-black/[0.04] px-8">
                     <button
                         onClick={() => setTab("BOQ")}
-                        className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${tab === "BOQ" ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-500 hover:text-neutral-700"}`}
+                        className={`py-3 px-1 text-sm font-bold border-b-2 transition-all relative ${
+                            tab === "BOQ"
+                                ? "border-brand-red text-brand-red"
+                                : "border-transparent text-neutral-400 hover:text-neutral-600"
+                        }`}
                     >
                         BOQ (Volume)
                     </button>
                     <button
                         onClick={() => setTab("AHSP")}
-                        className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${tab === "AHSP" ? "border-neutral-900 text-neutral-900" : "border-transparent text-neutral-500 hover:text-neutral-700"}`}
+                        className={`py-3 px-1 text-sm font-bold border-b-2 transition-all relative ${
+                            tab === "AHSP"
+                                ? "border-brand-red text-brand-red"
+                                : "border-transparent text-neutral-400 hover:text-neutral-600"
+                        }`}
                     >
                         AHSP (Analysis)
                     </button>
                 </div>
 
                 {/* CONTENT */}
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 min-h-0 flex flex-col bg-transparent">
                     {tab === "BOQ" ? (
                         <RABDetailBOQ
                             item={item}
@@ -89,6 +106,7 @@ export default function RABDetailDrawer({ isOpen, onClose, item, onApply, onAppl
                         <RABDetailAHSP
                             item={item}
                             onApplyPrice={(price) => onApply && onApply(price)}
+                            onReloadWbs={onReloadWbs}
                         />
                     )}
                 </div>

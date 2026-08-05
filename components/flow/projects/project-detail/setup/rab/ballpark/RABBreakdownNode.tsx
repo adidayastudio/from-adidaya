@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronDown, Calculator, User, Lock, Unlock } from "lucide-react";
+import { ChevronRight, ChevronDown, Calculator, User, Lock, Unlock, Hammer } from "lucide-react";
 import { RABItem, RABMode } from "./types/rab.types";
 import RABBreakdownList from "./RABBreakdownList";
 import { getNodeTotalPerM2 } from "./data/rab-utils";
@@ -14,7 +14,7 @@ type Props = {
   mode: RABMode;
   onPriceCommit?: (code: string, value: number) => void;
   onEstimateCommit?: (code: string, value: { volume: number; unit: string; unitPrice: number }) => void;
-  onSelect?: (item: RABItem) => void;
+  onSelect?: (item: RABItem, initialTab?: "BOQ" | "AHSP") => void;
 };
 
 export default function RABBreakdownNode({
@@ -122,7 +122,7 @@ export default function RABBreakdownNode({
       <tr className={`border-b border-neutral-100 last:border-0 hover:bg-neutral-50/80 ${hasChildren ? "bg-neutral-50 font-semibold" : ""
         }`}>
         {/* CHEVRON */}
-        <td className="py-2">
+        <td className="py-2 px-4">
           <div style={{ marginLeft: level * 16 }}>
             {hasChildren && (
               <button
@@ -140,7 +140,7 @@ export default function RABBreakdownNode({
         </td>
 
         {/* CODE */}
-        <td className="py-2">
+        <td className="py-2 px-4">
           <div className={`flex items-center justify-center border text-[10px] font-bold transition-colors ${level === 0
             ? "w-7 h-7 rounded-full border-neutral-300 bg-neutral-100 text-neutral-600"
             : level === 1
@@ -152,7 +152,7 @@ export default function RABBreakdownNode({
         </td>
 
         {/* ITEM */}
-        <td className="py-2">
+        <td className="py-2 px-4">
           <div className="leading-tight">
             <div
               className={`text-neutral-900 ${mode === "DETAIL" && !hasChildren ? "cursor-pointer hover:text-brand-red hover:underline" : ""}`}
@@ -169,6 +169,11 @@ export default function RABBreakdownNode({
                 {item.nameId}
               </div>
             )}
+            {item.notes && (
+              <div className="text-[10px] text-neutral-400 italic mt-0.5">
+                {item.notes}
+              </div>
+            )}
           </div>
         </td>
 
@@ -178,12 +183,12 @@ export default function RABBreakdownNode({
         {mode === "BALLPARK" && (
           <>
             {/* PRICE / m² (READ ONLY) */}
-            <td className="py-2 text-right text-neutral-500">
+            <td className="py-2 px-3 text-right text-neutral-500 whitespace-nowrap">
               Rp {Math.round(ballparkPricePerM2).toLocaleString("id-ID")}
             </td>
 
             {/* TOTAL COST (EDITABLE) */}
-            <td className="py-2 text-right text-neutral-900">
+            <td className="py-2 px-3 text-right text-neutral-900 whitespace-nowrap">
               {!hasChildren && editing ? (
                 <div className="flex flex-col items-end gap-1">
                   <input
@@ -205,13 +210,12 @@ export default function RABBreakdownNode({
                     : "hover:underline hover:text-brand-red text-neutral-900 font-medium"
                     }`}
                 >
-                  Rp {ballparkTotal.toLocaleString("id-ID")}
+                  Rp {Math.round(ballparkTotal).toLocaleString("id-ID")}
                 </button>
               )}
             </td>
 
-            {/* WEIGHT */}
-            <td className="py-2 text-right text-neutral-700">
+            <td className="py-2 px-3 text-right text-neutral-700 pr-6 whitespace-nowrap">
               {ballparkWeight.toFixed(2)}%
             </td>
           </>
@@ -221,7 +225,7 @@ export default function RABBreakdownNode({
         {(mode === "ESTIMATES" || mode === "DETAIL") && (
           <>
             {/* VOLUME */}
-            <td className="py-2 text-right">
+            <td className="py-2 px-3 text-right whitespace-nowrap">
               {!hasChildren ? (
                 <div className="flex items-center justify-end gap-2 group">
                   {/* Volume Input */}
@@ -236,11 +240,23 @@ export default function RABBreakdownNode({
                       autoFocus
                     />
                   ) : (
-                    <div
-                      onClick={() => setEditingField("volume")}
-                      className="cursor-pointer px-2 py-1 text-neutral-900 hover:bg-neutral-100 rounded min-w-[3rem] text-right"
-                    >
-                      {estValues.volume || 0}
+                    <div className="flex items-center justify-end gap-1.5 min-w-[5rem]">
+                      <div
+                        onClick={() => setEditingField("volume")}
+                        className="cursor-pointer px-2 py-1 text-neutral-900 hover:bg-neutral-100 rounded text-right flex-1"
+                      >
+                        {estValues.volume || 0}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelect && onSelect(item, "BOQ");
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-neutral-900 p-0.5 rounded transition-all hover:bg-neutral-100"
+                        title="Calculate from BOQ Formula"
+                      >
+                        <Calculator className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   )}
                 </div>
@@ -250,7 +266,7 @@ export default function RABBreakdownNode({
             </td>
 
             {/* UNIT */}
-            <td className="py-2 text-center">
+            <td className="py-2 px-4 text-center">
               {!hasChildren ? (
                 editingField === "unit" ? (
                   <input
@@ -276,7 +292,7 @@ export default function RABBreakdownNode({
             </td>
 
             {/* UNIT PRICE */}
-            <td className="py-2 text-right">
+            <td className="py-2 px-3 text-right whitespace-nowrap">
               {!hasChildren ? (
                 editingField === "unitPrice" ? (
                   <input
@@ -289,11 +305,23 @@ export default function RABBreakdownNode({
                     autoFocus
                   />
                 ) : (
-                  <div
-                    onClick={() => setEditingField("unitPrice")}
-                    className="cursor-pointer px-2 py-1 text-neutral-900 hover:bg-neutral-100 rounded font-medium"
-                  >
-                    Rp {Math.round(estValues.unitPrice).toLocaleString("id-ID")}
+                  <div className="flex items-center justify-end gap-1.5 min-w-[8rem]">
+                    <div
+                      onClick={() => setEditingField("unitPrice")}
+                      className="cursor-pointer px-2 py-1 text-neutral-900 hover:bg-neutral-100 rounded font-medium text-right flex-1"
+                    >
+                      Rp {Math.round(estValues.unitPrice).toLocaleString("id-ID")}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelect && onSelect(item, "AHSP");
+                      }}
+                      className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-neutral-900 p-0.5 rounded transition-all hover:bg-neutral-100"
+                      title="Analyze with AHSP Recipe"
+                    >
+                      <Hammer className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 )
               ) : (
@@ -301,9 +329,8 @@ export default function RABBreakdownNode({
               )}
             </td>
 
-            {/* TOTAL */}
-            <td className="py-2 text-right font-medium text-neutral-900">
-              Rp {estimateTotal.toLocaleString("id-ID")}
+            <td className="py-2 px-3 text-right font-medium text-neutral-900 pr-6 whitespace-nowrap">
+              Rp {Math.round(estimateTotal).toLocaleString("id-ID")}
             </td>
           </>
         )}

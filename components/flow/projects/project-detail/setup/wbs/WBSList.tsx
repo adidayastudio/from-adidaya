@@ -9,7 +9,7 @@ type Props = {
   items: WBSItem[];
   view: WBSView;
   mode: WBSMode;
-  onUpdateItem: (id: string, patch: Partial<{ nameEn: string; nameId?: string; code?: string }>) => void;
+  onUpdateItem: (id: string, patch: Partial<{ nameEn: string; nameId?: string; code?: string; notes?: string }>) => void;
   onAddChild: (parentId: string, level: number) => void;
   onAddSibling?: (siblingId: string, position: "above" | "below") => void;
   onRemove: (id: string) => void;
@@ -128,7 +128,7 @@ function WBSNode({
   index: number;
   isFirst: boolean;
   isLast: boolean;
-  onUpdate: (id: string, patch: Partial<{ nameEn: string; nameId?: string; code?: string }>) => void;
+  onUpdate: (id: string, patch: Partial<{ nameEn: string; nameId?: string; code?: string; notes?: string }>) => void;
   onAddChild: (parentId: string, level: number) => void;
   onAddSibling?: (siblingId: string, position: "above" | "below") => void;
   onRemove: (id: string) => void;
@@ -144,8 +144,14 @@ function WBSNode({
   onDragEnd?: () => void;
 }) {
   const hasChildren = item.children && item.children.length > 0;
-  const [open, setOpen] = useState(true); // Default expanded
+  const [open, setOpen] = useState(level < 1); // Default expanded for L1, collapsed for L2 and below
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showSpecInput, setShowSpecInput] = useState(!!item.notes);
+
+  // Sync state if notes change externally
+  useEffect(() => {
+    setShowSpecInput(!!item.notes);
+  }, [item.notes]);
 
   // Child drag state
   const [childDragIdx, setChildDragIdx] = useState<number | null>(null);
@@ -235,18 +241,42 @@ function WBSNode({
         </div>
 
         {/* Name */}
-        <div className="flex-1 min-w-0">
-          <InlineEdit
-            value={item.nameEn}
-            onSave={(v) => onUpdate(itemId, { nameEn: v })}
-            className="text-sm font-medium text-neutral-900"
-          />
-          {item.nameId && (
+        <div className="flex-1 min-w-0 flex items-center gap-3">
+          <div>
             <InlineEdit
-              value={item.nameId}
-              onSave={(v) => onUpdate(itemId, { nameId: v || undefined })}
-              className="text-xs text-neutral-400 italic mt-0.5"
+              value={item.nameEn}
+              onSave={(v) => onUpdate(itemId, { nameEn: v })}
+              className="text-sm font-medium text-neutral-900"
             />
+            {item.nameId && (
+              <InlineEdit
+                value={item.nameId}
+                onSave={(v) => onUpdate(itemId, { nameId: v || undefined })}
+                className="text-xs text-neutral-400 italic mt-0.5"
+              />
+            )}
+            {/* Notes / Specification */}
+            {(showSpecInput || item.notes) && (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider shrink-0 select-none">Spec:</span>
+                <InlineEdit
+                  value={item.notes || ""}
+                  onSave={(v) => {
+                    onUpdate(itemId, { notes: v || undefined });
+                    if (!v) {
+                      setShowSpecInput(false);
+                    }
+                  }}
+                  placeholder="Add specification notes..."
+                  className="text-xs text-neutral-500 hover:text-neutral-700 bg-neutral-50/50 hover:bg-neutral-50 px-1.5 py-0.5 rounded transition-all italic w-64"
+                />
+              </div>
+            )}
+          </div>
+          {(item as any).descendantCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-neutral-100 text-neutral-500 border border-neutral-200 shrink-0">
+              +{(item as any).descendantCount} sub-tasks
+            </span>
           )}
         </div>
 
@@ -266,7 +296,7 @@ function WBSNode({
               {showAddMenu && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 min-w-[140px]">
+                  <div className="absolute right-0 bottom-full mb-1 z-50 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 min-w-[140px]">
                     {/* Add Above/Below - only for child items (level > 0) */}
                     {onAddSibling && level > 0 && (
                       <>
@@ -296,6 +326,16 @@ function WBSNode({
                         </button>
                       </>
                     )}
+                    <div className="border-t border-neutral-100 my-1" />
+                    <button
+                      onClick={() => {
+                        setShowSpecInput(true);
+                        setShowAddMenu(false);
+                      }}
+                      className="w-full px-3 py-1.5 text-left text-xs hover:bg-neutral-50 flex items-center gap-2 text-neutral-600 font-medium"
+                    >
+                      <Plus className="w-3 h-3 text-neutral-400" /> Add Spec Notes
+                    </button>
                   </div>
                 </>
               )}
@@ -365,10 +405,12 @@ function InlineEdit({
   value,
   onSave,
   className,
+  placeholder = "—"
 }: {
   value: string;
   onSave: (value: string) => void;
   className?: string;
+  placeholder?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -413,7 +455,7 @@ function InlineEdit({
         "cursor-text hover:bg-neutral-100 rounded-md px-2 py-0.5 -mx-2 transition-colors"
       )}
     >
-      {value || "—"}
+      {value || <span className="text-neutral-300 italic">{placeholder}</span>}
     </div>
   );
 }

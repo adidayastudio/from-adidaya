@@ -6,7 +6,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { fetchClasses, updateClass, fetchDisciplines, ClassTemplate, Discipline } from "@/lib/api/templates-extended";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { CurrencyInput } from "./CurrencyInput";
-import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
+import { supabase } from "@/lib/supabaseClient";
 
 type ViewMode = "SUMMARY" | "BREAKDOWN";
 
@@ -49,16 +49,78 @@ export default function BallparkPage() {
             const wsId = await fetchDefaultWorkspaceId();
             setWorkspaceId(wsId);
             if (wsId) {
-                // Fetch Classes & Disciplines (Global)
-                const [classesData, disciplinesData] = await Promise.all([
+                // Fetch Classes, Disciplines & WBS Items (Global)
+                const [classesData, disciplinesData, wbsResult] = await Promise.all([
                     fetchClasses(wsId),
-                    fetchDisciplines(wsId)
+                    fetchDisciplines(wsId),
+                    supabase
+                        .from('work_breakdown_structure')
+                        .select('*')
+                        .eq('workspace_id', wsId)
                 ]);
-                setClasses(classesData.sort((a, b) => a.sortOrder - b.sortOrder));
-                setDisciplines(disciplinesData);
 
-                // Use Static WBS Data
-                if (WBS_BALLPARK) {
+                setClasses(classesData.sort((a, b) => a.sortOrder - b.sortOrder));
+
+                // Sort disciplines by SAMIL order
+                const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+                setDisciplines(disciplinesData.sort((a, b) => {
+                    const orderA = ORDER_MAP[a.code] ?? 999;
+                    const orderB = ORDER_MAP[b.code] ?? 999;
+                    return orderA - orderB;
+                }));
+
+                const dbWbs = wbsResult.data || [];
+                if (wbsResult.error) throw wbsResult.error;
+
+                if (dbWbs.length > 0) {
+                    const compareWBSCodes = (a: string, b: string): number => {
+                        const partsA = a.split('.');
+                        const partsB = b.split('.');
+                        const minLen = Math.min(partsA.length, partsB.length);
+                        for (let i = 0; i < minLen; i++) {
+                            const partA = partsA[i];
+                            const partB = partsB[i];
+                            const numA = parseInt(partA);
+                            const numB = parseInt(partB);
+                            const isNumA = !isNaN(numA);
+                            const isNumB = !isNaN(numB);
+                            if (isNumA && isNumB) {
+                                if (numA !== numB) return numA - numB;
+                            } else if (partA !== partB) {
+                                return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
+                            }
+                        }
+                        return partsA.length - partsB.length;
+                    };
+
+                    // Reconstruct tree from flat DB items
+                    const idMap = new Map<string, any>();
+                    dbWbs.forEach((item: any) => {
+                        idMap.set(item.id, {
+                            ...item,
+                            children: []
+                        });
+                    });
+
+                    const rootsList: any[] = [];
+                    dbWbs.forEach((item: any) => {
+                        const node = idMap.get(item.id);
+                        if (item.parent_id && idMap.has(item.parent_id)) {
+                            idMap.get(item.parent_id).children.push(node);
+                        } else {
+                            rootsList.push(node);
+                        }
+                    });
+
+                    // Sort tree recursively
+                    const sortNodes = (list: any[]) => {
+                        list.sort((a, b) => compareWBSCodes(a.code, b.code));
+                        list.forEach(node => {
+                            if (node.children) sortNodes(node.children);
+                        });
+                    };
+                    sortNodes(rootsList);
+
                     const rows: FlattenedRow[] = [];
                     // Flatten recursively
                     const flatten = (nodes: any[], depth: number, root: string, parentCode?: string) => {
@@ -68,8 +130,8 @@ export default function BallparkPage() {
 
                             rows.push({
                                 code: node.code,
-                                nameEn: node.nameEn,
-                                nameId: node.nameId,
+                                nameEn: node.name || "Unnamed",
+                                nameId: node.description || undefined,
                                 depth,
                                 hasChildren,
                                 rootCode: currentRoot,
@@ -78,11 +140,11 @@ export default function BallparkPage() {
                             });
 
                             if (hasChildren) {
-                                flatten(node.children!, depth + 1, currentRoot, node.code);
+                                flatten(node.children, depth + 1, currentRoot, node.code);
                             }
                         });
                     };
-                    flatten(WBS_BALLPARK, 0, "");
+                    flatten(rootsList, 0, "");
                     setWbsRows(rows);
 
                     // Auto-expand roots
@@ -91,6 +153,9 @@ export default function BallparkPage() {
                         if (r.depth === 0) roots.add(r.code);
                     });
                     setExpandedRows(roots);
+                } else {
+                    setWbsRows([]);
+                    setExpandedRows(new Set());
                 }
             }
         } catch (error) {
