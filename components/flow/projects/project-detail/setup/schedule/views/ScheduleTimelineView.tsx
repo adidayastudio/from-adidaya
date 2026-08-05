@@ -1,281 +1,201 @@
 "use client";
 
 import React, { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Hash } from "lucide-react";
+import { WeightedItem, ScheduleValue } from "@/components/flow/projects/project-detail/setup/schedule/schedule.types";
 
-/* ================= TYPES ================= */
-
-type ScheduleRow = {
-  code: string;
-  name: string;
-  level: number;
-  start?: string;
-  finish?: string;
-  duration?: number;
-  calendar?: string;
-  children?: ScheduleRow[];
+type Props = {
+  items: WeightedItem[];
+  onUpdate: (code: string, field: keyof ScheduleValue, value: any) => void;
 };
 
-/* ================= DUMMY DATA ================= */
-
-const RAW_DATA: ScheduleRow[] = [
-  {
-    code: "S",
-    name: "Structure",
-    level: 1,
-    children: [
-      {
-        code: "S.1",
-        name: "Substructure",
-        level: 2,
-        children: [
-          {
-            code: "S.1.1",
-            name: "Excavation",
-            level: 3,
-            start: "2026-01-06",
-            finish: "2026-01-13",
-            duration: 8,
-            calendar: "Normal",
-          },
-          {
-            code: "S.1.2",
-            name: "Foundation",
-            level: 3,
-            start: "2026-01-11",
-            finish: "2026-01-31",
-            duration: 21,
-            calendar: "Normal",
-          },
-        ],
-      },
-    ],
-  },
-];
-
-/* ================= DATE UTILS ================= */
-
-const DAY = 86400000;
-
-function daysBetween(a: string, b: string) {
-  return Math.round((+new Date(b) - +new Date(a)) / DAY) + 1;
-}
-
-function addDays(start: string, days: number) {
-  const d = new Date(start);
-  d.setDate(d.getDate() + days - 1);
-  return d.toISOString().slice(0, 10);
-}
-
-/* ================= AUTO CALC ================= */
-
-function autoCalc(row: ScheduleRow): ScheduleRow {
-  if (!row.children?.length) return row;
-
-  const children = row.children.map(autoCalc);
-  const starts = children.map(c => c.start).filter(Boolean) as string[];
-  const finishes = children.map(c => c.finish).filter(Boolean) as string[];
-
-  if (starts.length && finishes.length) {
-    const start = starts.sort()[0];
-    const finish = finishes.sort().slice(-1)[0];
-    return {
-      ...row,
-      start,
-      finish,
-      duration: daysBetween(start, finish),
-      children,
-    };
-  }
-
-  return { ...row, children };
-}
-
-/* ================= COMPONENT ================= */
-
-export default function ScheduleTimelineView() {
-  const [data, setData] = useState(RAW_DATA.map(autoCalc));
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({
-    S: true,
-    "S.1": true,
-  });
-  const [editing, setEditing] = useState<string | null>(null);
+export default function ScheduleTimelineView({ items, onUpdate }: Props) {
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   function toggle(code: string) {
     setExpanded(s => ({ ...s, [code]: !s[code] }));
   }
 
-  function updateLeaf(code: string, patch: Partial<ScheduleRow>) {
-    function walk(row: ScheduleRow): ScheduleRow {
-      if (row.code === code && !row.children) {
-        const next = { ...row, ...patch };
-
-        if (next.start && next.finish)
-          next.duration = daysBetween(next.start, next.finish);
-
-        if (next.start && next.duration && !patch.finish)
-          next.finish = addDays(next.start, next.duration);
-
-        return next;
+  // Flatten logic respecting expanded state
+  const flatItems: { item: WeightedItem; depth: number }[] = [];
+  function flatten(nodes: WeightedItem[], depth = 0) {
+    nodes.forEach(node => {
+      flatItems.push({ item: node, depth });
+      // Default L0 and L1 to expanded on initial load if not set
+      const isExpanded = expanded[node.code] ?? (depth < 2);
+      if (isExpanded && node.children && node.children.length > 0) {
+        flatten(node.children as WeightedItem[], depth + 1);
       }
-      if (row.children)
-        return { ...row, children: row.children.map(walk) };
+    });
+  }
+  flatten(items);
 
-      return row;
+  // Auto-calculate end date helper
+  const getFinishDate = (start?: string, duration?: number) => {
+    if (!start || !duration) return "";
+    const d = new Date(start);
+    if (isNaN(d.getTime())) return "";
+    d.setDate(d.getDate() + Math.max(0, duration - 1));
+    return d.toISOString().split("T")[0];
+  };
+
+  // Convert YYYY-MM-DD -> DD/MM/YYYY for unified formatting
+  const formatDateDMY = (dateStr?: string) => {
+    if (!dateStr) return "—";
+    const parts = dateStr.split("-");
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
-    setData(d => d.map(r => autoCalc(walk(r))));
-  }
+    return dateStr;
+  };
 
-  function renderRow(row: ScheduleRow): React.ReactNode[] {
-    const rows: React.ReactNode[] = [];
-    const hasChildren = !!row.children?.length;
-    const isOpen = expanded[row.code];
-    const isParent = hasChildren;
-
-    rows.push(
-      <tr key={row.code} className="border-b text-xs border-neutral-100">
-        {/* CODE */}
-        <td className="px-4 py-2 font-mono text-neutral-600 w-[120px]">
-          <div
-            className="flex items-center gap-1"
-            style={{ paddingLeft: `${(row.level - 1) * 12}px` }}
-          >
-            {hasChildren && (
-              <button onClick={() => toggle(row.code)}>
-                {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              </button>
-            )}
-            {row.code}
-          </div>
-        </td>
-
-        {/* ACTIVITY */}
-        <td className="px-4 py-3 pr-6">{row.name}</td>
-
-        {/* START */}
-        <td className="px-4 py-3 w-[130px]">
-          {isParent ? (
-            <span className="text-neutral-500">{row.start ?? "—"}</span>
-          ) : editing === `${row.code}:start` ? (
-            <input
-              type="date"
-              value={row.start}
-              autoFocus
-              className="border rounded px-1 text-xs w-full"
-              onBlur={() => setEditing(null)}
-              onChange={e =>
-                updateLeaf(row.code, { start: e.target.value })
-              }
-            />
-          ) : (
-            <span
-              className="cursor-text"
-              onClick={() => setEditing(`${row.code}:start`)}
-            >
-              {row.start}
-            </span>
-          )}
-        </td>
-
-        {/* FINISH */}
-        <td className="px-4 py-3 w-[130px]">
-          {isParent ? (
-            <span className="text-neutral-500">{row.finish ?? "—"}</span>
-          ) : editing === `${row.code}:finish` ? (
-            <input
-              type="date"
-              value={row.finish}
-              autoFocus
-              className="border rounded px-1 text-xs w-full"
-              onBlur={() => setEditing(null)}
-              onChange={e =>
-                updateLeaf(row.code, { finish: e.target.value })
-              }
-            />
-          ) : (
-            <span
-              className="cursor-text"
-              onClick={() => setEditing(`${row.code}:finish`)}
-            >
-              {row.finish}
-            </span>
-          )}
-        </td>
-
-        {/* DURATION */}
-        <td className="px-4 py-3 pr-6 text-right w-[140px]">
-          {isParent ? (
-            row.duration ?? "—"
-          ) : editing === `${row.code}:duration` ? (
-            <input
-              type="number"
-              value={row.duration}
-              autoFocus
-              className="border rounded px-1 text-xs w-full text-right"
-              onBlur={() => setEditing(null)}
-              onChange={e =>
-                updateLeaf(row.code, {
-                  duration: Number(e.target.value),
-                })
-              }
-            />
-          ) : (
-            <span
-              className="cursor-text"
-              onClick={() => setEditing(`${row.code}:duration`)}
-            >
-              {row.duration}
-            </span>
-          )}
-        </td>
-
-        {/* DEPENDENCY */}
-        <td className="px-4 py-3 w-[140px] text-neutral-400">—</td>
-
-        {/* CALENDAR */}
-        <td className="px-4 py-3 w-[110px] text-neutral-500">
-          {row.calendar ?? "Normal"}
-        </td>
-      </tr>
-    );
-
-    if (hasChildren && isOpen)
-      row.children!.forEach(c => rows.push(...renderRow(c)));
-
-    return rows;
-  }
+  const handleDateChange = (code: string, startVal?: string, durVal?: number) => {
+    const start = startVal;
+    const duration = durVal !== undefined ? Math.max(1, durVal) : 1;
+    onUpdate(code, "startDate", start);
+    onUpdate(code, "durationDays", duration);
+    if (start) {
+      onUpdate(code, "endDate", getFinishDate(start, duration));
+    }
+  };
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-sm">
+    <div className="overflow-x-auto w-full text-[11px]">
+      <table className="w-full border-collapse text-left">
         <thead>
-        <tr className="border-b border-neutral-200">
-            <th className="px-4 py-3 text-left text-neutral-500 w-[120px]">
-            Code
-            </th>
-            <th className="px-4 py-3 pr-6 text-left text-neutral-500">
-            Activity
-            </th>
-            <th className="px-4 py-3 text-left text-neutral-500 w-[140px]">
-            Start
-            </th>
-            <th className="px-4 py-3 text-left text-neutral-500 w-[140px]">
-            Finish
-            </th>
-            <th className="px-4 py-3 text-right text-neutral-500 w-[160px]">
-            Duration (days)
-            </th>
-            <th className="px-4 py-3 text-left text-neutral-500 w-[160px]">
-            Dependency
-            </th>
-            <th className="px-4 py-3 text-left text-neutral-500 w-[120px]">
-            Calendar
-            </th>
-        </tr>
+          <tr className="border-b border-neutral-200 dark:border-neutral-800 text-neutral-500 font-bold uppercase tracking-wider text-[9px]">
+            <th className="px-3 py-2.5">Activity / Task Name</th>
+            <th className="px-2 py-2.5 w-[50px] text-center">Wgt (%)</th>
+            <th className="px-3 py-2.5 w-[140px]">Start Date</th>
+            <th className="px-3 py-2.5 w-[140px]">Finish Date</th>
+            <th className="px-3 py-2.5 w-[90px] text-center">Duration</th>
+            <th className="px-3 py-2.5 w-[110px]">Calendar</th>
+          </tr>
         </thead>
+        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-850/60">
+          {flatItems.map(({ item, depth }) => {
+            const hasChildren = item.children && item.children.length > 0;
+            const isExpanded = expanded[item.code] ?? (depth < 2);
+            
+            // Get schedules
+            const startDate = item.schedule?.startDate || "";
+            const durationDays = item.schedule?.durationDays || 0;
+            const rawEndDate = startDate ? getFinishDate(startDate, durationDays) : "";
+            const formattedEndDate = formatDateDMY(rawEndDate);
+            const calendar = item.schedule?.calendarMode || "6-Days"; // Default to 6-Days Work
 
+            // Resolve proper text name mapping
+            const activityName = item.nameEn || item.name || "Unnamed Activity";
+            const activitySubName = item.nameId || item.description;
 
-        <tbody>{data.flatMap(renderRow)}</tbody>
+            return (
+              <tr key={item.code} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-850/20 transition-colors">
+                {/* Combined Activity Column */}
+                <td className="px-3 py-2 font-medium text-neutral-850 dark:text-neutral-200">
+                  <div
+                    className="flex items-start gap-1.5 min-w-0"
+                    style={{ paddingLeft: `${depth * 10}px` }}
+                  >
+                    {hasChildren ? (
+                      <button
+                        onClick={() => toggle(item.code)}
+                        className="p-0.5 rounded hover:bg-neutral-200/50 dark:hover:bg-neutral-700/50 text-neutral-505 transition-colors shrink-0 mt-0.5"
+                      >
+                        {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                      </button>
+                    ) : (
+                      <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0 mt-0.5">
+                        <Hash size={8} className="text-neutral-455" />
+                      </div>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-1 w-full min-w-0 flex-wrap">
+                        <span className="font-mono text-[8px] font-bold text-neutral-400 dark:text-neutral-500 shrink-0 select-none">
+                          {item.code}
+                        </span>
+                        <span className={`whitespace-normal break-words leading-tight ${depth === 0 ? "font-bold text-neutral-900 dark:text-white" : "text-neutral-800 dark:text-neutral-250"}`}>
+                          {activityName}
+                        </span>
+                      </div>
+                      {activitySubName && activitySubName !== activityName && (
+                        <span className="text-[9px] text-neutral-400 dark:text-neutral-500 italic block mt-0.5 pl-[2px] whitespace-normal break-words">
+                          {activitySubName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </td>
+
+                {/* Weight */}
+                <td className="px-2 py-2 text-center font-mono text-neutral-500 dark:text-neutral-400 text-[10px]">
+                  {item.weight ? `${item.weight.toFixed(1)}%` : "0.0%"}
+                </td>
+
+                {/* Start Date */}
+                <td className="px-3 py-2">
+                  {hasChildren ? (
+                    <span className="text-neutral-400 italic text-[10px]">—</span>
+                  ) : (
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => handleDateChange(item.code, e.target.value, durationDays)}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-2 py-0.5 text-[10px] text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-red font-mono"
+                    />
+                  )}
+                </td>
+
+                {/* Finish Date */}
+                <td className="px-3 py-2">
+                  {hasChildren ? (
+                    <span className="text-neutral-400 italic text-[10px]">—</span>
+                  ) : (
+                    <span className="font-mono text-[10px] text-neutral-800 dark:text-neutral-300 font-semibold px-2 py-0.5 bg-neutral-50 dark:bg-neutral-900/60 rounded border border-neutral-200/40 dark:border-neutral-800">
+                      {formattedEndDate}
+                    </span>
+                  )}
+                </td>
+
+                {/* Duration */}
+                <td className="px-3 py-2">
+                  {hasChildren ? (
+                    <span className="text-neutral-400 italic text-[10px] text-center block">—</span>
+                  ) : (
+                    <div className="flex items-center gap-1 justify-center">
+                      <input
+                        type="number"
+                        min="1"
+                        value={durationDays || ""}
+                        onChange={(e) => handleDateChange(item.code, startDate, Number(e.target.value))}
+                        className="w-12 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-1.5 py-0.5 text-center text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-red font-mono font-semibold text-[10px]"
+                        placeholder="Days"
+                      />
+                      <span className="text-[9px] text-neutral-400">hns</span>
+                    </div>
+                  )}
+                </td>
+
+                {/* Calendar */}
+                <td className="px-3 py-2">
+                  {hasChildren ? (
+                    <span className="text-neutral-400 italic text-[10px]">—</span>
+                  ) : (
+                    <select
+                      value={calendar}
+                      onChange={(e) => onUpdate(item.code, "calendarMode", e.target.value)}
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg px-1 py-0.5 text-[10px] text-neutral-700 dark:text-neutral-300 focus:outline-none focus:ring-1 focus:ring-brand-red cursor-pointer"
+                    >
+                      <option value="6-Days">6-Days Work</option>
+                      <option value="Normal">Normal (5-Days)</option>
+                      <option value="7-Days">7-Days Work</option>
+                    </select>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
       </table>
     </div>
   );
