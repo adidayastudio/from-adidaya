@@ -438,7 +438,7 @@ export default function ProjectSetupSchedulePage() {
     document.body.removeChild(link);
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = (isSummary = false) => {
     if (!project) return;
     setShowExportMenu(false);
 
@@ -511,10 +511,10 @@ export default function ProjectSetupSchedulePage() {
     });
 
     const flatItems: WeightedItem[] = [];
-    const flatten = (nodes: WeightedItem[]) => {
+    const flatten = (nodes: WeightedItem[], depth = 0) => {
       nodes.forEach(n => {
         flatItems.push(n);
-        if (n.children) flatten(n.children);
+        if (n.children && (!isSummary || depth < 1)) flatten(n.children, depth + 1);
       });
     };
     flatten(weightedTree);
@@ -597,7 +597,7 @@ export default function ProjectSetupSchedulePage() {
         </tr>
       `;
 
-      if (node.children) {
+      if (node.children && (!isSummary || depth < 1)) {
         node.children.forEach(c => addNodeHtml(c, depth + 1));
       }
     };
@@ -655,7 +655,9 @@ export default function ProjectSetupSchedulePage() {
     const pCode = project.project_code || "TED";
     const modeName = activeMode.charAt(0).toUpperCase() + activeMode.slice(1).toLowerCase();
     const scaleName = timeScale.charAt(0).toUpperCase() + timeScale.slice(1).toLowerCase();
-    const customFilename = `${datePrefix}_${pCode}_SCH_${modeName} ${scaleName}_R00`;
+    const modeNum = activeMode === "BALLPARK" ? "01" : activeMode === "ESTIMATES" ? "02" : "03";
+    const versionNum = isSummary ? "01" : "02";
+    const customFilename = `${datePrefix}_${pCode}_SCH_${modeName} ${scaleName}${isSummary ? ' Summary' : ''}_R00`;
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -876,7 +878,7 @@ export default function ProjectSetupSchedulePage() {
                   <div class="card-sub-id">Project Schedule & S-Curve</div>
                 </div>
                 <div class="card-divider"></div>
-                <div class="card-code">SCH-00-01</div>
+                <div class="card-code">SCH-${modeNum}-${versionNum}</div>
                 <div class="card-divider"></div>
                 <div class="card-footer-section">
                   <div class="footer-col-left">
@@ -967,6 +969,8 @@ export default function ProjectSetupSchedulePage() {
     printWindow.document.close();
   };
 
+  const modeNum = activeMode === "BALLPARK" ? "01" : activeMode === "ESTIMATES" ? "02" : "03";
+
   if (isLoading) return <GlobalLoading />;
   if (error || !project) {
     return (
@@ -1017,7 +1021,7 @@ export default function ProjectSetupSchedulePage() {
                 </button>
 
                 {showExportMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-850 rounded-2xl shadow-xl py-1.5 z-30 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-855 rounded-2xl shadow-xl py-1.5 z-30 animate-in fade-in slide-in-from-top-1 duration-150">
                     <button
                       type="button"
                       onClick={handleExportXLS}
@@ -1026,13 +1030,22 @@ export default function ProjectSetupSchedulePage() {
                       <Download className="w-3.5 h-3.5 text-neutral-400" />
                       Export to Excel (XLS)
                     </button>
+                    <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1"></div>
                     <button
                       type="button"
-                      onClick={handleExportPDF}
+                      onClick={() => handleExportPDF(true)}
                       className="w-full text-left px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-850 transition-colors flex items-center gap-2"
                     >
                       <FileText className="w-3.5 h-3.5 text-neutral-400" />
-                      Export to PDF
+                      Export PDF (Summary - SCH-{modeNum}-01)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExportPDF(false)}
+                      className="w-full text-left px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-850 transition-colors flex items-center gap-2"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-neutral-400" />
+                      Export PDF (Detail - SCH-{modeNum}-02)
                     </button>
                   </div>
                 )}
