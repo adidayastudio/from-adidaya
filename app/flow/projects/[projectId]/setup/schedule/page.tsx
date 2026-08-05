@@ -417,13 +417,22 @@ export default function ProjectSetupSchedulePage() {
       </html>
     `;
 
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const datePrefix = `${yyyy}${mm}${dd}`;
+    const pCode = project.project_code || "TED";
+    const modeName = activeMode.charAt(0).toUpperCase() + activeMode.slice(1).toLowerCase();
+    const scaleName = timeScale.charAt(0).toUpperCase() + timeScale.slice(1).toLowerCase();
+    const customFilename = `${datePrefix}_${pCode}_SCH_${modeName} ${scaleName}_R00`;
+
     const blob = new Blob([excelHtml], { type: "application/vnd.ms-excel" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
     
-    const safeProjectName = project.project_name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    link.setAttribute("download", `schedule_${safeProjectName}.xls`);
+    link.setAttribute("download", `${customFilename}.xls`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -638,7 +647,15 @@ export default function ProjectSetupSchedulePage() {
       </svg>
     `;
 
-    const safeProjectName = project.project_name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const datePrefix = `${yyyy}${mm}${dd}`;
+    const pCode = project.project_code || "TED";
+    const modeName = activeMode.charAt(0).toUpperCase() + activeMode.slice(1).toLowerCase();
+    const scaleName = timeScale.charAt(0).toUpperCase() + timeScale.slice(1).toLowerCase();
+    const customFilename = `${datePrefix}_${pCode}_SCH_${modeName} ${scaleName}_R00`;
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -928,7 +945,7 @@ export default function ProjectSetupSchedulePage() {
                 const element = document.getElementById('pdf-container');
                 const opt = {
                   margin:       10,
-                  filename:     'schedule_${safeProjectName}.pdf',
+                  filename:     '${customFilename}.pdf',
                   image:        { type: 'jpeg', quality: 0.98 },
                   html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
                   jsPDF:        { unit: 'mm', format: 'a3', orientation: 'landscape' }
