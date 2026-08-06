@@ -167,6 +167,70 @@ export interface WBSItem {
 export const WBS_DISCIPLINES = ["S", "A", "M", "I", "L"] as const;
 export type WBSDiscipline = typeof WBS_DISCIPLINES[number];
 
+export const WBS_DISCIPLINE_LABELS: Record<WBSDiscipline, string> = {
+    S: "Struktur",
+    A: "Arsitektur",
+    M: "MEP",
+    I: "Interior",
+    L: "Landscape",
+};
+
+// ============================================
+// WBS TRACKING (Progress Tracking Module)
+// ============================================
+
+export type MaterialStatus = "not_started" | "purchased" | "on_site" | "installed";
+
+export interface WBSTrackingItem {
+    wbsId: string;
+    wbsCode: string;
+    title: string;
+    titleId?: string;
+
+    // Hierarchy
+    parentId?: string;
+    level: number;
+    discipline?: WBSDiscipline;
+    massCode?: string;           // "A", "B", etc. for multi-mass
+    children?: WBSTrackingItem[];
+
+    // Volume & Weight
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    weight: number;              // percentage of total (bobot)
+
+    // Schedule Progress (fisik)
+    plannedProgress: number;     // 0-100 based on schedule baseline
+    actualProgress: number;      // 0-100 physical completion
+
+    // Finance Progress (terbayar)
+    materialStatus: MaterialStatus;
+    financeProgress: number;     // auto-calc: 0/25/50/100
+
+    // Overall
+    overallProgress: number;     // avg of schedule + finance
+
+    // Status
+    status: "not_started" | "in_progress" | "completed" | "delayed";
+    variance: number;            // schedule variance in days
+}
+
+/**
+ * Calculate finance progress from material status.
+ * - purchased/ordered → 25%
+ * - material on site → 50%
+ * - installed & approved → 100%
+ */
+export function getFinanceProgress(status: MaterialStatus): number {
+    switch (status) {
+        case "purchased": return 25;
+        case "on_site": return 50;
+        case "installed": return 100;
+        default: return 0;
+    }
+}
+
 // ============================================
 // RAB (Rencana Anggaran Biaya)
 // ============================================

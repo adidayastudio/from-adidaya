@@ -236,77 +236,7 @@ export default function ProjectDetailTrackingContent() {
           </>
         )}
 
-        {/* CARDS FOR BUILD SCOPE (WBS & VOLUME) */}
-        {activeTab === "schedule" && (
-          <>
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Progress Fisik</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-blue-500/10 text-blue-500">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-black tracking-tight leading-none text-blue-600 dark:text-blue-400">{summaryStats.overallProgress}%</p>
-                <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-blue-600 transition-all duration-500 rounded-full"
-                    style={{ width: `${summaryStats.overallProgress}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Terlambat</p>
-                <div className={clsx("w-7 h-7 rounded-full flex items-center justify-center shrink-0", summaryStats.delayedCount > 0 ? "bg-red-500/10 text-red-500" : "bg-emerald-500/10 text-emerald-500")}>
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <p className={clsx("text-2xl font-black tracking-tight leading-none", summaryStats.delayedCount > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400")}>
-                  {summaryStats.delayedCount} <span className="text-xs font-semibold text-neutral-400">Item</span>
-                </p>
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-semibold truncate">
-                  {summaryStats.delayedCount > 0 ? `+${summaryStats.scheduleVarianceDays} Hari Delay` : `🟢 Sesuai Baseline`}
-                </p>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Realisasi Volume</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-purple-500/10 text-purple-500">
-                  <Layers className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-2xl font-black tracking-tight leading-none text-neutral-900 dark:text-white">
-                  {summaryStats.totalActualVolume.toLocaleString("id-ID")}
-                </p>
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-semibold truncate">
-                  Target {summaryStats.totalTargetVolume.toLocaleString("id-ID")} Unit
-                </p>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Realisasi RAB</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-500">
-                  <DollarSign className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-2xl font-black tracking-tight leading-none text-neutral-900 dark:text-white truncate">
-                  Rp {summaryStats.totalActualCost.toLocaleString("id-ID")}
-                </p>
-                <p className="text-[10px] text-emerald-600 font-semibold truncate">Cost Variance OK</p>
-              </div>
-            </div>
-          </>
-        )}
+        {/* CARDS FOR BUILD SCOPE (WBS & VOLUME) — Now rendered inside TrackingScheduleTab with 3-tier progress */}
 
         {/* CARDS FOR RAB & FINANCE */}
         {activeTab === "rab" && (
