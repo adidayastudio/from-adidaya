@@ -20,6 +20,7 @@ import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wb
 import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-estimates";
 import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-inherit";
 import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
+import { buildWBSTree, ensureMultiBuildingWBS, mergeWBSTrees } from "@/lib/flow/mappers/wbs-tree";
 import { buildRABFromWBS } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-from-wbs";
 import { buildRABEstimates, EstimateValues } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-estimates-builder";
 import { RABItem } from "@/components/flow/projects/project-detail/setup/rab/ballpark/types/rab.types";
@@ -93,69 +94,7 @@ export default function ProjectSetupSchedulePage() {
           
         if (error) throw error;
         
-        const dbWbs = data || [];
-        if (dbWbs.length > 0) {
-          const compareWBSCodes = (a: string, b: string): number => {
-            const partsA = a.split('.');
-            const partsB = b.split('.');
-            const minLen = Math.min(partsA.length, partsB.length);
-            for (let i = 0; i < minLen; i++) {
-              const partA = partsA[i];
-              const partB = partsB[i];
-              const numA = parseInt(partA);
-              const numB = parseInt(partB);
-              const isNumA = !isNaN(numA);
-              const isNumB = !isNaN(numB);
-              if (isNumA && isNumB) {
-                if (numA !== numB) return numA - numB;
-              } else if (partA !== partB) {
-                return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
-              }
-            }
-            return partsA.length - partsB.length;
-          };
-
-          const idMap = new Map<string, any>();
-          dbWbs.forEach((item: any) => {
-            idMap.set(item.id, {
-              ...item,
-              code: item.wbs_code,
-              nameEn: item.title || "",
-              nameId: item.title_en || item.title || "",
-              children: []
-            });
-          });
-
-          const rootsList: any[] = [];
-          dbWbs.forEach((item: any) => {
-            const node = idMap.get(item.id);
-            if (item.parent_id && idMap.has(item.parent_id)) {
-              idMap.get(item.parent_id).children.push(node);
-            } else {
-              rootsList.push(node);
-            }
-          });
-
-          const sortNodes = (list: any[]) => {
-            list.sort((a, b) => compareWBSCodes(a.code, b.code));
-            list.forEach(node => {
-              if (node.children) sortNodes(node.children);
-            });
-          };
-
-          sortNodes(rootsList);
-
-          const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
-          rootsList.sort((a, b) => {
-            const prefixA = a.code.split('.')[0];
-            const prefixB = b.code.split('.')[0];
-            const orderA = ORDER_MAP[prefixA] ?? (prefixA.length === 1 ? prefixA.charCodeAt(0) : 999);
-            const orderB = ORDER_MAP[prefixB] ?? (prefixB.length === 1 ? prefixB.charCodeAt(0) : 999);
-            return orderA - orderB;
-          });
-
-          setDbWbsItems(rootsList);
-        }
+        setDbWbsItems(data || []);
       } catch (err) {
         console.error("Error fetching project WBS:", err);
       }
@@ -165,38 +104,11 @@ export default function ProjectSetupSchedulePage() {
   }, [project?.id]);
 
   const activeWBS = useMemo(() => {
-    if (dbWbsItems.length > 0) return dbWbsItems;
+    const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+    const dbTree = buildWBSTree(dbWbsItems);
+    const mergedTree = mergeWBSTrees(dbTree, defaultTree);
 
-    const count = project?.building_mass_count || 1;
-    const masses = project?.building_masses || [];
-
-    if (count > 1 && Array.isArray(masses) && masses.length > 0) {
-      const baseDetail = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
-
-      return masses.map((mass: any, idx: number) => {
-        const prefix = mass.code;
-        const massTitle = `${prefix}. ${mass.name}`;
-
-        const prefixChildren = (nodes: any[]): any[] => {
-          return nodes.map((node) => ({
-            ...node,
-            id: `node-${prefix}-${node.code}-${node.id || idx}`,
-            code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
-            children: node.children ? prefixChildren(node.children) : undefined,
-          }));
-        };
-
-        return {
-          id: `mass-${prefix}-${idx}`,
-          code: prefix,
-          nameEn: massTitle,
-          nameId: massTitle,
-          children: prefixChildren(baseDetail),
-        };
-      });
-    }
-
-    return WBS_BALLPARK;
+    return ensureMultiBuildingWBS(mergedTree, project);
   }, [dbWbsItems, project]);
 
   const estimateValues = useMemo<EstimateValues>(() => {

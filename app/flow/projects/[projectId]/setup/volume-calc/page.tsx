@@ -14,6 +14,7 @@ import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wb
 import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-estimates";
 import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-inherit";
 import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
+import { buildWBSTree, ensureMultiBuildingWBS, mergeWBSTrees } from "@/lib/flow/mappers/wbs-tree";
 
 // Define calculation item structure
 interface VolumeRow {
@@ -94,13 +95,7 @@ export default function VolumeCalcPage() {
           .eq("project_id", project.id);
 
         if (error) throw error;
-        const mapped = (data || []).map((item: any) => ({
-          ...item,
-          code: item.wbs_code,
-          nameEn: item.title || "",
-          nameId: item.title_en || item.title || "",
-        }));
-        setDbWbsItems(mapped);
+        setDbWbsItems(data || []);
       } catch (err) {
         console.error("Error fetching WBS:", err);
       } finally {
@@ -341,118 +336,11 @@ export default function VolumeCalcPage() {
 
   // Build hierarchical WBS Tree with exact natural sorting matching the WBS page
   const wbsTree = useMemo(() => {
-    if (!dbWbsItems.length) {
-      const count = project?.building_mass_count || 1;
-      const masses = project?.building_masses || [];
-      const baseDetail = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+    const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+    const dbTree = buildWBSTree(dbWbsItems);
+    const mergedTree = mergeWBSTrees(dbTree, defaultTree);
 
-      if (count > 1 && Array.isArray(masses) && masses.length > 0) {
-        return masses.map((mass: any, idx: number) => {
-          const prefix = mass.code;
-          const massTitle = `${prefix}. ${mass.name}`;
-
-          const prefixChildren = (nodes: any[]): any[] => {
-            return nodes.map((node) => ({
-              id: `node-${prefix}-${node.code}-${node.id || idx}`,
-              code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
-              nameEn: node.nameEn || "",
-              nameId: node.nameId || node.nameEn || "",
-              unit: node.unit || "m³",
-              children: node.children ? prefixChildren(node.children) : [],
-            }));
-          };
-
-          return {
-            id: `mass-${prefix}-${idx}`,
-            code: prefix,
-            nameEn: massTitle,
-            nameId: massTitle,
-            children: prefixChildren(baseDetail),
-          };
-        });
-      }
-
-      const mapToTreeNode = (nodes: any[]): TreeNode[] => {
-        return nodes.map((n) => ({
-          id: n.id || n.code,
-          code: n.code,
-          nameEn: n.nameEn || "",
-          nameId: n.nameId || "",
-          unit: n.unit || "m³",
-          children: n.children ? mapToTreeNode(n.children) : [],
-        }));
-      };
-
-      return mapToTreeNode(baseDetail);
-    }
-
-    const compareWBSCodes = (a: string, b: string): number => {
-      const partsA = a.split('.');
-      const partsB = b.split('.');
-      const minLen = Math.min(partsA.length, partsB.length);
-
-      // Force SAMIL order priority for root level segment
-      if (partsA.length > 0 && partsB.length > 0) {
-        const firstA = partsA[0];
-        const firstB = partsB[0];
-        if (firstA !== firstB) {
-          const orderA = SAMIL_ORDER[firstA] || 99;
-          const orderB = SAMIL_ORDER[firstB] || 99;
-          if (orderA !== orderB) return orderA - orderB;
-        }
-      }
-
-      for (let i = 0; i < minLen; i++) {
-        const partA = partsA[i];
-        const partB = partsB[i];
-        const numA = parseInt(partA);
-        const numB = parseInt(partB);
-        const isNumA = !isNaN(numA);
-        const isNumB = !isNaN(numB);
-        if (isNumA && isNumB) {
-          if (numA !== numB) return numA - numB;
-        } else if (partA !== partB) {
-          return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
-        }
-      }
-      return partsA.length - partsB.length;
-    };
-
-    const idMap = new Map<string, TreeNode>();
-    dbWbsItems.forEach((item: any) => {
-      const savedMetaUnit = (project?.meta as any)?.estimateValues?.[item.code]?.unit;
-
-      idMap.set(item.id, {
-        id: item.id,
-        code: item.code,
-        nameEn: item.name || "",
-        nameId: item.description || "",
-        unit: savedMetaUnit || item.unit || "m³",
-        children: []
-      });
-    });
-
-    const rootsList: TreeNode[] = [];
-    dbWbsItems.forEach((item: any) => {
-      const node = idMap.get(item.id);
-      if (node) {
-        if (item.parent_id && idMap.has(item.parent_id)) {
-          idMap.get(item.parent_id)!.children.push(node);
-        } else {
-          rootsList.push(node);
-        }
-      }
-    });
-
-    const sortNodes = (list: TreeNode[]) => {
-      list.sort((a, b) => compareWBSCodes(a.code, b.code));
-      list.forEach(node => {
-        if (node.children) sortNodes(node.children);
-      });
-    };
-
-    sortNodes(rootsList);
-    return rootsList;
+    return ensureMultiBuildingWBS(mergedTree, project);
   }, [dbWbsItems, project]);
 
   // Derived properties for header

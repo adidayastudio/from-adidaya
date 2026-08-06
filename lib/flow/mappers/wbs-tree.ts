@@ -27,32 +27,191 @@ export type WBSNode = WBSRow & { children: WBSNode[] };
 /**
  * Build tree from flat list
  */
-export function buildWBSTree(items: WBSRow[]): WBSNode[] {
-    const map = new Map<string, WBSNode>();
-    const roots: WBSNode[] = [];
+export function buildWBSTree(items: any[]): WBSNode[] {
+    if (!items || items.length === 0) return [];
+
+    const idMap = new Map<string, any>();
+    const codeMap = new Map<string, any>();
 
     // First pass: create nodes
     items.forEach((item) => {
-        map.set(item.id, { ...item, children: [] });
+        const code = item.wbs_code || item.code;
+        const node = {
+            ...item,
+            id: item.id || code,
+            code: code,
+            nameEn: item.title || item.nameEn || item.name || "",
+            nameId: item.title_en || item.nameId || item.title || item.description || "",
+            unit: item.unit || "m³",
+            children: [],
+        };
+        if (item.id) idMap.set(item.id, node);
+        if (code) codeMap.set(code, node);
     });
 
-    // Second pass: build tree
-    map.forEach((node) => {
-        if (node.parent_id && map.has(node.parent_id)) {
-            map.get(node.parent_id)!.children.push(node);
-        } else {
-            roots.push(node);
+    const roots: any[] = [];
+
+    codeMap.forEach((node) => {
+        // 1. Try parent_id
+        if (node.parent_id && idMap.has(node.parent_id)) {
+            idMap.get(node.parent_id)!.children.push(node);
+            return;
         }
+
+        // 2. Try wbs_code dot notation (e.g. "S.1" -> parent "S", "A.S.1" -> parent "A.S")
+        const lastDotIndex = node.code.lastIndexOf(".");
+        if (lastDotIndex > 0) {
+            const parentCode = node.code.substring(0, lastDotIndex);
+            if (codeMap.has(parentCode)) {
+                codeMap.get(parentCode)!.children.push(node);
+                return;
+            }
+        }
+
+        roots.push(node);
     });
 
-    // Sort by position
-    const sortByPosition = (nodes: WBSNode[]) => {
-        nodes.sort((a, b) => a.position - b.position);
-        nodes.forEach((n) => sortByPosition(n.children));
-    };
-    sortByPosition(roots);
+    const compareWBSCodes = (a: string, b: string): number => {
+        const partsA = a.split(".");
+        const partsB = b.split(".");
+        const minLen = Math.min(partsA.length, partsB.length);
+        const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
 
+        if (partsA.length > 0 && partsB.length > 0) {
+            const firstA = partsA[0];
+            const firstB = partsB[0];
+            if (firstA !== firstB) {
+                const orderA = ORDER_MAP[firstA] ?? (firstA.length === 1 ? firstA.charCodeAt(0) : 999);
+                const orderB = ORDER_MAP[firstB] ?? (firstB.length === 1 ? firstB.charCodeAt(0) : 999);
+                if (orderA !== orderB) return orderA - orderB;
+            }
+        }
+
+        for (let i = 0; i < minLen; i++) {
+            const partA = partsA[i];
+            const partB = partsB[i];
+            const numA = parseInt(partA);
+            const numB = parseInt(partB);
+            const isNumA = !isNaN(numA);
+            const isNumB = !isNaN(numB);
+            if (isNumA && isNumB) {
+                if (numA !== numB) return numA - numB;
+            } else if (partA !== partB) {
+                return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: "base" });
+            }
+        }
+        return partsA.length - partsB.length;
+    };
+
+    const sortNodes = (nodes: any[]) => {
+        nodes.sort((a, b) => compareWBSCodes(a.code, b.code));
+        nodes.forEach((n) => {
+            if (n.children && n.children.length > 0) sortNodes(n.children);
+        });
+    };
+
+    sortNodes(roots);
     return roots;
+}
+
+export function ensureMultiBuildingWBS(wbsTree: any[], project: any): any[] {
+    const count = project?.building_mass_count || (project?.meta as any)?.buildingMassCount || (Array.isArray((project?.meta as any)?.buildingMasses) ? (project?.meta as any)?.buildingMasses.length : 1);
+    let masses = project?.building_masses || (project?.meta as any)?.buildingMasses || [];
+
+    if (!Array.isArray(masses) || masses.length === 0) {
+        if (count > 1) {
+            masses = [
+                { code: "A", name: "Main Building" },
+                { code: "B", name: "Massa B" },
+                { code: "C", name: "Site Work", isSiteWork: true }
+            ];
+        }
+    }
+
+    if (count <= 1 || masses.length === 0) {
+        return wbsTree;
+    }
+
+    // Check if wbsTree is ALREADY multi-building (all roots must be building mass containers with SAMIL children)
+    const isAlreadyMultiBuilding =
+        wbsTree.length === masses.length &&
+        wbsTree.every((root) => {
+            const childSubCodes = root.children?.map((c: any) => c.code.replace(`${root.code}.`, "")) || [];
+            return childSubCodes.some((sub: string) => ["S", "A", "M", "I", "L"].includes(sub));
+        });
+
+    if (isAlreadyMultiBuilding) {
+        return wbsTree;
+    }
+
+    // Legacy single building tree -> wrap all existing items into Massa A, Massa B, Massa C...
+    return masses.map((mass: any, idx: number) => {
+        const prefix = mass.code;
+        const massTitle = `${prefix}. ${mass.name}`;
+
+        const prefixChildren = (nodes: any[]): any[] => {
+            return nodes.map((node) => ({
+                ...node,
+                id: `node-${prefix}-${node.code}-${node.id || idx}`,
+                code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
+                children: node.children ? prefixChildren(node.children) : undefined,
+            }));
+        };
+
+        return {
+            id: `mass-${prefix}-${idx}`,
+            code: prefix,
+            nameEn: massTitle,
+            nameId: massTitle,
+            children: prefixChildren(wbsTree),
+        };
+    });
+}
+
+export function mergeWBSTrees(dbTree: any[], defaultTree: any[]): any[] {
+    if (!dbTree || dbTree.length === 0) return defaultTree;
+    if (!defaultTree || defaultTree.length === 0) return dbTree;
+
+    const dbCodeMap = new Map<string, any>();
+    const collectNodes = (nodes: any[]) => {
+        nodes.forEach((n) => {
+            if (n.code) dbCodeMap.set(n.code, n);
+            if (n.children && n.children.length > 0) collectNodes(n.children);
+        });
+    };
+    collectNodes(dbTree);
+
+    const mergeNodes = (defNodes: any[]): any[] => {
+        return defNodes.map((defNode) => {
+            const dbNode = dbCodeMap.get(defNode.code);
+
+            const mergedChildren = defNode.children ? mergeNodes(defNode.children) : [];
+
+            if (dbNode) {
+                const defChildCodes = new Set((defNode.children || []).map((c: any) => c.code));
+                const extraDbChildren = (dbNode.children || []).filter((c: any) => !defChildCodes.has(c.code));
+
+                return {
+                    ...defNode,
+                    ...dbNode,
+                    children: [...mergedChildren, ...extraDbChildren],
+                };
+            }
+
+            return {
+                ...defNode,
+                children: mergedChildren,
+            };
+        });
+    };
+
+    const merged = mergeNodes(defaultTree);
+
+    // Filter out extra roots that look like sub-codes (e.g. "A.8") because they are merged into their parent "A"!
+    const defRootCodes = new Set(defaultTree.map((d) => d.code));
+    const extraRoots = dbTree.filter((r) => !defRootCodes.has(r.code) && !r.code.includes("."));
+
+    return [...merged, ...extraRoots];
 }
 
 /**

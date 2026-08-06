@@ -29,12 +29,14 @@ type Props = {
   items: RABItem[];
   area: number;
   mode: RABMode;
+  buildingMasses?: any[];
 };
 
 export default function RABSummaryTable({
   items,
   area,
   mode,
+  buildingMasses = [],
 }: Props) {
   /* ================================
      OPTIONS STATE
@@ -43,21 +45,35 @@ export default function RABSummaryTable({
   const [includeRounding, setIncludeRounding] = useState(false);
   const [roundingDigits, setRoundingDigits] = useState(3); // default: Ribuan
 
+  const massMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (Array.isArray(buildingMasses)) {
+      buildingMasses.forEach((m) => {
+        const a = Number(m.buildingArea);
+        if (Number.isFinite(a) && a >= 0) {
+          map.set(m.code, a);
+        }
+      });
+    }
+    return map;
+  }, [buildingMasses]);
+
+  const getItemTotalCost = (item: RABItem): number => {
+    if (mode === "ESTIMATES" || mode === "DETAIL") {
+      return item.total || 0;
+    }
+    const massSpecificArea = massMap.get(item.code);
+    const effectiveArea = massSpecificArea !== undefined ? massSpecificArea : area;
+    return Math.round(getNodeTotalPerM2(item) * effectiveArea);
+  };
+
   /* ================================
      TOTAL PROJECT COST (Rp)
   ================================ */
   const totalProjectCost = useMemo(() => {
-    const raw = items.reduce(
-      (sum, item) => {
-        if (mode === "ESTIMATES" || mode === "DETAIL") {
-          return sum + (item.total || 0);
-        }
-        return sum + getNodeTotalPerM2(item) * area;
-      },
-      0
-    );
+    const raw = items.reduce((sum, item) => sum + getItemTotalCost(item), 0);
     return Math.round(raw);
-  }, [items, area, mode]);
+  }, [items, area, mode, massMap]);
 
   /* ================================
      COST PER m² (DERIVED)
@@ -156,9 +172,7 @@ export default function RABSummaryTable({
 
           {/* ===== DISCIPLINE ROWS ===== */}
           {items.map((row) => {
-            const rowTotal = (mode === "ESTIMATES" || mode === "DETAIL")
-              ? (row.total || 0)
-              : Math.round(getNodeTotalPerM2(row) * area);
+            const rowTotal = getItemTotalCost(row);
             const rowPerM2 = area > 0 ? Math.round(rowTotal / area) : 0;
             const weight = totalProjectCost > 0 ? (rowTotal / totalProjectCost) * 100 : 0;
 

@@ -21,8 +21,9 @@ import type {
 import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
 import { WBS_ADDONS } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs.addons";
 import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-estimates";
-import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
+import { buildWBSTree, ensureMultiBuildingWBS, mergeWBSTrees } from "@/lib/flow/mappers/wbs-tree";
 import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-inherit";
+import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
 import WBSList from "@/components/flow/projects/project-detail/setup/wbs/WBSList";
 import { AddDisciplineModal, ConfirmModal } from "@/components/flow/projects/project-detail/setup/wbs/WBSModals";
 import {
@@ -206,109 +207,15 @@ export default function ProjectSetupWBSPage() {
           
         if (error) throw error;
         
-        const dbWbs = data || [];
-        const compareWBSCodes = (a: string, b: string): number => {
-          const partsA = a.split('.');
-          const partsB = b.split('.');
-          const minLen = Math.min(partsA.length, partsB.length);
-          for (let i = 0; i < minLen; i++) {
-            const partA = partsA[i];
-            const partB = partsB[i];
-            const numA = parseInt(partA);
-            const numB = parseInt(partB);
-            const isNumA = !isNaN(numA);
-            const isNumB = !isNaN(numB);
-            if (isNumA && isNumB) {
-              if (numA !== numB) return numA - numB;
-            } else if (partA !== partB) {
-              return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
-            }
-          }
-          return partsA.length - partsB.length;
-        };
+        const rawWbs = data || [];
+        const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+        const dbTree = buildWBSTree(rawWbs);
+        const mergedTree = mergeWBSTrees(dbTree, defaultTree);
+        const fullTree = ensureMultiBuildingWBS(mergedTree, project);
 
-        if (dbWbs.length > 0) {
-          const idMap = new Map<string, any>();
-          dbWbs.forEach((item: any) => {
-            idMap.set(item.id, {
-              ...item,
-              code: item.wbs_code,
-              nameEn: item.title || "",
-              nameId: item.title_en || item.title || "",
-              children: []
-            });
-          });
-
-          const rootsList: any[] = [];
-          dbWbs.forEach((item: any) => {
-            const node = idMap.get(item.id);
-            if (item.parent_id && idMap.has(item.parent_id)) {
-              idMap.get(item.parent_id).children.push(node);
-            } else {
-              rootsList.push(node);
-            }
-          });
-
-          const sortNodes = (list: any[]) => {
-            list.sort((a, b) => compareWBSCodes(a.code, b.code));
-            list.forEach(node => {
-              if (node.children) sortNodes(node.children);
-            });
-          };
-
-          sortNodes(rootsList);
-
-          const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
-          rootsList.sort((a, b) => {
-            const prefixA = a.code.split('.')[0];
-            const prefixB = b.code.split('.')[0];
-            const orderA = ORDER_MAP[prefixA] ?? (prefixA.length === 1 ? prefixA.charCodeAt(0) : 999);
-            const orderB = ORDER_MAP[prefixB] ?? (prefixB.length === 1 ? prefixB.charCodeAt(0) : 999);
-            return orderA - orderB;
-          });
-
-          setFullWbsTree(rootsList);
-          setHistory([rootsList]);
-          setHistoryIndex(0);
-        } else {
-          // No items in DB yet -> generate based on project building_mass_count / building_masses
-          const count = project.building_mass_count || 1;
-          const masses = project.building_masses || [];
-
-          const baseDetail = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
-
-          if (count > 1 && Array.isArray(masses) && masses.length > 0) {
-            const multiBuildingTree = masses.map((mass: any, idx: number) => {
-              const prefix = mass.code;
-              const massTitle = `${prefix}. ${mass.name}`;
-
-              const prefixChildren = (nodes: any[]): any[] => {
-                return nodes.map((node) => ({
-                  ...node,
-                  id: `node-${prefix}-${node.code}-${node.id || idx}`,
-                  code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
-                  children: node.children ? prefixChildren(node.children) : undefined,
-                }));
-              };
-
-              return {
-                id: `mass-${prefix}-${idx}`,
-                code: prefix,
-                nameEn: massTitle,
-                nameId: massTitle,
-                children: prefixChildren(baseDetail),
-              };
-            });
-
-            setFullWbsTree(multiBuildingTree);
-            setHistory([multiBuildingTree]);
-            setHistoryIndex(0);
-          } else {
-            setFullWbsTree(baseDetail);
-            setHistory([baseDetail]);
-            setHistoryIndex(0);
-          }
-        }
+        setFullWbsTree(fullTree);
+        setHistory([fullTree]);
+        setHistoryIndex(0);
       } catch (err) {
         console.error("Error loading project WBS:", err);
       } finally {
@@ -328,29 +235,83 @@ export default function ProjectSetupWBSPage() {
 
   // Helper to add/remove discipline addon from tree
   const toggleDiscipline = (disciplineCode: "A" | "M" | "I" | "L") => {
-    const hasDiscipline = fullWbsTree.some(item => item.code === disciplineCode);
+    setFullWbsTree((prev) => {
+      const isMulti = prev.some((r) => r.children && r.children.some((c: any) => c.code.includes(".")));
 
-    if (hasDiscipline) {
-      // Remove discipline
-      setFullWbsTree(prev => prev.filter(item => item.code !== disciplineCode));
-    } else {
-      // Add discipline from default full tree
-      const defaultFullTree = buildDetailFromEstimates(
-        buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA)
+      if (!isMulti) {
+        const hasDiscipline = prev.some((item) => item.code === disciplineCode);
+        if (hasDiscipline) {
+          return prev.filter((item) => item.code !== disciplineCode);
+        } else {
+          const defaultFullTree = buildDetailFromEstimates(
+            buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA)
+          );
+          const defaultNode = defaultFullTree.find((item) => item.code === disciplineCode);
+          if (!defaultNode) return prev;
+          const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+          const newTree = [...prev, defaultNode];
+          newTree.sort((a, b) => (ORDER_MAP[a.code] ?? 999) - (ORDER_MAP[b.code] ?? 999));
+          return newTree;
+        }
+      }
+
+      // Multi-building tree: toggle discipline inside each building mass
+      const hasDiscipline = prev.some((mass) =>
+        mass.children?.some((child: any) => {
+          const sub = child.code.replace(/^[A-Z]\./, "");
+          return sub === disciplineCode;
+        })
       );
-      const defaultNode = defaultFullTree.find(item => item.code === disciplineCode);
-      if (!defaultNode) return;
 
-      const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
-      const newTree = [...fullWbsTree, defaultNode];
-      newTree.sort((a, b) => {
-        const orderA = ORDER_MAP[a.code] ?? 999;
-        const orderB = ORDER_MAP[b.code] ?? 999;
-        return orderA - orderB;
-      });
+      if (hasDiscipline) {
+        return prev.map((mass) => ({
+          ...mass,
+          children: mass.children?.filter((child: any) => {
+            const sub = child.code.replace(/^[A-Z]\./, "");
+            return sub !== disciplineCode;
+          }),
+        }));
+      } else {
+        const defaultFullTree = buildDetailFromEstimates(
+          buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA)
+        );
+        const defaultNode = defaultFullTree.find((item) => item.code === disciplineCode);
+        if (!defaultNode) return prev;
 
-      setFullWbsTree(newTree);
-    }
+        return prev.map((mass) => {
+          const prefix = mass.code;
+          const prefixChildren = (nodes: any[]): any[] => {
+            return nodes.map((node) => ({
+              ...node,
+              id: `node-${prefix}-${node.code}-${Math.random()}`,
+              code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
+              children: node.children ? prefixChildren(node.children) : undefined,
+            }));
+          };
+
+          const newChild = {
+            ...defaultNode,
+            id: `node-${prefix}-${defaultNode.code}-${Math.random()}`,
+            code: `${prefix}.${defaultNode.code}`,
+            children: defaultNode.children ? prefixChildren(defaultNode.children) : undefined,
+          };
+
+          const existingChildren = mass.children || [];
+          const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+          const updatedChildren = [...existingChildren, newChild];
+          updatedChildren.sort((a, b) => {
+            const subA = a.code.replace(/^[A-Z]\./, "");
+            const subB = b.code.replace(/^[A-Z]\./, "");
+            return (ORDER_MAP[subA] ?? 999) - (ORDER_MAP[subB] ?? 999);
+          });
+
+          return {
+            ...mass,
+            children: updatedChildren,
+          };
+        });
+      }
+    });
     markEdited();
   };
 
@@ -468,7 +429,7 @@ export default function ProjectSetupWBSPage() {
   };
 
   const saveTreeToDb = async (treeToSave: any[]) => {
-    if (!project?.workspace_id) return;
+    if (!project?.id) return;
     
     try {
       setIsLoadingWBS(true);
@@ -488,54 +449,49 @@ export default function ProjectSetupWBSPage() {
 
       const treeWithUuids = prepareTreeWithUuids(treeToSave);
 
-      // 2. Delete all current WBS items for this workspace
+      // 2. Delete all current WBS items for this project
       const { error: deleteError } = await supabase
-        .from('work_breakdown_structure')
+        .from('project_wbs_items')
         .delete()
-        .eq('workspace_id', project.workspace_id);
+        .eq('project_id', project.id);
         
       if (deleteError) throw deleteError;
       
-      // 3. Flatten tree client-side and prepare rows
+      // 3. Flatten tree client-side and prepare rows for project_wbs_items
       const rowsToInsert: any[] = [];
-      const traverseAndPrepare = (item: any, parentDbId: string | null = null, indentLevel: number = 0) => {
-        let currentLevel = "structure";
-        if (indentLevel === 0) currentLevel = "structure";
-        else if (indentLevel === 1) currentLevel = "summary";
-        else if (indentLevel === 2) currentLevel = "estimate";
-        else if (indentLevel >= 3) currentLevel = "detail";
-
+      const traverseAndPrepare = (item: any, parentDbId: string | null = null, indentLevel: number = 0, pos: number = 0) => {
         const code = item.code || "NO-CODE";
-        const name = item.nameEn || item.name || "Unnamed";
-        const description = item.nameId || item.description || "";
+        const title = item.nameEn || item.name || "Unnamed";
+        const titleEn = item.nameId || item.description || null;
         const notes = item.notes || null;
 
         rowsToInsert.push({
           id: item.id,
-          workspace_id: project.workspace_id,
-          code: code,
-          name: name,
-          level: currentLevel,
-          indent_level: indentLevel,
+          project_id: project.id,
+          wbs_code: code,
+          title: title,
+          title_en: titleEn,
+          level: indentLevel,
+          position: pos,
           parent_id: parentDbId,
-          description: description,
+          is_leaf: !item.children || item.children.length === 0,
           notes: notes,
-          sort_order: parseInt(code.split('.').pop() || "0") || 1
+          unit: item.unit || null,
         });
 
         const children = item.children || [];
-        for (const child of children) {
-          traverseAndPrepare(child, item.id, indentLevel + 1);
+        for (let i = 0; i < children.length; i++) {
+          traverseAndPrepare(children[i], item.id, indentLevel + 1, i + 1);
         }
       };
 
-      for (const root of treeWithUuids) {
-        traverseAndPrepare(root);
+      for (let i = 0; i < treeWithUuids.length; i++) {
+        traverseAndPrepare(treeWithUuids[i], null, 0, i + 1);
       }
 
-      // 4. Single Bulk Insert to database
+      // 4. Single Bulk Insert to project_wbs_items database
       const { error: insertError } = await supabase
-        .from("work_breakdown_structure")
+        .from("project_wbs_items")
         .insert(rowsToInsert);
 
       if (insertError) throw insertError;
