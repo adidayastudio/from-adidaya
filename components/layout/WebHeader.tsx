@@ -105,6 +105,7 @@ export default function WebHeader({
   const isVibeActive = !!headerContent.shellBackground;
   const isFinanceRoute = pathname.includes('/flow/finance');
   const hideDefaults = isFinanceRoute || headerContent.hideGlobalActions;
+  const isProjectRoute = pathname.includes('/flow/projects') || pathname.includes('/project');
 
   return (
     <header className="h-[60px] flex items-start px-4 md:px-0 pt-0 gap-3 select-none bg-transparent absolute top-0 left-0 right-0 z-50 pointer-events-none">
