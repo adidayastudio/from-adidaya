@@ -29,7 +29,7 @@ export default function ProjectDetailSidebar() {
   const params = useParams();
   const pathname = usePathname();
   const projectId = params.projectId as string;
-  const basePath = `/project/${projectId}`;
+  const basePath = `/flow/projects/${projectId}`;
 
   // Accordion states for Desktop
   const [planningOpen, setPlanningOpen] = useState(false);
