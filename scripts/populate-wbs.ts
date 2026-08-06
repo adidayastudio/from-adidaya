@@ -399,11 +399,139 @@ const pdfMEP = [
   ]}
 ];
 
-// PDF overrides map by discipline letter
-const pdfByDiscipline: Record<string, any[]> = {
-  "S": pdfStructure,
-  "A": pdfArchitecture,
-  "M": pdfMEP
+// Kolam PDF items (under B.S)
+const pdfKolamStructure = [
+  {
+    code: "S.3", nameId: "Pekerjaan Dak Beton", nameEn: "Concrete Slab Works", children: [
+      {
+        code: "S.3.1", nameId: "Pekerjaan Dak Beton di Atas Kolam Tebal 12 cm", nameEn: "Concrete Slab Above Pool 12cm Thick", children: [
+          { code: "S.3.1.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+          { code: "S.3.1.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+          { code: "S.3.1.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+        ]
+      },
+      {
+        code: "S.3.2", nameId: "Pekerjaan Balok B1", nameEn: "Beam B1 Works", children: [
+          { code: "S.3.2.1", nameId: "Bekisting", nameEn: "Formwork" },
+          { code: "S.3.2.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+          { code: "S.3.2.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+        ]
+      },
+      {
+        code: "S.3.3", nameId: "Pekerjaan Balok B3", nameEn: "Beam B3 Works", children: [
+          { code: "S.3.3.1", nameId: "Bekisting", nameEn: "Formwork" },
+          { code: "S.3.3.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+          { code: "S.3.3.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+        ]
+      }
+    ]
+  },
+  {
+    code: "S.4", nameId: "Pekerjaan Baja", nameEn: "Steel Works", children: [
+      {
+        code: "S.4.1", nameId: "Pekerjaan Rangka Utama Atap", nameEn: "Main Roof Framing Works", children: [
+          { code: "S.4.1.1", nameId: "Batang Atas 2L 60x60x6", nameEn: "Top Chord 2L 60x60x6" },
+          { code: "S.4.1.2", nameId: "Batang Bawah 2L 65x65x9", nameEn: "Bottom Chord 2L 65x65x9" },
+          { code: "S.4.1.3", nameId: "Batang Tegak 2L 50x50x5", nameEn: "Vertical Member 2L 50x50x5" },
+          { code: "S.4.1.4", nameId: "Batang Diagonal 2L 50x50x5", nameEn: "Diagonal Member 2L 50x50x5" },
+          { code: "S.4.1.5", nameId: "Gusset Plate Seluruh Simpul", nameEn: "Gusset Plate All Nodes" },
+          { code: "S.4.1.6", nameId: "Batten/Spacer Plate Batang 2L", nameEn: "Batten/Spacer Plate 2L" },
+          { code: "S.4.1.7", nameId: "Seat Plate, End Plate, Plat Tumpuan", nameEn: "Seat Plate, End Plate, Bearing Plate" },
+          { code: "S.4.1.8", nameId: "Stiffener dan Plat Sambungan Tambahan", nameEn: "Stiffener & Additional Connection Plate" },
+          { code: "S.4.1.9", nameId: "Allowance Waste", nameEn: "Allowance Waste" }
+        ]
+      },
+      {
+        code: "S.4.2", nameId: "Pekerjaan Struktur Sekunder Atap", nameEn: "Secondary Roof Structure", children: [
+          { code: "S.4.2.1", nameId: "Gording CNP 125x50x20x2,3 mm", nameEn: "Purlin CNP 125x50x20x2.3mm" },
+          { code: "S.4.2.2", nameId: "Ikatan Angin Bidang Atap", nameEn: "Roof Plane Wind Bracing" },
+          { code: "S.4.2.3", nameId: "Ikatan Angin Vertikal Antarrangka", nameEn: "Vertical Wind Bracing Between Frames" },
+          { code: "S.4.2.4", nameId: "Sagrod", nameEn: "Sagrod" },
+          { code: "S.4.2.5", nameId: "Cleat, Bracket, dan Plat Sambungan Gording", nameEn: "Cleat, Bracket & Purlin Connection Plate" },
+          { code: "S.4.2.6", nameId: "Baut M16-M20 (Include Mur dan Washer)", nameEn: "Bolt M16-M20 (inc. Nut & Washer)" },
+          { code: "S.4.2.7", nameId: "Anchor Bolt M20-M24 (Include Mur, Washer, Template)", nameEn: "Anchor Bolt M20-M24 (inc. Nut, Washer, Template)" },
+          { code: "S.4.2.8", nameId: "Allowance Waste", nameEn: "Allowance Waste" }
+        ]
+      },
+      { code: "S.4.3", nameId: "Mobilisasi, Alat Angkat, dan Rangka Erection", nameEn: "Mobilization, Lifting Equipment & Frame Erection" }
+    ]
+  }
+];
+
+// Kolam Architecture PDF items (under B.A)
+const pdfKolamArchitecture = [
+  {
+    code: "A.1", nameId: "Pekerjaan Pasangan Dinding", nameEn: "Wall Masonry Works", children: [
+      { code: "A.1.1", nameId: "Pemasangan 1 m2 Roster", nameEn: "Breeze Block Installation 1m2" }
+    ]
+  },
+  {
+    code: "A.4", nameId: "Pekerjaan Penutup Atap", nameEn: "Roof Covering Works", children: [
+      { code: "A.4.1", nameId: "Pekerjaan 1 m2 Penutup Atap PVC Sheet Ex. Alderon Double Twin Wall", nameEn: "PVC Roofing Sheet Alderon Double Twin Wall 1m2" },
+      { code: "A.4.2", nameId: "Pekerjaan Talang", nameEn: "Gutter Works" },
+      { code: "A.4.3", nameId: "Pekerjaan Aluminium Foil Bubble", nameEn: "Aluminium Foil Insulation" },
+      { code: "A.4.4", nameId: "Pekerjaan Nok, Flashing, dan Aksesoris", nameEn: "Ridge Capping, Flashing & Accessories" }
+    ]
+  }
+];
+
+// Kolam MEP PDF items (under B.M)
+const pdfKolamMEP = [
+  {
+    code: "M.1", nameId: "Pekerjaan Pemipaan Umum", nameEn: "General Plumbing Works", children: [
+      {
+        code: "M.1.1", nameId: "Pekerjaan Pemipaan Air Hujan", nameEn: "Storm Water Plumbing Works", children: [
+          {
+            code: "M.1.1.1", nameId: "Instalasi Air Hujan", nameEn: "Storm Water Installation", children: [
+              { code: "M.1.1.1.1", nameId: "Pipa Tegak dan Horizontal", nameEn: "Riser & Horizontal Pipes" },
+              { code: "M.1.1.1.2", nameId: "PVC AW dia. 4\"", nameEn: "PVC AW dia. 4\"" },
+              { code: "M.1.1.1.3", nameId: "PVC AW dia. 3\" Horizontal", nameEn: "PVC AW dia. 3\" Horizontal" },
+              { code: "M.1.1.1.4", nameId: "PVC AW dia. 3\" Tegak", nameEn: "PVC AW dia. 3\" Riser" },
+              { code: "M.1.1.1.5", nameId: "Fitting dan Aksesoris", nameEn: "Fittings & Accessories" },
+              { code: "M.1.1.1.6", nameId: "Hanger dan Bracket", nameEn: "Hangers & Brackets" },
+              { code: "M.1.1.1.7", nameId: "Cast Iron Floor Drain dia. 4\"", nameEn: "Cast Iron Floor Drain dia. 4\"" },
+              { code: "M.1.1.1.8", nameId: "Grouting dan Coring", nameEn: "Grouting & Coring" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    code: "M.3", nameId: "Pekerjaan Elektrikal Umum", nameEn: "General Electrical Works", children: [
+      {
+        code: "M.3.1", nameId: "Pekerjaan Kabel Toefuur", nameEn: "Cable Supply Works", children: [
+          {
+            code: "M.3.1.1", nameId: "Pekerjaan Pengadaan dan Pemasangan Kabel Distribusi Utama", nameEn: "Main Distribution Cable Supply & Installation", children: [
+              { code: "M.3.1.1.1", nameId: "MDP Kolam ke PP Kolam", nameEn: "Pool MDP to Pool PP" },
+              { code: "M.3.1.1.2", nameId: "MDP Kolam ke LP Kolam", nameEn: "Pool MDP to Pool LP" }
+            ]
+          },
+          {
+            code: "M.3.1.2", nameId: "Pekerjaan dan Pengadaan Kabel Grounding", nameEn: "Grounding Cable Supply", children: [
+              { code: "M.3.1.2.1", nameId: "Pengadaan Kabel Grounding BC", nameEn: "BC Grounding Cable" },
+              { code: "M.3.1.2.2", nameId: "Pembuatan Titik Grounding Elektrikal", nameEn: "Electrical Grounding Point" },
+              { code: "M.3.1.2.3", nameId: "Pembuatan Titik Grounding Elektronika", nameEn: "Electronics Grounding Point" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+];
+
+// PDF overrides map by mass code & discipline letter
+const pdfByMassAndDiscipline: Record<string, Record<string, any[]>> = {
+  "A": {
+    "S": pdfStructure,
+    "A": pdfArchitecture,
+    "M": pdfMEP
+  },
+  "B": {
+    "S": pdfKolamStructure,
+    "A": pdfKolamArchitecture,
+    "M": pdfKolamMEP
+  }
 };
 
 // ========================================================================
@@ -445,7 +573,6 @@ async function run() {
   
   for (const [mIdx, mass] of masses.entries()) {
     const prefix = mass.code;
-    const isGym = prefix === "A";
     const massId = crypto.randomUUID();
     
     // Building Mass Root
@@ -479,9 +606,10 @@ async function run() {
         is_leaf: false
       });
       
-      // Build PDF lookup for this discipline (Gym only)
-      const pdfItems = isGym ? pdfByDiscipline[discLetter] : undefined;
-      const pdfLookup = pdfItems ? buildPdfLookup(pdfItems) : new Map();
+      // Build PDF lookup for this discipline (if available for this mass)
+      const pdfItems = pdfByMassAndDiscipline[prefix]?.[discLetter];
+      const hasPdf = !!pdfItems;
+      const pdfLookup = hasPdf ? buildPdfLookup(pdfItems) : new Map();
       
       // Traverse SAMIL children of this discipline
       function traverseSamil(samilNodes: any[] | undefined, parentId: string, level: number) {
@@ -497,7 +625,7 @@ async function run() {
           let titleEn = samilNode.nameId;
           
           // Check if PDF has an override for this code
-          if (isGym && pdfLookup.has(normalizedCode)) {
+          if (hasPdf && pdfLookup.has(normalizedCode)) {
             const pdfItem = pdfLookup.get(normalizedCode)!;
             title = pdfItem.nameEn;    // English
             titleEn = pdfItem.nameId;  // Indonesian
@@ -517,7 +645,7 @@ async function run() {
           });
           
           // If PDF has deeper children that SAMIL doesn't have, add them
-          if (isGym && pdfLookup.has(normalizedCode)) {
+          if (hasPdf && pdfLookup.has(normalizedCode)) {
             const pdfItem = pdfLookup.get(normalizedCode)!;
             if (pdfItem.children && (!samilNode.children || samilNode.children.length === 0)) {
               // PDF has children but SAMIL leaf → insert PDF children
@@ -554,9 +682,9 @@ async function run() {
         });
       }
       
-      // For Gym: Also add PDF items that are NOT in SAMIL template 
+      // Also add PDF items that are NOT in SAMIL template 
       // (PDF items with codes that don't exist in SAMIL)
-      if (isGym && pdfItems) {
+      if (hasPdf && pdfItems) {
         // First, collect all normalized SAMIL codes for this discipline
         const samilCodes = new Set<string>();
         function collectSamilCodes(nodes: any[] | undefined) {
