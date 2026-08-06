@@ -77,27 +77,28 @@ export function buildWBSTree(items: any[]): WBSNode[] {
         const minLen = Math.min(partsA.length, partsB.length);
         const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
 
-        if (partsA.length > 0 && partsB.length > 0) {
-            const firstA = partsA[0];
-            const firstB = partsB[0];
-            if (firstA !== firstB) {
-                const orderA = ORDER_MAP[firstA] ?? (firstA.length === 1 ? firstA.charCodeAt(0) : 999);
-                const orderB = ORDER_MAP[firstB] ?? (firstB.length === 1 ? firstB.charCodeAt(0) : 999);
-                if (orderA !== orderB) return orderA - orderB;
-            }
-        }
-
         for (let i = 0; i < minLen; i++) {
             const partA = partsA[i];
             const partB = partsB[i];
-            const numA = parseInt(partA);
-            const numB = parseInt(partB);
-            const isNumA = !isNaN(numA);
-            const isNumB = !isNaN(numB);
-            if (isNumA && isNumB) {
-                if (numA !== numB) return numA - numB;
-            } else if (partA !== partB) {
-                return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: "base" });
+
+            if (partA !== partB) {
+                const orderA = ORDER_MAP[partA];
+                const orderB = ORDER_MAP[partB];
+
+                if (orderA !== undefined && orderB !== undefined) {
+                    if (orderA !== orderB) return orderA - orderB;
+                }
+
+                const numA = parseInt(partA);
+                const numB = parseInt(partB);
+                const isNumA = !isNaN(numA);
+                const isNumB = !isNaN(numB);
+
+                if (isNumA && isNumB) {
+                    if (numA !== numB) return numA - numB;
+                } else {
+                    return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: "base" });
+                }
             }
         }
         return partsA.length - partsB.length;
