@@ -209,17 +209,17 @@ export default function ProjectSetupRABPage() {
   const [dbWbsItems, setDbWbsItems] = useState<any[]>([]);
   const [isLoadingWBS, setIsLoadingWBS] = useState(true);
 
-  // Fetch WBS dynamically from DB matching workspace
+  // Fetch WBS dynamically from DB matching project
   useEffect(() => {
-    if (!project?.workspace_id) return;
+    if (!project?.id) return;
     
     async function fetchWbs() {
       try {
         setIsLoadingWBS(true);
         const { data, error } = await supabase
-          .from("work_breakdown_structure")
+          .from("project_wbs_items")
           .select("*")
-          .eq("workspace_id", project.workspace_id);
+          .eq("project_id", project.id);
           
         if (error) throw error;
         
@@ -249,8 +249,9 @@ export default function ProjectSetupRABPage() {
           dbWbs.forEach((item: any) => {
             idMap.set(item.id, {
               ...item,
-              nameEn: item.name || "",
-              nameId: item.description || "",
+              code: item.wbs_code,
+              nameEn: item.title || "",
+              nameId: item.title_en || item.title || "",
               children: []
             });
           });
@@ -278,12 +279,14 @@ export default function ProjectSetupRABPage() {
           rootsList.sort((a, b) => {
             const prefixA = a.code.split('.')[0];
             const prefixB = b.code.split('.')[0];
-            const orderA = ORDER_MAP[prefixA] ?? 999;
-            const orderB = ORDER_MAP[prefixB] ?? 999;
+            const orderA = ORDER_MAP[prefixA] ?? (prefixA.length === 1 ? prefixA.charCodeAt(0) : 999);
+            const orderB = ORDER_MAP[prefixB] ?? (prefixB.length === 1 ? prefixB.charCodeAt(0) : 999);
             return orderA - orderB;
           });
 
           setDbWbsItems(rootsList);
+        } else {
+          setDbWbsItems([]);
         }
       } catch (err) {
         console.error("Error fetching project WBS:", err);
@@ -293,11 +296,53 @@ export default function ProjectSetupRABPage() {
     }
     
     fetchWbs();
-  }, [project?.workspace_id, refreshTrigger]);
+  }, [project?.id, refreshTrigger]);
 
   const activeWBS = useMemo(() => {
+    const count = project?.building_mass_count || 1;
+    const masses = project?.building_masses || [];
+
+    // Check if dbWbsItems already has Level 0 building mass nodes (A, B, C)
+    const hasLevel0 = dbWbsItems.length > 0 && dbWbsItems.some((item) => {
+      const code = item.code;
+      return code === "A" || code === "B" || (Array.isArray(masses) && masses.some((m: any) => m.code === code));
+    });
+
+    if (hasLevel0) {
+      return dbWbsItems;
+    }
+
+    // If project is multi-building (count > 1) but DB items or defaults don't have Level 0 prefix:
+    if (count > 1 && Array.isArray(masses) && masses.length > 0) {
+      const baseDetail = dbWbsItems.length > 0
+        ? dbWbsItems
+        : buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+
+      return masses.map((mass: any, idx: number) => {
+        const prefix = mass.code;
+        const massTitle = `${prefix}. ${mass.name}`;
+
+        const prefixChildren = (nodes: any[]): any[] => {
+          return nodes.map((node) => ({
+            ...node,
+            id: `node-${prefix}-${node.code}-${node.id || idx}`,
+            code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
+            children: node.children ? prefixChildren(node.children) : undefined,
+          }));
+        };
+
+        return {
+          id: `mass-${prefix}-${idx}`,
+          code: prefix,
+          nameEn: massTitle,
+          nameId: massTitle,
+          children: prefixChildren(baseDetail),
+        };
+      });
+    }
+
     return dbWbsItems.length > 0 ? dbWbsItems : WBS_BALLPARK;
-  }, [dbWbsItems]);
+  }, [dbWbsItems, project]);
 
 
 
@@ -410,22 +455,18 @@ export default function ProjectSetupRABPage() {
 
   // 2. Build RAB Tree (Estimates)
   const rabTreeEstimates = useMemo(() => {
-    const wbsEstimates = dbWbsItems.length > 0
-      ? activeWBS 
-      : buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA);
+    const wbsEstimates = activeWBS;
     return buildRABEstimates(wbsEstimates, estimateValues, {
       rabClass: context.buildingClass,
       rf: context.rf,
       df: context.df,
       adjustmentFactor: adjustmentFactor
     });
-  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass, context.rf, context.df, adjustmentFactor]);
+  }, [estimateValues, activeWBS, context.buildingClass, context.rf, context.df, adjustmentFactor]);
 
   // 3. Build RAB Tree (Detail Mode - Deep L4/L5)
   const rabTreeDetail = useMemo(() => {
-    const wbsDetail = dbWbsItems.length > 0
-      ? activeWBS 
-      : buildDetailFromEstimates(buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA));
+    const wbsDetail = activeWBS;
 
     return buildRABEstimates(wbsDetail, estimateValues, {
       rabClass: context.buildingClass,
@@ -433,7 +474,7 @@ export default function ProjectSetupRABPage() {
       df: context.df,
       adjustmentFactor: adjustmentFactor
     });
-  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass, context.rf, context.df, adjustmentFactor]);
+  }, [estimateValues, activeWBS, context.buildingClass, context.rf, context.df, adjustmentFactor]);
 
   // ACTIVE TREE
   const activeTree = useMemo(() => {

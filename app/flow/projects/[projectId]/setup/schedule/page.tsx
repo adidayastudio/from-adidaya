@@ -82,14 +82,14 @@ export default function ProjectSetupSchedulePage() {
   }, [project]);
 
   useEffect(() => {
-    if (!project?.workspace_id) return;
+    if (!project?.id) return;
     
     async function fetchWbs() {
       try {
         const { data, error } = await supabase
-          .from("work_breakdown_structure")
+          .from("project_wbs_items")
           .select("*")
-          .eq("workspace_id", project.workspace_id);
+          .eq("project_id", project.id);
           
         if (error) throw error;
         
@@ -119,8 +119,9 @@ export default function ProjectSetupSchedulePage() {
           dbWbs.forEach((item: any) => {
             idMap.set(item.id, {
               ...item,
-              nameEn: item.name || "",
-              nameId: item.description || "",
+              code: item.wbs_code,
+              nameEn: item.title || "",
+              nameId: item.title_en || item.title || "",
               children: []
             });
           });
@@ -148,8 +149,8 @@ export default function ProjectSetupSchedulePage() {
           rootsList.sort((a, b) => {
             const prefixA = a.code.split('.')[0];
             const prefixB = b.code.split('.')[0];
-            const orderA = ORDER_MAP[prefixA] ?? 999;
-            const orderB = ORDER_MAP[prefixB] ?? 999;
+            const orderA = ORDER_MAP[prefixA] ?? (prefixA.length === 1 ? prefixA.charCodeAt(0) : 999);
+            const orderB = ORDER_MAP[prefixB] ?? (prefixB.length === 1 ? prefixB.charCodeAt(0) : 999);
             return orderA - orderB;
           });
 
@@ -161,11 +162,42 @@ export default function ProjectSetupSchedulePage() {
     }
     
     fetchWbs();
-  }, [project?.workspace_id]);
+  }, [project?.id]);
 
   const activeWBS = useMemo(() => {
-    return dbWbsItems.length > 0 ? dbWbsItems : WBS_BALLPARK;
-  }, [dbWbsItems]);
+    if (dbWbsItems.length > 0) return dbWbsItems;
+
+    const count = project?.building_mass_count || 1;
+    const masses = project?.building_masses || [];
+
+    if (count > 1 && Array.isArray(masses) && masses.length > 0) {
+      const baseDetail = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+
+      return masses.map((mass: any, idx: number) => {
+        const prefix = mass.code;
+        const massTitle = `${prefix}. ${mass.name}`;
+
+        const prefixChildren = (nodes: any[]): any[] => {
+          return nodes.map((node) => ({
+            ...node,
+            id: `node-${prefix}-${node.code}-${node.id || idx}`,
+            code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
+            children: node.children ? prefixChildren(node.children) : undefined,
+          }));
+        };
+
+        return {
+          id: `mass-${prefix}-${idx}`,
+          code: prefix,
+          nameEn: massTitle,
+          nameId: massTitle,
+          children: prefixChildren(baseDetail),
+        };
+      });
+    }
+
+    return WBS_BALLPARK;
+  }, [dbWbsItems, project]);
 
   const estimateValues = useMemo<EstimateValues>(() => {
     return (project?.meta as any)?.estimateValues || {};

@@ -10,6 +10,10 @@ import { Save, Plus, Trash2, Calculator, ArrowRight, ChevronDown, ChevronRight, 
 import { supabase } from "@/lib/supabaseClient";
 import { useProject } from "@/components/flow/project-context";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
+import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
+import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-estimates";
+import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-inherit";
+import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
 
 // Define calculation item structure
 interface VolumeRow {
@@ -80,17 +84,23 @@ export default function VolumeCalcPage() {
 
   // Load WBS Items
   useEffect(() => {
-    if (!project?.workspace_id) return;
+    if (!project?.id) return;
     async function fetchWbs() {
       try {
         setIsLoadingWBS(true);
         const { data, error } = await supabase
-          .from("work_breakdown_structure")
+          .from("project_wbs_items")
           .select("*")
-          .eq("workspace_id", project.workspace_id);
+          .eq("project_id", project.id);
 
         if (error) throw error;
-        setDbWbsItems(data || []);
+        const mapped = (data || []).map((item: any) => ({
+          ...item,
+          code: item.wbs_code,
+          nameEn: item.title || "",
+          nameId: item.title_en || item.title || "",
+        }));
+        setDbWbsItems(mapped);
       } catch (err) {
         console.error("Error fetching WBS:", err);
       } finally {
@@ -98,7 +108,7 @@ export default function VolumeCalcPage() {
       }
     }
     fetchWbs();
-  }, [project?.workspace_id]);
+  }, [project?.id]);
 
   // Load saved volume calcs for the selected WBS Code
   useEffect(() => {
@@ -331,7 +341,50 @@ export default function VolumeCalcPage() {
 
   // Build hierarchical WBS Tree with exact natural sorting matching the WBS page
   const wbsTree = useMemo(() => {
-    if (!dbWbsItems.length) return [];
+    if (!dbWbsItems.length) {
+      const count = project?.building_mass_count || 1;
+      const masses = project?.building_masses || [];
+      const baseDetail = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+
+      if (count > 1 && Array.isArray(masses) && masses.length > 0) {
+        return masses.map((mass: any, idx: number) => {
+          const prefix = mass.code;
+          const massTitle = `${prefix}. ${mass.name}`;
+
+          const prefixChildren = (nodes: any[]): any[] => {
+            return nodes.map((node) => ({
+              id: `node-${prefix}-${node.code}-${node.id || idx}`,
+              code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
+              nameEn: node.nameEn || "",
+              nameId: node.nameId || node.nameEn || "",
+              unit: node.unit || "m³",
+              children: node.children ? prefixChildren(node.children) : [],
+            }));
+          };
+
+          return {
+            id: `mass-${prefix}-${idx}`,
+            code: prefix,
+            nameEn: massTitle,
+            nameId: massTitle,
+            children: prefixChildren(baseDetail),
+          };
+        });
+      }
+
+      const mapToTreeNode = (nodes: any[]): TreeNode[] => {
+        return nodes.map((n) => ({
+          id: n.id || n.code,
+          code: n.code,
+          nameEn: n.nameEn || "",
+          nameId: n.nameId || "",
+          unit: n.unit || "m³",
+          children: n.children ? mapToTreeNode(n.children) : [],
+        }));
+      };
+
+      return mapToTreeNode(baseDetail);
+    }
 
     const compareWBSCodes = (a: string, b: string): number => {
       const partsA = a.split('.');
@@ -367,7 +420,6 @@ export default function VolumeCalcPage() {
 
     const idMap = new Map<string, TreeNode>();
     dbWbsItems.forEach((item: any) => {
-      // Find override unit from project meta if saved
       const savedMetaUnit = (project?.meta as any)?.estimateValues?.[item.code]?.unit;
 
       idMap.set(item.id, {

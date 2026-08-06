@@ -192,17 +192,17 @@ export default function ProjectSetupWBSPage() {
 
   const [isLoadingWBS, setIsLoadingWBS] = useState(true);
 
-  // Load WBS from database on mount / workspace change
+  // Load WBS from database on mount / project change
   useEffect(() => {
-    if (!project?.workspace_id) return;
+    if (!project?.id) return;
     
     async function loadWBS() {
       try {
         setIsLoadingWBS(true);
         const { data, error } = await supabase
-          .from("work_breakdown_structure")
+          .from("project_wbs_items")
           .select("*")
-          .eq("workspace_id", project.workspace_id);
+          .eq("project_id", project.id);
           
         if (error) throw error;
         
@@ -227,55 +227,87 @@ export default function ProjectSetupWBSPage() {
           return partsA.length - partsB.length;
         };
 
-        const idMap = new Map<string, any>();
-        dbWbs.forEach((item: any) => {
-          idMap.set(item.id, {
-            ...item,
-            nameEn: item.name || "",
-            nameId: item.description || "",
-            children: []
+        if (dbWbs.length > 0) {
+          const idMap = new Map<string, any>();
+          dbWbs.forEach((item: any) => {
+            idMap.set(item.id, {
+              ...item,
+              code: item.wbs_code,
+              nameEn: item.title || "",
+              nameId: item.title_en || item.title || "",
+              children: []
+            });
           });
-        });
 
-        const rootsList: any[] = [];
-        dbWbs.forEach((item: any) => {
-          const node = idMap.get(item.id);
-          if (item.parent_id && idMap.has(item.parent_id)) {
-            idMap.get(item.parent_id).children.push(node);
-          } else {
-            rootsList.push(node);
-          }
-        });
-
-        const sortNodes = (list: any[]) => {
-          list.sort((a, b) => compareWBSCodes(a.code, b.code));
-          list.forEach(node => {
-            if (node.children) sortNodes(node.children);
+          const rootsList: any[] = [];
+          dbWbs.forEach((item: any) => {
+            const node = idMap.get(item.id);
+            if (item.parent_id && idMap.has(item.parent_id)) {
+              idMap.get(item.parent_id).children.push(node);
+            } else {
+              rootsList.push(node);
+            }
           });
-        };
 
-        sortNodes(rootsList);
+          const sortNodes = (list: any[]) => {
+            list.sort((a, b) => compareWBSCodes(a.code, b.code));
+            list.forEach(node => {
+              if (node.children) sortNodes(node.children);
+            });
+          };
 
-        const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
-        rootsList.sort((a, b) => {
-          const prefixA = a.code.split('.')[0];
-          const prefixB = b.code.split('.')[0];
-          const orderA = ORDER_MAP[prefixA] ?? 999;
-          const orderB = ORDER_MAP[prefixB] ?? 999;
-          return orderA - orderB;
-        });
+          sortNodes(rootsList);
 
-        if (rootsList.length > 0) {
-          const loadedCodes = new Set(rootsList.map((r) => r.code));
-          const defaultBallpark = WBS_BALLPARK;
-          const missingDefaults = defaultBallpark.filter((d) => !loadedCodes.has(d.code));
+          const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+          rootsList.sort((a, b) => {
+            const prefixA = a.code.split('.')[0];
+            const prefixB = b.code.split('.')[0];
+            const orderA = ORDER_MAP[prefixA] ?? (prefixA.length === 1 ? prefixA.charCodeAt(0) : 999);
+            const orderB = ORDER_MAP[prefixB] ?? (prefixB.length === 1 ? prefixB.charCodeAt(0) : 999);
+            return orderA - orderB;
+          });
 
-          const completeTree = missingDefaults.length > 0 ? [...rootsList, ...missingDefaults] : rootsList;
-          completeTree.sort((a, b) => (ORDER_MAP[a.code] ?? 999) - (ORDER_MAP[b.code] ?? 999));
-
-          setFullWbsTree(completeTree);
-          setHistory([completeTree]);
+          setFullWbsTree(rootsList);
+          setHistory([rootsList]);
           setHistoryIndex(0);
+        } else {
+          // No items in DB yet -> generate based on project building_mass_count / building_masses
+          const count = project.building_mass_count || 1;
+          const masses = project.building_masses || [];
+
+          const baseDetail = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+
+          if (count > 1 && Array.isArray(masses) && masses.length > 0) {
+            const multiBuildingTree = masses.map((mass: any, idx: number) => {
+              const prefix = mass.code;
+              const massTitle = `${prefix}. ${mass.name}`;
+
+              const prefixChildren = (nodes: any[]): any[] => {
+                return nodes.map((node) => ({
+                  ...node,
+                  id: `node-${prefix}-${node.code}-${node.id || idx}`,
+                  code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
+                  children: node.children ? prefixChildren(node.children) : undefined,
+                }));
+              };
+
+              return {
+                id: `mass-${prefix}-${idx}`,
+                code: prefix,
+                nameEn: massTitle,
+                nameId: massTitle,
+                children: prefixChildren(baseDetail),
+              };
+            });
+
+            setFullWbsTree(multiBuildingTree);
+            setHistory([multiBuildingTree]);
+            setHistoryIndex(0);
+          } else {
+            setFullWbsTree(baseDetail);
+            setHistory([baseDetail]);
+            setHistoryIndex(0);
+          }
         }
       } catch (err) {
         console.error("Error loading project WBS:", err);
@@ -285,7 +317,7 @@ export default function ProjectSetupWBSPage() {
     }
     
     loadWBS();
-  }, [project?.workspace_id]);
+  }, [project?.id, project?.building_mass_count, project?.building_masses]);
 
   const DISCIPLINE_ADDONS: { code: "A" | "M" | "I" | "L"; label: string }[] = [
     { code: "A", label: "Architecture" },

@@ -50,8 +50,9 @@ export function getWeight(
   code: string,
   rabClass: RABClass
 ): number {
+  const cleanCode = code.replace(/^[A-Z]\./, "");
   const row = RAB_BALLPARK_WEIGHTS.find(
-    (r) => r.code === code
+    (r) => r.code === code || r.code === cleanCode
   );
   if (!row) return 0;
 
