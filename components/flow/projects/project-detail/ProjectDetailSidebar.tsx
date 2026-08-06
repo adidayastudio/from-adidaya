@@ -72,8 +72,10 @@ export default function ProjectDetailSidebar() {
   }, []);
 
   const isRouteActive = (href: string, exact = false) => {
-    if (exact) return pathname === href;
-    return pathname.startsWith(href);
+    const cleanPath = (pathname || "").split("?")[0].replace(/\/$/, "");
+    const cleanHref = (href || "").split("?")[0].replace(/\/$/, "");
+    if (exact) return cleanPath === cleanHref;
+    return cleanPath.startsWith(cleanHref);
   };
 
   const handleTogglePlanning = () => {
@@ -201,11 +203,11 @@ export default function ProjectDetailSidebar() {
                         className={clsx(
                           "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                           active
-                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                            ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)]"
+                            : "text-neutral-600 dark:text-neutral-400 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-900 dark:hover:text-neutral-100 font-medium"
                         )}
                       >
-                        <item.icon className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                        <item.icon className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
                         <span className="truncate">{item.label}</span>
                       </Link>
                     );
