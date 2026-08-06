@@ -106,22 +106,24 @@ export default function WebHeader({
   const isFinanceRoute = pathname.includes('/flow/finance');
   const hideDefaults = isFinanceRoute || headerContent.hideGlobalActions;
 
+  const isProjectRoute = pathname.includes('/flow/projects') || pathname.includes('/project');
+
   return (
     <header className="h-[60px] flex items-start px-4 md:px-0 pt-0 gap-3 select-none bg-transparent absolute top-0 left-0 right-0 z-50 pointer-events-none">
       {/* Navigation Buttons Bubble */}
-      {/* Navigation Buttons Bubble */}
-      <div className={clsx(
-        "flex h-9 items-center gap-0.5 p-1 rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
-        isVibeActive
-          ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md"
-          : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl"
-      )}>
-        {headerContent.left ? (
-          headerContent.left
-        ) : (
-          <>
-            <button
-              onClick={() => canGoBack && router.back()}
+      {!isProjectRoute && (
+        <div className={clsx(
+          "flex h-9 items-center gap-0.5 p-1 rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
+          isVibeActive
+            ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md"
+            : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl"
+        )}>
+          {headerContent.left ? (
+            headerContent.left
+          ) : (
+            <>
+              <button
+                onClick={() => canGoBack && router.back()}
               disabled={!canGoBack}
               className={clsx(
                 "p-1.5 rounded-full transition-all",
@@ -149,6 +151,7 @@ export default function WebHeader({
           </>
         )}
       </div>
+      )}
 
       {/* Custom Left for Finance (if provided) */}
       {isFinanceRoute && headerContent.left && (
