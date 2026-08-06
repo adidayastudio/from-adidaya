@@ -44,8 +44,8 @@ export default function ProjectDetailSidebar() {
   const workMenuRef = useRef<HTMLDivElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
-  const isPlanningRoute = pathname.includes(`${basePath}/setup`);
-  const isWorkRoute = pathname.includes(`${basePath}/tracking`) || pathname.includes(`${basePath}/activity`);
+  const isPlanningRoute = pathname ? (pathname.includes('/setup') || pathname.includes('/settings')) : false;
+  const isWorkRoute = pathname ? (pathname.includes('/tracking') || pathname.includes('/activity')) : false;
 
   // Auto-open accordions when entering their respective routes
   useEffect(() => {
@@ -74,6 +74,19 @@ export default function ProjectDetailSidebar() {
   const isRouteActive = (href: string, exact = false) => {
     const cleanPath = (pathname || "").split("?")[0].replace(/\/$/, "");
     const cleanHref = (href || "").split("?")[0].replace(/\/$/, "");
+
+    // Extract subpath after projectId (e.g. "/setup/info", "/setup/wbs", "/tracking")
+    const pathSub = cleanPath.replace(/^\/(flow\/projects|project)\/[^\/]+/, "");
+    const hrefSub = cleanHref.replace(/^\/(flow\/projects|project)\/[^\/]+/, "");
+
+    if (pathSub && hrefSub) {
+      if (pathSub === hrefSub) return true;
+      if (pathSub.startsWith(hrefSub)) return true;
+      // Alias setup/info vs setup/general
+      if ((pathSub.includes('setup/info') || pathSub.includes('settings/general')) && (hrefSub.includes('setup/info') || hrefSub.includes('settings/general'))) return true;
+      return false;
+    }
+
     if (exact) return cleanPath === cleanHref;
     return cleanPath.startsWith(cleanHref);
   };

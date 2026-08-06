@@ -110,7 +110,25 @@ function ProjectDetailLocalSidebar({
         { label: "Schedule", href: `${basePath}/setup/schedule`, icon: Calendar },
     ];
 
-    const isPlanningRoute = pathname ? pathname.includes(`${basePath}/setup`) || pathname.includes(`/setup/`) || pathname.includes(`/settings/`) : false;
+    const isRouteActive = (href: string, exact = false) => {
+        const cleanPath = (pathname || "").split("?")[0].replace(/\/$/, "");
+        const cleanHref = (href || "").split("?")[0].replace(/\/$/, "");
+
+        const pathSub = cleanPath.replace(/^\/(flow\/projects|project)\/[^\/]+/, "");
+        const hrefSub = cleanHref.replace(/^\/(flow\/projects|project)\/[^\/]+/, "");
+
+        if (pathSub && hrefSub) {
+            if (pathSub === hrefSub) return true;
+            if (pathSub.startsWith(hrefSub)) return true;
+            if ((pathSub.includes('setup/info') || pathSub.includes('settings/general')) && (hrefSub.includes('setup/info') || hrefSub.includes('settings/general'))) return true;
+            return false;
+        }
+
+        if (exact) return cleanPath === cleanHref;
+        return cleanPath.startsWith(cleanHref);
+    };
+
+    const isPlanningRoute = pathname ? (pathname.includes('/setup') || pathname.includes('/settings')) : false;
 
     useEffect(() => {
         if (isPlanningRoute) setPlanningOpen(true);
@@ -126,12 +144,12 @@ function ProjectDetailLocalSidebar({
                     onClick={() => setActiveTab("overview")}
                     className={clsx(
                         "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
-                        activeTab === "overview"
+                        activeTab === "overview" && !isPlanningRoute
                             ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60"
                             : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
                     )}
                 >
-                    <LayoutDashboard className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "overview" ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+                    <LayoutDashboard className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "overview" && !isPlanningRoute ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
                     <span className="truncate">Overview</span>
                 </button>
 
@@ -154,7 +172,7 @@ function ProjectDetailLocalSidebar({
                     {planningOpen && (
                         <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-neutral-300 dark:border-neutral-700 pl-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
                             {PLANNING_ITEMS.map((item) => {
-                                const active = pathname ? (pathname === item.href || pathname.startsWith(item.href) || pathname.includes(item.href.replace(basePath, ""))) : false;
+                                const active = isRouteActive(item.href, true);
                                 return (
                                     <Link
                                         key={item.label}
