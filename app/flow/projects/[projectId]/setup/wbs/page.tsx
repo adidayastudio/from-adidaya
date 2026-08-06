@@ -625,7 +625,7 @@ export default function ProjectSetupWBSPage() {
                     Save Changes
                   </Button>
                 )}
-                {currentEditState === "saved" && (
+                {currentEditState !== "submitted" && (
                   <Button size="sm" onClick={submitWBS} icon={<Send className="w-4 h-4" />}>
                     Submit WBS
                   </Button>
@@ -672,6 +672,9 @@ export default function ProjectSetupWBSPage() {
                 </div>
 
                 {/* Status */}
+                {currentEditState === "pristine" && (
+                  <span className="text-xs text-neutral-500 font-medium">● Ready</span>
+                )}
                 {currentEditState === "draft" && (
                   <span className="text-xs text-amber-600 font-medium">● Draft</span>
                 )}
