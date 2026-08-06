@@ -234,8 +234,8 @@ export async function migrateSingleBuildingWBSToMassA(projectId: string, massANa
         massANode = created;
     }
 
-    // 3. Update wbs_code and level for all unmigrated items
-    for (const item of unmigrated) {
+    // 3. Update wbs_code and level for all unmigrated items in parallel batches
+    const updatePromises = unmigrated.map(async (item) => {
         const newCode = `A.${item.wbs_code}`;
         const newLevel = item.level + 1;
         
@@ -248,11 +248,12 @@ export async function migrateSingleBuildingWBSToMassA(projectId: string, massANa
             })
             .eq("id", item.id);
 
-        // Also update volume calcs referencing old wbs_code
         await supabase
             .from("project_volume_calcs")
             .update({ wbs_code: newCode })
             .eq("project_id", projectId)
             .eq("wbs_code", item.wbs_code);
-    }
+    });
+
+    await Promise.all(updatePromises);
 }
