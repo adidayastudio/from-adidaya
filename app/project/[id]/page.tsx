@@ -660,16 +660,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     // HEADER INJECTION (Desktop Only)
     useHeader({
         hideGlobalActions: true,
-        left: (
-            <div className="hidden lg:flex items-center gap-2 pointer-events-auto">
-                <button
-                    onClick={() => router.push("/project")}
-                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 active:scale-95 transition-all"
-                >
-                    <ChevronLeft size={16} strokeWidth={1.5} />
-                </button>
-            </div>
-        ),
         middle: project ? (
             <div className="hidden lg:flex items-center gap-2 pointer-events-auto text-[11px] font-bold text-neutral-800 dark:text-neutral-200 animate-in fade-in duration-300">
                 <span className="opacity-60 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => router.push("/project")}>Projects</span>
