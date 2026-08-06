@@ -94,36 +94,36 @@ export default function ProjectDetailTrackingContent() {
   };
 
   const tabs: TabItem<TrackingTab>[] = [
-    { key: "stages", label: "Design Scope (Stages & Tasks)" },
-    { key: "schedule", label: "Build Scope (WBS & Volume)", badge: `${summaryStats.totalItems} Items` },
+    { key: "stages", label: "Stages & Tasks" },
+    { key: "schedule", label: "WBS & Volume", badge: `${summaryStats.totalItems} Items` },
     { key: "rab", label: "RAB & Finance" },
     { key: "reports", label: "Site Reports" },
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* 1. TOP TAB NAVIGATION & ACTION BAR (FULL GLASSY PILLS) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-neutral-200/50 dark:border-neutral-800/50 pb-4">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* 1. TOP TAB NAVIGATION & ACTION BAR (CLEAN & SPACIOUS PILLS) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/[0.06] dark:border-white/[0.06] pb-4">
         {/* SEGMENTED FULL PILL TABS */}
-        <div className="flex items-center p-1.5 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl rounded-full border border-white/80 dark:border-white/10 shadow-sm overflow-x-auto gap-1.5">
+        <div className="flex items-center p-1 bg-neutral-200/50 dark:bg-neutral-800/50 backdrop-blur-xl rounded-full border border-black/[0.04] dark:border-white/10 shadow-inner overflow-x-auto hide-scrollbar gap-1 max-w-full">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
               className={clsx(
-                "px-5 py-2.5 text-xs rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2.5 shrink-0 active:scale-95",
+                "px-4 py-2 text-xs rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2 shrink-0 active:scale-95",
                 activeTab === tab.key
-                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white font-extrabold shadow-[0_2px_12px_rgba(0,0,0,0.08)] border border-black/[0.04] dark:border-white/10"
-                  : "text-neutral-600 dark:text-neutral-400 font-semibold hover:bg-white/60 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white"
+                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white font-extrabold shadow-sm border border-black/[0.04] dark:border-white/10"
+                  : "text-neutral-500 dark:text-neutral-400 font-medium hover:text-neutral-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-white/5"
               )}
             >
               <span>{tab.label}</span>
               {tab.badge && (
                 <span className={clsx(
-                  "px-2.5 py-0.5 text-[10px] font-extrabold rounded-full transition-colors",
+                  "px-2 py-0.5 text-[10px] font-extrabold rounded-full transition-colors",
                   activeTab === tab.key
-                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs"
-                    : "bg-neutral-200/80 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                    : "bg-neutral-300/60 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300"
                 )}>
                   {tab.badge}
                 </span>
@@ -133,13 +133,13 @@ export default function ProjectDetailTrackingContent() {
         </div>
 
         {/* TOP ACTIONS */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 self-end md:self-auto">
           <Button
             size="sm"
             variant="secondary"
             onClick={loadTrackingData}
-            icon={<RefreshCw className={clsx("w-3.5 h-3.5", isLoading && "animate-spin")} />}
-            className="rounded-full bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl border border-white/60 dark:border-white/10 hover:bg-white dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 shadow-sm"
+            icon={<RefreshCw className={clsx("w-3.5 h-3.5 text-neutral-600 dark:text-neutral-300", isLoading && "animate-spin")} />}
+            className="rounded-full bg-white dark:bg-neutral-900 border border-black/5 dark:border-white/10 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 shadow-sm text-xs font-bold px-4"
           >
             Refresh
           </Button>
@@ -148,7 +148,7 @@ export default function ProjectDetailTrackingContent() {
             size="sm"
             onClick={() => openInputModal()}
             icon={<Plus className="w-4 h-4" />}
-            className="rounded-full bg-brand-red hover:bg-brand-red/90 text-white shadow-[0_4px_14px_rgba(220,38,38,0.3)] active:scale-95"
+            className="rounded-full bg-brand-red hover:bg-brand-red/90 text-white shadow-sm font-bold text-xs px-4 active:scale-95"
           >
             + Input Progress Harian
           </Button>
