@@ -45,6 +45,10 @@ export function PageHeader({
   onBack,
   backLabel,
 }: PageHeaderProps) {
+  const pathname = usePathname();
+  const isProjectPage = pathname?.includes('/flow/projects') || pathname?.includes('/project');
+  const shouldShowBack = allowBack && !isProjectPage;
+
   return (
     <div className={clsx("space-y-3", className)}>
       {/* Breadcrumbs Bubble */}
@@ -92,7 +96,7 @@ export function PageHeader({
         <div className="flex items-start gap-3 min-w-0">
 
           {/* Back Button */}
-          {allowBack && (
+          {shouldShowBack && (
             backLabel ? (
               <Button
                 variant="outline"
