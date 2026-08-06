@@ -84,10 +84,12 @@ export async function fetchProjectTrackingData(projectId: string): Promise<Track
   }
 
   // 3. SSOT Tree transformation: DB -> buildWBSTree -> ensureMultiBuildingWBS -> flattenWBSTree
-  const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+  if (!allRows || allRows.length === 0) {
+    return [];
+  }
+
   const dbTree = buildWBSTree(allRows);
-  const baseTree = dbTree.length > 0 ? dbTree : defaultTree;
-  const fullTree = ensureMultiBuildingWBS(baseTree, project);
+  const fullTree = ensureMultiBuildingWBS(dbTree, project);
   const flattened = flattenWBSTree(fullTree);
 
   return (flattened as any[]).map((row: any) => {
