@@ -102,7 +102,6 @@ export default function ProjectDetailSidebar() {
     { label: "Volume Calc", href: `${basePath}/setup/volume-calc`, icon: Calculator },
     { label: "RAB", href: `${basePath}/setup/rab`, icon: DollarSign },
     { label: "Schedule", href: `${basePath}/setup/schedule`, icon: Calendar },
-    { label: "Rules", href: `${basePath}/setup/rules`, icon: ShieldCheck },
   ];
 
   const WORK_ITEMS = [
