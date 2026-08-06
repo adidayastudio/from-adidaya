@@ -298,6 +298,16 @@ export default function VolumeCalcPage() {
 
       if (metaErr) throw metaErr;
 
+      // 4. Update the volume and unit in the work_breakdown_structure table directly
+      await supabase
+        .from("work_breakdown_structure")
+        .update({
+          volume: totalVolume,
+          unit: selectedWbsUnit
+        })
+        .eq("workspace_id", project.workspace_id)
+        .eq("code", selectedWbsCode);
+
       // Refresh the project context to automatically propagate the updated estimateValues across the app (like RAB page)
       if (refresh) {
         await refresh();

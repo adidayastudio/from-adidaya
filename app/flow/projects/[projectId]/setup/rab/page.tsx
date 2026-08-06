@@ -408,10 +408,18 @@ export default function ProjectSetupRABPage() {
     return applyPriceOverrides(adjustedTree, priceOverrides);
   }, [activeWBS, context.buildingClass, context.rf, context.df, priceOverrides, adjustmentFactor]);
 
+  const hasEstimates = useMemo(() => {
+    return dbWbsItems.some((item: any) => item.level === "estimate");
+  }, [dbWbsItems]);
+
+  const hasDetails = useMemo(() => {
+    return dbWbsItems.some((item: any) => item.level === "detail");
+  }, [dbWbsItems]);
+
   // 2. Build RAB Tree (Estimates)
   const rabTreeEstimates = useMemo(() => {
     // Build base WBS Estimates tree
-    const wbsEstimates = dbWbsItems.length > 0 
+    const wbsEstimates = (dbWbsItems.length > 0 && hasEstimates)
       ? activeWBS 
       : buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA);
     // Convert to RAB items with user values + Context Factors
@@ -421,16 +429,16 @@ export default function ProjectSetupRABPage() {
       df: context.df,
       adjustmentFactor: adjustmentFactor
     });
-  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass, context.rf, context.df, adjustmentFactor]);
+  }, [estimateValues, activeWBS, dbWbsItems.length, hasEstimates, context.buildingClass, context.rf, context.df, adjustmentFactor]);
 
   // 3. Build RAB Tree (Detail Mode - Deep L4/L5)
   const rabTreeDetail = useMemo(() => {
     // Start with WBS Estimates
-    const wbsEstimates = dbWbsItems.length > 0 
+    const wbsEstimates = (dbWbsItems.length > 0 && hasEstimates)
       ? activeWBS 
       : buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA);
     // Extend to Detail (L4/L5) matching WBS Detail view
-    const wbsDetail = dbWbsItems.length > 0 
+    const wbsDetail = (dbWbsItems.length > 0 && hasDetails)
       ? activeWBS 
       : buildDetailFromEstimates(wbsEstimates);
 
@@ -442,7 +450,7 @@ export default function ProjectSetupRABPage() {
       df: context.df,
       adjustmentFactor: adjustmentFactor
     });
-  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass, context.rf, context.df, adjustmentFactor]);
+  }, [estimateValues, activeWBS, dbWbsItems.length, hasEstimates, hasDetails, context.buildingClass, context.rf, context.df, adjustmentFactor]);
 
   // ACTIVE TREE
   const activeTree = useMemo(() => {
