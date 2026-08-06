@@ -1,294 +1,293 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useProject } from "@/components/flow/project-context";
 import TrackingStagesTab from "./TrackingStagesTab";
 import TrackingRabTab from "./TrackingRabTab";
 import TrackingScheduleTab from "./TrackingScheduleTab";
 import TrackingReportsTab from "./TrackingReportsTab";
+import DailyProgressInputModal from "./DailyProgressInputModal";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { ArrowUpDown, Filter, Check, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  fetchProjectTrackingData,
+  calculateTrackingSummary,
+  TrackingWBSItem,
+  ProjectTrackingSummary,
+} from "@/lib/flow/repositories/daily-progress.repo";
+import {
+  AlertTriangle,
+  Plus,
+  RefreshCw,
+  Layers,
+  Calendar,
+  DollarSign,
+  Clock,
+  CheckCircle2,
+  FileCheck,
+  TrendingUp,
+} from "lucide-react";
 import clsx from "clsx";
-import { mockTrackingItems, TrackingItem } from "./data";
-import { PopoverRoot as Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 
-type TrackingTab = "stages" | "rab" | "schedule" | "reports";
-type TabItem<T> = { key: T; label: string };
-type TimeFilter = "all" | "today" | "week" | "month";
-type SortKey = "status" | "date" | "progress";
-type SortDir = "asc" | "desc";
+type TrackingTab = "schedule" | "stages" | "rab" | "reports";
+type TabItem<T> = { key: T; label: string; icon?: any; badge?: string };
 
 export default function ProjectDetailTrackingContent() {
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { project } = useProject();
 
-    const initialTab = (searchParams.get("tab") as TrackingTab) || "stages";
-    const [activeTab, setActiveTab] = useState<TrackingTab>(initialTab);
+  const initialTab = (searchParams.get("tab") as TrackingTab) || "schedule";
+  const [activeTab, setActiveTab] = useState<TrackingTab>(initialTab);
 
-    // Filter State
-    const [filterTags, setFilterTags] = useState<string[]>([]);
-    const [filterStage, setFilterStage] = useState<string[]>([]);
-    const [filterTime, setFilterTime] = useState<TimeFilter>("all");
+  // Real DB Tracking Data State
+  const [wbsItems, setWbsItems] = useState<TrackingWBSItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedItemForModal, setSelectedItemForModal] = useState<TrackingWBSItem | null>(null);
 
-    // Sort State
-    const [sortKey, setSortKey] = useState<SortKey>("date");
-    const [sortDir, setSortDir] = useState<SortDir>("desc");
-
-    const handleTabChange = (tab: TrackingTab) => {
-        setActiveTab(tab);
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("tab", tab);
-        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    };
-
-    const tabs: TabItem<TrackingTab>[] = [
-        { key: "stages", label: "Stages" },
-        { key: "rab", label: "RAB Budget" },
-        { key: "schedule", label: "Schedule" },
-        { key: "reports", label: "Reports" },
-    ];
-
-    // Logic
-    const filteredItems = useMemo(() => {
-        // Reports tab handles its own fetching/filtering for now, so we only filter mock items for other tabs
-        if (activeTab === "reports") return [];
-
-        let items = mockTrackingItems.filter((item) => item.tab === activeTab);
-
-        // Filter by Tags
-        if (filterTags.length > 0) {
-            items = items.filter((item) => filterTags.includes(item.tag));
-        }
-
-        // Filter by Stage
-        if (filterStage.length > 0) {
-            items = items.filter((item) => filterStage.includes(item.stage));
-        }
-
-        // Filter by Time
-        if (filterTime !== "all") {
-            const now = new Date();
-            items = items.filter((item) => {
-                const itemDate = new Date(item.timestamp);
-                const diffTime = Math.abs(now.getTime() - itemDate.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-                if (filterTime === "today") return diffDays <= 1;
-                if (filterTime === "week") return diffDays <= 7;
-                if (filterTime === "month") return diffDays <= 30;
-                return true;
-            });
-        }
-
-        // Sort
-        return items.sort((a, b) => {
-            let valA: any;
-            let valB: any;
-
-            if (sortKey === "date") {
-                valA = new Date(a.timestamp).getTime();
-                valB = new Date(b.timestamp).getTime();
-            } else {
-                valA = a[sortKey as keyof TrackingItem];
-                valB = b[sortKey as keyof TrackingItem];
-            }
-
-            if (valA < valB) return sortDir === "asc" ? -1 : 1;
-            if (valA > valB) return sortDir === "asc" ? 1 : -1;
-            return 0;
-        });
-    }, [activeTab, filterTags, filterStage, filterTime, sortKey, sortDir]);
-
-    const toggleTag = (tag: string) => {
-        setFilterTags((prev) =>
-            prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-        );
-    };
-
-    const toggleStage = (stage: string) => {
-        setFilterStage((prev) =>
-            prev.includes(stage) ? prev.filter((s) => s !== stage) : [...prev, stage]
-        );
-    };
-
+  // Check Submission Readiness
+  const isSubmitted = useMemo(() => {
+    if (!project) return false;
+    const meta = (project.meta as any) || {};
     return (
-        <div>
-            {/* HEADER: TITLE LEFT, TOGGLE + ACTION RIGHT */}
-            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 mb-8">
-                <h2 className="text-xl font-bold text-neutral-900 whitespace-nowrap">Project Tracking</h2>
-
-                <div className="flex flex-row items-center justify-between gap-2 w-full xl:w-auto">
-                    {/* SEGMENTED TOGGLE */}
-                    <div className="grid grid-cols-4 xl:flex xl:items-center p-0.5 xl:p-1 bg-neutral-100 rounded-full flex-1 xl:flex-none xl:w-auto gap-0 xl:gap-0 min-w-0">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.key}
-                                onClick={() => handleTabChange(tab.key)}
-                                className={clsx(
-                                    "px-0 xl:px-4 py-1.5 text-[9px] md:text-sm font-medium rounded-full transition-all duration-200 capitalize flex items-center justify-center whitespace-nowrap min-w-0",
-                                    activeTab === tab.key
-                                        ? "bg-white text-neutral-900 shadow-sm"
-                                        : "text-neutral-500 hover:text-neutral-700"
-                                )}
-                            >
-                                <span className="xl:hidden">{tab.label}</span>
-                                <span className="hidden xl:inline">{tab.label}</span>
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* ACTIONS (Sort/Filter) - HIDE ON REPORTS TAB IF NOT NEEDED, OR KEEP */}
-                    {activeTab !== "reports" && (
-                        <div className="flex items-center justify-end gap-1 w-auto shrink-0 xl:gap-2">
-
-                            {/* FILTER POPOVER */}
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="secondary"
-                                        className={clsx(
-                                            "!h-10 !w-10 !p-0 !rounded-full border border-neutral-200 bg-white shadow-none flex-shrink-0 min-w-[40px] flex items-center justify-center",
-                                            (filterTags.length > 0 || filterStage.length > 0 || filterTime !== "all") ? "text-brand-red border-brand-red ring-1 ring-brand-red bg-red-50" : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
-                                        )}
-                                    >
-                                        <Filter className="w-4 h-4" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-64 p-4" align="end">
-                                    <div className="space-y-4 max-h-[300px] overflow-y-auto pr-1">
-                                        <div>
-                                            <h4 className="font-semibold text-sm mb-2 text-neutral-900">Type</h4>
-                                            <div className="space-y-2">
-                                                {["Site", "Design", "Expense", "Procurement"].map((tag) => (
-                                                    <div key={tag} className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => toggleTag(tag)}
-                                                            className={clsx(
-                                                                "w-4 h-4 rounded border flex items-center justify-center transition-colors",
-                                                                filterTags.includes(tag) ? "bg-brand-red border-brand-red text-white" : "border-neutral-300 bg-white"
-                                                            )}
-                                                        >
-                                                            {filterTags.includes(tag) && <Check className="w-3 h-3" />}
-                                                        </button>
-                                                        <span className="text-sm text-neutral-700 cursor-pointer" onClick={() => toggleTag(tag)}>{tag}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="h-px bg-neutral-100" />
-                                        <div>
-                                            <h4 className="font-semibold text-sm mb-2 text-neutral-900">Stage</h4>
-                                            <div className="space-y-2">
-                                                {["01-KO", "02-SD", "03-DD", "04-CD", "06-CN"].map((stg) => (
-                                                    <div key={stg} className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => toggleStage(stg)}
-                                                            className={clsx(
-                                                                "w-4 h-4 rounded border flex items-center justify-center transition-colors",
-                                                                filterStage.includes(stg) ? "bg-brand-red border-brand-red text-white" : "border-neutral-300 bg-white"
-                                                            )}
-                                                        >
-                                                            {filterStage.includes(stg) && <Check className="w-3 h-3" />}
-                                                        </button>
-                                                        <span className="text-sm text-neutral-700 cursor-pointer" onClick={() => toggleStage(stg)}>{stg}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="h-px bg-neutral-100" />
-                                        <div>
-                                            <h4 className="font-semibold text-sm mb-2 text-neutral-900">Time Range</h4>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {(["all", "today", "week", "month"] as TimeFilter[]).map((t) => (
-                                                    <button
-                                                        key={t}
-                                                        onClick={() => setFilterTime(t)}
-                                                        className={clsx(
-                                                            "px-3 py-1.5 text-xs rounded-full border transition-all capitalize",
-                                                            filterTime === t
-                                                                ? "bg-neutral-900 text-white border-neutral-900"
-                                                                : "bg-white text-neutral-600 border-neutral-200 hover:border-neutral-300"
-                                                        )}
-                                                    >
-                                                        {t === "all" ? "All Time" : t}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        {(filterTags.length > 0 || filterStage.length > 0 || filterTime !== "all") && (
-                                            <Button size="sm" variant="text" onClick={() => { setFilterTags([]); setFilterStage([]); setFilterTime("all"); }} className="w-full text-xs text-neutral-500 hover:text-red-600">
-                                                Reset Filters
-                                            </Button>
-                                        )}
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-
-                            {/* SORT POPOVER */}
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="secondary"
-                                        className={clsx(
-                                            "!h-10 !w-10 !p-0 !rounded-full border border-neutral-200 bg-white shadow-none flex-shrink-0 min-w-[40px] flex items-center justify-center",
-                                            (sortKey !== "date" || sortDir !== "desc") ? "text-neutral-900" : "text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50"
-                                        )}
-                                    >
-                                        <ArrowUpDown className="w-4 h-4" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-48 p-2" align="end">
-                                    <div className="flex flex-col gap-1">
-                                        <div className="px-2 py-1.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Sort by</div>
-                                        {[
-                                            { key: "status", label: "Status" },
-                                            { key: "date", label: "Date" },
-                                            { key: "progress", label: "Progress" },
-                                        ].map((opt) => (
-                                            <button
-                                                key={opt.key}
-                                                onClick={() => setSortKey(opt.key as SortKey)}
-                                                className={clsx(
-                                                    "flex items-center justify-between px-2 py-2 text-sm rounded-md transition-colors",
-                                                    sortKey === opt.key ? "bg-neutral-100 text-neutral-900 font-medium" : "text-neutral-600 hover:bg-neutral-50"
-                                                )}
-                                            >
-                                                {opt.label}
-                                                {sortKey === opt.key && <Check className="w-4 h-4 text-neutral-900" />}
-                                            </button>
-                                        ))}
-                                        <div className="h-px bg-neutral-100 my-1" />
-                                        <div className="px-2 py-1.5 text-xs font-semibold text-neutral-500 uppercase tracking-wider">Direction</div>
-                                        <div className="flex bg-neutral-100 p-1 rounded-lg">
-                                            <button
-                                                onClick={() => setSortDir("asc")}
-                                                className={clsx("flex-1 py-1.5 text-xs font-medium rounded-md flex items-center justify-center gap-1 transition-all", sortDir === "asc" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-                                            >
-                                                Asc <ChevronUp className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                                onClick={() => setSortDir("desc")}
-                                                className={clsx("flex-1 py-1.5 text-xs font-medium rounded-md flex items-center justify-center gap-1 transition-all", sortDir === "desc" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700")}
-                                            >
-                                                Desc <ChevronDown className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* CONTENT: ANIMATED */}
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {activeTab === "stages" && <TrackingStagesTab items={filteredItems} />}
-                {activeTab === "rab" && <TrackingRabTab items={filteredItems} />}
-                {activeTab === "schedule" && <TrackingScheduleTab items={filteredItems} />}
-                {activeTab === "reports" && <TrackingReportsTab />}
-            </div>
-        </div>
+      meta.isSubmitted === true ||
+      meta.wbsSubmitted === true ||
+      project.status === "active" ||
+      project.status === "in_progress"
     );
+  }, [project]);
+
+  // Fetch real tracking data on mount / project change
+  const loadTrackingData = async () => {
+    if (!project?.id) return;
+    try {
+      setIsLoading(true);
+      const data = await fetchProjectTrackingData(project.id);
+      setWbsItems(data);
+    } catch (err) {
+      console.error("Error loading tracking data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTrackingData();
+  }, [project?.id]);
+
+  const summaryStats: ProjectTrackingSummary = useMemo(() => {
+    return calculateTrackingSummary(wbsItems);
+  }, [wbsItems]);
+
+  const handleTabChange = (tab: TrackingTab) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  const openInputModal = (item?: TrackingWBSItem) => {
+    setSelectedItemForModal(item || null);
+    setIsModalOpen(true);
+  };
+
+  const tabs: TabItem<TrackingTab>[] = [
+    { key: "schedule", label: "Build Scope (WBS & Volume)", badge: `${summaryStats.totalItems} Items` },
+    { key: "stages", label: "Design Scope (Stages & Tasks)" },
+    { key: "rab", label: "RAB & Finance Realization" },
+    { key: "reports", label: "Site Reports" },
+  ];
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* 1. SUBMISSION READINESS WARNING BANNER */}
+      {!isSubmitted && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3 text-amber-900 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold flex items-center gap-2">
+                Status Modul: <span className="px-2 py-0.5 bg-amber-200 text-amber-800 rounded-md text-xs">Draft Mode</span>
+              </div>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Setup WBS, RAB, dan Schedule belum di-submit. Anda tetap dapat melakukan tracking menggunakan data draft saat ini.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => router.push(`/flow/projects/${project?.id}/setup/wbs`)}
+            className="whitespace-nowrap bg-white hover:bg-amber-100 text-amber-900 border-amber-300"
+          >
+            Go to WBS Setup
+          </Button>
+        </div>
+      )}
+
+      {/* 2. EXECUTIVE DASHBOARD SUMMARY CARDS */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* CARD 1: OVERALL PHYSICAL PROGRESS */}
+        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+            <span>Overall Progress Fisik</span>
+            <TrendingUp className="w-4 h-4 text-blue-500" />
+          </div>
+          <div className="mt-3">
+            <div className="text-2xl font-extrabold text-neutral-900">{summaryStats.overallProgress}%</div>
+            <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden mt-2">
+              <div
+                className="h-full bg-blue-600 transition-all duration-500"
+                style={{ width: `${summaryStats.overallProgress}%` }}
+              />
+            </div>
+          </div>
+          <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+            {summaryStats.completedCount} Selesai • {summaryStats.inProgressCount} Dalam Proses
+          </div>
+        </div>
+
+        {/* CARD 2: DELAY COUNTER */}
+        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+            <span>Pekerjaan Terlambat</span>
+            <AlertTriangle className={clsx("w-4 h-4", summaryStats.delayedCount > 0 ? "text-red-500" : "text-neutral-400")} />
+          </div>
+          <div className="mt-3">
+            <div className={clsx("text-2xl font-extrabold", summaryStats.delayedCount > 0 ? "text-red-600" : "text-green-600")}>
+              {summaryStats.delayedCount} <span className="text-xs font-normal text-neutral-500">Item</span>
+            </div>
+            <div className="text-xs font-semibold text-neutral-600 mt-1">
+              {summaryStats.delayedCount > 0 ? `🔴 Perlu Perhatian Segera` : `🟢 Semua Sesuai Jadwal`}
+            </div>
+          </div>
+          <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+            Max Varian: +{summaryStats.scheduleVarianceDays} Hari
+          </div>
+        </div>
+
+        {/* CARD 3: VOLUME REALIZATION */}
+        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+            <span>Realisasi Volume</span>
+            <Layers className="w-4 h-4 text-purple-500" />
+          </div>
+          <div className="mt-3">
+            <div className="text-xl font-extrabold text-neutral-900">
+              {summaryStats.totalActualVolume.toLocaleString("id-ID")}
+            </div>
+            <div className="text-xs text-neutral-500 font-medium mt-0.5">
+              dari Target {summaryStats.totalTargetVolume.toLocaleString("id-ID")} Unit
+            </div>
+          </div>
+          <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+            Akumulasi Terpasang Lapangan
+          </div>
+        </div>
+
+        {/* CARD 4: COST / FINANCE REALIZATION */}
+        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+            <span>Realisasi Biaya RAB</span>
+            <DollarSign className="w-4 h-4 text-emerald-500" />
+          </div>
+          <div className="mt-3">
+            <div className="text-lg font-extrabold text-neutral-900">
+              Rp {summaryStats.totalActualCost.toLocaleString("id-ID")}
+            </div>
+            <div className="text-xs text-neutral-500 font-medium mt-0.5">
+              Cost Variance Ok
+            </div>
+          </div>
+          <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+            Actual Spend vs RAB Baseline
+          </div>
+        </div>
+      </div>
+
+      {/* 3. HEADER TAB NAVIGATION & TOP ACTION BAR */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-neutral-200 pb-4">
+        {/* SEGMENTED SCOPE TABS */}
+        <div className="flex items-center p-1 bg-neutral-100 rounded-xl overflow-x-auto gap-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => handleTabChange(tab.key)}
+              className={clsx(
+                "px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap flex items-center gap-2",
+                activeTab === tab.key
+                  ? "bg-white text-neutral-900 shadow-sm"
+                  : "text-neutral-500 hover:text-neutral-800"
+              )}
+            >
+              <span>{tab.label}</span>
+              {tab.badge && (
+                <span className="px-1.5 py-0.5 text-[10px] font-extrabold rounded-md bg-neutral-200/70 text-neutral-700">
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* TOP ACTIONS */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={loadTrackingData}
+            icon={<RefreshCw className={clsx("w-3.5 h-3.5", isLoading && "animate-spin")} />}
+          >
+            Refresh
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => openInputModal()}
+            icon={<Plus className="w-4 h-4" />}
+            className="bg-brand-red hover:bg-brand-red/90 text-white"
+          >
+            + Input Progress Harian
+          </Button>
+        </div>
+      </div>
+
+      {/* 4. ACTIVE TAB CONTENT */}
+      <div>
+        {activeTab === "schedule" && (
+          <TrackingScheduleTab
+            items={wbsItems}
+            isLoading={isLoading}
+            onOpenInputModal={openInputModal}
+            onRefresh={loadTrackingData}
+          />
+        )}
+
+        {activeTab === "stages" && (
+          <TrackingStagesTab />
+        )}
+
+        {activeTab === "rab" && (
+          <TrackingRabTab items={wbsItems} />
+        )}
+
+        {activeTab === "reports" && (
+          <TrackingReportsTab />
+        )}
+      </div>
+
+      {/* 5. DAILY PROGRESS INPUT MODAL */}
+      <DailyProgressInputModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        items={wbsItems}
+        preSelectedItem={selectedItemForModal}
+        onSuccess={loadTrackingData}
+      />
+    </div>
+  );
 }
