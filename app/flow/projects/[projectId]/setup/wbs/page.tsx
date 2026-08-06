@@ -59,10 +59,10 @@ export default function ProjectSetupWBSPage() {
   const [activeView, setActiveView] = useState<WBSView>("SUMMARY");
   const [enabledAddons, setEnabledAddons] = useState<("I" | "L")[]>([]);
 
-  // Trees per mode
-  const [ballparkTree, setBallparkTree] = useState(() => WBS_BALLPARK);
-  const [estimatesTree, setEstimatesTree] = useState<any[]>([]);
-  const [detailTree, setDetailTree] = useState<any[]>([]);
+  // Single unified tree state for all WBS levels
+  const [fullWbsTree, setFullWbsTree] = useState<any[]>(() => {
+    return buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+  });
 
   // Revisions per mode
   const [revisions, setRevisions] = useState<Revision[]>([]);
@@ -96,83 +96,92 @@ export default function ProjectSetupWBSPage() {
         if (error) throw error;
         
         const dbWbs = data || [];
-        if (dbWbs.length > 0) {
-          const compareWBSCodes = (a: string, b: string): number => {
-            const partsA = a.split('.');
-            const partsB = b.split('.');
-            const minLen = Math.min(partsA.length, partsB.length);
-            for (let i = 0; i < minLen; i++) {
-              const partA = partsA[i];
-              const partB = partsB[i];
-              const numA = parseInt(partA);
-              const numB = parseInt(partB);
-              const isNumA = !isNaN(numA);
-              const isNumB = !isNaN(numB);
-              if (isNumA && isNumB) {
-                if (numA !== numB) return numA - numB;
-              } else if (partA !== partB) {
-                return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
-              }
+        const compareWBSCodes = (a: string, b: string): number => {
+          const partsA = a.split('.');
+          const partsB = b.split('.');
+          const minLen = Math.min(partsA.length, partsB.length);
+          for (let i = 0; i < minLen; i++) {
+            const partA = partsA[i];
+            const partB = partsB[i];
+            const numA = parseInt(partA);
+            const numB = parseInt(partB);
+            const isNumA = !isNaN(numA);
+            const isNumB = !isNaN(numB);
+            if (isNumA && isNumB) {
+              if (numA !== numB) return numA - numB;
+            } else if (partA !== partB) {
+              return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
             }
-            return partsA.length - partsB.length;
-          };
-
-          const idMap = new Map<string, any>();
-          dbWbs.forEach((item: any) => {
-            idMap.set(item.id, {
-              id: item.id,
-              code: item.code,
-              nameEn: item.name || "",
-              nameId: item.description || "",
-              notes: item.notes || "",
-              children: []
-            });
-          });
-
-          const rootsList: any[] = [];
-          dbWbs.forEach((item: any) => {
-            const node = idMap.get(item.id);
-            if (item.parent_id && idMap.has(item.parent_id)) {
-              idMap.get(item.parent_id).children.push(node);
-            } else {
-              rootsList.push(node);
-            }
-          });
-
-          const sortNodes = (list: any[]) => {
-            list.sort((a, b) => compareWBSCodes(a.code, b.code));
-            list.forEach(node => {
-              if (node.children) sortNodes(node.children);
-            });
-          };
-
-          sortNodes(rootsList);
-
-          const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
-          rootsList.sort((a, b) => {
-            const prefixA = a.code.split('.')[0];
-            const prefixB = b.code.split('.')[0];
-            const orderA = ORDER_MAP[prefixA] ?? 999;
-            const orderB = ORDER_MAP[prefixB] ?? 999;
-            return orderA - orderB;
-          });
-
-          // Set the trees conditionally based on what levels are actually present in the database
-          const hasEstimates = dbWbs.some((item: any) => item.level === "estimate");
-          const hasDetails = dbWbs.some((item: any) => item.level === "detail");
-
-          setBallparkTree(rootsList);
-          if (hasEstimates) {
-            setEstimatesTree(rootsList);
-          } else {
-            setEstimatesTree([]);
           }
-          if (hasDetails) {
-            setDetailTree(rootsList);
+          return partsA.length - partsB.length;
+        };
+
+        const idMap = new Map<string, any>();
+        dbWbs.forEach((item: any) => {
+          idMap.set(item.id, {
+            id: item.id,
+            code: item.code,
+            nameEn: item.name || "",
+            nameId: item.description || "",
+            notes: item.notes || "",
+            children: []
+          });
+        });
+
+        const rootsList: any[] = [];
+        dbWbs.forEach((item: any) => {
+          const node = idMap.get(item.id);
+          if (item.parent_id && idMap.has(item.parent_id)) {
+            idMap.get(item.parent_id).children.push(node);
           } else {
-            setDetailTree([]);
+            rootsList.push(node);
           }
+        });
+
+        // Default SAMIL tree template with full detail
+        const defaultFullTree = buildDetailFromEstimates(
+          buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA)
+        );
+
+        // Ensure all default SAMIL disciplines (S, A, M, I, L) exist in rootsList
+        defaultFullTree.forEach((defaultRoot) => {
+          const exists = rootsList.some((r) => r.code === defaultRoot.code);
+          if (!exists) {
+            rootsList.push(defaultRoot);
+          }
+        });
+
+        const sortNodes = (list: any[]) => {
+          list.sort((a, b) => compareWBSCodes(a.code, b.code));
+          list.forEach(node => {
+            if (node.children) sortNodes(node.children);
+          });
+        };
+
+        sortNodes(rootsList);
+
+        const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+        rootsList.sort((a, b) => {
+          const prefixA = a.code.split('.')[0];
+          const prefixB = b.code.split('.')[0];
+          const orderA = ORDER_MAP[prefixA] ?? 999;
+          const orderB = ORDER_MAP[prefixB] ?? 999;
+          return orderA - orderB;
+        });
+
+        // Ensure complete levels (structure -> summary -> estimate -> detail)
+        let completeTree = rootsList;
+        const hasEstimates = dbWbs.some((item: any) => item.level === "estimate");
+        const hasDetails = dbWbs.some((item: any) => item.level === "detail");
+
+        if (!hasEstimates) {
+          completeTree = buildEstimatesFromBallpark(completeTree, RAW_WBS_ESTIMATES_DELTA);
         }
+        if (!hasDetails) {
+          completeTree = buildDetailFromEstimates(completeTree);
+        }
+
+        setFullWbsTree(completeTree);
       } catch (err) {
         console.error("Error loading project WBS:", err);
       } finally {
@@ -184,63 +193,42 @@ export default function ProjectSetupWBSPage() {
   }, [project?.workspace_id]);
 
   // ALL HOOKS MUST BE BEFORE CONDITIONAL RETURNS
-  // ballparkWithAddons is now just ballparkTree (addons are inserted into tree directly)
-  const ballparkWithAddons = useMemo(() => ballparkTree, [ballparkTree]);
+  const ballparkWithAddons = useMemo(() => fullWbsTree, [fullWbsTree]);
 
   // Helper to add/remove addon from tree
   const toggleAddon = (addonCode: "I" | "L") => {
     const addon = WBS_ADDONS.find(a => a.code === addonCode);
     if (!addon) return;
 
-    const hasAddon = ballparkTree.some(item => item.code === addonCode);
+    const hasAddon = fullWbsTree.some(item => item.code === addonCode);
 
     if (hasAddon) {
       // Remove addon
-      setBallparkTree(prev => prev.filter(item => item.code !== addonCode));
+      setFullWbsTree(prev => prev.filter(item => item.code !== addonCode));
       setEnabledAddons(prev => prev.filter(c => c !== addonCode));
     } else {
       // Add addon right after SAM (at index 3) or after existing addons
       const SAM_COUNT = 3;
-      // Find insert position: after SAM, after any existing I/L
       let insertIdx = SAM_COUNT;
-      for (let i = SAM_COUNT; i < ballparkTree.length; i++) {
-        if (["I", "L"].includes(ballparkTree[i].code || "")) {
+      for (let i = SAM_COUNT; i < fullWbsTree.length; i++) {
+        if (["I", "L"].includes(fullWbsTree[i].code || "")) {
           insertIdx = i + 1;
         } else {
           break;
         }
       }
 
-      const newTree = [...ballparkTree];
+      const newTree = [...fullWbsTree];
       newTree.splice(insertIdx, 0, addon);
-      setBallparkTree(newTree);
+      setFullWbsTree(newTree);
       setEnabledAddons(prev => [...prev, addonCode]);
     }
     markEdited();
   };
 
-  // Auto-inherit estimates from ballpark if empty
-  const computedEstimatesTree = useMemo(() => {
-    if (estimatesTree.length === 0) {
-      return buildEstimatesFromBallpark(ballparkWithAddons, RAW_WBS_ESTIMATES_DELTA);
-    }
-    return estimatesTree;
-  }, [ballparkWithAddons, estimatesTree]);
-
-  // Build Detail from Estimates + detail extensions (level 3-4)
-  const computedDetailTree = useMemo(() => {
-    if (detailTree.length === 0) {
-      return buildDetailFromEstimates(computedEstimatesTree);
-    }
-    return detailTree;
-  }, [computedEstimatesTree, detailTree]);
-
-  // Get active tree based on mode
-  const rawActiveTree = useMemo(() => {
-    if (activeMode === "BALLPARK") return ballparkWithAddons;
-    if (activeMode === "ESTIMATES") return computedEstimatesTree;
-    return computedDetailTree;
-  }, [activeMode, ballparkWithAddons, computedEstimatesTree, computedDetailTree]);
+  const computedEstimatesTree = useMemo(() => fullWbsTree, [fullWbsTree]);
+  const computedDetailTree = useMemo(() => fullWbsTree, [fullWbsTree]);
+  const rawActiveTree = useMemo(() => fullWbsTree, [fullWbsTree]);
 
   // Apply view depth pruning
   const activeTree = useMemo(() => {
@@ -264,13 +252,6 @@ export default function ProjectSetupWBSPage() {
     setActiveRevisionId(firstRevOfMode?.id || null);
   }
 
-  // Get setter for current mode
-  function getTreeSetter() {
-    if (activeMode === "BALLPARK") return setBallparkTree;
-    if (activeMode === "ESTIMATES") return setEstimatesTree;
-    return setDetailTree;
-  }
-
   // Mark as edited
   function markEdited() {
     if (currentEditState === "pristine") {
@@ -281,8 +262,7 @@ export default function ProjectSetupWBSPage() {
   // CRUD handlers
   const onUpdateItem = (id: string, patch: Partial<{ nameEn: string; nameId?: string }>) => {
     markEdited();
-    const setter = getTreeSetter();
-    setter((prev: any[]) => updateById(prev.length ? prev : rawActiveTree, id, patch as any));
+    setFullWbsTree((prev: any[]) => updateById(prev, id, patch as any));
   };
 
   const onAddChild = (parentId: string, level: number) => {
@@ -295,59 +275,44 @@ export default function ProjectSetupWBSPage() {
       nameId: "Pekerjaan Baru",
       children: [],
     };
-    const setter = getTreeSetter();
-    setter((prev: any[]) => addChildById(prev.length ? prev : rawActiveTree, parentId, newItem as any));
+    setFullWbsTree((prev: any[]) => addChildById(prev, parentId, newItem as any));
   };
 
   const onAddSibling = (siblingId: string, position: "above" | "below") => {
     markEdited();
-    const setter = getTreeSetter();
-    setter((prev: any[]) => {
-      const tree = prev.length ? prev : rawActiveTree;
-      return addSiblingToTree(tree, siblingId, position);
-    });
+    setFullWbsTree((prev: any[]) => addSiblingToTree(prev, siblingId, position));
   };
 
   const onRemove = (id: string) => {
     markEdited();
-    const setter = getTreeSetter();
-    setter((prev: any[]) => removeById(prev.length ? prev : rawActiveTree, id));
+    setFullWbsTree((prev: any[]) => removeById(prev, id));
   };
 
   const onReorder = (parentId: string | null, fromIndex: number, toIndex: number) => {
-    // SAM items are at indices 0,1,2 - they cannot be moved and nothing can be moved before/between them
     const SAM_COUNT = 3; // S, A, M
 
-    const setter = getTreeSetter();
-    setter((prev: any[]) => {
-      const tree = prev.length ? prev : rawActiveTree;
-
+    setFullWbsTree((prev: any[]) => {
       if (!parentId) {
-        // Root level reorder
-        // Don't allow moving SAM items
-        if (fromIndex < SAM_COUNT) return tree;
-        // Don't allow dropping into SAM positions (must be >= SAM_COUNT)
+        if (fromIndex < SAM_COUNT) return prev;
         if (toIndex < SAM_COUNT) toIndex = SAM_COUNT;
-
-        // If same position after adjustment, no change
-        if (fromIndex === toIndex) return tree;
+        if (fromIndex === toIndex) return prev;
 
         markEdited();
-        const newTree = [...tree];
+        const newTree = [...prev];
         const [moved] = newTree.splice(fromIndex, 1);
         newTree.splice(toIndex, 0, moved);
         return renumberTree(newTree);
       }
 
       markEdited();
-      return reorderChildren(tree, parentId, fromIndex, toIndex);
+      return reorderChildren(prev, parentId, fromIndex, toIndex);
     });
   };
 
   // Add discipline
   const onAddDiscipline = (code: string, nameEn: string, nameId?: string) => {
     markEdited();
-    setBallparkTree((prev) => addRootDiscipline(prev, { code, nameEn, nameId, children: [] }));
+    setFullWbsTree((prev) => addRootDiscipline(prev, { code, nameEn, nameId, children: [] }));
   };
 
   // Reset handler
@@ -357,9 +322,7 @@ export default function ProjectSetupWBSPage() {
 
   const doReset = () => {
     setEnabledAddons([]);
-    setBallparkTree(WBS_BALLPARK);
-    setEstimatesTree([]);
-    setDetailTree([]);
+    setFullWbsTree(buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA)));
     setEditState({
       BALLPARK: "draft",
       ESTIMATES: "draft",
@@ -372,7 +335,23 @@ export default function ProjectSetupWBSPage() {
     
     try {
       setIsLoadingWBS(true);
-      // 1. Delete all current WBS items for this workspace
+
+      // 1. Assign consistent UUIDs so in-memory state matches DB IDs
+      const prepareTreeWithUuids = (nodes: any[]): any[] => {
+        return nodes.map(node => {
+          const isUuid = node.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(node.id);
+          const validId = isUuid ? node.id : crypto.randomUUID();
+          return {
+            ...node,
+            id: validId,
+            children: node.children ? prepareTreeWithUuids(node.children) : []
+          };
+        });
+      };
+
+      const treeWithUuids = prepareTreeWithUuids(treeToSave);
+
+      // 2. Delete all current WBS items for this workspace
       const { error: deleteError } = await supabase
         .from('work_breakdown_structure')
         .delete()
@@ -380,7 +359,7 @@ export default function ProjectSetupWBSPage() {
         
       if (deleteError) throw deleteError;
       
-      // 2. Flatten tree client-side and prepare rows
+      // 3. Flatten tree client-side and prepare rows
       const rowsToInsert: any[] = [];
       const traverseAndPrepare = (item: any, parentDbId: string | null = null, indentLevel: number = 0) => {
         let currentLevel = "structure";
@@ -394,11 +373,8 @@ export default function ProjectSetupWBSPage() {
         const description = item.nameId || item.description || "";
         const notes = item.notes || null;
 
-        const isUuid = item.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id);
-        const dbId = isUuid ? item.id : crypto.randomUUID();
-
         rowsToInsert.push({
-          id: dbId,
+          id: item.id,
           workspace_id: project.workspace_id,
           code: code,
           name: name,
@@ -412,20 +388,23 @@ export default function ProjectSetupWBSPage() {
 
         const children = item.children || [];
         for (const child of children) {
-          traverseAndPrepare(child, dbId, indentLevel + 1);
+          traverseAndPrepare(child, item.id, indentLevel + 1);
         }
       };
 
-      for (const root of treeToSave) {
+      for (const root of treeWithUuids) {
         traverseAndPrepare(root);
       }
 
-      // 3. Single Bulk Insert to database
+      // 4. Single Bulk Insert to database
       const { error: insertError } = await supabase
         .from("work_breakdown_structure")
         .insert(rowsToInsert);
 
       if (insertError) throw insertError;
+      
+      // Sync state with UUIDs
+      setFullWbsTree(treeWithUuids);
       
       alert("✅ WBS saved successfully to database!");
     } catch (err: any) {
@@ -439,34 +418,30 @@ export default function ProjectSetupWBSPage() {
   // Save Draft
   const saveDraft = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "saved" }));
-    await saveTreeToDb(computedDetailTree);
+    await saveTreeToDb(fullWbsTree);
   };
 
   // Save Changes
   const saveChanges = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "saved" }));
-    await saveTreeToDb(computedDetailTree);
+    await saveTreeToDb(fullWbsTree);
   };
 
   // Submit WBS
   const submitWBS = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "submitted" }));
-    await saveTreeToDb(computedDetailTree);
+    await saveTreeToDb(fullWbsTree);
   };
 
   // Add revision
   function addRevision() {
     const modeRevCount = modeRevisions.length + 1;
-    const currentTree = activeMode === "BALLPARK" ? ballparkWithAddons
-      : activeMode === "ESTIMATES" ? computedEstimatesTree
-        : computedDetailTree;
-
     const rev: Revision = {
       id: uid("rev"),
       label: `${activeMode} Rev ${modeRevCount}`,
       createdAt: Date.now(),
       mode: activeMode,
-      tree: currentTree,
+      tree: fullWbsTree,
       enabledAddons,
     };
     setRevisions((prev) => [...prev, rev]);
@@ -479,13 +454,7 @@ export default function ProjectSetupWBSPage() {
     const rev = revisions.find((r) => r.id === revId);
     if (!rev) return;
 
-    if (rev.mode === "BALLPARK") {
-      setBallparkTree(rev.tree);
-    } else if (rev.mode === "ESTIMATES") {
-      setEstimatesTree(rev.tree);
-    } else {
-      setDetailTree(rev.tree);
-    }
+    setFullWbsTree(rev.tree);
     setEnabledAddons(rev.enabledAddons);
     setActiveRevisionId(rev.id);
     setEditState(prev => ({ ...prev, [activeMode]: "pristine" }));
