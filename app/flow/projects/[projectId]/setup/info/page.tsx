@@ -115,6 +115,11 @@ export default function ProjectInfoPage() {
     const [buildingArea, setBuildingArea] = useState("");
     const [floors, setFloors] = useState("");
     const [rabClass, setRabClass] = useState("B");
+    const [buildingMassCount, setBuildingMassCount] = useState<number>(1);
+    const [buildingMasses, setBuildingMasses] = useState<Array<{ code: string; name: string; buildingArea: string; floors: string; isSiteWork?: boolean }>>([
+        { code: "A", name: "Main Building", buildingArea: "", floors: "" },
+        { code: "B", name: "Pekerjaan Luar & Infrastruktur (Site Work)", buildingArea: "", floors: "", isSiteWork: true }
+    ]);
 
     // Client
     const [clientName, setClientName] = useState("");
@@ -333,6 +338,36 @@ export default function ProjectInfoPage() {
             setFloors(meta?.floors || "");
             setRabClass(meta?.rabClass || "B");
 
+            const count = project.building_mass_count || meta?.buildingMassCount || 1;
+            setBuildingMassCount(count);
+
+            const initialMasses = project.building_masses || meta?.buildingMasses;
+            if (initialMasses && Array.isArray(initialMasses) && initialMasses.length > 0) {
+                setBuildingMasses(initialMasses);
+            } else {
+                // Generate defaults
+                const masses = [];
+                for (let i = 0; i < count; i++) {
+                    const code = String.fromCharCode(65 + i);
+                    masses.push({
+                        code,
+                        name: count === 1 ? "Main Building" : `Massa ${code}`,
+                        buildingArea: i === 0 ? (meta?.buildingArea || "") : "",
+                        floors: i === 0 ? (meta?.floors || "") : "",
+                    });
+                }
+                // Add Site Work as the last consecutive letter
+                const siteCode = String.fromCharCode(65 + count);
+                masses.push({
+                    code: siteCode,
+                    name: "Pekerjaan Luar & Infrastruktur (Site Work)",
+                    buildingArea: "",
+                    floors: "",
+                    isSiteWork: true,
+                });
+                setBuildingMasses(masses);
+            }
+
             setClientName(meta?.clientName || "");
             setClientContact(meta?.clientContact || "");
 
@@ -389,6 +424,8 @@ export default function ProjectInfoPage() {
                 buildingArea,
                 floors,
                 rabClass,
+                buildingMassCount,
+                buildingMasses,
                 clientName,
                 clientContact,
             };
@@ -413,6 +450,8 @@ export default function ProjectInfoPage() {
                     status,
                     start_date: startDate || null,
                     end_date: endDate || null,
+                    building_mass_count: buildingMassCount,
+                    building_masses: buildingMasses,
                     meta,
                     location,
                 }),
@@ -813,12 +852,19 @@ export default function ProjectInfoPage() {
                                 </div>
                             </div>
                         </div>
- 
+
                         {/* Specifications */}
                         <div className="bg-white/40 dark:bg-neutral-800/10 backdrop-blur-md rounded-2xl border border-white/40 dark:border-white/5 p-6 space-y-5 shadow-sm">
-                            <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">Specifications</h2>
- 
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-sm font-semibold text-neutral-900 uppercase tracking-wide">Specifications</h2>
+                                {buildingMassCount > 1 && (
+                                    <span className="text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 font-medium">
+                                        Multi-Building Project ({buildingMassCount} Mass + 1 Site Work)
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
                                 <Input
                                     label="Land Area (m²)"
                                     type="number"
@@ -847,6 +893,113 @@ export default function ProjectInfoPage() {
                                     onChange={setRabClass}
                                     disabled={!isEditing}
                                 />
+                                <Input
+                                    label="Building Mass Count"
+                                    type="number"
+                                    min={1}
+                                    max={10}
+                                    value={buildingMassCount.toString()}
+                                    onChange={(e) => {
+                                        const count = Math.max(1, parseInt(e.target.value, 10) || 1);
+                                        setBuildingMassCount(count);
+                                        // Update masses list
+                                        const updated = [];
+                                        for (let i = 0; i < count; i++) {
+                                            const code = String.fromCharCode(65 + i);
+                                            const existing = buildingMasses.find(m => m.code === code && !m.isSiteWork);
+                                            updated.push({
+                                                code,
+                                                name: existing?.name || (count === 1 ? "Main Building" : `Massa ${code}`),
+                                                buildingArea: existing?.buildingArea || (i === 0 ? buildingArea : ""),
+                                                floors: existing?.floors || (i === 0 ? floors : ""),
+                                            });
+                                        }
+                                        const siteCode = String.fromCharCode(65 + count);
+                                        const existingSite = buildingMasses.find(m => m.isSiteWork);
+                                        updated.push({
+                                            code: siteCode,
+                                            name: existingSite?.name || "Pekerjaan Luar & Infrastruktur (Site Work)",
+                                            buildingArea: existingSite?.buildingArea || "",
+                                            floors: existingSite?.floors || "",
+                                            isSiteWork: true,
+                                        });
+                                        setBuildingMasses(updated);
+                                    }}
+                                    disabled={!isEditing}
+                                />
+                            </div>
+
+                            {/* Detailed Building Mass Breakdown (Level 0) */}
+                            <div className="mt-4 pt-4 border-t border-neutral-200/50 dark:border-neutral-700/50 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 uppercase tracking-wider">
+                                        Rincian Massa Bangunan & Segmen (WBS Level 0)
+                                    </h3>
+                                    <span className="text-xs text-neutral-500">
+                                        Setiap massa akan otomatis memiliki WBS SAMIL lengkap (S, A, M, I, L)
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {buildingMasses.map((mass, idx) => (
+                                        <div
+                                            key={mass.code}
+                                            className={`grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3 rounded-xl border ${
+                                                mass.isSiteWork
+                                                    ? "bg-neutral-100/60 dark:bg-neutral-800/40 border-dashed border-neutral-300 dark:border-neutral-700"
+                                                    : "bg-white/60 dark:bg-neutral-900/30 border-white/40 dark:border-white/5"
+                                            }`}
+                                        >
+                                            <div className="md:col-span-1 flex items-center justify-center">
+                                                <span className={`px-2.5 py-1 text-xs font-bold rounded-lg ${
+                                                    mass.isSiteWork
+                                                        ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20"
+                                                        : "bg-primary/10 text-primary border border-primary/20"
+                                                }`}>
+                                                    [{mass.code}]
+                                                </span>
+                                            </div>
+                                            <div className="md:col-span-6">
+                                                <Input
+                                                    label="Nama Massa / Segmen"
+                                                    value={mass.name}
+                                                    onChange={(e) => {
+                                                        const updated = [...buildingMasses];
+                                                        updated[idx].name = e.target.value;
+                                                        setBuildingMasses(updated);
+                                                    }}
+                                                    disabled={!isEditing || mass.isSiteWork}
+                                                />
+                                            </div>
+                                            <div className="md:col-span-3">
+                                                <Input
+                                                    label="Luas Bangunan (m²)"
+                                                    type="number"
+                                                    value={mass.buildingArea}
+                                                    onChange={(e) => {
+                                                        const updated = [...buildingMasses];
+                                                        updated[idx].buildingArea = e.target.value;
+                                                        setBuildingMasses(updated);
+                                                    }}
+                                                    disabled={!isEditing || mass.isSiteWork}
+                                                />
+                                            </div>
+                                            <div className="md:col-span-2">
+                                                <Input
+                                                    label="Lantai"
+                                                    type="number"
+                                                    value={mass.floors}
+                                                    onChange={(e) => {
+                                                        const updated = [...buildingMasses];
+                                                        updated[idx].floors = e.target.value;
+                                                        setBuildingMasses(updated);
+                                                    }}
+                                                    disabled={!isEditing || mass.isSiteWork}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
