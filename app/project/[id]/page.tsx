@@ -114,27 +114,6 @@ function ProjectDetailLocalSidebar({
     return (
         <aside className="w-full hidden lg:flex flex-col space-y-4 pt-0">
             <div className="space-y-0.5">
-                {/* Back / Forward Pill Buttons */}
-                <div className="flex items-center gap-1 mb-3">
-                    <div className="flex items-center border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 rounded-full p-0.5 shadow-sm">
-                        <button
-                            onClick={() => router.back()}
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                            title="Go back"
-                        >
-                            <ChevronLeft className="w-3.5 h-3.5" />
-                        </button>
-                        <div className="w-px h-3 bg-neutral-200 dark:bg-neutral-800" />
-                        <button
-                            onClick={() => router.forward()}
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                            title="Go forward"
-                        >
-                            <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
-
                 {/* Overview */}
                 <button
                     onClick={() => setActiveTab("overview")}
