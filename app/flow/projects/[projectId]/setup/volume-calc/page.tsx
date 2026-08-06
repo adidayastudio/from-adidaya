@@ -58,7 +58,7 @@ const SAMIL_ORDER: Record<string, number> = {
 export default function VolumeCalcPage() {
   const params = useParams();
   const projectId = params.projectId as string;
-  const { project, isLoading, error } = useProject();
+  const { project, isLoading, error, refresh } = useProject();
 
   const [dbWbsItems, setDbWbsItems] = useState<any[]>([]);
   const [selectedWbsCode, setSelectedWbsCode] = useState<string | null>(null);
@@ -297,6 +297,11 @@ export default function VolumeCalcPage() {
         .eq("id", project.id);
 
       if (metaErr) throw metaErr;
+
+      // Refresh the project context to automatically propagate the updated estimateValues across the app (like RAB page)
+      if (refresh) {
+        await refresh();
+      }
 
       // Update unit in the active list directly
       setDbWbsItems(prev =>

@@ -439,19 +439,19 @@ export default function ProjectSetupWBSPage() {
   // Save Draft
   const saveDraft = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "saved" }));
-    await saveTreeToDb(rawActiveTree);
+    await saveTreeToDb(computedDetailTree);
   };
 
   // Save Changes
   const saveChanges = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "saved" }));
-    await saveTreeToDb(rawActiveTree);
+    await saveTreeToDb(computedDetailTree);
   };
 
   // Submit WBS
   const submitWBS = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "submitted" }));
-    await saveTreeToDb(rawActiveTree);
+    await saveTreeToDb(computedDetailTree);
   };
 
   // Add revision
