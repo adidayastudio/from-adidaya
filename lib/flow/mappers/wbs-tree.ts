@@ -132,13 +132,8 @@ export function ensureMultiBuildingWBS(wbsTree: any[], project: any): any[] {
         return wbsTree;
     }
 
-    // Check if wbsTree is ALREADY multi-building (all roots must be building mass containers with SAMIL children)
-    const isAlreadyMultiBuilding =
-        wbsTree.length === masses.length &&
-        wbsTree.every((root) => {
-            const childSubCodes = root.children?.map((c: any) => c.code.replace(`${root.code}.`, "")) || [];
-            return childSubCodes.some((sub: string) => ["S", "A", "M", "I", "L"].includes(sub));
-        });
+    // Check if wbsTree is ALREADY multi-building (roots match building mass codes)
+    const isAlreadyMultiBuilding = wbsTree.some((root) => masses.some((m: any) => m.code === root.code));
 
     if (isAlreadyMultiBuilding) {
         return wbsTree;
