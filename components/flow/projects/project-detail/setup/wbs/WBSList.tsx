@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronRight, ChevronDown, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, CornerDownRight } from "lucide-react";
+import { ChevronRight, ChevronDown, Plus, Trash2, GripVertical, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CornerDownRight, Copy, Search, Maximize2, Minimize2 } from "lucide-react";
 import { WBSItem, WBSView, WBSMode } from "./data/wbs.types";
 import clsx from "clsx";
 
@@ -14,10 +14,37 @@ type Props = {
   onAddSibling?: (siblingId: string, position: "above" | "below") => void;
   onRemove: (id: string) => void;
   onReorder?: (parentId: string | null, fromIndex: number, toIndex: number) => void;
+  onIndent?: (id: string) => void;
+  onOutdent?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  onMoveDirection?: (id: string, direction: "up" | "down") => void;
 };
 
 // Default SAM codes that cannot be reordered
 const DEFAULT_CODES = ["S", "A", "M"];
+
+function filterTree(items: WBSItem[], query: string): WBSItem[] {
+  if (!query.trim()) return items;
+  const q = query.toLowerCase().trim();
+
+  return items.reduce<WBSItem[]>((acc, item) => {
+    const codeMatch = item.code.toLowerCase().includes(q);
+    const nameEnMatch = item.nameEn.toLowerCase().includes(q);
+    const nameIdMatch = item.nameId?.toLowerCase().includes(q) ?? false;
+    const notesMatch = item.notes?.toLowerCase().includes(q) ?? false;
+    const matchesSelf = codeMatch || nameEnMatch || nameIdMatch || notesMatch;
+
+    const filteredChildren = item.children ? filterTree(item.children, q) : [];
+
+    if (matchesSelf || filteredChildren.length > 0) {
+      acc.push({
+        ...item,
+        children: filteredChildren.length > 0 ? filteredChildren : item.children
+      });
+    }
+    return acc;
+  }, []);
+}
 
 export default function WBSList({
   items: initialItems,
@@ -27,13 +54,21 @@ export default function WBSList({
   onAddChild,
   onAddSibling,
   onRemove,
-  onReorder
+  onReorder,
+  onIndent,
+  onOutdent,
+  onDuplicate,
+  onMoveDirection
 }: Props) {
   const [items, setItems] = useState<WBSItem[]>(initialItems);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandAllState, setExpandAllState] = useState<boolean | null>(null);
 
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
+
+  const filteredItems = filterTree(items, searchQuery);
 
   // Root level drag state
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
@@ -67,33 +102,77 @@ export default function WBSList({
   };
 
   return (
-    <div className="w-full space-y-0">
-      {items.map((item, idx) => (
-        <WBSNode
-          key={item.id || item.code}
-          item={item}
-          view={view}
-          mode={mode}
-          level={0}
-          index={idx}
-          isFirst={idx === 0}
-          isLast={idx === items.length - 1}
-          onUpdate={onUpdateItem}
-          onAddChild={onAddChild}
-          onAddSibling={onAddSibling}
-          onRemove={onRemove}
-          onReorder={onReorder}
-          canAddChild={canAddChild}
-          canReorder={canReorder(item)}
-          isDragging={draggedIdx === idx}
-          isDragOver={dragOverIdx === idx && draggedIdx !== idx}
-          onDragStart={() => handleDragStart(idx)}
-          onDragOver={(e) => handleDragOver(e, idx)}
-          onDragLeave={handleDragLeave}
-          onDrop={() => handleDrop(idx)}
-          onDragEnd={handleDragEnd}
-        />
-      ))}
+    <div className="w-full space-y-3">
+      {/* Controls Bar: Search & Expand/Collapse All */}
+      <div className="flex items-center justify-between gap-3 bg-neutral-50 p-2.5 rounded-lg border border-neutral-200/80">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search WBS code or title..."
+            className="w-full pl-8 pr-3 py-1.5 text-xs border border-neutral-200 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-brand-red focus:border-brand-red transition-all"
+          />
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setExpandAllState(true)}
+            className="px-2.5 py-1.5 rounded border border-neutral-200 bg-white hover:bg-neutral-50 text-[11px] font-medium text-neutral-600 flex items-center gap-1 transition-colors"
+            title="Expand All Nodes"
+          >
+            <Maximize2 className="w-3 h-3 text-neutral-500" /> Expand All
+          </button>
+          <button
+            onClick={() => setExpandAllState(false)}
+            className="px-2.5 py-1.5 rounded border border-neutral-200 bg-white hover:bg-neutral-50 text-[11px] font-medium text-neutral-600 flex items-center gap-1 transition-colors"
+            title="Collapse All Nodes"
+          >
+            <Minimize2 className="w-3 h-3 text-neutral-500" /> Collapse All
+          </button>
+        </div>
+      </div>
+
+      <div className="w-full border border-neutral-200 rounded-lg overflow-hidden bg-white">
+        {filteredItems.length === 0 ? (
+          <div className="p-8 text-center text-xs text-neutral-400">
+            No WBS items found matching &quot;{searchQuery}&quot;.
+          </div>
+        ) : (
+          filteredItems.map((item, idx) => (
+            <WBSNode
+              key={item.id ? `${item.id}-root-${idx}` : `${item.code}-root-${idx}`}
+              item={item}
+              view={view}
+              mode={mode}
+              level={0}
+              index={idx}
+              isFirst={idx === 0}
+              isLast={idx === filteredItems.length - 1}
+              expandAllState={expandAllState}
+              onUpdate={onUpdateItem}
+              onAddChild={onAddChild}
+              onAddSibling={onAddSibling}
+              onRemove={onRemove}
+              onReorder={onReorder}
+              onIndent={onIndent}
+              onOutdent={onOutdent}
+              onDuplicate={onDuplicate}
+              onMoveDirection={onMoveDirection}
+              canAddChild={canAddChild}
+              canReorder={canReorder(item)}
+              isDragging={draggedIdx === idx}
+              isDragOver={dragOverIdx === idx && draggedIdx !== idx}
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDragLeave={handleDragLeave}
+              onDrop={() => handleDrop(idx)}
+              onDragEnd={handleDragEnd}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -106,11 +185,16 @@ function WBSNode({
   index,
   isFirst,
   isLast,
+  expandAllState,
   onUpdate,
   onAddChild,
   onAddSibling,
   onRemove,
   onReorder,
+  onIndent,
+  onOutdent,
+  onDuplicate,
+  onMoveDirection,
   canAddChild,
   canReorder,
   isDragging,
@@ -128,11 +212,16 @@ function WBSNode({
   index: number;
   isFirst: boolean;
   isLast: boolean;
+  expandAllState?: boolean | null;
   onUpdate: (id: string, patch: Partial<{ nameEn: string; nameId?: string; code?: string; notes?: string }>) => void;
   onAddChild: (parentId: string, level: number) => void;
   onAddSibling?: (siblingId: string, position: "above" | "below") => void;
   onRemove: (id: string) => void;
   onReorder?: (parentId: string | null, fromIndex: number, toIndex: number) => void;
+  onIndent?: (id: string) => void;
+  onOutdent?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
+  onMoveDirection?: (id: string, direction: "up" | "down") => void;
   canAddChild: (level: number) => boolean;
   canReorder: boolean;
   isDragging?: boolean;
@@ -144,9 +233,14 @@ function WBSNode({
   onDragEnd?: () => void;
 }) {
   const hasChildren = item.children && item.children.length > 0;
-  const [open, setOpen] = useState(level < 1); // Default expanded for L1, collapsed for L2 and below
+  const [open, setOpen] = useState(level < 1);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showSpecInput, setShowSpecInput] = useState(!!item.notes);
+
+  useEffect(() => {
+    if (expandAllState === true) setOpen(true);
+    else if (expandAllState === false) setOpen(level < 1);
+  }, [expandAllState, level]);
 
   // Sync state if notes change externally
   useEffect(() => {
@@ -181,7 +275,6 @@ function WBSNode({
   const itemId = item.id || item.code;
   const isDefaultItem = DEFAULT_CODES.includes(item.code);
 
-  // Check if child can be reordered
   const canChildReorder = (child: WBSItem) => !DEFAULT_CODES.includes(child.code);
 
   return (
@@ -280,10 +373,65 @@ function WBSNode({
           )}
         </div>
 
-        {/* Actions */}
+        {/* Actions Toolbar */}
         {showActions && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-            {/* Add Menu - Always show for add above/below */}
+            {/* Move Up / Down */}
+            {onMoveDirection && !isDefaultItem && (
+              <>
+                <button
+                  disabled={isFirst}
+                  onClick={() => onMoveDirection(itemId, "up")}
+                  className="p-1.5 rounded-md hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-20"
+                  title="Move Up"
+                >
+                  <ArrowUp className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  disabled={isLast}
+                  onClick={() => onMoveDirection(itemId, "down")}
+                  className="p-1.5 rounded-md hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition-colors disabled:opacity-20"
+                  title="Move Down"
+                >
+                  <ArrowDown className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
+
+            {/* Outdent (Naik Level / Make Sibling of Parent) */}
+            {onOutdent && level > 0 && (
+              <button
+                onClick={() => onOutdent(itemId)}
+                className="p-1.5 rounded-md hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition-colors"
+                title="Naik Level (Outdent to parent level)"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Indent (Turun Level / Make Sub-item) */}
+            {onIndent && level > 0 && index > 0 && (
+              <button
+                onClick={() => onIndent(itemId)}
+                className="p-1.5 rounded-md hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition-colors"
+                title="Turun Level (Indent as sub-item)"
+              >
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Duplicate Item */}
+            {onDuplicate && level > 0 && (
+              <button
+                onClick={() => onDuplicate(itemId)}
+                className="p-1.5 rounded-md hover:bg-neutral-200 text-neutral-400 hover:text-neutral-700 transition-colors"
+                title="Duplicate item & sub-tasks"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Add Menu */}
             <div className="relative">
               <button
                 onClick={() => setShowAddMenu(!showAddMenu)}
@@ -297,7 +445,6 @@ function WBSNode({
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowAddMenu(false)} />
                   <div className="absolute right-0 bottom-full mb-1 z-50 bg-white border border-neutral-200 rounded-lg shadow-lg py-1 min-w-[140px]">
-                    {/* Add Above/Below - only for child items (level > 0) */}
                     {onAddSibling && level > 0 && (
                       <>
                         <button
@@ -314,7 +461,6 @@ function WBSNode({
                         </button>
                       </>
                     )}
-                    {/* Add Subwork - for items that can have children */}
                     {canAddChild(level) && (
                       <>
                         {onAddSibling && level > 0 && <div className="border-t border-neutral-100 my-1" />}
@@ -360,7 +506,7 @@ function WBSNode({
         <div className="ml-3 border-l border-neutral-100">
           {item.children!.map((child, idx) => (
             <WBSNode
-              key={child.id || child.code}
+              key={child.id ? `${child.id}-L${level + 1}-${idx}` : `${child.code}-L${level + 1}-${idx}`}
               item={child}
               view={view}
               mode={mode}
@@ -368,11 +514,16 @@ function WBSNode({
               index={idx}
               isFirst={idx === 0}
               isLast={idx === item.children!.length - 1}
+              expandAllState={expandAllState}
               onUpdate={onUpdate}
               onAddChild={onAddChild}
               onAddSibling={onAddSibling}
               onRemove={onRemove}
               onReorder={onReorder}
+              onIndent={onIndent}
+              onOutdent={onOutdent}
+              onDuplicate={onDuplicate}
+              onMoveDirection={onMoveDirection}
               canAddChild={canAddChild}
               canReorder={canChildReorder(child)}
               isDragging={childDragIdx === idx}

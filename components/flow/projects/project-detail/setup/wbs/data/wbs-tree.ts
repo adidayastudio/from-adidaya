@@ -3,8 +3,10 @@ import type { WBSItem, WBSMode, WBSView } from "./wbs.types";
 /* ================================
   ID
 ================================ */
+let uidCounter = 0;
 export function uid(prefix = "wbs") {
-  return `${prefix}_${Math.random().toString(36).slice(2, 9)}${Date.now().toString(36)}`;
+  uidCounter = (uidCounter + 1) % 1000000;
+  return `${prefix}_${Math.random().toString(36).slice(2, 9)}_${Date.now().toString(36)}_${uidCounter}`;
 }
 
 /* ================================
@@ -127,8 +129,6 @@ export function addRootDiscipline(
   (nama & struktur ikut, detail makin dalam via delta nanti)
 ================================ */
 export function inheritTree(base: WBSItem[]): WBSItem[] {
-  // deep clone w/ stable IDs? untuk estimates/detail sebaiknya "new IDs" tapi still traceable.
-  // SSOT: Ballpark jadi basis; estimates/detail turunan bisa id baru tapi kita tetap jaga stabil.
   const clone = (n: WBSItem): WBSItem => ({
     id: uid("wbs"),
     code: n.code,
@@ -137,4 +137,139 @@ export function inheritTree(base: WBSItem[]): WBSItem[] {
     children: n.children?.map(clone),
   });
   return base.map(clone);
+}
+
+/* ================================
+  ADVANCED TREE MANIPULATION (INDENT, OUTDENT, DUPLICATE, MOVE)
+================================ */
+
+function formatDuplicateName(name: string): string {
+  if (!name) return name;
+  const match = name.match(/\s*\((\d+)\)$/);
+  if (match) {
+    const num = parseInt(match[1], 10) + 1;
+    return name.replace(/\s*\((\d+)\)$/, ` (${num})`);
+  }
+  return `${name} (2)`;
+}
+
+function cloneNodeWithNewIds(node: WBSItem, isRoot = true): WBSItem {
+  return {
+    ...node,
+    id: uid("wbs"),
+    nameEn: isRoot ? formatDuplicateName(node.nameEn) : node.nameEn,
+    nameId: isRoot && node.nameId ? formatDuplicateName(node.nameId) : node.nameId,
+    children: node.children ? node.children.map(c => cloneNodeWithNewIds(c, false)) : undefined
+  };
+}
+
+export function duplicateNodeById(tree: WBSItem[], targetId: string): WBSItem[] {
+  if (!targetId) return tree;
+
+  const duplicateInArray = (items: WBSItem[]): WBSItem[] => {
+    return items.flatMap((item) => {
+      const isMatch = (item.id && item.id === targetId) || (item.code && item.code === targetId);
+
+      if (isMatch) {
+        return [item, cloneNodeWithNewIds(item)];
+      }
+
+      if (item.children?.length) {
+        return [{ ...item, children: duplicateInArray(item.children) }];
+      }
+
+      return [item];
+    });
+  };
+
+  const next = duplicateInArray(tree);
+  return normalizeCodes(next);
+}
+
+export function indentNodeById(tree: WBSItem[], id: string): WBSItem[] {
+  const indentInArray = (items: WBSItem[]): WBSItem[] => {
+    const idx = items.findIndex(item => item.id === id);
+    if (idx > 0) {
+      const nodeToIndent = items[idx];
+      const prevSibling = { ...items[idx - 1] };
+      const updatedChildren = [...(prevSibling.children ?? []), nodeToIndent];
+      prevSibling.children = updatedChildren;
+      
+      const newItems = [...items];
+      newItems.splice(idx - 1, 2, prevSibling);
+      return newItems;
+    }
+
+    return items.map(item => {
+      if (!item.children?.length) return item;
+      return { ...item, children: indentInArray(item.children) };
+    });
+  };
+
+  const next = indentInArray(tree);
+  return normalizeCodes(next);
+}
+
+export function outdentNodeById(tree: WBSItem[], id: string): WBSItem[] {
+  const outdentFromTree = (items: WBSItem[]): { newTree: WBSItem[]; extractedNode?: WBSItem } => {
+    let extracted: WBSItem | undefined = undefined;
+    const newItems: WBSItem[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.children?.length) {
+        const childIdx = item.children.findIndex(c => c.id === id);
+        if (childIdx !== -1) {
+          extracted = item.children[childIdx];
+          const newChildren = item.children.filter(c => c.id !== id);
+          const updatedParent = { ...item, children: newChildren.length > 0 ? newChildren : undefined };
+          newItems.push(updatedParent);
+          newItems.push(extracted);
+          continue;
+        }
+
+        const res = outdentFromTree(item.children);
+        if (res.extractedNode) {
+          newItems.push({ ...item, children: res.newTree.length > 0 ? res.newTree : undefined });
+          extracted = res.extractedNode;
+          continue;
+        }
+      }
+      newItems.push(item);
+    }
+
+    return { newTree: newItems, extractedNode: extracted };
+  };
+
+  const { newTree } = outdentFromTree(tree);
+  return normalizeCodes(newTree);
+}
+
+export function moveNodeDirectionById(tree: WBSItem[], id: string, direction: "up" | "down"): WBSItem[] {
+  const DEFAULT_ROOTS = ["S", "A", "M"];
+  
+  const moveInArray = (items: WBSItem[]): WBSItem[] => {
+    const idx = items.findIndex(item => item.id === id);
+    if (idx !== -1) {
+      const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= items.length) return items;
+
+      if (DEFAULT_ROOTS.includes(items[idx].code) || DEFAULT_ROOTS.includes(items[targetIdx].code)) {
+        return items;
+      }
+
+      const newItems = [...items];
+      const [moved] = newItems.splice(idx, 1);
+      newItems.splice(targetIdx, 0, moved);
+      return newItems;
+    }
+
+    return items.map(item => {
+      if (!item.children?.length) return item;
+      return { ...item, children: moveInArray(item.children) };
+    });
+  };
+
+  const next = moveInArray(tree);
+  return normalizeCodes(next);
 }

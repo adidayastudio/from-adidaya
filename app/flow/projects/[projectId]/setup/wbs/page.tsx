@@ -33,6 +33,10 @@ import {
   removeById,
   updateById,
   uid,
+  indentNodeById,
+  outdentNodeById,
+  duplicateNodeById,
+  moveNodeDirectionById,
 } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-tree";
 
 const WBS_TABS = [
@@ -287,6 +291,26 @@ export default function ProjectSetupWBSPage() {
   const onRemove = (id: string) => {
     markEdited();
     setFullWbsTree((prev: any[]) => removeById(prev, id));
+  };
+
+  const onIndent = (id: string) => {
+    markEdited();
+    setFullWbsTree((prev: any[]) => indentNodeById(prev, id));
+  };
+
+  const onOutdent = (id: string) => {
+    markEdited();
+    setFullWbsTree((prev: any[]) => outdentNodeById(prev, id));
+  };
+
+  const onDuplicate = (id: string) => {
+    markEdited();
+    setFullWbsTree((prev: any[]) => duplicateNodeById(prev, id));
+  };
+
+  const onMoveDirection = (id: string, direction: "up" | "down") => {
+    markEdited();
+    setFullWbsTree((prev: any[]) => moveNodeDirectionById(prev, id, direction));
   };
 
   const onReorder = (parentId: string | null, fromIndex: number, toIndex: number) => {
@@ -620,6 +644,10 @@ export default function ProjectSetupWBSPage() {
                 onAddSibling={onAddSibling}
                 onRemove={onRemove}
                 onReorder={onReorder}
+                onIndent={onIndent}
+                onOutdent={onOutdent}
+                onDuplicate={onDuplicate}
+                onMoveDirection={onMoveDirection}
               />
             </div>
 
