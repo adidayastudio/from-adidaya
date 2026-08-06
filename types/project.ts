@@ -55,6 +55,9 @@ export interface Project {
     location: ProjectLocation;
     meta: Record<string, any>; // extra fields like type, buildType, disciplines, rabClass, etc.
 
+    building_mass_count?: number;
+    building_masses?: any[];
+
     createdBy?: string;
     createdAt: string;
     updatedAt: string;

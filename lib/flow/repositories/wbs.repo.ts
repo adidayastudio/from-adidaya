@@ -174,3 +174,74 @@ export async function createWBSFromTemplate(
 
     return data ?? [];
 }
+
+/**
+ * Automatically migrate existing single-building WBS items to Massa A when transitioning to multi-building
+ */
+export async function migrateSingleBuildingWBSToMassA(projectId: string, massAName: string = "Massa A") {
+    // 1. Fetch all existing WBS items for project
+    const { data: items, error } = await supabase
+        .from("project_wbs_items")
+        .select("*")
+        .eq("project_id", projectId);
+
+    if (error || !items || items.length === 0) return;
+
+    // Check if any items need migration (items starting directly with S, A, M, I, L without Level 0 letter prefix)
+    const samilPrefixes = ["S", "A", "M", "I", "L"];
+    const unmigrated = items.filter((item) => {
+        const rootCode = item.wbs_code.split(".")[0];
+        return samilPrefixes.includes(rootCode);
+    });
+
+    if (unmigrated.length === 0) return; // Already migrated or no legacy items
+
+    // 2. Create Level 0 root node for Massa A if not exists
+    let { data: massANode } = await supabase
+        .from("project_wbs_items")
+        .select("*")
+        .eq("project_id", projectId)
+        .eq("wbs_code", "A")
+        .maybeSingle();
+
+    if (!massANode) {
+        const { data: created, error: createErr } = await supabase
+            .from("project_wbs_items")
+            .insert({
+                project_id: projectId,
+                wbs_code: "A",
+                title: massAName,
+                level: 0,
+                position: 1,
+                is_leaf: false,
+                meta: { is_building_mass: true },
+            })
+            .select()
+            .single();
+
+        if (createErr) throw createErr;
+        massANode = created;
+    }
+
+    // 3. Update wbs_code and level for all unmigrated items
+    for (const item of unmigrated) {
+        const newCode = `A.${item.wbs_code}`;
+        const newLevel = item.level + 1;
+        
+        await supabase
+            .from("project_wbs_items")
+            .update({
+                wbs_code: newCode,
+                level: newLevel,
+                parent_id: item.parent_id === null ? massANode!.id : item.parent_id,
+            })
+            .eq("id", item.id);
+
+        // Also update volume calcs referencing old wbs_code
+        await supabase
+            .from("project_volume_calcs")
+            .update({ wbs_code: newCode })
+            .eq("project_id", projectId)
+            .eq("wbs_code", item.wbs_code);
+    }
+}

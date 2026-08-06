@@ -99,6 +99,8 @@ export async function updateProject(
     if (patch.endDate !== undefined) updateData.end_date = patch.endDate;
     if (patch.location) updateData.location = patch.location;
     if (patch.meta) updateData.meta = patch.meta;
+    if (patch.building_mass_count !== undefined) updateData.building_mass_count = patch.building_mass_count;
+    if (patch.building_masses !== undefined) updateData.building_masses = patch.building_masses;
 
     const { error } = await supabase
         .from("projects")
@@ -392,6 +394,8 @@ function mapDbToProject(row: any): Project {
         endDate: row.end_date,
         location: row.location || {},
         meta: row.meta || {},
+        building_mass_count: row.building_mass_count,
+        building_masses: row.building_masses,
         createdBy: row.created_by,
         createdAt: row.created_at,
         updatedAt: row.updated_at,

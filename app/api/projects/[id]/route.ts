@@ -16,6 +16,8 @@ const PROJECT_COLUMNS = `
     status,
     start_date,
     end_date,
+    building_mass_count,
+    building_masses,
     location,
     meta,
     created_by,
@@ -62,7 +64,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const updateData: Record<string, any> = {};
     const allowedFields = [
         'project_code', 'project_number', 'project_name', 'status',
-        'start_date', 'end_date', 'location', 'meta'
+        'start_date', 'end_date', 'building_mass_count', 'building_masses',
+        'location', 'meta'
     ];
 
     for (const field of allowedFields) {

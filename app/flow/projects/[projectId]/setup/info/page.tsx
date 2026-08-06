@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { fetchProjectTypes, fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { fetchClasses, fetchTypologies, fetchDisciplines } from "@/lib/api/templates-extended";
 import { INDONESIAN_REGIONS } from "@/shared/constants/regions";
+import { migrateSingleBuildingWBSToMassA } from "@/lib/flow/repositories/wbs.repo";
 
 /* ================= TYPES ================= */
 
@@ -458,6 +459,14 @@ export default function ProjectInfoPage() {
             });
  
             if (res.ok) {
+                if (buildingMassCount > 1) {
+                    try {
+                        const massAName = buildingMasses.find(m => m.code === "A")?.name || "Massa A";
+                        await migrateSingleBuildingWBSToMassA(project.id, massAName);
+                    } catch (migErr) {
+                        console.error("Failed to migrate existing WBS items to Massa A:", migErr);
+                    }
+                }
                 setSaveMessage("Changes saved successfully!");
                 refresh();
                 return true;
