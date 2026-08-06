@@ -96,7 +96,7 @@ export default function ProjectDetailTrackingContent() {
   const tabs: TabItem<TrackingTab>[] = [
     { key: "schedule", label: "Build Scope (WBS & Volume)", badge: `${summaryStats.totalItems} Items` },
     { key: "stages", label: "Design Scope (Stages & Tasks)" },
-    { key: "rab", label: "RAB & Finance Realization" },
+    { key: "rab", label: "RAB & Finance" },
     { key: "reports", label: "Site Reports" },
   ];
 
@@ -212,21 +212,26 @@ export default function ProjectDetailTrackingContent() {
       {/* 3. HEADER TAB NAVIGATION & TOP ACTION BAR */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-neutral-200 pb-4">
         {/* SEGMENTED SCOPE TABS */}
-        <div className="flex items-center p-1 bg-neutral-100 rounded-xl overflow-x-auto gap-1">
+        <div className="flex items-center p-1.5 bg-neutral-200/60 dark:bg-neutral-800/60 rounded-2xl overflow-x-auto gap-1.5 border border-neutral-300/40 dark:border-neutral-700/40 shadow-inner">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
               className={clsx(
-                "px-3.5 py-2 text-xs font-semibold rounded-lg transition-all whitespace-nowrap flex items-center gap-2",
+                "px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-2",
                 activeTab === tab.key
-                  ? "bg-white text-neutral-900 shadow-sm"
-                  : "text-neutral-500 hover:text-neutral-800"
+                  ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-md border border-neutral-300/60 dark:border-neutral-700/60 scale-[1.02]"
+                  : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-neutral-800/40"
               )}
             >
               <span>{tab.label}</span>
               {tab.badge && (
-                <span className="px-1.5 py-0.5 text-[10px] font-extrabold rounded-md bg-neutral-200/70 text-neutral-700">
+                <span className={clsx(
+                  "px-2 py-0.5 text-[10px] font-extrabold rounded-md transition-colors",
+                  activeTab === tab.key
+                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                    : "bg-neutral-300/70 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
+                )}>
                   {tab.badge}
                 </span>
               )}
