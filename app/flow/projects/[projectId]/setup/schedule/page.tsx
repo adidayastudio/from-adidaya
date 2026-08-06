@@ -87,15 +87,24 @@ export default function ProjectSetupSchedulePage() {
     
     async function fetchWbs() {
       try {
-        const { data, error } = await supabase
-          .from("project_wbs_items")
-          .select("*")
-          .eq("project_id", project.id)
-          .range(0, 10000);
-          
-        if (error) throw error;
+        let allRows: any[] = [];
+        let page = 0;
+        const pageSize = 1000;
         
-        setDbWbsItems(data || []);
+        while (true) {
+          const { data, error } = await supabase
+            .from("project_wbs_items")
+            .select("*")
+            .eq("project_id", project.id)
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+            
+          if (error || !data || data.length === 0) break;
+          allRows.push(...data);
+          if (data.length < pageSize) break;
+          page++;
+        }
+        
+        setDbWbsItems(allRows);
       } catch (err) {
         console.error("Error fetching project WBS:", err);
       }

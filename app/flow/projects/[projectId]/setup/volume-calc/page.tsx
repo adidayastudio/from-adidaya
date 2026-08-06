@@ -89,14 +89,24 @@ export default function VolumeCalcPage() {
     async function fetchWbs() {
       try {
         setIsLoadingWBS(true);
-        const { data, error } = await supabase
-          .from("project_wbs_items")
-          .select("*")
-          .eq("project_id", project.id)
-          .range(0, 10000);
+        let allRows: any[] = [];
+        let page = 0;
+        const pageSize = 1000;
+        
+        while (true) {
+          const { data, error } = await supabase
+            .from("project_wbs_items")
+            .select("*")
+            .eq("project_id", project.id)
+            .range(page * pageSize, (page + 1) * pageSize - 1);
+            
+          if (error || !data || data.length === 0) break;
+          allRows.push(...data);
+          if (data.length < pageSize) break;
+          page++;
+        }
 
-        if (error) throw error;
-        setDbWbsItems(data || []);
+        setDbWbsItems(allRows);
       } catch (err) {
         console.error("Error fetching WBS:", err);
       } finally {
