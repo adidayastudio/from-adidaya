@@ -68,6 +68,42 @@ export default function ProjectSetupWBSPage() {
     return buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
   });
 
+  // Auto-generate multi-building WBS tree when project specs are loaded
+  useEffect(() => {
+    if (!project) return;
+
+    const count = project.building_mass_count || 1;
+    const masses = project.building_masses || [];
+
+    if (count > 1 && Array.isArray(masses) && masses.length > 0) {
+      const baseDetail = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+
+      const multiBuildingTree = masses.map((mass: any, idx: number) => {
+        const prefix = mass.code;
+        const massTitle = `${prefix}. ${mass.name}`;
+
+        const prefixChildren = (nodes: any[]): any[] => {
+          return nodes.map((node) => ({
+            ...node,
+            id: `node-${prefix}-${node.code}-${node.id || idx}`,
+            code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
+            children: node.children ? prefixChildren(node.children) : undefined,
+          }));
+        };
+
+        return {
+          id: `mass-${prefix}-${idx}`,
+          code: prefix,
+          nameEn: massTitle,
+          nameId: massTitle,
+          children: prefixChildren(baseDetail),
+        };
+      });
+
+      setFullWbsTree(multiBuildingTree);
+    }
+  }, [project]);
+
   // History state for Undo / Redo
   const [history, setHistory] = useState<any[][]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);

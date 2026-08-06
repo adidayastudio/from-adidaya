@@ -223,15 +223,28 @@ export function buildDetailFromEstimates(estimatesTree: WBSItem[]): WBSItem[] {
 
     function addExtensions(items: WBSItem[]): WBSItem[] {
         return items.map(item => {
+            const prefix = item.code.match(/^[A-Z]\./) ? item.code.split(".")[0] + "." : "";
+            const cleanCode = item.code.replace(/^[A-Z]\./, "");
+
             // Check if this item has detail extensions
-            const extensions = WBS_DETAIL_EXTENSIONS[item.code];
+            const extensions = WBS_DETAIL_EXTENSIONS[item.code] || WBS_DETAIL_EXTENSIONS[cleanCode];
 
             // Recursively process existing children
             let children = item.children ? addExtensions(item.children) : [];
 
             // Add extensions if they exist
             if (extensions) {
-                const extendedChildren = extensions.map(ext => ({
+                const prefixChildCodes = (extList: Omit<WBSItem, "id">[]): Omit<WBSItem, "id">[] => {
+                    return extList.map(ext => ({
+                        ...ext,
+                        code: prefix ? `${prefix}${ext.code}` : ext.code,
+                        children: ext.children ? prefixChildCodes(ext.children) : undefined,
+                    }));
+                };
+
+                const prefixedExtensions = prefix ? prefixChildCodes(extensions) : extensions;
+
+                const extendedChildren = prefixedExtensions.map(ext => ({
                     ...ext,
                     id: generateId(),
                     children: ext.children?.map(child => ({

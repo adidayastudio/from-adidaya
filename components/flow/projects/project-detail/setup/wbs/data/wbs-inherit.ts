@@ -27,14 +27,21 @@ export function buildEstimatesFromBallpark(
 
   function attach(nodes: WBSItem[]) {
     for (const n of nodes) {
-      const hit = delta.find((d) => d.parentCode === n.code);
+      const cleanCode = n.code.replace(/^[A-Z]\./, "");
+      const hit = delta.find((d) => d.parentCode === n.code || d.parentCode === cleanCode);
 
       if (hit) {
         // inject id untuk item delta
         const deltaWithIds = withIds(hit.items);
 
-        // clone lagi biar aman (immutability)
-        n.children = [...(n.children ?? []), ...cloneTree(deltaWithIds)];
+        // Prefix delta items code if parent node has a building prefix
+        const prefix = n.code.match(/^[A-Z]\./) ? n.code.split(".")[0] + "." : "";
+        const prefixedDelta = deltaWithIds.map((dItem) => ({
+          ...dItem,
+          code: prefix ? `${prefix}${dItem.code}` : dItem.code,
+        }));
+
+        n.children = [...(n.children ?? []), ...cloneTree(prefixedDelta)];
       }
 
       if (n.children?.length) attach(n.children);
