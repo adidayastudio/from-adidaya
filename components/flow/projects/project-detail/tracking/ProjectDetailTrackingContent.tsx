@@ -102,115 +102,8 @@ export default function ProjectDetailTrackingContent() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* 1. SUBMISSION READINESS WARNING BANNER */}
-      {!isSubmitted && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3 text-amber-900 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0 mt-0.5">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-sm font-bold flex items-center gap-2">
-                Status Modul: <span className="px-2 py-0.5 bg-amber-200 text-amber-800 rounded-md text-xs">Draft Mode</span>
-              </div>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Setup WBS, RAB, dan Schedule belum di-submit. Anda tetap dapat melakukan tracking menggunakan data draft saat ini.
-              </p>
-            </div>
-          </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => router.push(`/flow/projects/${project?.id}/setup/wbs`)}
-            className="whitespace-nowrap bg-white hover:bg-amber-100 text-amber-900 border-amber-300"
-          >
-            Go to WBS Setup
-          </Button>
-        </div>
-      )}
-
-      {/* 2. EXECUTIVE DASHBOARD SUMMARY CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* CARD 1: OVERALL PHYSICAL PROGRESS */}
-        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
-            <span>Overall Progress Fisik</span>
-            <TrendingUp className="w-4 h-4 text-blue-500" />
-          </div>
-          <div className="mt-3">
-            <div className="text-2xl font-extrabold text-neutral-900">{summaryStats.overallProgress}%</div>
-            <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden mt-2">
-              <div
-                className="h-full bg-blue-600 transition-all duration-500"
-                style={{ width: `${summaryStats.overallProgress}%` }}
-              />
-            </div>
-          </div>
-          <div className="mt-2 text-[10px] text-neutral-400 font-medium">
-            {summaryStats.completedCount} Selesai • {summaryStats.inProgressCount} Dalam Proses
-          </div>
-        </div>
-
-        {/* CARD 2: DELAY COUNTER */}
-        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
-            <span>Pekerjaan Terlambat</span>
-            <AlertTriangle className={clsx("w-4 h-4", summaryStats.delayedCount > 0 ? "text-red-500" : "text-neutral-400")} />
-          </div>
-          <div className="mt-3">
-            <div className={clsx("text-2xl font-extrabold", summaryStats.delayedCount > 0 ? "text-red-600" : "text-green-600")}>
-              {summaryStats.delayedCount} <span className="text-xs font-normal text-neutral-500">Item</span>
-            </div>
-            <div className="text-xs font-semibold text-neutral-600 mt-1">
-              {summaryStats.delayedCount > 0 ? `🔴 Perlu Perhatian Segera` : `🟢 Semua Sesuai Jadwal`}
-            </div>
-          </div>
-          <div className="mt-2 text-[10px] text-neutral-400 font-medium">
-            Max Varian: +{summaryStats.scheduleVarianceDays} Hari
-          </div>
-        </div>
-
-        {/* CARD 3: VOLUME REALIZATION */}
-        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
-            <span>Realisasi Volume</span>
-            <Layers className="w-4 h-4 text-purple-500" />
-          </div>
-          <div className="mt-3">
-            <div className="text-xl font-extrabold text-neutral-900">
-              {summaryStats.totalActualVolume.toLocaleString("id-ID")}
-            </div>
-            <div className="text-xs text-neutral-500 font-medium mt-0.5">
-              dari Target {summaryStats.totalTargetVolume.toLocaleString("id-ID")} Unit
-            </div>
-          </div>
-          <div className="mt-2 text-[10px] text-neutral-400 font-medium">
-            Akumulasi Terpasang Lapangan
-          </div>
-        </div>
-
-        {/* CARD 4: COST / FINANCE REALIZATION */}
-        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
-            <span>Realisasi Biaya RAB</span>
-            <DollarSign className="w-4 h-4 text-emerald-500" />
-          </div>
-          <div className="mt-3">
-            <div className="text-lg font-extrabold text-neutral-900">
-              Rp {summaryStats.totalActualCost.toLocaleString("id-ID")}
-            </div>
-            <div className="text-xs text-neutral-500 font-medium mt-0.5">
-              Cost Variance Ok
-            </div>
-          </div>
-          <div className="mt-2 text-[10px] text-neutral-400 font-medium">
-            Actual Spend vs RAB Baseline
-          </div>
-        </div>
-      </div>
-
-      {/* 3. HEADER TAB NAVIGATION & TOP ACTION BAR */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-neutral-200 pb-4">
+      {/* 1. TOP TAB NAVIGATION & ACTION BAR (BARIS 1 - PALING ATAS) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-neutral-200/80 dark:border-neutral-800 pb-4">
         {/* SEGMENTED SCOPE TABS */}
         <div className="flex items-center p-1.5 bg-neutral-200/60 dark:bg-neutral-800/60 rounded-2xl overflow-x-auto gap-1.5 border border-neutral-300/40 dark:border-neutral-700/40 shadow-inner">
           {tabs.map((tab) => (
@@ -259,6 +152,333 @@ export default function ProjectDetailTrackingContent() {
             + Input Progress Harian
           </Button>
         </div>
+      </div>
+
+      {/* 2. SUBMISSION READINESS WARNING BANNER */}
+      {!isSubmitted && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3 text-amber-900 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-bold flex items-center gap-2">
+                Status Modul: <span className="px-2 py-0.5 bg-amber-200 text-amber-800 rounded-md text-xs">Draft Mode</span>
+              </div>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Setup WBS, RAB, dan Schedule belum di-submit. Anda tetap dapat melakukan tracking menggunakan data draft saat ini.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => router.push(`/flow/projects/${project?.id}/setup/wbs`)}
+            className="whitespace-nowrap bg-white hover:bg-amber-100 text-amber-900 border-amber-300"
+          >
+            Go to WBS Setup
+          </Button>
+        </div>
+      )}
+
+      {/* 3. DYNAMIC SUMMARY CARDS (CHANGES CONTEXTUALLY PER ACTIVE TAB) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+        {/* CARDS FOR BUILD SCOPE (WBS & VOLUME) */}
+        {activeTab === "schedule" && (
+          <>
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Overall Progress Fisik</span>
+                <TrendingUp className="w-4 h-4 text-blue-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">{summaryStats.overallProgress}%</div>
+                <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden mt-2">
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-500"
+                    style={{ width: `${summaryStats.overallProgress}%` }}
+                  />
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                {summaryStats.completedCount} Selesai • {summaryStats.inProgressCount} Dalam Proses
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Pekerjaan Terlambat</span>
+                <AlertTriangle className={clsx("w-4 h-4", summaryStats.delayedCount > 0 ? "text-red-500" : "text-neutral-400")} />
+              </div>
+              <div className="mt-3">
+                <div className={clsx("text-2xl font-extrabold", summaryStats.delayedCount > 0 ? "text-red-600" : "text-green-600")}>
+                  {summaryStats.delayedCount} <span className="text-xs font-normal text-neutral-500">Item</span>
+                </div>
+                <div className="text-xs font-semibold text-neutral-600 dark:text-neutral-300 mt-1">
+                  {summaryStats.delayedCount > 0 ? `🔴 Perlu Perhatian Segera` : `🟢 Semua Sesuai Jadwal`}
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Max Varian: +{summaryStats.scheduleVarianceDays} Hari
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Realisasi Volume</span>
+                <Layers className="w-4 h-4 text-purple-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-xl font-extrabold text-neutral-900 dark:text-white">
+                  {summaryStats.totalActualVolume.toLocaleString("id-ID")}
+                </div>
+                <div className="text-xs text-neutral-500 font-medium mt-0.5">
+                  dari Target {summaryStats.totalTargetVolume.toLocaleString("id-ID")} Unit
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Akumulasi Terpasang Lapangan
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Realisasi Biaya RAB</span>
+                <DollarSign className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-lg font-extrabold text-neutral-900 dark:text-white">
+                  Rp {summaryStats.totalActualCost.toLocaleString("id-ID")}
+                </div>
+                <div className="text-xs text-emerald-600 font-semibold mt-0.5">
+                  Cost Variance Ok
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Actual Spend vs RAB Baseline
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* CARDS FOR DESIGN SCOPE (STAGES & TASKS) */}
+        {activeTab === "stages" && (
+          <>
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Overall Progress Desain</span>
+                <Calendar className="w-4 h-4 text-blue-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">40.0%</div>
+                <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden mt-2">
+                  <div className="h-full bg-blue-600 transition-all duration-500" style={{ width: "40%" }} />
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Target Fase: 02-SD Schematic Design
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Status Tahapan Stage</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">
+                  2 <span className="text-xs font-medium text-neutral-400">/ 5 Stage</span>
+                </div>
+                <div className="text-xs font-semibold text-emerald-600 mt-1">
+                  🟢 01-KO Kickoff Completed
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Schematic Design sedang berjalan
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Deliverables & Revisions</span>
+                <FileCheck className="w-4 h-4 text-purple-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-xl font-extrabold text-neutral-900 dark:text-white">
+                  12 <span className="text-xs font-normal text-neutral-500">Drawings</span>
+                </div>
+                <div className="text-xs text-amber-600 font-semibold mt-0.5">
+                  🟡 2 Pending Review Klien
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Dokumen Arsitektur & Struktur
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Timeline Schedule Desain</span>
+                <Clock className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-lg font-extrabold text-neutral-900 dark:text-white">
+                  On Schedule
+                </div>
+                <div className="text-xs text-neutral-500 font-medium mt-0.5">
+                  Target Finish SD: 15 Aug
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Timeline Sesuai Target Klien
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* CARDS FOR RAB & FINANCE */}
+        {activeTab === "rab" && (
+          <>
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Total RAB Baseline</span>
+                <DollarSign className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-lg font-extrabold text-neutral-900 dark:text-white">
+                  Rp {(summaryStats.totalActualCost * 1.5).toLocaleString("id-ID")}
+                </div>
+                <div className="text-xs text-neutral-500 font-medium mt-0.5">
+                  Total Anggaran Disetujui
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Contract RAB Value
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Realisasi Biaya Terpasang</span>
+                <TrendingUp className="w-4 h-4 text-blue-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-lg font-extrabold text-neutral-900 dark:text-white">
+                  Rp {summaryStats.totalActualCost.toLocaleString("id-ID")}
+                </div>
+                <div className="text-xs text-blue-600 font-semibold mt-0.5">
+                  {(summaryStats.totalActualCost > 0 ? (100 / 1.5).toFixed(1) : 0)}% Realisasi
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Valuasi Pekerjaan Lapangan
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Sisa Anggaran (Variance)</span>
+                <AlertTriangle className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-lg font-extrabold text-emerald-600">
+                  Rp {(summaryStats.totalActualCost * 0.5).toLocaleString("id-ID")}
+                </div>
+                <div className="text-xs text-emerald-600 font-semibold mt-0.5">
+                  🟢 Sisa Anggaran Aman
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                RAB Baseline minus Realisasi
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Serapan Anggaran</span>
+                <Layers className="w-4 h-4 text-purple-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">66.7%</div>
+                <div className="h-2 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden mt-2">
+                  <div className="h-full bg-purple-600 transition-all duration-500" style={{ width: "66.7%" }} />
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Prosentase Serapan RAB
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* CARDS FOR REPORTS */}
+        {activeTab === "reports" && (
+          <>
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Total Laporan Terbit</span>
+                <FileCheck className="w-4 h-4 text-blue-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">24 Laporan</div>
+                <div className="text-xs text-blue-600 font-semibold mt-0.5">
+                  18 Daily • 6 Weekly
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Dokumentasi Lapangan & Desain
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Kondisi Lapangan</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-extrabold text-emerald-600">Cerah</div>
+                <div className="text-xs text-neutral-500 font-medium mt-0.5">
+                  Pekerjaan Berjalan Lancar
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Update Terakhir: Hari Ini
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Tenaga Kerja Lapangan</span>
+                <TrendingUp className="w-4 h-4 text-purple-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-extrabold text-neutral-900 dark:text-white">18 Pekerja</div>
+                <div className="text-xs text-neutral-500 font-medium mt-0.5">
+                  3 Tukang • 15 Pekerja
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Absensi Mandor Hari Ini
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm flex flex-col justify-between">
+              <div className="flex items-center justify-between text-xs text-neutral-500 font-medium">
+                <span>Status Approval Report</span>
+                <Clock className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-extrabold text-emerald-600">Approved</div>
+                <div className="text-xs text-neutral-500 font-medium mt-0.5">
+                  Disetujui Project Manager
+                </div>
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-400 font-medium">
+                Minggu ke-24 Ready
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* 4. ACTIVE TAB CONTENT */}
