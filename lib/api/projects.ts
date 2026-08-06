@@ -166,17 +166,26 @@ export async function updateStage(
 // ============================================
 
 export async function fetchProjectWBS(projectId: string): Promise<WBSItem[]> {
-    const { data, error } = await supabase
-        .from("project_wbs_items")
-        .select("*")
-        .eq("project_id", projectId)
-        .range(0, 10000)
-        .order("level", { ascending: true })
-        .order("position", { ascending: true });
+    let allRows: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
 
-    if (error || !data) return [];
+    while (true) {
+        const { data, error } = await supabase
+            .from("project_wbs_items")
+            .select("*")
+            .eq("project_id", projectId)
+            .range(page * pageSize, (page + 1) * pageSize - 1)
+            .order("level", { ascending: true })
+            .order("position", { ascending: true });
 
-    return buildWBSTree(data.map(mapDbToWBS));
+        if (error || !data || data.length === 0) break;
+        allRows.push(...data);
+        if (data.length < pageSize) break;
+        page++;
+    }
+
+    return buildWBSTree(allRows.map(mapDbToWBS));
 }
 
 export async function createWBSItem(

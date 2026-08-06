@@ -6,22 +6,32 @@
 import { supabase } from "@/lib/supabaseClient";
 
 export async function fetchProjectWBS(projectId: string, stageId?: string) {
-    let query = supabase
-        .from("project_wbs_items")
-        .select("*")
-        .eq("project_id", projectId);
+    let allRows: any[] = [];
+    let page = 0;
+    const pageSize = 1000;
 
-    if (stageId) {
-        query = query.eq("stage_id", stageId);
+    while (true) {
+        let query = supabase
+            .from("project_wbs_items")
+            .select("*")
+            .eq("project_id", projectId);
+
+        if (stageId) {
+            query = query.eq("stage_id", stageId);
+        }
+
+        const { data, error } = await query
+            .range(page * pageSize, (page + 1) * pageSize - 1)
+            .order("level", { ascending: true })
+            .order("position", { ascending: true });
+
+        if (error || !data || data.length === 0) break;
+        allRows.push(...data);
+        if (data.length < pageSize) break;
+        page++;
     }
 
-    const { data, error } = await query
-        .range(0, 10000)
-        .order("level", { ascending: true })
-        .order("position", { ascending: true });
-
-    if (error) throw error;
-    return data ?? [];
+    return allRows;
 }
 
 export async function fetchWBSItem(itemId: string) {
