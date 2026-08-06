@@ -88,83 +88,71 @@ export default function TrackingStagesTab() {
   );
 
   return (
-    <div className="space-y-6">
-      {/* 1. DESIGN SCOPE HEADER & PROGRESS CARD */}
-      <div className="p-5 rounded-2xl bg-white border border-neutral-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="text-xs font-bold text-brand-red uppercase tracking-wider flex items-center gap-1.5">
-            <PenTool className="w-3.5 h-3.5" /> Design Scope Tracking (Tasks & Stages)
-          </div>
-          <h3 className="text-base font-bold text-neutral-900">Kemajuan Tahapan Desain & Deliverables</h3>
-          <p className="text-xs text-neutral-500">
-            Pelacakan progres tahap perancangan arsitektur, gambar kerja, dan dokumen perencanaan.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-4 bg-neutral-50 p-3 rounded-xl border border-neutral-100 shrink-0">
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {/* COMPACT CLEAN STAGE PROGRESS LIST (NO REDUNDANT BANNER & NO BULKY CARDS) */}
+      <div className="bg-white dark:bg-neutral-900 rounded-[22px] border border-black/[0.05] dark:border-white/[0.05] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+        <div className="p-5 border-b border-black/[0.04] dark:border-white/[0.04] flex items-center justify-between">
           <div>
-            <div className="text-[10px] text-neutral-400 font-medium">Total Design Progress</div>
-            <div className="text-xl font-extrabold text-neutral-900">{overallDesignProgress}%</div>
+            <h3 className="text-sm font-extrabold text-neutral-900 dark:text-white">Tahapan Desain & Progress Tasks</h3>
+            <p className="text-[11px] text-neutral-500 font-medium mt-0.5">Status penyelesaian deliverables per tahapan perancangan</p>
           </div>
-          <div className="w-20 h-2 bg-neutral-200 rounded-full overflow-hidden">
-            <div className="h-full bg-brand-red transition-all duration-300" style={{ width: `${overallDesignProgress}%` }} />
-          </div>
+          <span className="px-3 py-1 bg-neutral-100 dark:bg-neutral-800 rounded-full text-xs font-bold text-neutral-700 dark:text-neutral-300">
+            {overallDesignProgress}% Selesai
+          </span>
         </div>
-      </div>
 
-      {/* 2. STAGES TIMELINE GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {stages.map((stage) => (
-          <div
-            key={stage.id}
-            className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow"
-          >
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="px-2.5 py-1 text-xs font-extrabold rounded-lg bg-neutral-100 text-neutral-800">
+        <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04]">
+          {stages.map((stage) => (
+            <div
+              key={stage.id}
+              className="p-4 hover:bg-neutral-50/60 dark:hover:bg-neutral-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            >
+              <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                <span className="w-10 h-10 rounded-xl bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white flex items-center justify-center font-extrabold text-xs shrink-0 border border-black/[0.03] dark:border-white/[0.05]">
                   {stage.code}
                 </span>
+                <div className="min-w-0">
+                  <h4 className="text-sm font-bold text-neutral-900 dark:text-white truncate">{stage.name}</h4>
+                  <p className="text-xs text-neutral-400 font-medium truncate mt-0.5">{stage.desc}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6 shrink-0 justify-between sm:justify-end">
+                <div className="text-right min-w-[100px]">
+                  <div className="text-xs font-bold text-neutral-800 dark:text-neutral-200">
+                    {stage.completedTasks} / {stage.tasksCount} Tasks
+                  </div>
+                  <div className="w-24 h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden mt-1.5">
+                    <div
+                      className={clsx(
+                        "h-full rounded-full transition-all duration-500",
+                        stage.status === "Completed" ? "bg-emerald-500" : stage.status === "In Progress" ? "bg-blue-500" : "bg-neutral-300"
+                      )}
+                      style={{ width: `${stage.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <span className="text-xs font-black text-neutral-900 dark:text-white min-w-[36px] text-right">
+                  {stage.progress}%
+                </span>
+
                 <span
                   className={clsx(
-                    "px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider",
+                    "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider min-w-[85px] text-center",
                     stage.status === "Completed"
-                      ? "bg-green-100 text-green-700"
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                       : stage.status === "In Progress"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-neutral-100 text-neutral-500"
+                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-400"
                   )}
                 >
                   {stage.status}
                 </span>
               </div>
-
-              <div>
-                <h4 className="text-sm font-bold text-neutral-900">{stage.name}</h4>
-                <p className="text-xs text-neutral-500 line-clamp-2 mt-1">{stage.desc}</p>
-              </div>
             </div>
-
-            <div className="space-y-2 pt-2 border-t border-neutral-100">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-neutral-500 font-medium flex items-center gap-1">
-                  <CheckSquare className="w-3.5 h-3.5 text-neutral-400" />
-                  {stage.completedTasks} / {stage.tasksCount} Tasks Selesai
-                </span>
-                <span className="font-extrabold text-neutral-900">{stage.progress}%</span>
-              </div>
-
-              <div className="h-2 w-full bg-neutral-100 rounded-full overflow-hidden">
-                <div
-                  className={clsx(
-                    "h-full transition-all duration-300",
-                    stage.status === "Completed" ? "bg-green-500" : "bg-brand-red"
-                  )}
-                  style={{ width: `${stage.progress}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
