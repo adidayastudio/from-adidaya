@@ -520,6 +520,453 @@ const pdfKolamMEP = [
   }
 ];
 
+// Cafe / Kopijalu PDF items (under C.S)
+const pdfCafeStructure = [
+  {
+    code: "S.1", nameId: "Pekerjaan Tanah dan Fondasi", nameEn: "Earthwork & Foundation", children: [
+      {
+        code: "S.1.1", nameId: "Pekerjaan Galian Tanah", nameEn: "Soil Excavation", children: [
+          { code: "S.1.1.1", nameId: "Sloof", nameEn: "Tie-Beam Excavation" }
+        ]
+      },
+      { code: "S.1.2", nameId: "Pengurugan Pasir Urug t=5 cm", nameEn: "Sand Bedding t=5cm" }
+    ]
+  },
+  {
+    code: "S.2", nameId: "Pekerjaan Beton", nameEn: "Concrete Works", children: [
+      {
+        code: "S.2.1", nameId: "Lantai 1", nameEn: "Floor 1", children: [
+          {
+            code: "S.2.1.1", nameId: "Pekerjaan Sloof SL2 20x30", nameEn: "Tie-Beam SL2 20x30", children: [
+              { code: "S.2.1.1.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.1.1.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.1.1.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+            ]
+          },
+          {
+            code: "S.2.1.2", nameId: "Pekerjaan Kolom Praktis KP Eksterior", nameEn: "Practical Column KP Exterior", children: [
+              { code: "S.2.1.2.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.1.2.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.1.2.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+            ]
+          },
+          {
+            code: "S.2.1.5", nameId: "Pekerjaan Balok Latei Eksterior", nameEn: "Exterior Lintel Beam", children: [
+              { code: "S.2.1.5.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.1.5.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.1.5.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+            ]
+          }
+        ]
+      },
+      {
+        code: "S.2.2", nameId: "Lantai 2", nameEn: "Floor 2", children: [
+          {
+            code: "S.2.2.1", nameId: "Pekerjaan Kolom Praktis KP Eksterior", nameEn: "Practical Column KP Exterior", children: [
+              { code: "S.2.2.1.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.2.1.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.2.1.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+            ]
+          },
+          {
+            code: "S.2.2.4", nameId: "Pekerjaan Balok Latei Eksterior", nameEn: "Exterior Lintel Beam", children: [
+              { code: "S.2.2.4.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.2.4.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.2.4.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+            ]
+          },
+          {
+            code: "S.2.2.5", nameId: "Pekerjaan Tangga Lantai 2-3", nameEn: "Staircase Floor 2-3", children: [
+              { code: "S.2.2.5.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.2.5.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.2.5.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+            ]
+          }
+        ]
+      },
+      {
+        code: "S.2.3", nameId: "Lantai 3", nameEn: "Floor 3", children: [
+          {
+            code: "S.2.3.1", nameId: "Pekerjaan Kolom Praktis KP Eksterior", nameEn: "Practical Column KP Exterior", children: [
+              { code: "S.2.3.1.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.3.1.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.3.1.3", nameId: "Pengecoran Beton", nameEn: "Concrete Pouring" }
+            ]
+          },
+          {
+            code: "S.2.3.3", nameId: "Pekerjaan Kolom K3", nameEn: "Column K3 Works", children: [
+              { code: "S.2.3.3.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.3.3.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.3.3.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+            ]
+          },
+          {
+            code: "S.2.3.4", nameId: "Pekerjaan Ring Balk BA-2 20x30", nameEn: "Ring Beam BA-2 20x30", children: [
+              { code: "S.2.3.4.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.3.4.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.3.4.3", nameId: "Pengecoran Beton Mutu K-300", nameEn: "Concrete K-300 Pouring" }
+            ]
+          },
+          {
+            code: "S.2.3.5", nameId: "Pekerjaan Balok Latei Eksterior", nameEn: "Exterior Lintel Beam", children: [
+              { code: "S.2.3.5.1", nameId: "Pekerjaan Bekisting", nameEn: "Formwork" },
+              { code: "S.2.3.5.2", nameId: "Pekerjaan Pembesian", nameEn: "Reinforcement" },
+              { code: "S.2.3.5.3", nameId: "Pengecoran Beton", nameEn: "Concrete Pouring" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    code: "S.3", nameId: "Pekerjaan Rangka Atap", nameEn: "Roof Framing Works", children: [
+      { code: "S.3.1", nameId: "Pekerjaan Rangka Baja Ringan", nameEn: "Lightweight Steel Roof Framing" }
+    ]
+  }
+];
+
+// Cafe / Kopijalu Architecture PDF items (under C.A)
+const pdfCafeArchitecture = [
+  {
+    code: "A.1", nameId: "Pekerjaan Pasangan Dinding", nameEn: "Wall Masonry Works", children: [
+      {
+        code: "A.1.1", nameId: "Pemasangan 1 m2 Dinding Bata Ringan", nameEn: "Lightweight Block Wall 1m2", children: [
+          { code: "A.1.1.1", nameId: "Lantai 1 Eksterior", nameEn: "Floor 1 Exterior" },
+          { code: "A.1.1.3", nameId: "Lantai 2 Eksterior", nameEn: "Floor 2 Exterior" },
+          { code: "A.1.1.5", nameId: "Lantai 3 Eksterior", nameEn: "Floor 3 Exterior" }
+        ]
+      },
+      { code: "A.1.2", nameId: "Pemasangan 1 m2 Plesteran", nameEn: "Wall Plastering 1m2" },
+      { code: "A.1.3", nameId: "Pemasangan 1 m2 Acian", nameEn: "Skim Coating 1m2" }
+    ]
+  },
+  {
+    code: "A.2", nameId: "Pekerjaan Penutup Dinding Eksterior", nameEn: "Exterior Wall Finishes", children: [
+      { code: "A.2.1", nameId: "Pemasangan Tali Air Aluminium 2mm", nameEn: "Aluminium Groove Line 2mm" }
+    ]
+  },
+  {
+    code: "A.3", nameId: "Pekerjaan Plafon Eksterior", nameEn: "Exterior Ceiling Works", children: [
+      { code: "A.3.1", nameId: "Pekerjaan Plafond Eksterior", nameEn: "Exterior Ceiling Works" }
+    ]
+  },
+  {
+    code: "A.4", nameId: "Pekerjaan Penutup Atap", nameEn: "Roof Covering Works", children: [
+      { code: "A.4.1", nameId: "Pekerjaan 1 m2 Penutup Atap PVC Sheet Ex. Alderon Double Twin Wall", nameEn: "PVC Roofing Sheet Alderon Double Twin Wall 1m2" },
+      { code: "A.4.2", nameId: "Pekerjaan Talang", nameEn: "Gutter Works" },
+      { code: "A.4.3", nameId: "Pekerjaan Aluminium Foil Bubble", nameEn: "Aluminium Foil Insulation" },
+      { code: "A.4.4", nameId: "Pekerjaan Nok, Flashing, dan Aksesoris", nameEn: "Ridge Capping, Flashing & Accessories" },
+      { code: "A.4.5", nameId: "Pekerjaan Atap Kaca", nameEn: "Glass Roof Works (inc. Galvanized Hollow, Laminated Tempered Glass 6+6mm, Sealant)" }
+    ]
+  },
+  {
+    code: "A.5", nameId: "Pekerjaan Pengecatan Eksterior", nameEn: "Exterior Painting Works", children: [
+      { code: "A.5.1", nameId: "Pengecatan 1 m2 Dinding Eksterior", nameEn: "Exterior Wall Painting 1m2" },
+      { code: "A.5.2", nameId: "Pengecatan 1 m2 Plafon Eksterior", nameEn: "Exterior Ceiling Painting 1m2" }
+    ]
+  },
+  {
+    code: "A.6", nameId: "Pekerjaan Kaca, Pintu, Jendela Eksterior", nameEn: "Exterior Door, Window & Glazing", children: [
+      {
+        code: "A.6.1", nameId: "Lantai 1", nameEn: "Floor 1", children: [
+          {
+            code: "A.6.1.1", nameId: "Pemasangan Pintu Jendela PJ04 (4400x2400) (1 set) - Pintu Jendela Utama", nameEn: "Door Window PJ04 (4400x2400) - Main Entry", children: [
+              { code: "A.6.1.1.1", nameId: "Pemasangan 1 m2 Daun Pintu Tempered Glass 12mm", nameEn: "Tempered Glass Door Leaf 12mm 1m2" },
+              { code: "A.6.1.1.2", nameId: "Pemasangan 1 m2 Jendela Mati Tempered Glass 12mm", nameEn: "Fixed Window Tempered Glass 12mm 1m2" },
+              { code: "A.6.1.1.3", nameId: "Pemasangan 1 set Sensor Otomatis Pintu", nameEn: "Automatic Door Sensor 1 set" }
+            ]
+          },
+          {
+            code: "A.6.1.2", nameId: "Pemasangan Pintu Utama PJ05 (4300x2400) (1 set) - Pintu Arah Kolam Jendela Double Swing", nameEn: "Main Door PJ05 (4300x2400) - Pool Side Double Swing", children: [
+              { code: "A.6.1.2.1", nameId: "Pemasangan 1 m2 Daun Pintu Tempered Glass 12mm", nameEn: "Tempered Glass Door Leaf 12mm 1m2" },
+              { code: "A.6.1.2.2", nameId: "Pemasangan 1 m2 Jendela Mati Tempered Glass 12mm", nameEn: "Fixed Window Tempered Glass 12mm 1m2" },
+              { code: "A.6.1.2.3", nameId: "Pemasangan 1 set Engsel Pintu Pivot dan Patch Fitting Pintu Kaca", nameEn: "Pivot Hinge & Patch Fitting 1 set" },
+              { code: "A.6.1.2.4", nameId: "Pemasangan 1 bh Handle dan Slot Pintu", nameEn: "Door Handle & Lock Slot 1 pc" }
+            ]
+          },
+          {
+            code: "A.6.1.3", nameId: "Pemasangan Pintu P01 (1500x2400) (1 set) - Pintu Dapur Double Swing", nameEn: "Kitchen Double Swing Door P01 (1500x2400) 1 set", children: [
+              { code: "A.6.1.3.1", nameId: "Pemasangan 1 m1 Frame Pintu Besi", nameEn: "Steel Door Frame 1m1" },
+              { code: "A.6.1.3.2", nameId: "Pemasangan 1 m2 Daun Pintu Besi", nameEn: "Steel Door Leaf 1m2" },
+              { code: "A.6.1.3.3", nameId: "Pemasangan 1 psg Engsel Pintu Besi", nameEn: "Steel Door Hinge 1 pair" },
+              { code: "A.6.1.3.4", nameId: "Pemasangan 1 bh Handle dan Slot Pintu", nameEn: "Door Handle & Slot 1 pc" }
+            ]
+          },
+          {
+            code: "A.6.1.4", nameId: "Pemasangan Pintu P02 (700x2400) (2 set) - Pintu Loker Karyawan", nameEn: "Staff Locker Door P02 (700x2400) 2 sets", children: [
+              { code: "A.6.1.4.1", nameId: "Pemasangan 1 m1 Rangka Aluminium 3\"", nameEn: "Aluminium Frame 3\" 1m1" },
+              { code: "A.6.1.4.2", nameId: "Pemasangan 1 m2 Daun Pintu Aluminium", nameEn: "Aluminium Door Leaf 1m2" },
+              { code: "A.6.1.4.3", nameId: "Pemasangan 1 psg Engsel Pintu", nameEn: "Door Hinge 1 pair" },
+              { code: "A.6.1.4.4", nameId: "Pemasangan 1 bh Handle dan Slot Pintu", nameEn: "Door Handle & Slot 1 pc" }
+            ]
+          },
+          {
+            code: "A.6.1.5", nameId: "Pemasangan Bouvenlight BV04, BV05, BV06 (4 set)", nameEn: "Bouvenlight BV04, BV05, BV06 4 sets", children: [
+              { code: "A.6.1.5.1", nameId: "Pemasangan 1 m2 Jendela Zigzag Clear Glass 8mm", nameEn: "Zigzag Clear Glass Window 8mm 1m2" },
+              { code: "A.6.1.5.2", nameId: "Pemasangan 1 m1 Kusen Alumunium Hitam 3\"", nameEn: "Black Aluminium Frame 3\" 1m1" }
+            ]
+          },
+          { code: "A.6.1.6", nameId: "Pemasangan Jendela J05 (4400x2400) (6 set)", nameEn: "Window J05 (4400x2400) 6 sets" },
+          { code: "A.6.1.7", nameId: "Pemasangan Jendela J06 ((2800x2400)+(1600x600)) (1 set)", nameEn: "Window J06 ((2800x2400)+(1600x600)) 1 set" },
+          { code: "A.6.1.8", nameId: "Pemasangan Jendela J07 (4300x2400) (1 set)", nameEn: "Window J07 (4300x2400) 1 set" },
+          { code: "A.6.1.9", nameId: "Pemasangan Jendela J08A, J08B, J08C, J08D (L11.750, H4.800) (4 set) - Area Stage", nameEn: "Window J08A-D Area Stage 4 sets" }
+        ]
+      },
+      {
+        code: "A.6.2", nameId: "Lantai 2", nameEn: "Floor 2", children: [
+          {
+            code: "A.6.2.1", nameId: "Pemasangan Pintu Outdoor PJ06A, PJ06B (4400x2400) (2 set) - Pintu Ruang VIP", nameEn: "VIP Room Outdoor Door PJ06A/B (4400x2400) 2 sets", children: [
+              { code: "A.6.2.1.1", nameId: "Pemasangan 1 m2 Daun Pintu Tempered Glass 12mm", nameEn: "Tempered Glass Door Leaf 12mm 1m2" },
+              { code: "A.6.2.1.2", nameId: "Pemasangan 1 m2 Jendela Mati Tempered Glass 12mm", nameEn: "Fixed Window Tempered Glass 12mm 1m2" },
+              { code: "A.6.2.1.3", nameId: "Pemasangan 1 set Engsel Pintu Pivot dan Patch Fitting Pintu Kaca", nameEn: "Pivot Hinge & Patch Fitting 1 set" },
+              { code: "A.6.2.1.4", nameId: "Pemasangan 1 bh Handle dan Slot Pintu", nameEn: "Door Handle & Lock Slot 1 pc" }
+            ]
+          },
+          {
+            code: "A.6.2.2", nameId: "Pemasangan Pintu Outdoor PJ07 (4300x2400) (1 set) - Pintu Rooftop Kolam", nameEn: "Pool Rooftop Outdoor Door PJ07 (4300x2400) 1 set", children: [
+              { code: "A.6.2.2.1", nameId: "Pemasangan 1 m2 Daun Pintu Tempered Glass 12mm", nameEn: "Tempered Glass Door Leaf 12mm 1m2" },
+              { code: "A.6.2.2.2", nameId: "Pemasangan 1 m2 Jendela Mati Tempered Glass 12mm", nameEn: "Fixed Window Tempered Glass 12mm 1m2" },
+              { code: "A.6.2.2.3", nameId: "Pemasangan 1 set Engsel Pintu Pivot dan Patch Fitting Pintu Kaca", nameEn: "Pivot Hinge & Patch Fitting 1 set" },
+              { code: "A.6.2.2.4", nameId: "Pemasangan 1 bh Handle dan Slot Pintu", nameEn: "Door Handle & Lock Slot 1 pc" }
+            ]
+          },
+          { code: "A.6.2.3", nameId: "Pemasangan Jendela J01A (4300x2400) (2 set)", nameEn: "Window J01A (4300x2400) 2 sets" },
+          { code: "A.6.2.4", nameId: "Pemasangan Jendela J16 (4400x2400) (1 set)", nameEn: "Window J16 (4400x2400) 1 set" },
+          { code: "A.6.2.5", nameId: "Pemasangan Jendela J17 (700x2400) (1 set)", nameEn: "Window J17 (700x2400) 1 set" },
+          { code: "A.6.2.6", nameId: "Pemasangan Jendela J18 (5600x2400) (1 set)", nameEn: "Window J18 (5600x2400) 1 set" },
+          { code: "A.6.2.7", nameId: "Pemasangan Jendela J19 (10400x2400) (1 set)", nameEn: "Window J19 (10400x2400) 1 set" },
+          { code: "A.6.2.8", nameId: "Pemasangan Jendela J20 (700x2400) (1 set)", nameEn: "Window J20 (700x2400) 1 set" },
+          { code: "A.6.2.9", nameId: "Pemasangan Jendela J21 (4400x1500) (1 set)", nameEn: "Window J21 (4400x1500) 1 set" },
+          { code: "A.6.2.10", nameId: "Pemasangan Jendela J22 (4200x1500) (5 set)", nameEn: "Window J22 (4200x1500) 5 sets" },
+          { code: "A.6.2.11", nameId: "Pemasangan Jendela J23 (4200x2400) (7 set)", nameEn: "Window J23 (4200x2400) 7 sets" },
+          { code: "A.6.2.12", nameId: "Pemasangan Jendela J24 (4300x2400) (1 set)", nameEn: "Window J24 (4300x2400) 1 set" },
+          { code: "A.6.2.13", nameId: "Pemasangan Jendela J25 (4400x2400) (1 set) Tangga", nameEn: "Staircase Window J25 (4400x2400) 1 set" }
+        ]
+      },
+      {
+        code: "A.6.3", nameId: "Lantai 3", nameEn: "Floor 3", children: [
+          {
+            code: "A.6.3.1", nameId: "Pemasangan Pintu PJ08 (2700x2400) (1 set)", nameEn: "Door PJ08 (2700x2400) 1 set", children: [
+              { code: "A.6.3.1.1", nameId: "Pemasangan 1 m2 Daun Pintu Tempered Glass 12mm", nameEn: "Tempered Glass Door Leaf 12mm 1m2" },
+              { code: "A.6.3.1.2", nameId: "Pemasangan 1 m2 Jendela Mati Tempered Glass 12mm", nameEn: "Fixed Window Tempered Glass 12mm 1m2" },
+              { code: "A.6.3.1.3", nameId: "Pemasangan 1 set Engsel Pintu Pivot dan Patch Fitting Pintu Kaca", nameEn: "Pivot Hinge & Patch Fitting 1 set" },
+              { code: "A.6.3.1.4", nameId: "Pemasangan 1 bh Handle Pintu Kaca", nameEn: "Glass Door Handle 1 pc" }
+            ]
+          },
+          {
+            code: "A.6.3.2", nameId: "Pemasangan Pintu PJ09 (4650x2400) (1 set)", nameEn: "Door PJ09 (4650x2400) 1 set", children: [
+              { code: "A.6.3.2.1", nameId: "Pemasangan 1 m2 Daun Pintu Tempered Glass 12mm", nameEn: "Tempered Glass Door Leaf 12mm 1m2" },
+              { code: "A.6.3.2.2", nameId: "Pemasangan 1 m2 Jendela Mati Tempered Glass 12mm", nameEn: "Fixed Window Tempered Glass 12mm 1m2" },
+              { code: "A.6.3.2.3", nameId: "Pemasangan 1 set Engsel Pintu Pivot dan Patch Fitting Pintu Kaca", nameEn: "Pivot Hinge & Patch Fitting 1 set" },
+              { code: "A.6.3.2.4", nameId: "Pemasangan 1 bh Handle Pintu Kaca", nameEn: "Glass Door Handle 1 pc" }
+            ]
+          },
+          {
+            code: "A.6.3.3", nameId: "Pemasangan Pintu P03 (900x2400) (1 set)", nameEn: "Door P03 (900x2400) 1 set", children: [
+              { code: "A.6.3.3.1", nameId: "Pemasangan 1 m1 Kusen Alumunium Hitam 3\" Ex. YKK/Alexindo", nameEn: "Black Aluminium Frame 3\" YKK/Alexindo 1m1" },
+              { code: "A.6.3.3.2", nameId: "Pemasangan 1 m2 Daun Pintu Kaca", nameEn: "Glass Door Leaf 1m2" },
+              { code: "A.6.3.3.3", nameId: "Pemasangan 1 psg Engsel Pintu", nameEn: "Door Hinge 1 pair" },
+              { code: "A.6.3.3.4", nameId: "Pemasangan 1 bh Handle dan Slot Pintu", nameEn: "Door Handle & Slot 1 pc" }
+            ]
+          },
+          {
+            code: "A.6.3.4", nameId: "Pemasangan Pintu P04 (900x2400) (1 set)", nameEn: "Door P04 (900x2400) 1 set", children: [
+              { code: "A.6.3.4.1", nameId: "Pemasangan 1 m1 Kusen Alumunium Hitam 3\" Ex. YKK/Alexindo", nameEn: "Black Aluminium Frame 3\" YKK/Alexindo 1m1" },
+              { code: "A.6.3.4.2", nameId: "Pemasangan 1 m2 Daun Pintu Kaca", nameEn: "Glass Door Leaf 1m2" },
+              { code: "A.6.3.4.3", nameId: "Pemasangan 1 psg Engsel Pintu", nameEn: "Door Hinge 1 pair" },
+              { code: "A.6.3.4.4", nameId: "Pemasangan 1 bh Handle dan Slot Pintu", nameEn: "Door Handle & Slot 1 pc" }
+            ]
+          },
+          {
+            code: "A.6.3.5", nameId: "Pemasangan Pintu P05 (900x2400) (1 set)", nameEn: "Door P05 (900x2400) 1 set", children: [
+              { code: "A.6.3.5.1", nameId: "Pemasangan 1 m1 Kusen Alumunium Hitam 3\" Ex. YKK/Alexindo", nameEn: "Black Aluminium Frame 3\" YKK/Alexindo 1m1" },
+              { code: "A.6.3.5.2", nameId: "Pemasangan 1 m2 Daun Pintu Kaca", nameEn: "Glass Door Leaf 1m2" },
+              { code: "A.6.3.5.3", nameId: "Pemasangan 1 psg Engsel Pintu", nameEn: "Door Hinge 1 pair" },
+              { code: "A.6.3.5.4", nameId: "Pemasangan 1 bh Handle dan Slot Pintu", nameEn: "Door Handle & Slot 1 pc" }
+            ]
+          },
+          { code: "A.6.3.6", nameId: "Pemasangan Jendela J31 (6150x1500) 1 set", nameEn: "Window J31 (6150x1500) 1 set" },
+          { code: "A.6.3.7", nameId: "Pemasangan Jendela J32 (6150x1500) 1 set", nameEn: "Window J32 (6150x1500) 1 set" },
+          { code: "A.6.3.8", nameId: "Pemasangan Jendela J32 (3800x1500) 1 set", nameEn: "Window J32 (3800x1500) 1 set" },
+          { code: "A.6.3.9", nameId: "Pemasangan Jendela J33 (5150x1500) 1 set", nameEn: "Window J33 (5150x1500) 1 set" },
+          { code: "A.6.3.10", nameId: "Pemasangan Jendela J34 (3000x2400) 1 set", nameEn: "Window J34 (3000x2400) 1 set" },
+          { code: "A.6.3.11", nameId: "Pemasangan Jendela J35 (4400x1500) 1 set", nameEn: "Window J35 (4400x1500) 1 set" },
+          { code: "A.6.3.12", nameId: "Pemasangan Jendela J36 (1800x1500) 5 set", nameEn: "Window J36 (1800x1500) 5 sets" },
+          { code: "A.6.3.13", nameId: "Pemasangan Jendela BV07 (1200x600) 3 set", nameEn: "Window BV07 (1200x600) 3 sets" },
+          { code: "A.6.3.14", nameId: "Pemasangan Jendela BV07A (825x600) 1 set", nameEn: "Window BV07A (825x600) 1 set" }
+        ]
+      }
+    ]
+  },
+  {
+    code: "A.7", nameId: "Pekerjaan Fasad", nameEn: "Façade Works", children: [
+      { code: "A.7.1", nameId: "Pekerjaan Façade Kisi-kisi Kayu", nameEn: "Wooden Louvre Façade" },
+      { code: "A.7.2", nameId: "Pekerjaan Lampu Logo Facade", nameEn: "Facade Logo Light" }
+    ]
+  }
+];
+
+// Cafe / Kopijalu MEP PDF items (under C.M)
+const pdfCafeMEP = [
+  {
+    code: "M.1", nameId: "Pekerjaan Pemipaan Umum", nameEn: "General Plumbing Works", children: [
+      {
+        code: "M.1.1", nameId: "Pekerjaan Pemipaan Air Bersih", nameEn: "Clean Water Plumbing Works", children: [
+          {
+            code: "M.1.1.1", nameId: "Peralatan Penunjang Air Bersih", nameEn: "Clean Water Support Equipment", children: [
+              { code: "M.1.1.1.1", nameId: "Pengadaan dan Pemasangan Penampungan Air", nameEn: "Water Storage Supply & Installation" },
+              { code: "M.1.1.1.2", nameId: "Pompa Booster Roof Tank ke Distribusi", nameEn: "Booster Pump Roof Tank to Distribution" }
+            ]
+          },
+          {
+            code: "M.1.1.2", nameId: "Pekerjaan Air Bersih", nameEn: "Clean Water Works", children: [
+              {
+                code: "M.1.1.2.1", nameId: "Pekerjaan Pipa Utama dan Pipa Tegak Air Bersih Dingin", nameEn: "Cold Water Main & Riser Pipes", children: [
+                  { code: "M.1.1.2.1.1", nameId: "Pipa PVC AW dia. 100 mm", nameEn: "PVC AW Pipe dia. 100mm" },
+                  { code: "M.1.1.2.1.2", nameId: "Pipa PVC AW dia. 2'' 50 mm", nameEn: "PVC AW Pipe dia. 2\" 50mm" },
+                  { code: "M.1.1.2.1.3", nameId: "Pipa PVC AW dia.1 1/2'' 32 mm", nameEn: "PVC AW Pipe dia. 1½\" 32mm" },
+                  { code: "M.1.1.2.1.4", nameId: "Pipa PVC AW dia. 1'' 25 mm", nameEn: "PVC AW Pipe dia. 1\" 25mm" },
+                  { code: "M.1.1.2.1.5", nameId: "Pemasangan Stop Valve dia. 100mm", nameEn: "Stop Valve dia. 100mm" },
+                  { code: "M.1.1.2.1.6", nameId: "Stop Valve PPR dia 32 mm", nameEn: "PPR Stop Valve dia. 32mm" },
+                  { code: "M.1.1.2.1.7", nameId: "Stop Valve dia. 2'' 50 mm", nameEn: "Stop Valve dia. 2\" 50mm" },
+                  { code: "M.1.1.2.1.8", nameId: "Fitting dan Accesories", nameEn: "Fittings & Accessories" },
+                  { code: "M.1.1.2.1.9", nameId: "Hanger dan Bracket", nameEn: "Hangers & Brackets" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        code: "M.1.2", nameId: "Pekerjaan Pemipaan Air Hujan, Air Kotor, dan Air Bekas", nameEn: "Storm, Waste & Grey Water Plumbing", children: [
+          {
+            code: "M.1.2.1", nameId: "Peralatan Penunjang Air Kotor", nameEn: "Waste Water Support Equipment", children: [
+              { code: "M.1.2.1.1", nameId: "Pengadaan dan Pemasangan Bio Septic Tank 12.000 liter/hari", nameEn: "Bio Septic Tank 12,000 L/day" }
+            ]
+          },
+          {
+            code: "M.1.2.2", nameId: "Pekerjaan Instalasi Air Hujan, Air Kotor, dan Air Bekas", nameEn: "Storm, Waste & Grey Water Installation", children: [
+              {
+                code: "M.1.2.2.1", nameId: "Instalasi Air Hujan", nameEn: "Storm Water Installation", children: [
+                  {
+                    code: "M.1.2.2.1.1", nameId: "Pipa Tegak dan Horizontal", nameEn: "Riser & Horizontal Pipes", children: [
+                      { code: "M.1.2.2.1.1.1", nameId: "PVC AW dia. 4\"", nameEn: "PVC AW dia. 4\"" },
+                      { code: "M.1.2.2.1.1.2", nameId: "PVC AW dia. 3\" Horizontal", nameEn: "PVC AW dia. 3\" Horizontal" },
+                      { code: "M.1.2.2.1.1.3", nameId: "PVC AW dia. 3\" Tegak", nameEn: "PVC AW dia. 3\" Riser" },
+                      { code: "M.1.2.2.1.1.4", nameId: "Fitting dan Aksesoris", nameEn: "Fittings & Accessories" },
+                      { code: "M.1.2.2.1.1.5", nameId: "Hanger dan Bracket", nameEn: "Hangers & Brackets" },
+                      { code: "M.1.2.2.1.1.6", nameId: "Cast Iron Floor Drain dia. 4\"", nameEn: "Cast Iron Floor Drain dia. 4\"" },
+                      { code: "M.1.2.2.1.1.7", nameId: "Grouting dan Coring", nameEn: "Grouting & Coring" }
+                    ]
+                  }
+                ]
+              },
+              {
+                code: "M.1.2.2.2", nameId: "Instalasi Air Kotor Padat/AKP dan Air Kotor Cair/AKC", nameEn: "Solid & Liquid Waste Water Installation", children: [
+                  {
+                    code: "M.1.2.2.2.1", nameId: "Lantai 1", nameEn: "Floor 1", children: [
+                      { code: "M.1.2.2.2.1.1", nameId: "PVC AW dia. 4\"", nameEn: "PVC AW dia. 4\"" },
+                      { code: "M.1.2.2.2.1.2", nameId: "PVC AW dia. 3\"", nameEn: "PVC AW dia. 3\"" },
+                      { code: "M.1.2.2.2.1.3", nameId: "PVC AW dia. 2\"", nameEn: "PVC AW dia. 2\"" },
+                      { code: "M.1.2.2.2.1.4", nameId: "Fitting dan Aksesoris", nameEn: "Fittings & Accessories" },
+                      { code: "M.1.2.2.2.1.5", nameId: "Hanger dan Bracket", nameEn: "Hangers & Brackets" }
+                    ]
+                  },
+                  {
+                    code: "M.1.2.2.2.2", nameId: "Lantai 2", nameEn: "Floor 2", children: [
+                      { code: "M.1.2.2.2.2.1", nameId: "PVC AW dia. 4\"", nameEn: "PVC AW dia. 4\"" },
+                      { code: "M.1.2.2.2.2.2", nameId: "PVC AW dia. 3\"", nameEn: "PVC AW dia. 3\"" },
+                      { code: "M.1.2.2.2.2.3", nameId: "PVC AW dia. 2\"", nameEn: "PVC AW dia. 2\"" },
+                      { code: "M.1.2.2.2.2.4", nameId: "Fitting dan Aksesoris", nameEn: "Fittings & Accessories" },
+                      { code: "M.1.2.2.2.2.5", nameId: "Hanger dan Bracket", nameEn: "Hangers & Brackets" },
+                      { code: "M.1.2.2.2.2.6", nameId: "Cast Iron Floor Drain dia. 5\"", nameEn: "Cast Iron Floor Drain dia. 5\"" },
+                      { code: "M.1.2.2.2.2.7", nameId: "Cast Iron Floor Drain dia. 4\"", nameEn: "Cast Iron Floor Drain dia. 4\"" },
+                      { code: "M.1.2.2.2.2.8", nameId: "Cast Iron Floor Drain dia. 3\"", nameEn: "Cast Iron Floor Drain dia. 3\"" },
+                      { code: "M.1.2.2.2.2.9", nameId: "Grouting dan Coring", nameEn: "Grouting & Coring" }
+                    ]
+                  },
+                  {
+                    code: "M.1.2.2.2.3", nameId: "Lantai 3", nameEn: "Floor 3", children: [
+                      { code: "M.1.2.2.2.3.1", nameId: "PVC AW dia. 4\"", nameEn: "PVC AW dia. 4\"" },
+                      { code: "M.1.2.2.2.3.2", nameId: "PVC AW dia. 3\"", nameEn: "PVC AW dia. 3\"" },
+                      { code: "M.1.2.2.2.3.3", nameId: "PVC AW dia. 2\"", nameEn: "PVC AW dia. 2\"" },
+                      { code: "M.1.2.2.2.3.4", nameId: "Fitting dan Aksesoris", nameEn: "Fittings & Accessories" },
+                      { code: "M.1.2.2.2.3.5", nameId: "Hanger dan Bracket", nameEn: "Hangers & Brackets" },
+                      { code: "M.1.2.2.2.3.6", nameId: "Cast Iron Floor Drain dia. 5\"", nameEn: "Cast Iron Floor Drain dia. 5\"" },
+                      { code: "M.1.2.2.2.3.7", nameId: "Cast Iron Floor Drain dia. 4\"", nameEn: "Cast Iron Floor Drain dia. 4\"" },
+                      { code: "M.1.2.2.2.3.8", nameId: "Cast Iron Floor Drain dia. 3\"", nameEn: "Cast Iron Floor Drain dia. 3\"" },
+                      { code: "M.1.2.2.2.3.9", nameId: "Grouting dan Coring", nameEn: "Grouting & Coring" }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    code: "M.3", nameId: "Pekerjaan Elektrikal Umum", nameEn: "General Electrical Works", children: [
+      {
+        code: "M.3.1", nameId: "Pekerjaan Kabel Toefuur", nameEn: "Cable Supply Works", children: [
+          {
+            code: "M.3.1.1", nameId: "Pekerjaan Pengadaan dan Pemasangan Kabel Distribusi Utama", nameEn: "Main Distribution Cable Supply & Installation", children: [
+              { code: "M.3.1.1.1", nameId: "MDP Kafe ke SDP/PP/LP Lantai 1", nameEn: "Cafe MDP to SDP/PP/LP Floor 1" },
+              { code: "M.3.1.1.2", nameId: "MDP Kafe ke SDP/PP/LP Lantai 2", nameEn: "Cafe MDP to SDP/PP/LP Floor 2" },
+              { code: "M.3.1.1.3", nameId: "MDP Kafe ke SDP/PP/LP Lantai 3", nameEn: "Cafe MDP to SDP/PP/LP Floor 3" }
+            ]
+          },
+          {
+            code: "M.3.1.2", nameId: "Pekerjaan dan Pengadaan Kabel Grounding", nameEn: "Grounding Cable Supply", children: [
+              { code: "M.3.1.2.1", nameId: "Pengadaan Kabel Grounding BC", nameEn: "BC Grounding Cable" },
+              { code: "M.3.1.2.2", nameId: "Pembuatan Titik Grounding Elektrikal", nameEn: "Electrical Grounding Point" },
+              { code: "M.3.1.2.3", nameId: "Pembuatan Titik Grounding Elektronika", nameEn: "Electronics Grounding Point" }
+            ]
+          }
+        ]
+      },
+      {
+        code: "M.3.2", nameId: "Pekerjaan Panel", nameEn: "Panel Works", children: [
+          {
+            code: "M.3.2.1", nameId: "SDP/PP/LP Lantai 1", nameEn: "SDP/PP/LP Floor 1", children: [
+              { code: "M.3.2.1.1", nameId: "Lighting Panel 3 Fasa (MCCB 3P 32 A)", nameEn: "Lighting Panel 3 Phase (MCCB 3P 32A)" },
+              { code: "M.3.2.1.2", nameId: "Air Conditioning Panel 3 Fasa (MCCB 3P 250 A)", nameEn: "AC Panel 3 Phase (MCCB 3P 250A)" },
+              { code: "M.3.2.1.3", nameId: "Power Panel 1 Fasa (MCB 1 P 10 A)", nameEn: "Power Panel 1 Phase (MCB 1P 10A)" }
+            ]
+          },
+          {
+            code: "M.3.2.2", nameId: "SDP/PP/LP Lantai 2", nameEn: "SDP/PP/LP Floor 2", children: [
+              { code: "M.3.2.2.1", nameId: "Lighting Panel 3 Fasa (MCCB 3P 32 A)", nameEn: "Lighting Panel 3 Phase (MCCB 3P 32A)" },
+              { code: "M.3.2.2.2", nameId: "Air Conditioning Panel 3 Fasa (MCCB 3P 250 A)", nameEn: "AC Panel 3 Phase (MCCB 3P 250A)" },
+              { code: "M.3.2.2.3", nameId: "Power Panel 1 Fasa (MCB 1 P 10 A)", nameEn: "Power Panel 1 Phase (MCB 1P 10A)" }
+            ]
+          },
+          {
+            code: "M.3.2.3", nameId: "SDP/PP/LP Lantai 3", nameEn: "SDP/PP/LP Floor 3", children: [
+              { code: "M.3.2.3.1", nameId: "Lighting Panel 3 Fasa (MCCB 3P 32 A)", nameEn: "Lighting Panel 3 Phase (MCCB 3P 32A)" },
+              { code: "M.3.2.3.2", nameId: "Air Conditioning Panel 3 Fasa (MCCB 3P 250 A)", nameEn: "AC Panel 3 Phase (MCCB 3P 250A)" },
+              { code: "M.3.2.3.3", nameId: "Power Panel 1 Fasa (MCB 1 P 10 A)", nameEn: "Power Panel 1 Phase (MCB 1P 10A)" }
+            ]
+          },
+          { code: "M.3.2.4", nameId: "Fire Pump Panel 3 Fasa (MCCB 3P 125 A)", nameEn: "Fire Pump Panel 3 Phase (MCCB 3P 125A)" },
+          { code: "M.3.2.5", nameId: "ELV Panel 1 Fsa (MCB 1P 6 A)", nameEn: "ELV Panel 1 Phase (MCB 1P 6A)" }
+        ]
+      }
+    ]
+  },
+  {
+    code: "M.6", nameId: "Pekerjaan Proteksi Kebakaran Umum", nameEn: "General Fire Protection Works", children: [
+      { code: "M.6.1", nameId: "APAR CO2 6kg", nameEn: "CO2 Fire Extinguisher 6kg" },
+      { code: "M.6.2", nameId: "Pemasangan 1 unit Sprinkler Head Pendant", nameEn: "Pendant Sprinkler Head 1 unit" },
+      { code: "M.6.3", nameId: "Pemasangan 1 unit Smoke Detector Konvensional", nameEn: "Conventional Smoke Detector 1 unit" },
+      { code: "M.6.4", nameId: "Pemasangan 1 unit Hydrant Pillar", nameEn: "Hydrant Pillar 1 unit" },
+      { code: "M.6.5", nameId: "Pemasangan 1 unit Indoor Hydrant Box (IHB)", nameEn: "Indoor Hydrant Box 1 unit" },
+      { code: "M.6.6", nameId: "Pompa Kebakaran", nameEn: "Fire Pump" }
+    ]
+  }
+];
+
 // PDF overrides map by mass code & discipline letter
 const pdfByMassAndDiscipline: Record<string, Record<string, any[]>> = {
   "A": {
@@ -531,6 +978,11 @@ const pdfByMassAndDiscipline: Record<string, Record<string, any[]>> = {
     "S": pdfKolamStructure,
     "A": pdfKolamArchitecture,
     "M": pdfKolamMEP
+  },
+  "C": {
+    "S": pdfCafeStructure,
+    "A": pdfCafeArchitecture,
+    "M": pdfCafeMEP
   }
 };
 
