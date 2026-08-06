@@ -61,6 +61,7 @@ export default function ProjectSetupSchedulePage() {
   });
 
   const [scheduleValues, setScheduleValues] = useState<Record<string, ScheduleValue>>({});
+  const [dbWbsItems, setDbWbsItems] = useState<any[]>([]);
 
   useEffect(() => {
     if (project) {
@@ -80,34 +81,123 @@ export default function ProjectSetupSchedulePage() {
     }
   }, [project]);
 
+  useEffect(() => {
+    if (!project?.workspace_id) return;
+    
+    async function fetchWbs() {
+      try {
+        const { data, error } = await supabase
+          .from("work_breakdown_structure")
+          .select("*")
+          .eq("workspace_id", project.workspace_id);
+          
+        if (error) throw error;
+        
+        const dbWbs = data || [];
+        if (dbWbs.length > 0) {
+          const compareWBSCodes = (a: string, b: string): number => {
+            const partsA = a.split('.');
+            const partsB = b.split('.');
+            const minLen = Math.min(partsA.length, partsB.length);
+            for (let i = 0; i < minLen; i++) {
+              const partA = partsA[i];
+              const partB = partsB[i];
+              const numA = parseInt(partA);
+              const numB = parseInt(partB);
+              const isNumA = !isNaN(numA);
+              const isNumB = !isNaN(numB);
+              if (isNumA && isNumB) {
+                if (numA !== numB) return numA - numB;
+              } else if (partA !== partB) {
+                return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: 'base' });
+              }
+            }
+            return partsA.length - partsB.length;
+          };
+
+          const idMap = new Map<string, any>();
+          dbWbs.forEach((item: any) => {
+            idMap.set(item.id, {
+              ...item,
+              nameEn: item.name || "",
+              nameId: item.description || "",
+              children: []
+            });
+          });
+
+          const rootsList: any[] = [];
+          dbWbs.forEach((item: any) => {
+            const node = idMap.get(item.id);
+            if (item.parent_id && idMap.has(item.parent_id)) {
+              idMap.get(item.parent_id).children.push(node);
+            } else {
+              rootsList.push(node);
+            }
+          });
+
+          const sortNodes = (list: any[]) => {
+            list.sort((a, b) => compareWBSCodes(a.code, b.code));
+            list.forEach(node => {
+              if (node.children) sortNodes(node.children);
+            });
+          };
+
+          sortNodes(rootsList);
+
+          const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+          rootsList.sort((a, b) => {
+            const prefixA = a.code.split('.')[0];
+            const prefixB = b.code.split('.')[0];
+            const orderA = ORDER_MAP[prefixA] ?? 999;
+            const orderB = ORDER_MAP[prefixB] ?? 999;
+            return orderA - orderB;
+          });
+
+          setDbWbsItems(rootsList);
+        }
+      } catch (err) {
+        console.error("Error fetching project WBS:", err);
+      }
+    }
+    
+    fetchWbs();
+  }, [project?.workspace_id]);
+
+  const activeWBS = useMemo(() => {
+    return dbWbsItems.length > 0 ? dbWbsItems : WBS_BALLPARK;
+  }, [dbWbsItems]);
+
   const estimateValues = useMemo<EstimateValues>(() => {
     return (project?.meta as any)?.estimateValues || {};
   }, [project]);
 
   const rabTreeBallpark = useMemo(() => {
     return buildRABFromWBS({
-      wbs: WBS_BALLPARK,
+      wbs: activeWBS,
       rabClass: context.buildingClass,
       rf: 1, df: 1
     });
-  }, [context.buildingClass]);
+  }, [activeWBS, context.buildingClass]);
 
   const rabTreeEstimates = useMemo(() => {
-    const wbsEstimates = buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA);
+    const wbsEstimates = dbWbsItems.length > 0
+      ? activeWBS
+      : buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA);
     return buildRABEstimates(wbsEstimates, estimateValues, {
       rabClass: context.buildingClass,
       rf: 1, df: 1, adjustmentFactor: 100
     });
-  }, [estimateValues, context.buildingClass]);
+  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass]);
 
   const rabTreeDetail = useMemo(() => {
-    const wbsEstimates = buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA);
-    const wbsDetail = buildDetailFromEstimates(wbsEstimates);
+    const wbsDetail = dbWbsItems.length > 0
+      ? activeWBS
+      : buildDetailFromEstimates(buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA));
     return buildRABEstimates(wbsDetail, estimateValues, {
       rabClass: context.buildingClass || "C",
       rf: 1.0, df: 1.0, adjustmentFactor: 100
     });
-  }, [estimateValues, context.buildingClass]);
+  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass]);
 
   const activeTree = useMemo(() => {
     if (activeMode === "BALLPARK") return rabTreeBallpark;
