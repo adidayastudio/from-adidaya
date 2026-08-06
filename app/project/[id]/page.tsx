@@ -109,6 +109,12 @@ function ProjectDetailLocalSidebar({
         { label: "Schedule", href: `${basePath}/setup/schedule`, icon: Calendar },
     ];
 
+    const isPlanningRoute = pathname ? pathname.includes(`${basePath}/setup`) || pathname.includes(`/setup/`) || pathname.includes(`/settings/`) : false;
+
+    useEffect(() => {
+        if (isPlanningRoute) setPlanningOpen(true);
+    }, [isPlanningRoute]);
+
     const [workOpen, setWorkOpen] = useState(false);
 
     return (
@@ -120,11 +126,11 @@ function ProjectDetailLocalSidebar({
                     className={clsx(
                         "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                         activeTab === "overview"
-                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                            ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60"
+                            : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
                     )}
                 >
-                    <LayoutDashboard className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "overview" ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                    <LayoutDashboard className={clsx("w-4 h-4 shrink-0 transition-colors", activeTab === "overview" ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
                     <span className="truncate">Overview</span>
                 </button>
 
@@ -132,9 +138,12 @@ function ProjectDetailLocalSidebar({
                 <div>
                     <button
                         onClick={() => setPlanningOpen((v) => !v)}
-                        className="w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                        className={clsx(
+                            "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5 font-medium",
+                            isPlanningRoute ? "text-neutral-900 dark:text-white font-extrabold" : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 hover:text-neutral-900"
+                        )}
                     >
-                        <Calendar className="w-4 h-4 shrink-0 text-neutral-400" />
+                        <Calendar className={clsx("w-4 h-4 shrink-0 transition-colors", isPlanningRoute ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
                         <span className="flex-1 truncate">Planning</span>
                         <ChevronDown
                             className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", planningOpen && "rotate-180")}
@@ -142,17 +151,25 @@ function ProjectDetailLocalSidebar({
                     </button>
 
                     {planningOpen && (
-                        <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                            {PLANNING_ITEMS.map((item) => (
-                                <Link
-                                    key={item.label}
-                                    href={item.href}
-                                    className="w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5 text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
-                                >
-                                    <item.icon className="w-3.5 h-3.5 shrink-0 text-neutral-400" />
-                                    <span className="truncate">{item.label}</span>
-                                </Link>
-                            ))}
+                        <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-neutral-300 dark:border-neutral-700 pl-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                            {PLANNING_ITEMS.map((item) => {
+                                const active = pathname ? (pathname === item.href || pathname.startsWith(item.href) || pathname.includes(item.href.replace(basePath, ""))) : false;
+                                return (
+                                    <Link
+                                        key={item.label}
+                                        href={item.href}
+                                        className={clsx(
+                                            "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                                            active
+                                                ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60"
+                                                : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 hover:text-neutral-900 font-medium"
+                                        )}
+                                    >
+                                        <item.icon className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+                                        <span className="truncate">{item.label}</span>
+                                    </Link>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
