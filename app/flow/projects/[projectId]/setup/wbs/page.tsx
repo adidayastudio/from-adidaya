@@ -192,36 +192,37 @@ export default function ProjectSetupWBSPage() {
     loadWBS();
   }, [project?.workspace_id]);
 
-  // ALL HOOKS MUST BE BEFORE CONDITIONAL RETURNS
-  const ballparkWithAddons = useMemo(() => fullWbsTree, [fullWbsTree]);
+  const DISCIPLINE_ADDONS: { code: "A" | "M" | "I" | "L"; label: string }[] = [
+    { code: "A", label: "Architecture" },
+    { code: "M", label: "MEP" },
+    { code: "I", label: "Interior" },
+    { code: "L", label: "Landscape" },
+  ];
 
-  // Helper to add/remove addon from tree
-  const toggleAddon = (addonCode: "I" | "L") => {
-    const addon = WBS_ADDONS.find(a => a.code === addonCode);
-    if (!addon) return;
+  // Helper to add/remove discipline addon from tree
+  const toggleDiscipline = (disciplineCode: "A" | "M" | "I" | "L") => {
+    const hasDiscipline = fullWbsTree.some(item => item.code === disciplineCode);
 
-    const hasAddon = fullWbsTree.some(item => item.code === addonCode);
-
-    if (hasAddon) {
-      // Remove addon
-      setFullWbsTree(prev => prev.filter(item => item.code !== addonCode));
-      setEnabledAddons(prev => prev.filter(c => c !== addonCode));
+    if (hasDiscipline) {
+      // Remove discipline
+      setFullWbsTree(prev => prev.filter(item => item.code !== disciplineCode));
     } else {
-      // Add addon right after SAM (at index 3) or after existing addons
-      const SAM_COUNT = 3;
-      let insertIdx = SAM_COUNT;
-      for (let i = SAM_COUNT; i < fullWbsTree.length; i++) {
-        if (["I", "L"].includes(fullWbsTree[i].code || "")) {
-          insertIdx = i + 1;
-        } else {
-          break;
-        }
-      }
+      // Add discipline from default full tree
+      const defaultFullTree = buildDetailFromEstimates(
+        buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA)
+      );
+      const defaultNode = defaultFullTree.find(item => item.code === disciplineCode);
+      if (!defaultNode) return;
 
-      const newTree = [...fullWbsTree];
-      newTree.splice(insertIdx, 0, addon);
+      const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+      const newTree = [...fullWbsTree, defaultNode];
+      newTree.sort((a, b) => {
+        const orderA = ORDER_MAP[a.code] ?? 999;
+        const orderB = ORDER_MAP[b.code] ?? 999;
+        return orderA - orderB;
+      });
+
       setFullWbsTree(newTree);
-      setEnabledAddons(prev => [...prev, addonCode]);
     }
     markEdited();
   };
@@ -585,21 +586,21 @@ export default function ProjectSetupWBSPage() {
 
               {/* Addon buttons for Ballpark */}
               {activeMode === "BALLPARK" && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {DISCIPLINE_ADDONS.map((disc) => {
+                    const isPresent = fullWbsTree.some(item => item.code === disc.code);
+                    return (
+                      <button
+                        key={disc.code}
+                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 ${isPresent ? "bg-neutral-100 text-neutral-900 font-semibold border-neutral-300" : "bg-white text-neutral-600"}`}
+                        onClick={() => toggleDiscipline(disc.code)}
+                      >
+                        {isPresent ? "✓ " : "+ "}{disc.label}
+                      </button>
+                    );
+                  })}
                   <button
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 ${enabledAddons.includes("I") ? "bg-neutral-100" : ""}`}
-                    onClick={() => toggleAddon("I")}
-                  >
-                    {enabledAddons.includes("I") ? "✓ " : "+ "}Interior
-                  </button>
-                  <button
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 ${enabledAddons.includes("L") ? "bg-neutral-100" : ""}`}
-                    onClick={() => toggleAddon("L")}
-                  >
-                    {enabledAddons.includes("L") ? "✓ " : "+ "}Landscape
-                  </button>
-                  <button
-                    className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50"
+                    className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 bg-white text-neutral-600"
                     onClick={() => setShowAddDiscipline(true)}
                   >
                     + Other
