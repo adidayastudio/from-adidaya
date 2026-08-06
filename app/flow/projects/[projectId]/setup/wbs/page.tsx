@@ -68,6 +68,77 @@ export default function ProjectSetupWBSPage() {
     return buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
   });
 
+  // History state for Undo / Redo
+  const [history, setHistory] = useState<any[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
+  // Helper to push state onto history stack
+  const setTreeWithHistory = (updateFnOrNewTree: any) => {
+    markEdited();
+    setFullWbsTree((prevTree) => {
+      const nextTree = typeof updateFnOrNewTree === "function" ? updateFnOrNewTree(prevTree) : updateFnOrNewTree;
+      if (nextTree === prevTree) return prevTree;
+
+      setHistory((prevHistory) => {
+        const sliced = prevHistory.slice(0, historyIndex + 1);
+        if (sliced.length === 0) {
+          const newHist = [prevTree, nextTree];
+          setHistoryIndex(1);
+          return newHist;
+        }
+        const newHist = [...sliced, nextTree];
+        setHistoryIndex(newHist.length - 1);
+        return newHist;
+      });
+
+      return nextTree;
+    });
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0 && history[historyIndex - 1]) {
+      const prevStep = history[historyIndex - 1];
+      setHistoryIndex((idx) => idx - 1);
+      setFullWbsTree(prevStep);
+      markEdited();
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1 && history[historyIndex + 1]) {
+      const nextStep = history[historyIndex + 1];
+      setHistoryIndex((idx) => idx + 1);
+      setFullWbsTree(nextStep);
+      markEdited();
+    }
+  };
+
+  // Keyboard shortcut listener (Cmd+Z / Ctrl+Z for Undo, Cmd+Shift+Z / Ctrl+Y for Redo)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        if (e.shiftKey) {
+          e.preventDefault();
+          handleRedo();
+        } else {
+          e.preventDefault();
+          handleUndo();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [history, historyIndex]);
+
   // Revisions per mode
   const [revisions, setRevisions] = useState<Revision[]>([]);
   const [activeRevisionId, setActiveRevisionId] = useState<string | null>(null);
@@ -123,11 +194,9 @@ export default function ProjectSetupWBSPage() {
         const idMap = new Map<string, any>();
         dbWbs.forEach((item: any) => {
           idMap.set(item.id, {
-            id: item.id,
-            code: item.code,
+            ...item,
             nameEn: item.name || "",
             nameId: item.description || "",
-            notes: item.notes || "",
             children: []
           });
         });
@@ -139,19 +208,6 @@ export default function ProjectSetupWBSPage() {
             idMap.get(item.parent_id).children.push(node);
           } else {
             rootsList.push(node);
-          }
-        });
-
-        // Default SAMIL tree template with full detail
-        const defaultFullTree = buildDetailFromEstimates(
-          buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA)
-        );
-
-        // Ensure all default SAMIL disciplines (S, A, M, I, L) exist in rootsList
-        defaultFullTree.forEach((defaultRoot) => {
-          const exists = rootsList.some((r) => r.code === defaultRoot.code);
-          if (!exists) {
-            rootsList.push(defaultRoot);
           }
         });
 
@@ -173,19 +229,18 @@ export default function ProjectSetupWBSPage() {
           return orderA - orderB;
         });
 
-        // Ensure complete levels (structure -> summary -> estimate -> detail)
-        let completeTree = rootsList;
-        const hasEstimates = dbWbs.some((item: any) => item.level === "estimate");
-        const hasDetails = dbWbs.some((item: any) => item.level === "detail");
+        if (rootsList.length > 0) {
+          const loadedCodes = new Set(rootsList.map((r) => r.code));
+          const defaultBallpark = WBS_BALLPARK;
+          const missingDefaults = defaultBallpark.filter((d) => !loadedCodes.has(d.code));
 
-        if (!hasEstimates) {
-          completeTree = buildEstimatesFromBallpark(completeTree, RAW_WBS_ESTIMATES_DELTA);
-        }
-        if (!hasDetails) {
-          completeTree = buildDetailFromEstimates(completeTree);
-        }
+          const completeTree = missingDefaults.length > 0 ? [...rootsList, ...missingDefaults] : rootsList;
+          completeTree.sort((a, b) => (ORDER_MAP[a.code] ?? 999) - (ORDER_MAP[b.code] ?? 999));
 
-        setFullWbsTree(completeTree);
+          setFullWbsTree(completeTree);
+          setHistory([completeTree]);
+          setHistoryIndex(0);
+        }
       } catch (err) {
         console.error("Error loading project WBS:", err);
       } finally {
@@ -266,13 +321,11 @@ export default function ProjectSetupWBSPage() {
 
   // CRUD handlers
   const onUpdateItem = (id: string, patch: Partial<{ nameEn: string; nameId?: string }>) => {
-    markEdited();
-    setFullWbsTree((prev: any[]) => updateById(prev, id, patch as any));
+    setTreeWithHistory((prev: any[]) => updateById(prev, id, patch as any));
   };
 
   const onAddChild = (parentId: string, level: number) => {
     if (activeMode === "BALLPARK" && level >= 1) return;
-    markEdited();
     const newItem = {
       id: uid("wbs"),
       code: "NEW",
@@ -280,64 +333,55 @@ export default function ProjectSetupWBSPage() {
       nameId: "Pekerjaan Baru",
       children: [],
     };
-    setFullWbsTree((prev: any[]) => addChildById(prev, parentId, newItem as any));
+    setTreeWithHistory((prev: any[]) => addChildById(prev, parentId, newItem as any));
   };
 
   const onAddSibling = (siblingId: string, position: "above" | "below") => {
-    markEdited();
-    setFullWbsTree((prev: any[]) => addSiblingToTree(prev, siblingId, position));
+    setTreeWithHistory((prev: any[]) => addSiblingToTree(prev, siblingId, position));
   };
 
   const onRemove = (id: string) => {
-    markEdited();
-    setFullWbsTree((prev: any[]) => removeById(prev, id));
+    setTreeWithHistory((prev: any[]) => removeById(prev, id));
   };
 
   const onIndent = (id: string) => {
-    markEdited();
-    setFullWbsTree((prev: any[]) => indentNodeById(prev, id));
+    setTreeWithHistory((prev: any[]) => indentNodeById(prev, id));
   };
 
   const onOutdent = (id: string) => {
-    markEdited();
-    setFullWbsTree((prev: any[]) => outdentNodeById(prev, id));
+    setTreeWithHistory((prev: any[]) => outdentNodeById(prev, id));
   };
 
   const onDuplicate = (id: string) => {
-    markEdited();
-    setFullWbsTree((prev: any[]) => duplicateNodeById(prev, id));
+    setTreeWithHistory((prev: any[]) => duplicateNodeById(prev, id));
   };
 
   const onMoveDirection = (id: string, direction: "up" | "down") => {
-    markEdited();
-    setFullWbsTree((prev: any[]) => moveNodeDirectionById(prev, id, direction));
+    setTreeWithHistory((prev: any[]) => moveNodeDirectionById(prev, id, direction));
   };
 
   const onReorder = (parentId: string | null, fromIndex: number, toIndex: number) => {
     const SAM_COUNT = 3; // S, A, M
 
-    setFullWbsTree((prev: any[]) => {
+    setTreeWithHistory((prev: any[]) => {
       if (!parentId) {
         if (fromIndex < SAM_COUNT) return prev;
         if (toIndex < SAM_COUNT) toIndex = SAM_COUNT;
         if (fromIndex === toIndex) return prev;
 
-        markEdited();
         const newTree = [...prev];
         const [moved] = newTree.splice(fromIndex, 1);
         newTree.splice(toIndex, 0, moved);
         return renumberTree(newTree);
       }
 
-      markEdited();
       return reorderChildren(prev, parentId, fromIndex, toIndex);
     });
   };
 
   // Add discipline
   const onAddDiscipline = (code: string, nameEn: string, nameId?: string) => {
-    markEdited();
-    setFullWbsTree((prev) => addRootDiscipline(prev, { code, nameEn, nameId, children: [] }));
+    setTreeWithHistory((prev) => addRootDiscipline(prev, { code, nameEn, nameId, children: [] }));
   };
 
   // Reset handler
@@ -648,6 +692,10 @@ export default function ProjectSetupWBSPage() {
                 onOutdent={onOutdent}
                 onDuplicate={onDuplicate}
                 onMoveDirection={onMoveDirection}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={historyIndex > 0}
+                canRedo={historyIndex < history.length - 1}
               />
             </div>
 
