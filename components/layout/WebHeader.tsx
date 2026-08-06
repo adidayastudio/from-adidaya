@@ -112,7 +112,6 @@ export default function WebHeader({
       {/* Navigation Buttons Bubble */}
       <div className={clsx(
         "flex h-9 items-center gap-0.5 p-1 rounded-full border shadow-sm pointer-events-auto transition-all duration-500",
-        isProjectRoute && "lg:ml-[256px]",
         isVibeActive
           ? "bg-white/10 dark:bg-black/10 border-white/10 dark:border-white/5 backdrop-blur-md"
           : "bg-white/10 dark:bg-neutral-800/10 border-white/20 dark:border-neutral-700/20 backdrop-blur-xl"
