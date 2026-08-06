@@ -239,9 +239,9 @@ export default function ProjectSetupRABPage() {
 
   const activeWBS = useMemo(() => {
     const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
-    const mergedTree = mergeWBSTrees(dbWbsItems, defaultTree);
+    const baseTree = dbWbsItems.length > 0 ? dbWbsItems : defaultTree;
 
-    return ensureMultiBuildingWBS(mergedTree, project);
+    return ensureMultiBuildingWBS(baseTree, project);
   }, [dbWbsItems, project]);
 
 

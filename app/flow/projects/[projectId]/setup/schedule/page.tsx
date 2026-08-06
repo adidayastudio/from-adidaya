@@ -106,9 +106,9 @@ export default function ProjectSetupSchedulePage() {
   const activeWBS = useMemo(() => {
     const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
     const dbTree = buildWBSTree(dbWbsItems);
-    const mergedTree = mergeWBSTrees(dbTree, defaultTree);
+    const baseTree = dbTree.length > 0 ? dbTree : defaultTree;
 
-    return ensureMultiBuildingWBS(mergedTree, project);
+    return ensureMultiBuildingWBS(baseTree, project);
   }, [dbWbsItems, project]);
 
   const estimateValues = useMemo<EstimateValues>(() => {

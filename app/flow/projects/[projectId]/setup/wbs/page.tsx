@@ -210,8 +210,8 @@ export default function ProjectSetupWBSPage() {
         const rawWbs = data || [];
         const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
         const dbTree = buildWBSTree(rawWbs);
-        const mergedTree = mergeWBSTrees(dbTree, defaultTree);
-        const fullTree = ensureMultiBuildingWBS(mergedTree, project);
+        const baseTree = dbTree.length > 0 ? dbTree : defaultTree;
+        const fullTree = ensureMultiBuildingWBS(baseTree, project);
 
         setFullWbsTree(fullTree);
         setHistory([fullTree]);
