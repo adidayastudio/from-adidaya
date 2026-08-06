@@ -54,6 +54,17 @@ export default function ScheduleSystem() {
         if (!projectId) return;
         setIsLoading(true);
         try {
+            // Get the project's workspace_id
+            const { data: projectData, error: projectError } = await supabase
+                .from("projects")
+                .select("workspace_id")
+                .eq("id", projectId)
+                .single();
+            
+            if (projectError) throw projectError;
+            const workspaceId = projectData?.workspace_id;
+            if (!workspaceId) throw new Error("No workspace found for this project");
+
             // 1. Sync Schedule Items (Ensure they exist)
             await supabase.rpc('sync_project_schedule', { target_project_id: projectId });
 
@@ -67,13 +78,12 @@ export default function ScheduleSystem() {
                         project_id
                     )
                 `)
+                .eq("workspace_id", workspaceId)
                 .order("code", { ascending: true }); // Note: sorting might be trickier if wbs_code is not perfect
 
             if (error) throw error;
 
-            // Filter schedule items for THIS project (since WBS might have links to others? No, RLS usually handles, but strict join in Supabase:
-            // The left join will return array of schedule items. We need to filter for our project_id.
-
+            // Filter schedule items for THIS project
             const processed = (data || []).map((item: any) => {
                 const projectSchedule = Array.isArray(item.schedule)
                     ? item.schedule.find((s: any) => s.project_id === projectId)
@@ -209,7 +219,7 @@ export default function ScheduleSystem() {
             </div>
 
             <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden min-h-[500px]">
-                {view === "table" && <ScheduleTable items={items} onUpdate={fetchData} />}
+                {view === "table" && <ScheduleTable projectId={projectId} items={items} onUpdate={fetchData} />}
                 {view === "gantt" && <ScheduleGantt items={items} />}
                 {view === "timeline" && <div className="p-8 text-center text-neutral-400">Timeline View Coming Soon</div>}
             </div>

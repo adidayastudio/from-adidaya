@@ -157,10 +157,21 @@ export default function ProjectSetupWBSPage() {
             return orderA - orderB;
           });
 
-          // Set the trees
+          // Set the trees conditionally based on what levels are actually present in the database
+          const hasEstimates = dbWbs.some((item: any) => item.level === "estimate");
+          const hasDetails = dbWbs.some((item: any) => item.level === "detail");
+
           setBallparkTree(rootsList);
-          setEstimatesTree(rootsList);
-          setDetailTree(rootsList);
+          if (hasEstimates) {
+            setEstimatesTree(rootsList);
+          } else {
+            setEstimatesTree([]);
+          }
+          if (hasDetails) {
+            setDetailTree(rootsList);
+          } else {
+            setDetailTree([]);
+          }
         }
       } catch (err) {
         console.error("Error loading project WBS:", err);
@@ -345,15 +356,15 @@ export default function ProjectSetupWBSPage() {
   };
 
   const doReset = () => {
-    if (activeMode === "BALLPARK") {
-      setEnabledAddons([]);
-      setBallparkTree(WBS_BALLPARK);
-    } else if (activeMode === "ESTIMATES") {
-      setEstimatesTree([]);
-    } else {
-      setDetailTree([]);
-    }
-    setEditState(prev => ({ ...prev, [activeMode]: "pristine" }));
+    setEnabledAddons([]);
+    setBallparkTree(WBS_BALLPARK);
+    setEstimatesTree([]);
+    setDetailTree([]);
+    setEditState({
+      BALLPARK: "draft",
+      ESTIMATES: "draft",
+      DETAIL: "draft"
+    });
   };
 
   const saveTreeToDb = async (treeToSave: any[]) => {
@@ -369,8 +380,9 @@ export default function ProjectSetupWBSPage() {
         
       if (deleteError) throw deleteError;
       
-      // 2. Recursive insert function
-      const insertNode = async (item: any, parentDbId: string | null = null, indentLevel: number = 0) => {
+      // 2. Flatten tree client-side and prepare rows
+      const rowsToInsert: any[] = [];
+      const traverseAndPrepare = (item: any, parentDbId: string | null = null, indentLevel: number = 0) => {
         let currentLevel = "structure";
         if (indentLevel === 0) currentLevel = "structure";
         else if (indentLevel === 1) currentLevel = "summary";
@@ -382,38 +394,38 @@ export default function ProjectSetupWBSPage() {
         const description = item.nameId || item.description || "";
         const notes = item.notes || null;
 
-        const { data, error } = await supabase
-          .from("work_breakdown_structure")
-          .insert({
-            id: item.id || crypto.randomUUID(),
-            workspace_id: project.workspace_id,
-            code: code,
-            name: name,
-            level: currentLevel,
-            indent_level: indentLevel,
-            parent_id: parentDbId,
-            description: description,
-            notes: notes,
-            sort_order: parseInt(code.split('.').pop() || "0") || 1
-          })
-          .select('id')
-          .single();
+        const isUuid = item.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.id);
+        const dbId = isUuid ? item.id : crypto.randomUUID();
 
-        if (error) throw error;
+        rowsToInsert.push({
+          id: dbId,
+          workspace_id: project.workspace_id,
+          code: code,
+          name: name,
+          level: currentLevel,
+          indent_level: indentLevel,
+          parent_id: parentDbId,
+          description: description,
+          notes: notes,
+          sort_order: parseInt(code.split('.').pop() || "0") || 1
+        });
 
-        const newDbId = data.id;
         const children = item.children || [];
-        if (children && children.length > 0) {
-          for (const child of children) {
-            await insertNode(child, newDbId, indentLevel + 1);
-          }
+        for (const child of children) {
+          traverseAndPrepare(child, dbId, indentLevel + 1);
         }
       };
 
-      // 3. Loop through roots and insert
       for (const root of treeToSave) {
-        await insertNode(root);
+        traverseAndPrepare(root);
       }
+
+      // 3. Single Bulk Insert to database
+      const { error: insertError } = await supabase
+        .from("work_breakdown_structure")
+        .insert(rowsToInsert);
+
+      if (insertError) throw insertError;
       
       alert("✅ WBS saved successfully to database!");
     } catch (err: any) {
@@ -642,7 +654,7 @@ export default function ProjectSetupWBSPage() {
             </div>
 
             {/* Reset Link */}
-            {currentEditState !== "pristine" && (
+            {currentEditState !== "submitted" && (
               <div className="pt-4">
                 <button
                   className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors flex items-center gap-1.5"

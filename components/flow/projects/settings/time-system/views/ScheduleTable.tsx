@@ -6,11 +6,12 @@ import { Calendar, ChevronRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
 
 interface ScheduleTableProps {
+    projectId: string;
     items: any[];
     onUpdate: () => void;
 }
 
-export function ScheduleTable({ items, onUpdate }: ScheduleTableProps) {
+export function ScheduleTable({ projectId, items, onUpdate }: ScheduleTableProps) {
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
     const toggleExpand = (id: string) => {
@@ -37,9 +38,10 @@ export function ScheduleTable({ items, onUpdate }: ScheduleTableProps) {
             const { error } = await supabase
                 .from("project_schedule_items")
                 .upsert({
+                    project_id: projectId,
                     wbs_id: wbsId,
                     [field]: numValue
-                }, { onConflict: 'wbs_id' });
+                }, { onConflict: 'project_id,wbs_id' });
 
             if (error) throw error;
             onUpdate();
