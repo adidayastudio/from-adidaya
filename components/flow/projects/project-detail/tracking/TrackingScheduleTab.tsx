@@ -18,13 +18,42 @@ type Props = {
   onRefresh: () => void;
 };
 
-const DISCIPLINE_TITLE_MAP: Record<string, string> = {
-  S: "Pekerjaan Struktur",
-  A: "Pekerjaan Arsitektur",
-  M: "Pekerjaan MEP",
-  I: "Pekerjaan Interior",
-  L: "Pekerjaan Landscape",
+import { compareWBSCodes } from "@/lib/flow/mappers/wbs-tree";
+
+const SSOT_TITLE_MAP: Record<string, { id: string; en: string }> = {
+  S: { id: "Pekerjaan Struktur", en: "Structure" },
+  "S.1": { id: "Persiapan", en: "Preparation" },
+  "S.2": { id: "Tanah", en: "Earthworks" },
+  "S.3": { id: "Fondasi", en: "Foundations" },
+  "S.4": { id: "Struktur Utama", en: "Main Structure" },
+  "S.5": { id: "Struktur Atap", en: "Roof Structure" },
+  A: { id: "Pekerjaan Arsitektur", en: "Architecture" },
+  "A.1": { id: "Pasangan Dinding", en: "Wall Construction" },
+  "A.2": { id: "Penutup Dinding", en: "Wall Finishes" },
+  "A.3": { id: "Penutup Lantai", en: "Floor Finishes" },
+  "A.4": { id: "Plafond", en: "Ceiling" },
+  "A.5": { id: "Penutup Atap", en: "Roof Covering" },
+  "A.6": { id: "Pengecatan", en: "Painting" },
+  "A.7": { id: "Kaca, Pintu, Jendela", en: "Door, Window, & Glazing" },
+  "A.8": { id: "Fasad", en: "Façade" },
+  "A.9": { id: "Sanitair", en: "Sanitary" },
+  "A.10": { id: "Lain-Lain", en: "Misc" },
+  M: { id: "Pekerjaan MEP", en: "MEP" },
+  "M.1": { id: "Pemipaan", en: "Plumbing" },
+  "M.2": { id: "Elektrikal", en: "Electrical" },
+  "M.3": { id: "Elektronika", en: "Electronics & Low Current" },
+  "M.4": { id: "HVAC", en: "HVAC" },
+  "M.5": { id: "Proteksi Kebakaran", en: "Fire Protection" },
+  "M.6": { id: "Proteksi Petir", en: "Lightning Protection" },
+  I: { id: "Pekerjaan Interior", en: "Interior" },
+  L: { id: "Pekerjaan Landscape", en: "Landscape" },
 };
+
+function normalizeWBSCode(code: string): string {
+  if (!code) return "";
+  // Strip duplicate discipline prefix e.g. A.A.1 -> A.1, S.S.1.1 -> S.1.1
+  return code.replace(/^([SAMIL])\.\1\./, "$1.").replace(/^([SAMIL])\.\1$/, "$1");
+}
 
 // Build tree structure from flat items with SSOT SAMIL order & auto parent resolution
 export type TreeNode = TrackingWBSItem & { children: TreeNode[]; isSynthetic?: boolean };
@@ -34,27 +63,34 @@ function buildTree(items: TrackingWBSItem[]): TreeNode[] {
 
   const map = new Map<string, TreeNode>();
 
-  // 1. Add all explicit items to map
+  // 1. Add all explicit items to map with normalized WBS code
   items.forEach((item) => {
-    map.set(item.wbsCode, {
-      ...item,
-      children: [],
-    });
+    const cleanCode = normalizeWBSCode(item.wbsCode);
+    if (!map.has(cleanCode) || !map.get(cleanCode)!.isLeaf) {
+      map.set(cleanCode, {
+        ...item,
+        wbsCode: cleanCode,
+        children: [],
+      });
+    }
   });
 
   // 2. Ensure parent nodes exist for every node
   const ensureParentExists = (code: string): TreeNode | null => {
     if (map.has(code)) return map.get(code)!;
 
+    const ssot = SSOT_TITLE_MAP[code];
     const parts = code.split(".");
+    const title = ssot?.id || `Pekerjaan ${code}`;
+    const titleEn = ssot?.en || `Work ${code}`;
+
     if (parts.length <= 1) {
-      const title = DISCIPLINE_TITLE_MAP[code] || `Disiplin ${code}`;
       const syntheticNode: TreeNode = {
         id: `synth-${code}`,
         projectId: "",
         wbsCode: code,
         title: title,
-        titleEn: title,
+        titleEn: titleEn,
         level: 0,
         position: 0,
         isLeaf: false,
@@ -81,8 +117,8 @@ function buildTree(items: TrackingWBSItem[]): TreeNode[] {
       id: `synth-${code}`,
       projectId: "",
       wbsCode: code,
-      title: `Sub-pekerjaan ${code}`,
-      titleEn: `Sub-work ${code}`,
+      title: title,
+      titleEn: titleEn,
       level: parts.length - 1,
       position: 0,
       isLeaf: false,
