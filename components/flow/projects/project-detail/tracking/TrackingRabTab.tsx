@@ -4,40 +4,135 @@ import { useState, useMemo } from "react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Download, ChevronDown, ChevronRight } from "lucide-react";
 import { TrackingWBSItem } from "@/lib/flow/repositories/daily-progress.repo";
+import { compareWBSCodes } from "@/lib/flow/mappers/wbs-tree";
 import clsx from "clsx";
 
 type Props = {
   items: TrackingWBSItem[];
 };
 
-// Build tree structure from flat items
-type TreeNode = TrackingWBSItem & { children: TreeNode[] };
+const DISCIPLINE_TITLE_MAP: Record<string, string> = {
+  S: "Pekerjaan Struktur",
+  A: "Pekerjaan Arsitektur",
+  M: "Pekerjaan MEP",
+  I: "Pekerjaan Interior",
+  L: "Pekerjaan Landscape",
+};
+
+// Build tree structure from flat items with SSOT SAMIL order & auto parent resolution
+export type TreeNode = TrackingWBSItem & { children: TreeNode[]; isSynthetic?: boolean };
 
 function buildTree(items: TrackingWBSItem[]): TreeNode[] {
+  if (!items || items.length === 0) return [];
+
   const map = new Map<string, TreeNode>();
-  const roots: TreeNode[] = [];
 
-  const sorted = [...items].sort((a, b) => a.wbsCode.localeCompare(b.wbsCode));
-
-  sorted.forEach((item) => {
-    map.set(item.wbsCode, { ...item, children: [] });
+  // 1. Add all explicit items to map
+  items.forEach((item) => {
+    map.set(item.wbsCode, {
+      ...item,
+      children: [],
+    });
   });
 
-  sorted.forEach((item) => {
-    const node = map.get(item.wbsCode)!;
-    const parts = item.wbsCode.split(".");
+  // 2. Ensure parent nodes exist for every node
+  const ensureParentExists = (code: string): TreeNode | null => {
+    if (map.has(code)) return map.get(code)!;
+
+    const parts = code.split(".");
+    if (parts.length <= 1) {
+      const title = DISCIPLINE_TITLE_MAP[code] || `Disiplin ${code}`;
+      const syntheticNode: TreeNode = {
+        id: `synth-${code}`,
+        projectId: "",
+        wbsCode: code,
+        title: title,
+        titleEn: title,
+        level: 0,
+        position: 0,
+        isLeaf: false,
+        unit: "",
+        targetQuantity: 0,
+        actualQuantity: 0,
+        progressPercent: 0,
+        targetCost: 0,
+        actualCost: 0,
+        status: "pending",
+        delayDays: 0,
+        logs: [],
+        children: [],
+        isSynthetic: true,
+      };
+      map.set(code, syntheticNode);
+      return syntheticNode;
+    }
+
+    const parentCode = parts.slice(0, -1).join(".");
+    const parentNode = ensureParentExists(parentCode);
+
+    const syntheticNode: TreeNode = {
+      id: `synth-${code}`,
+      projectId: "",
+      wbsCode: code,
+      title: `Sub-pekerjaan ${code}`,
+      titleEn: `Sub-work ${code}`,
+      level: parts.length - 1,
+      position: 0,
+      isLeaf: false,
+      unit: "",
+      targetQuantity: 0,
+      actualQuantity: 0,
+      progressPercent: 0,
+      targetCost: 0,
+      actualCost: 0,
+      status: "pending",
+      delayDays: 0,
+      logs: [],
+      children: [],
+      isSynthetic: true,
+    };
+    map.set(code, syntheticNode);
+
+    if (parentNode && !parentNode.children.some((c) => c.wbsCode === code)) {
+      parentNode.children.push(syntheticNode);
+    }
+
+    return syntheticNode;
+  };
+
+  // 3. Link nodes to parents
+  map.forEach((node) => {
+    const parts = node.wbsCode.split(".");
     if (parts.length > 1) {
       const parentCode = parts.slice(0, -1).join(".");
-      const parent = map.get(parentCode);
-      if (parent) {
-        parent.children.push(node);
-        return;
+      const parentNode = ensureParentExists(parentCode);
+      if (parentNode && !parentNode.children.some((c) => c.wbsCode === node.wbsCode)) {
+        parentNode.children.push(node);
       }
     }
-    roots.push(node);
   });
 
-  return roots;
+  // Re-collect true root nodes
+  const finalRoots: TreeNode[] = [];
+  map.forEach((node) => {
+    const parts = node.wbsCode.split(".");
+    if (parts.length === 1 && !finalRoots.some((r) => r.wbsCode === node.wbsCode)) {
+      finalRoots.push(node);
+    }
+  });
+
+  // 4. Sort recursively using compareWBSCodes (SAMIL order)
+  const sortTree = (nodes: TreeNode[]) => {
+    nodes.sort((a, b) => compareWBSCodes(a.wbsCode, b.wbsCode));
+    nodes.forEach((n) => {
+      if (n.children.length > 0) {
+        sortTree(n.children);
+      }
+    });
+  };
+
+  sortTree(finalRoots);
+  return finalRoots;
 }
 
 // Sum costs recursively for a node

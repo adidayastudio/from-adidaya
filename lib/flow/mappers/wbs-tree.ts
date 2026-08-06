@@ -27,6 +27,39 @@ export type WBSNode = WBSRow & { children: WBSNode[] };
 /**
  * Build tree from flat list
  */
+export const compareWBSCodes = (a: string, b: string): number => {
+    const partsA = (a || "").split(".");
+    const partsB = (b || "").split(".");
+    const minLen = Math.min(partsA.length, partsB.length);
+    const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
+
+    for (let i = 0; i < minLen; i++) {
+        const partA = partsA[i];
+        const partB = partsB[i];
+
+        if (partA !== partB) {
+            const orderA = ORDER_MAP[partA];
+            const orderB = ORDER_MAP[partB];
+
+            if (orderA !== undefined && orderB !== undefined) {
+                if (orderA !== orderB) return orderA - orderB;
+            }
+
+            const numA = parseInt(partA);
+            const numB = parseInt(partB);
+            const isNumA = !isNaN(numA);
+            const isNumB = !isNaN(numB);
+
+            if (isNumA && isNumB) {
+                if (numA !== numB) return numA - numB;
+            } else {
+                return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: "base" });
+            }
+        }
+    }
+    return partsA.length - partsB.length;
+};
+
 export function buildWBSTree(items: any[]): WBSNode[] {
     if (!items || items.length === 0) return [];
 
@@ -35,7 +68,7 @@ export function buildWBSTree(items: any[]): WBSNode[] {
 
     // First pass: create nodes
     items.forEach((item) => {
-        const code = item.wbs_code || item.code;
+        const code = item.wbs_code || item.code || item.wbsCode;
         const node = {
             ...item,
             id: item.id || code,
@@ -71,41 +104,8 @@ export function buildWBSTree(items: any[]): WBSNode[] {
         roots.push(node);
     });
 
-    const compareWBSCodes = (a: string, b: string): number => {
-        const partsA = a.split(".");
-        const partsB = b.split(".");
-        const minLen = Math.min(partsA.length, partsB.length);
-        const ORDER_MAP: Record<string, number> = { S: 1, A: 2, M: 3, I: 4, L: 5 };
-
-        for (let i = 0; i < minLen; i++) {
-            const partA = partsA[i];
-            const partB = partsB[i];
-
-            if (partA !== partB) {
-                const orderA = ORDER_MAP[partA];
-                const orderB = ORDER_MAP[partB];
-
-                if (orderA !== undefined && orderB !== undefined) {
-                    if (orderA !== orderB) return orderA - orderB;
-                }
-
-                const numA = parseInt(partA);
-                const numB = parseInt(partB);
-                const isNumA = !isNaN(numA);
-                const isNumB = !isNaN(numB);
-
-                if (isNumA && isNumB) {
-                    if (numA !== numB) return numA - numB;
-                } else {
-                    return partA.localeCompare(partB, undefined, { numeric: true, sensitivity: "base" });
-                }
-            }
-        }
-        return partsA.length - partsB.length;
-    };
-
     const sortNodes = (nodes: any[]) => {
-        nodes.sort((a, b) => compareWBSCodes(a.code, b.code));
+        nodes.sort((a, b) => compareWBSCodes(a.code || a.wbsCode, b.code || b.wbsCode));
         nodes.forEach((n) => {
             if (n.children && n.children.length > 0) sortNodes(n.children);
         });
