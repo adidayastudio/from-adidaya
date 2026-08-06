@@ -16,9 +16,7 @@ export const RAW_WBS_ESTIMATES_DELTA = [
       { code: "S.1.6", nameEn: "Site Office & Temporary Storage", nameId: "Direksi Keet & Gudang Sementara", unit: "ls", unitPrice: 6000000 },
       { code: "S.1.7", nameEn: "HSE Equipment & Signage", nameId: "Perlengkapan K3", unit: "ls", unitPrice: 385000 },
       { code: "S.1.8", nameEn: "Heavy Demolition Works", nameId: "Pembongkaran Berat", unit: "m3", unitPrice: 250000 },
-      { code: "S.1.9", nameEn: "PBG Building Permit", nameId: "Perizinan PBG (Persetujuan Bangunan Gedung)", unit: "ls", unitPrice: 15000000 },
-      { code: "S.1.10", nameEn: "SLF Certification", nameId: "Sertifikat Laik Fungsi (SLF)", unit: "ls", unitPrice: 10000000 },
-      { code: "S.1.11", nameEn: "Environmental Permitting (UKL-UPL/Amdal)", nameId: "Perizinan Lingkungan (UKL-UPL/Amdal)", unit: "ls", unitPrice: 12000000 },
+      { code: "S.1.9", nameEn: "PBG, SLF, & Permitting", nameId: "PBG, SLF, & Permitting", unit: "ls", unitPrice: 15000000 },
     ],
   },
   {
