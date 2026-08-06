@@ -18,8 +18,6 @@ type Props = {
   onRefresh: () => void;
 };
 
-import { compareWBSCodes } from "@/lib/flow/mappers/wbs-tree";
-
 const SSOT_TITLE_MAP: Record<string, { id: string; en: string }> = {
   S: { id: "Pekerjaan Struktur", en: "Structure" },
   "S.1": { id: "Persiapan", en: "Preparation" },
