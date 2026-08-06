@@ -92,7 +92,8 @@ export default function VolumeCalcPage() {
         const { data, error } = await supabase
           .from("project_wbs_items")
           .select("*")
-          .eq("project_id", project.id);
+          .eq("project_id", project.id)
+          .range(0, 10000);
 
         if (error) throw error;
         setDbWbsItems(data || []);

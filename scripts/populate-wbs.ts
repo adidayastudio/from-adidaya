@@ -967,6 +967,69 @@ const pdfCafeMEP = [
   }
 ];
 
+// Site Work / Landscape PDF items (under D.L)
+const pdfSiteWorkLandscape = [
+  {
+    code: "L.1", nameId: "Pekerjaan Persiapan Lanskap", nameEn: "Landscape Preparation Works", children: [
+      { code: "L.1.1", nameId: "Pembersihan Lahan", nameEn: "Site Clearing" },
+      { code: "L.1.2", nameId: "Pengukuran dan Setting Out", nameEn: "Surveying & Setting Out" }
+    ]
+  },
+  {
+    code: "L.2", nameId: "Pekerjaan Tanah", nameEn: "Earthworks", children: [
+      { code: "L.2.1", nameId: "Pekerjaan Galian", nameEn: "Excavation Works" },
+      { code: "L.2.2", nameId: "Pekerjaan Urugan", nameEn: "Backfilling Works" },
+      { code: "L.2.3", nameId: "Pekerjaan Perataan dan Pembentukan Elevasi Lahan", nameEn: "Land Grading & Elevation Shaping" },
+      { code: "L.2.4", nameId: "Pekerjaan Pemadatan Tanah", nameEn: "Soil Compaction" },
+      { code: "L.2.5", nameId: "Pekerjaan Geotextile", nameEn: "Geotextile Works" }
+    ]
+  },
+  {
+    code: "L.3", nameId: "Pekerjaan Perkerasan, Jalan, dan Parkir", nameEn: "Paving, Road & Parking Works", children: [
+      { code: "L.3.1", nameId: "Pekerjaan Paving Block", nameEn: "Paving Block Works" },
+      { code: "L.3.2", nameId: "Pekerjaan Grass Block", nameEn: "Grass Block Works" },
+      { code: "L.3.3", nameId: "Pekerjaan Batu Alam", nameEn: "Natural Stone Works" },
+      { code: "L.3.4", nameId: "Pekerjaan Jalur Pedestrian", nameEn: "Pedestrian Walkway Works" },
+      { code: "L.3.5", nameId: "Pekerjaan Perkerasan Aspal", nameEn: "Asphalt Paving Works (inc. top aggregate, base aggregate, liquid asphalt, asphalt material, paving excavation)" },
+      { code: "L.3.7", nameId: "Pekerjaan Kanstin", nameEn: "Kerb Works" },
+      { code: "L.3.8", nameId: "Pekerjaan Wheel Stopper", nameEn: "Wheel Stopper Works" },
+      { code: "L.3.9", nameId: "Pengecatan Marka Jalan dan Parkir", nameEn: "Road & Parking Marking Painting" }
+    ]
+  },
+  {
+    code: "L.4", nameId: "Pekerjaan Drainase Lansekap", nameEn: "Landscape Drainage Works", children: [
+      { code: "L.4.1", nameId: "Pekerjaan U-ditch dan Cover", nameEn: "U-ditch & Cover Works" },
+      { code: "L.4.2", nameId: "Pekerjaan Sumur Resapan", nameEn: "Infiltration Well Works" },
+      { code: "L.4.3", nameId: "Pekerjaan Bak Kontrol", nameEn: "Inspection Chamber Works" },
+      { code: "L.4.4", nameId: "Pekerjaan Galian Drainase", nameEn: "Drainage Excavation" },
+      { code: "L.4.5", nameId: "Pekerjaan Urugan", nameEn: "Backfilling Works" }
+    ]
+  },
+  {
+    code: "L.5", nameId: "Pekerjaan Taman dan Tanaman", nameEn: "Garden & Plants Works", children: [
+      { code: "L.5.1", nameId: "Pekerjaan Rumput", nameEn: "Grass Works" },
+      { code: "L.5.2", nameId: "Pekerjaan Pohon Peneduh", nameEn: "Shade Tree Works" },
+      { code: "L.5.3", nameId: "Pekerjaan Pohon Pengarah", nameEn: "Directional Tree Works" },
+      { code: "L.5.4", nameId: "Pekerjaan Semak", nameEn: "Shrub Works" }
+    ]
+  },
+  {
+    code: "L.6", nameId: "Pekerjaan Penerangan Lansekap", nameEn: "Landscape Lighting Works", children: [
+      { code: "L.6.1", nameId: "Pekerjaan Lampu Penerangan Jalan", nameEn: "Street Lighting Works" },
+      { code: "L.6.2", nameId: "Pekerjaan Lampu Pedestrian", nameEn: "Pedestrian Lighting Works" },
+      { code: "L.6.3", nameId: "Pekerjaan Lampu Taman", nameEn: "Garden Lighting Works" },
+      { code: "L.6.4", nameId: "Pekerjaan Lampu Logo Taman Gym", nameEn: "Gym Garden Backlit Logo Light" },
+      { code: "L.6.5", nameId: "Pekerjaan Lampu Logo Taman Cafe", nameEn: "Cafe Garden Backlit Logo Light" },
+      { code: "L.6.6", nameId: "Pekerjaan Instalasi Penerangan (Kabel, Konduit, dan Aksesoris)", nameEn: "Lighting Installation (Cable, Conduit & Accessories)" }
+    ]
+  },
+  {
+    code: "L.7", nameId: "Pekerjaan Furniture Taman", nameEn: "Garden Furniture Works", children: [
+      { code: "L.7.1", nameId: "Pekerjaan dan Pemasangan Kursi Taman", nameEn: "Garden Bench Supply & Installation" }
+    ]
+  }
+];
+
 // PDF overrides map by mass code & discipline letter
 const pdfByMassAndDiscipline: Record<string, Record<string, any[]>> = {
   "A": {
@@ -983,6 +1046,9 @@ const pdfByMassAndDiscipline: Record<string, Record<string, any[]>> = {
     "S": pdfCafeStructure,
     "A": pdfCafeArchitecture,
     "M": pdfCafeMEP
+  },
+  "D": {
+    "L": pdfSiteWorkLandscape
   }
 };
 
@@ -1040,8 +1106,12 @@ async function run() {
       is_leaf: false
     });
     
-    // For each SAMIL discipline (S, A, M, I, L)
-    for (const [dIdx, discNode] of samilTree.entries()) {
+    // For Site Work (D), ONLY include "L" (Landscape) discipline, remove S, A, M, I!
+    const availableDisciplines = prefix === "D" 
+      ? samilTree.filter(d => d.code === "L") 
+      : samilTree;
+    
+    for (const [dIdx, discNode] of availableDisciplines.entries()) {
       const discLetter = discNode.code; // "S", "A", "M", "I", "L"
       const discId = crypto.randomUUID();
       const discWbsCode = `${prefix}.${discLetter}`;
@@ -1063,126 +1133,153 @@ async function run() {
       const hasPdf = !!pdfItems;
       const pdfLookup = hasPdf ? buildPdfLookup(pdfItems) : new Map();
       
-      // Traverse SAMIL children of this discipline
-      function traverseSamil(samilNodes: any[] | undefined, parentId: string, level: number) {
-        if (!samilNodes) return;
-        
-        samilNodes.forEach((samilNode, pos) => {
-          const id = crypto.randomUUID();
-          // Normalize the SAMIL code (strip doubled prefix like S.S.1.1 -> S.1.1)
-          const normalizedCode = normalizeSamilCode(samilNode.code);
-          const fullCode = `${prefix}.${normalizedCode}`;
-          
-          let title = samilNode.nameEn;
-          let titleEn = samilNode.nameId;
-          
-          // Check if PDF has an override for this code
-          if (hasPdf && pdfLookup.has(normalizedCode)) {
-            const pdfItem = pdfLookup.get(normalizedCode)!;
-            title = pdfItem.nameEn;    // English
-            titleEn = pdfItem.nameId;  // Indonesian
-          }
-          
-          projectRows.push({
-            id,
-            project_id: fksId,
-            wbs_code: fullCode,
-            title,
-            title_en: titleEn !== title ? titleEn : null,
-            parent_id: parentId,
-            level,
-            position: pos + 1,
-            is_leaf: !samilNode.children || samilNode.children.length === 0,
-            unit: samilNode.unit || null
-          });
-          
-          // If PDF has deeper children that SAMIL doesn't have, add them
-          if (hasPdf && pdfLookup.has(normalizedCode)) {
-            const pdfItem = pdfLookup.get(normalizedCode)!;
-            if (pdfItem.children && (!samilNode.children || samilNode.children.length === 0)) {
-              // PDF has children but SAMIL leaf → insert PDF children
-              traversePdf(pdfItem.children, id, level + 1, prefix);
-              return; // don't recurse into SAMIL (no SAMIL children)
-            }
-          }
-          
-          traverseSamil(samilNode.children, id, level + 1);
-        });
-      }
-      
-      // Traverse pure PDF nodes (for items deeper than SAMIL)
-      function traversePdf(pdfNodes: any[], parentId: string, level: number, massPrefix: string) {
-        pdfNodes.forEach((pdfNode, pos) => {
-          const id = crypto.randomUUID();
-          const fullCode = `${massPrefix}.${pdfNode.code}`;
-          
-          projectRows.push({
-            id,
-            project_id: fksId,
-            wbs_code: fullCode,
-            title: pdfNode.nameEn,
-            title_en: pdfNode.nameId !== pdfNode.nameEn ? pdfNode.nameId : null,
-            parent_id: parentId,
-            level,
-            position: pos + 1,
-            is_leaf: !pdfNode.children || pdfNode.children.length === 0,
-          });
-          
-          if (pdfNode.children) {
-            traversePdf(pdfNode.children, id, level + 1, massPrefix);
-          }
-        });
-      }
-      
-      // Also add PDF items that are NOT in SAMIL template 
-      // (PDF items with codes that don't exist in SAMIL)
-      if (hasPdf && pdfItems) {
-        // First, collect all normalized SAMIL codes for this discipline
-        const samilCodes = new Set<string>();
-        function collectSamilCodes(nodes: any[] | undefined) {
-          if (!nodes) return;
-          nodes.forEach(n => {
-            samilCodes.add(normalizeSamilCode(n.code));
-            collectSamilCodes(n.children);
-          });
-        }
-        collectSamilCodes(discNode.children);
-        
-        // Insert SAMIL children first
-        traverseSamil(discNode.children, discId, 2);
-        
-        // Now add PDF top-level items that don't match any SAMIL code
-        // (These are entirely new categories from the PDF)
-        const existingL2Codes = new Set(
-          (discNode.children || []).map((c: any) => normalizeSamilCode(c.code))
-        );
-        
-        pdfItems.forEach((pdfTopItem, pos) => {
-          if (!existingL2Codes.has(pdfTopItem.code)) {
-            // This PDF level-2 item doesn't exist in SAMIL template → add it entirely from PDF
+      // For Site Work (D), directly populate D.L with pdfSiteWorkLandscape
+      if (prefix === "D" && discLetter === "L") {
+        function traversePurePdf(pdfNodes: any[], parentId: string, level: number) {
+          pdfNodes.forEach((pdfNode, pos) => {
             const id = crypto.randomUUID();
-            const fullCode = `${prefix}.${pdfTopItem.code}`;
+            const fullCode = `${prefix}.${pdfNode.code}`;
             
             projectRows.push({
               id,
               project_id: fksId,
               wbs_code: fullCode,
-              title: pdfTopItem.nameEn,
-              title_en: pdfTopItem.nameId !== pdfTopItem.nameEn ? pdfTopItem.nameId : null,
-              parent_id: discId,
-              level: 2,
-              position: 100 + pos,
-              is_leaf: !pdfTopItem.children || pdfTopItem.children.length === 0,
+              title: pdfNode.nameEn,
+              title_en: pdfNode.nameId !== pdfNode.nameEn ? pdfNode.nameId : null,
+              parent_id: parentId,
+              level,
+              position: pos + 1,
+              is_leaf: !pdfNode.children || pdfNode.children.length === 0,
             });
             
-            if (pdfTopItem.children) {
-              traversePdf(pdfTopItem.children, id, 3, prefix);
+            if (pdfNode.children) {
+              traversePurePdf(pdfNode.children, id, level + 1);
             }
-          }
-        });
+          });
+        }
+        traversePurePdf(pdfSiteWorkLandscape, discId, 2);
       } else {
-        // Non-Gym: just use SAMIL template as-is
-        traverseSamil(discNode.children, discId, 2);
+        // Traverse SAMIL children of this discipline
+        function traverseSamil(samilNodes: any[] | undefined, parentId: string, level: number) {
+          if (!samilNodes) return;
+          
+          samilNodes.forEach((samilNode, pos) => {
+            const id = crypto.randomUUID();
+            // Normalize the SAMIL code (strip doubled prefix like S.S.1.1 -> S.1.1)
+            const normalizedCode = normalizeSamilCode(samilNode.code);
+            const fullCode = `${prefix}.${normalizedCode}`;
+            
+            let title = samilNode.nameEn;
+            let titleEn = samilNode.nameId;
+            
+            // Check if PDF has an override for this code
+            if (hasPdf && pdfLookup.has(normalizedCode)) {
+              const pdfItem = pdfLookup.get(normalizedCode)!;
+              title = pdfItem.nameEn;    // English
+              titleEn = pdfItem.nameId;  // Indonesian
+            }
+            
+            projectRows.push({
+              id,
+              project_id: fksId,
+              wbs_code: fullCode,
+              title,
+              title_en: titleEn !== title ? titleEn : null,
+              parent_id: parentId,
+              level,
+              position: pos + 1,
+              is_leaf: !samilNode.children || samilNode.children.length === 0,
+              unit: samilNode.unit || null
+            });
+            
+            // If PDF has deeper children that SAMIL doesn't have, add them
+            if (hasPdf && pdfLookup.has(normalizedCode)) {
+              const pdfItem = pdfLookup.get(normalizedCode)!;
+              if (pdfItem.children && (!samilNode.children || samilNode.children.length === 0)) {
+                // PDF has children but SAMIL leaf → insert PDF children
+                traversePdf(pdfItem.children, id, level + 1, prefix);
+                return; // don't recurse into SAMIL (no SAMIL children)
+              }
+            }
+            
+            traverseSamil(samilNode.children, id, level + 1);
+          });
+        }
+        
+        // Traverse pure PDF nodes (for items deeper than SAMIL)
+        function traversePdf(pdfNodes: any[], parentId: string, level: number, massPrefix: string) {
+          pdfNodes.forEach((pdfNode, pos) => {
+            const id = crypto.randomUUID();
+            const fullCode = `${massPrefix}.${pdfNode.code}`;
+            
+            projectRows.push({
+              id,
+              project_id: fksId,
+              wbs_code: fullCode,
+              title: pdfNode.nameEn,
+              title_en: pdfNode.nameId !== pdfNode.nameEn ? pdfNode.nameId : null,
+              parent_id: parentId,
+              level,
+              position: pos + 1,
+              is_leaf: !pdfNode.children || pdfNode.children.length === 0,
+            });
+            
+            if (pdfNode.children) {
+              traversePdf(pdfNode.children, id, level + 1, massPrefix);
+            }
+          });
+        }
+        
+        // Also add PDF items that are NOT in SAMIL template 
+        // (PDF items with codes that don't exist in SAMIL)
+        if (hasPdf && pdfItems) {
+          // First, collect all normalized SAMIL codes for this discipline
+          const samilCodes = new Set<string>();
+          function collectSamilCodes(nodes: any[] | undefined) {
+            if (!nodes) return;
+            nodes.forEach(n => {
+              samilCodes.add(normalizeSamilCode(n.code));
+              collectSamilCodes(n.children);
+            });
+          }
+          collectSamilCodes(discNode.children);
+          
+          // Insert SAMIL children first
+          traverseSamil(discNode.children, discId, 2);
+          
+          // Now add PDF top-level items that don't match any SAMIL code
+          // (These are entirely new categories from the PDF)
+          const existingL2Codes = new Set(
+            (discNode.children || []).map((c: any) => normalizeSamilCode(c.code))
+          );
+          
+          pdfItems.forEach((pdfTopItem, pos) => {
+            if (!existingL2Codes.has(pdfTopItem.code)) {
+              // This PDF level-2 item doesn't exist in SAMIL template → add it entirely from PDF
+              const id = crypto.randomUUID();
+              const fullCode = `${prefix}.${pdfTopItem.code}`;
+              
+              projectRows.push({
+                id,
+                project_id: fksId,
+                wbs_code: fullCode,
+                title: pdfTopItem.nameEn,
+                title_en: pdfTopItem.nameId !== pdfTopItem.nameEn ? pdfTopItem.nameId : null,
+                parent_id: discId,
+                level: 2,
+                position: 100 + pos,
+                is_leaf: !pdfTopItem.children || pdfTopItem.children.length === 0,
+              });
+              
+              if (pdfTopItem.children) {
+                traversePdf(pdfTopItem.children, id, 3, prefix);
+              }
+            }
+          });
+        } else {
+          // Non-Gym: just use SAMIL template as-is
+          traverseSamil(discNode.children, discId, 2);
+        }
       }
     }
   }

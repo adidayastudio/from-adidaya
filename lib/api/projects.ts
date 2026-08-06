@@ -170,6 +170,7 @@ export async function fetchProjectWBS(projectId: string): Promise<WBSItem[]> {
         .from("project_wbs_items")
         .select("*")
         .eq("project_id", projectId)
+        .range(0, 10000)
         .order("level", { ascending: true })
         .order("position", { ascending: true });
 

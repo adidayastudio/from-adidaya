@@ -16,6 +16,7 @@ export async function fetchProjectWBS(projectId: string, stageId?: string) {
     }
 
     const { data, error } = await query
+        .range(0, 10000)
         .order("level", { ascending: true })
         .order("position", { ascending: true });
 
