@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/shared/ui/primitives/dialog/dialog";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Input } from "@/shared/ui/primitives/input/input";
 import { TrackingWBSItem, updateDailyWBSProgress } from "@/lib/flow/repositories/daily-progress.repo";
-import { Calendar, CloudSun, AlertTriangle, CheckCircle2, DollarSign, Layers } from "lucide-react";
+import { Calendar, CloudSun, AlertTriangle, CheckCircle2, DollarSign, Layers, X } from "lucide-react";
 import clsx from "clsx";
 
 type Props = {
@@ -118,17 +117,22 @@ export default function DailyProgressInputModal({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-white p-6 rounded-2xl shadow-xl border border-neutral-100 max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="border-b border-neutral-100 pb-4">
-          <DialogTitle className="text-lg font-bold text-neutral-900 flex items-center gap-2">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
+      <div className="max-w-2xl w-full bg-white p-6 rounded-2xl shadow-xl border border-neutral-100 max-h-[90vh] overflow-y-auto space-y-4">
+        <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
+          <div className="text-lg font-bold text-neutral-900 flex items-center gap-2">
             <span className="p-2 bg-brand-red/10 text-brand-red rounded-lg">
               <Layers className="w-5 h-5" />
             </span>
             Input Progres & Realisasi Lapangan Harian
-          </DialogTitle>
-        </DialogHeader>
+          </div>
+          <button onClick={onClose} className="p-1 text-neutral-400 hover:text-neutral-700 rounded-lg">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 pt-4">
           {/* 1. SELECT WBS ITEM */}
@@ -336,16 +340,16 @@ export default function DailyProgressInputModal({
           </div>
 
           {/* FOOTER ACTIONS */}
-          <DialogFooter className="pt-4 border-t border-neutral-100 flex justify-end gap-2">
+          <div className="pt-4 border-t border-neutral-100 flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
               Batal
             </Button>
             <Button type="submit" disabled={isSubmitting || !selectedWbsId}>
               {isSubmitting ? "Saving..." : "Simpan Progres Harian"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

@@ -1,9 +1,9 @@
-/**
- * DAILY PROGRESS & TRACKING REPOSITORY
- * SSOT for daily WBS progress logs, volume realization, and delay tracking.
- */
-
 import { supabase } from "@/lib/supabaseClient";
+import { buildWBSTree, ensureMultiBuildingWBS, flattenWBSTree } from "@/lib/flow/mappers/wbs-tree";
+import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
+import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-estimates";
+import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-inherit";
+import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
 
 export type DailyProgressLog = {
   id: string;
@@ -57,6 +57,14 @@ export type ProjectTrackingSummary = {
  * Fetch all WBS items for a project using paginated loop to avoid 1000 max_rows server cap
  */
 export async function fetchProjectTrackingData(projectId: string): Promise<TrackingWBSItem[]> {
+  // 1. Fetch project info
+  const { data: project } = await supabase
+    .from("projects")
+    .select("*")
+    .eq("id", projectId)
+    .single();
+
+  // 2. Fetch raw rows
   let allRows: any[] = [];
   let page = 0;
   const pageSize = 1000;
@@ -75,18 +83,24 @@ export async function fetchProjectTrackingData(projectId: string): Promise<Track
     page++;
   }
 
-  return allRows.map((row) => {
+  // 3. SSOT Tree transformation: DB -> buildWBSTree -> ensureMultiBuildingWBS -> flattenWBSTree
+  const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+  const dbTree = buildWBSTree(allRows);
+  const baseTree = dbTree.length > 0 ? dbTree : defaultTree;
+  const fullTree = ensureMultiBuildingWBS(baseTree, project);
+  const flattened = flattenWBSTree(fullTree);
+
+  return (flattened as any[]).map((row: any) => {
     const meta = row.meta || {};
     const targetQty = Number(row.quantity || meta.targetQuantity || 0);
     const actualQty = Number(meta.actualQuantity || 0);
-    
-    // Auto-calculate progress percent if targetQty > 0
+    const code = row.wbs_code || row.code || "";
+
     let progress = Number(meta.progressPercent || 0);
     if (targetQty > 0 && actualQty > 0) {
       progress = Math.min(100, Number(((actualQty / targetQty) * 100).toFixed(1)));
     }
 
-    // Determine Status & Delay Days
     let status: "completed" | "in_progress" | "delayed" | "pending" = meta.status || "pending";
     if (progress >= 100) {
       status = "completed";
@@ -99,13 +113,13 @@ export async function fetchProjectTrackingData(projectId: string): Promise<Track
 
     return {
       id: row.id,
-      projectId: row.project_id,
-      wbsCode: row.wbs_code,
-      title: row.title,
-      titleEn: row.title_en,
-      level: row.level,
-      position: row.position,
-      isLeaf: row.is_leaf,
+      projectId: row.project_id || projectId,
+      wbsCode: code,
+      title: row.title || row.nameEn || row.name || "",
+      titleEn: row.title_en || row.nameId || null,
+      level: row.level ?? 0,
+      position: row.position ?? 0,
+      isLeaf: row.is_leaf ?? false,
       unit: row.unit || "m³",
       targetQuantity: targetQty,
       actualQuantity: actualQty,
