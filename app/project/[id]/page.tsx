@@ -44,7 +44,7 @@ import {
     Construction,
     Calculator
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import Link from "next/link";
 import clsx from "clsx";
 import { useHeader } from "@/components/providers/HeaderProvider";
@@ -96,6 +96,7 @@ function ProjectDetailLocalSidebar({
     projectId: string;
     router: any;
 }) {
+    const pathname = usePathname();
     const [planningOpen, setPlanningOpen] = useState(false);
 
     const basePath = `/project/${projectId}`;
