@@ -128,7 +128,7 @@ export default function ProjectDetailSidebar() {
     <>
       {/* DESKTOP SIDEBAR */}
       <aside className="w-full hidden lg:flex flex-col">
-        <div className="space-y-4 pt-10">
+        <div className="space-y-4 pt-0">
           {/* Main Nav Items */}
           <div className="space-y-0.5">
             {/* Overview */}
