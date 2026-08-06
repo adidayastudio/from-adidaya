@@ -122,14 +122,14 @@ export default function ProjectDetailSidebar() {
             <Link
               href={basePath}
               className={clsx(
-                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
                 isRouteActive(basePath, true)
-                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60 dark:border-white/10"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
               )}
             >
-              <LayoutDashboard className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(basePath, true) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-              <span className="truncate">Overview</span>
+              <LayoutDashboard className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(basePath, true) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Overview</span>
             </Link>
 
             {/* Planning Accordion */}
@@ -137,21 +137,21 @@ export default function ProjectDetailSidebar() {
               <button
                 onClick={() => setPlanningOpen((v) => !v)}
                 className={clsx(
-                  "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                  "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
                   isPlanningRoute
-                    ? "text-neutral-900 dark:text-white font-semibold"
-                    : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    ? "text-neutral-900 dark:text-white font-extrabold"
+                    : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
                 )}
               >
-                <Calendar className={clsx("w-4 h-4 shrink-0 transition-colors", isPlanningRoute ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-                <span className="flex-1 truncate">Planning</span>
+                <Calendar className={clsx("w-4 h-4 shrink-0 transition-colors", isPlanningRoute ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+                <span className="flex-1 truncate font-semibold">Planning</span>
                 <ChevronDown
                   className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", planningOpen && "rotate-180")}
                 />
               </button>
 
               {planningOpen && (
-                <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-neutral-300 dark:border-neutral-700 pl-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
                   {PLANNING_ITEMS.map((item) => {
                     const active = isRouteActive(item.href, true);
                     return (
@@ -161,11 +161,11 @@ export default function ProjectDetailSidebar() {
                         className={clsx(
                           "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                           active
-                            ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                            : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                            ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60 dark:border-white/10"
+                            : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
                         )}
                       >
-                        <item.icon className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
+                        <item.icon className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
                         <span className="truncate">{item.label}</span>
                       </Link>
                     );
@@ -179,21 +179,21 @@ export default function ProjectDetailSidebar() {
               <button
                 onClick={() => setWorkOpen((v) => !v)}
                 className={clsx(
-                  "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                  "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
                   isWorkRoute
-                    ? "text-neutral-900 dark:text-white font-semibold"
-                    : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                    ? "text-neutral-900 dark:text-white font-extrabold"
+                    : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
                 )}
               >
-                <Activity className={clsx("w-4 h-4 shrink-0 transition-colors", isWorkRoute ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-                <span className="flex-1 truncate">Work</span>
+                <Activity className={clsx("w-4 h-4 shrink-0 transition-colors", isWorkRoute ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+                <span className="flex-1 truncate font-semibold">Work</span>
                 <ChevronDown
                   className={clsx("w-3.5 h-3.5 text-neutral-400 transition-transform duration-200", workOpen && "rotate-180")}
                 />
               </button>
 
               {workOpen && (
-                <div className="ml-5 mt-0.5 space-y-0.5 border-l border-neutral-200 dark:border-neutral-800 pl-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="ml-5 mt-0.5 space-y-0.5 border-l-2 border-neutral-300 dark:border-neutral-700 pl-2.5 animate-in fade-in slide-in-from-top-1 duration-200">
                   {WORK_ITEMS.map((item) => {
                     const active = isRouteActive(item.href, true);
                     return (
@@ -203,8 +203,8 @@ export default function ProjectDetailSidebar() {
                         className={clsx(
                           "w-full text-left rounded-lg text-[11px] transition-all flex items-center gap-2.5 px-3 py-1.5",
                           active
-                            ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.1)]"
-                            : "text-neutral-600 dark:text-neutral-400 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-900 dark:hover:text-neutral-100 font-medium"
+                            ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60 dark:border-white/10"
+                            : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
                         )}
                       >
                         <item.icon className={clsx("w-3.5 h-3.5 shrink-0 transition-colors", active ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
@@ -220,84 +220,84 @@ export default function ProjectDetailSidebar() {
             <Link
               href={`${basePath}/docs`}
               className={clsx(
-                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
                 isRouteActive(`${basePath}/docs`)
-                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 hover:text-neutral-900 font-medium"
               )}
             >
-              <FileText className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/docs`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-              <span className="truncate font-medium">Documents</span>
+              <FileText className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/docs`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Documents</span>
             </Link>
 
             {/* Finance */}
             <Link
               href={`${basePath}/finance`}
               className={clsx(
-                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
                 isRouteActive(`${basePath}/finance`)
-                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
-                  : "text-neutral-500 hover:bg-white/40 hover:text-neutral-800 font-medium"
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 hover:text-neutral-900 font-medium"
               )}
             >
-              <Banknote className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/finance`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-              <span className="truncate">Finance</span>
+              <Banknote className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/finance`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Finance</span>
             </Link>
 
             {/* Resources */}
             <Link
               href={`${basePath}/resources`}
               className={clsx(
-                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
                 isRouteActive(`${basePath}/resources`)
-                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
-                  : "text-neutral-500 hover:bg-white/40 hover:text-neutral-800 font-medium"
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 hover:text-neutral-900 font-medium"
               )}
             >
-              <Package className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/resources`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-              <span className="truncate">Resources</span>
+              <Package className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/resources`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Resources</span>
             </Link>
 
             {/* People */}
             <Link
               href={`${basePath}/people`}
               className={clsx(
-                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
                 isRouteActive(`${basePath}/people`)
-                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
-                  : "text-neutral-500 hover:bg-white/40 hover:text-neutral-800 font-medium"
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 hover:text-neutral-900 font-medium"
               )}
             >
-              <Users className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/people`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-              <span className="truncate">People</span>
+              <Users className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/people`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">People</span>
             </Link>
 
             {/* Crew */}
             <Link
               href={`${basePath}/crew`}
               className={clsx(
-                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
                 isRouteActive(`${basePath}/crew`)
-                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]"
-                  : "text-neutral-500 hover:bg-white/40 hover:text-neutral-800 font-medium"
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 hover:text-neutral-900 font-medium"
               )}
             >
-              <UserCheck className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/crew`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-              <span className="truncate">Crew</span>
+              <UserCheck className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/crew`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Crew</span>
             </Link>
 
             {/* Reports */}
             <Link
               href={`${basePath}/reports`}
               className={clsx(
-                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-1.5",
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
                 isRouteActive(`${basePath}/reports`)
-                  ? "text-neutral-900 dark:text-white bg-neutral-500/10 dark:bg-neutral-400/20 font-semibold shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                  : "text-neutral-500 hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200 font-medium"
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 hover:text-neutral-900 font-medium"
               )}
             >
-              <FileSpreadsheet className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/reports`) ? "text-neutral-900 dark:text-white" : "text-neutral-400")} />
-              <span className="truncate font-medium">Reports</span>
+              <FileSpreadsheet className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/reports`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Reports</span>
             </Link>
           </div>
         </div>
