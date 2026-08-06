@@ -102,28 +102,28 @@ export default function ProjectDetailTrackingContent() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* 1. TOP TAB NAVIGATION & ACTION BAR (BARIS 1 - PALING ATAS) */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-neutral-200/80 dark:border-neutral-800 pb-4">
-        {/* SEGMENTED SCOPE TABS */}
-        <div className="flex items-center p-1.5 bg-neutral-200/60 dark:bg-neutral-800/60 rounded-2xl overflow-x-auto gap-1.5 border border-neutral-300/40 dark:border-neutral-700/40 shadow-inner">
+      {/* 1. TOP TAB NAVIGATION & ACTION BAR (GLASSY TABS) */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-neutral-200/50 dark:border-neutral-800/50 pb-4">
+        {/* SEGMENTED GLASSY TABS */}
+        <div className="flex items-center p-1.5 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl rounded-[22px] border border-white/60 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-x-auto gap-1.5">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
               className={clsx(
-                "px-4 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap flex items-center gap-2",
+                "px-4 py-2 text-xs rounded-2xl transition-all duration-200 whitespace-nowrap flex items-center gap-2.5 shrink-0 active:scale-95",
                 activeTab === tab.key
-                  ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-md border border-neutral-300/60 dark:border-neutral-700/60 scale-[1.02]"
-                  : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-neutral-800/40"
+                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white font-extrabold shadow-[0_2px_10px_rgba(0,0,0,0.06)] border border-black/[0.04] dark:border-white/10"
+                  : "text-neutral-600 dark:text-neutral-400 font-semibold hover:bg-white/60 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white"
               )}
             >
               <span>{tab.label}</span>
               {tab.badge && (
                 <span className={clsx(
-                  "px-2 py-0.5 text-[10px] font-extrabold rounded-md transition-colors",
+                  "px-2 py-0.5 text-[10px] font-extrabold rounded-full transition-colors",
                   activeTab === tab.key
-                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                    : "bg-neutral-300/70 dark:bg-neutral-700 text-neutral-700 dark:text-neutral-300"
+                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs"
+                    : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
                 )}>
                   {tab.badge}
                 </span>
@@ -139,6 +139,7 @@ export default function ProjectDetailTrackingContent() {
             variant="secondary"
             onClick={loadTrackingData}
             icon={<RefreshCw className={clsx("w-3.5 h-3.5", isLoading && "animate-spin")} />}
+            className="rounded-full bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl border border-white/60 dark:border-white/10 hover:bg-white dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 shadow-sm"
           >
             Refresh
           </Button>
@@ -147,7 +148,7 @@ export default function ProjectDetailTrackingContent() {
             size="sm"
             onClick={() => openInputModal()}
             icon={<Plus className="w-4 h-4" />}
-            className="bg-brand-red hover:bg-brand-red/90 text-white"
+            className="rounded-full bg-brand-red hover:bg-brand-red/90 text-white shadow-[0_4px_14px_rgba(220,38,38,0.3)] active:scale-95"
           >
             + Input Progress Harian
           </Button>
