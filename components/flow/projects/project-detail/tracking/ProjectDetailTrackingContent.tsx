@@ -38,7 +38,7 @@ export default function ProjectDetailTrackingContent() {
   const pathname = usePathname();
   const { project } = useProject();
 
-  const initialTab = (searchParams.get("tab") as TrackingTab) || "schedule";
+  const initialTab = (searchParams.get("tab") as TrackingTab) || "stages";
   const [activeTab, setActiveTab] = useState<TrackingTab>(initialTab);
 
   // Real DB Tracking Data State
@@ -94,36 +94,36 @@ export default function ProjectDetailTrackingContent() {
   };
 
   const tabs: TabItem<TrackingTab>[] = [
-    { key: "schedule", label: "Build Scope (WBS & Volume)", badge: `${summaryStats.totalItems} Items` },
     { key: "stages", label: "Design Scope (Stages & Tasks)" },
+    { key: "schedule", label: "Build Scope (WBS & Volume)", badge: `${summaryStats.totalItems} Items` },
     { key: "rab", label: "RAB & Finance" },
     { key: "reports", label: "Site Reports" },
   ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* 1. TOP TAB NAVIGATION & ACTION BAR (GLASSY TABS) */}
+      {/* 1. TOP TAB NAVIGATION & ACTION BAR (FULL GLASSY PILLS) */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-neutral-200/50 dark:border-neutral-800/50 pb-4">
-        {/* SEGMENTED GLASSY TABS */}
-        <div className="flex items-center p-1.5 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-xl rounded-[22px] border border-white/60 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.03)] overflow-x-auto gap-1.5">
+        {/* SEGMENTED FULL PILL TABS */}
+        <div className="flex items-center p-1.5 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-xl rounded-full border border-white/80 dark:border-white/10 shadow-sm overflow-x-auto gap-1.5">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => handleTabChange(tab.key)}
               className={clsx(
-                "px-4 py-2 text-xs rounded-2xl transition-all duration-200 whitespace-nowrap flex items-center gap-2.5 shrink-0 active:scale-95",
+                "px-5 py-2.5 text-xs rounded-full transition-all duration-200 whitespace-nowrap flex items-center gap-2.5 shrink-0 active:scale-95",
                 activeTab === tab.key
-                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white font-extrabold shadow-[0_2px_10px_rgba(0,0,0,0.06)] border border-black/[0.04] dark:border-white/10"
+                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white font-extrabold shadow-[0_2px_12px_rgba(0,0,0,0.08)] border border-black/[0.04] dark:border-white/10"
                   : "text-neutral-600 dark:text-neutral-400 font-semibold hover:bg-white/60 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white"
               )}
             >
               <span>{tab.label}</span>
               {tab.badge && (
                 <span className={clsx(
-                  "px-2 py-0.5 text-[10px] font-extrabold rounded-full transition-colors",
+                  "px-2.5 py-0.5 text-[10px] font-extrabold rounded-full transition-colors",
                   activeTab === tab.key
                     ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 shadow-xs"
-                    : "bg-neutral-200/70 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
+                    : "bg-neutral-200/80 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
                 )}>
                   {tab.badge}
                 </span>
