@@ -102,8 +102,8 @@ export default function ProjectDetailTrackingContent() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      {/* 1. TOP TAB NAVIGATION & ACTION BAR (CLEAN & SPACIOUS PILLS) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-black/[0.06] dark:border-white/[0.06] pb-4">
+      {/* 1. TOP TAB NAVIGATION & ACTION BAR (NO DIVIDER) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* SEGMENTED FULL PILL TABS */}
         <div className="flex items-center p-1 bg-neutral-200/50 dark:bg-neutral-800/50 backdrop-blur-xl rounded-full border border-black/[0.04] dark:border-white/10 shadow-inner overflow-x-auto hide-scrollbar gap-1 max-w-full">
           {tabs.map((tab) => (
@@ -155,30 +155,19 @@ export default function ProjectDetailTrackingContent() {
         </div>
       </div>
 
-      {/* 2. SUBMISSION READINESS WARNING BANNER */}
-      {!isSubmitted && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3 text-amber-900 shadow-sm">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0 mt-0.5">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-sm font-bold flex items-center gap-2">
-                Status Modul: <span className="px-2 py-0.5 bg-amber-200 text-amber-800 rounded-md text-xs">Draft Mode</span>
-              </div>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Setup WBS, RAB, dan Schedule belum di-submit. Anda tetap dapat melakukan tracking menggunakan data draft saat ini.
-              </p>
-            </div>
+      {/* 2. SUBMISSION READINESS COMPACT BANNER (ONLY SHOW ON WBS & RAB TABS) */}
+      {!isSubmitted && (activeTab === "schedule" || activeTab === "rab") && (
+        <div className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3 text-amber-900 dark:text-amber-200 text-xs shadow-xs">
+          <div className="flex items-center gap-2 font-semibold truncate">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="truncate">Status Modul: <strong className="font-extrabold text-amber-800 dark:text-amber-300">Draft Mode</strong> — Setup WBS/RAB belum di-submit.</span>
           </div>
-          <Button
-            size="sm"
-            variant="secondary"
+          <button
             onClick={() => router.push(`/flow/projects/${project?.id}/setup/wbs`)}
-            className="whitespace-nowrap bg-white hover:bg-amber-100 text-amber-900 border-amber-300"
+            className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[11px] shrink-0 transition-colors shadow-xs"
           >
-            Go to WBS Setup
-          </Button>
+            Setup WBS
+          </button>
         </div>
       )}
 
