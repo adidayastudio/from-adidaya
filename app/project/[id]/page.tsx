@@ -785,7 +785,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
     return (
         <ProjectProvider projectId={id}>
-            <div className="min-h-screen bg-transparent pb-24 pt-0 lg:pt-[20px]">
+            <div className="min-h-screen bg-transparent pb-24 pt-0">
             {/* Top Navigation Bar - Fixed (Mobile Only) */}
             <div
                 className={clsx(
