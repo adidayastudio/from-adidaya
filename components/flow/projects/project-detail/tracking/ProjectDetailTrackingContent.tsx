@@ -238,70 +238,7 @@ export default function ProjectDetailTrackingContent() {
 
         {/* CARDS FOR BUILD SCOPE (WBS & VOLUME) — Now rendered inside TrackingScheduleTab with 3-tier progress */}
 
-        {/* CARDS FOR RAB & FINANCE */}
-        {activeTab === "rab" && (
-          <>
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">RAB Baseline</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-500">
-                  <DollarSign className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-xl font-black tracking-tight leading-none text-neutral-900 dark:text-white truncate">
-                  Rp {(summaryStats.totalActualCost * 1.5).toLocaleString("id-ID")}
-                </p>
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-semibold truncate">Nilai Kontrak RAB</p>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Terbayar</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-blue-500/10 text-blue-500">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-xl font-black tracking-tight leading-none text-neutral-900 dark:text-white truncate">
-                  Rp {summaryStats.totalActualCost.toLocaleString("id-ID")}
-                </p>
-                <p className="text-[10px] text-blue-600 font-semibold truncate">{(summaryStats.totalActualCost > 0 ? (100 / 1.5).toFixed(1) : 0)}% Realisasi</p>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Sisa Anggaran</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-amber-500/10 text-amber-500">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-xl font-black tracking-tight leading-none text-emerald-600 truncate">
-                  Rp {(summaryStats.totalActualCost * 0.5).toLocaleString("id-ID")}
-                </p>
-                <p className="text-[10px] text-emerald-600 font-semibold truncate">🟢 Budget Aman</p>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Serapan Anggaran</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-purple-500/10 text-purple-500">
-                  <Layers className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-black tracking-tight leading-none text-neutral-900 dark:text-white">66.7%</p>
-                <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-purple-600 transition-all duration-500 rounded-full" style={{ width: "66.7%" }} />
-                </div>
-              </div>
-            </div>
-          </>
-        )}
+        {/* CARDS FOR RAB & FINANCE — Now rendered inside TrackingRabTab */}
 
         {/* CARDS FOR REPORTS */}
         {activeTab === "reports" && (

@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { Download, Plus, DollarSign, TrendingUp, TrendingDown } from "lucide-react";
+import { Download, ChevronDown, ChevronRight } from "lucide-react";
 import { TrackingWBSItem } from "@/lib/flow/repositories/daily-progress.repo";
 import clsx from "clsx";
 
@@ -10,20 +10,69 @@ type Props = {
   items: TrackingWBSItem[];
 };
 
+// Build tree structure from flat items
+type TreeNode = TrackingWBSItem & { children: TreeNode[] };
+
+function buildTree(items: TrackingWBSItem[]): TreeNode[] {
+  const map = new Map<string, TreeNode>();
+  const roots: TreeNode[] = [];
+
+  const sorted = [...items].sort((a, b) => a.wbsCode.localeCompare(b.wbsCode));
+
+  sorted.forEach((item) => {
+    map.set(item.wbsCode, { ...item, children: [] });
+  });
+
+  sorted.forEach((item) => {
+    const node = map.get(item.wbsCode)!;
+    const parts = item.wbsCode.split(".");
+    if (parts.length > 1) {
+      const parentCode = parts.slice(0, -1).join(".");
+      const parent = map.get(parentCode);
+      if (parent) {
+        parent.children.push(node);
+        return;
+      }
+    }
+    roots.push(node);
+  });
+
+  return roots;
+}
+
+// Sum costs recursively for a node
+function sumCosts(node: TreeNode): { target: number; actual: number } {
+  if (node.children.length === 0) {
+    const target = node.targetCost || 15000000;
+    const actual = node.actualCost || (node.progressPercent > 0 ? (target * node.progressPercent) / 100 : 0);
+    return { target, actual };
+  }
+  let target = 0;
+  let actual = 0;
+  node.children.forEach((c) => {
+    const sub = sumCosts(c);
+    target += sub.target;
+    actual += sub.actual;
+  });
+  return { target, actual };
+}
+
 export default function TrackingRabTab({ items }: Props) {
-  const leafItems = useMemo(() => items.filter((i) => i.isLeaf || i.level >= 2), [items]);
+  const [expandedCodes, setExpandedCodes] = useState<Set<string>>(new Set());
+
+  const tree = useMemo(() => buildTree(items), [items]);
 
   // Aggregate stats
   const totals = useMemo(() => {
     let totalTarget = 0;
     let totalActual = 0;
 
-    leafItems.forEach((item) => {
-      totalTarget += item.targetCost;
-      totalActual += item.actualCost;
+    tree.forEach((root) => {
+      const sub = sumCosts(root);
+      totalTarget += sub.target;
+      totalActual += sub.actual;
     });
 
-    // Fallback default estimates if DB cost fields are empty
     if (totalTarget === 0) totalTarget = 1200000000;
     if (totalActual === 0) totalActual = 450000000;
 
@@ -31,110 +80,223 @@ export default function TrackingRabTab({ items }: Props) {
     const costPercent = totalTarget > 0 ? Number(((totalActual / totalTarget) * 100).toFixed(1)) : 0;
 
     return { totalTarget, totalActual, remaining, costPercent };
-  }, [leafItems]);
+  }, [tree]);
+
+  const toggleExpand = (code: string) => {
+    setExpandedCodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  };
+
+  const expandAllRoots = () => {
+    const codes = new Set<string>();
+    tree.forEach((n) => codes.add(n.wbsCode));
+    setExpandedCodes(codes);
+  };
+
+  const collapseAll = () => setExpandedCodes(new Set());
+
+  // Recursive row renderer
+  function renderNode(node: TreeNode, depth: number = 0) {
+    const isExpanded = expandedCodes.has(node.wbsCode);
+    const hasChildren = node.children.length > 0;
+    const isRoot = depth === 0;
+
+    const costs = sumCosts(node);
+    const percent = costs.target > 0 ? Number(((costs.actual / costs.target) * 100).toFixed(1)) : 0;
+    const isOverrun = percent > 100;
+
+    return (
+      <div key={node.wbsCode}>
+        <div
+          className={clsx(
+            "flex items-center gap-3 py-3 px-4 transition-colors border-b border-black/[0.03] dark:border-white/[0.03]",
+            isRoot
+              ? "bg-neutral-50/50 dark:bg-neutral-800/30 hover:bg-neutral-100/60 dark:hover:bg-neutral-800/50"
+              : "hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20",
+            hasChildren && "cursor-pointer"
+          )}
+          style={{ paddingLeft: `${16 + depth * 24}px` }}
+          onClick={hasChildren ? () => toggleExpand(node.wbsCode) : undefined}
+        >
+          {/* Expand/Collapse icon */}
+          <div className="w-5 h-5 flex items-center justify-center shrink-0">
+            {hasChildren ? (
+              isExpanded ? (
+                <ChevronDown className="w-4 h-4 text-neutral-400" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-neutral-400" />
+              )
+            ) : (
+              <div className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-600" />
+            )}
+          </div>
+
+          {/* WBS Code */}
+          <span className={clsx(
+            "font-mono text-[11px] shrink-0 min-w-[70px]",
+            isRoot ? "font-extrabold text-neutral-900 dark:text-white" : "font-bold text-neutral-600 dark:text-neutral-400"
+          )}>
+            {node.wbsCode}
+          </span>
+
+          {/* Title */}
+          <div className="flex-1 min-w-0">
+            <span className={clsx(
+              "text-xs truncate block",
+              isRoot ? "font-extrabold text-neutral-900 dark:text-white" : "font-semibold text-neutral-800 dark:text-neutral-200"
+            )}>
+              {node.title}
+            </span>
+            {node.titleEn && depth > 0 && (
+              <span className="text-[10px] text-neutral-400 italic truncate block">{node.titleEn}</span>
+            )}
+          </div>
+
+          {/* Target RAB */}
+          <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 shrink-0 min-w-[110px] text-right">
+            Rp {costs.target.toLocaleString("id-ID")}
+          </span>
+
+          {/* Actual Spend */}
+          <span className={clsx(
+            "text-[11px] font-bold shrink-0 min-w-[110px] text-right",
+            isOverrun ? "text-red-600" : "text-blue-600 dark:text-blue-400"
+          )}>
+            Rp {costs.actual.toLocaleString("id-ID")}
+          </span>
+
+          {/* Realization % + bar */}
+          <div className="w-24 shrink-0 flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+              <div
+                className={clsx(
+                  "h-full rounded-full transition-all duration-500",
+                  isOverrun ? "bg-red-500" : percent > 0 ? "bg-amber-500" : "bg-neutral-200"
+                )}
+                style={{ width: `${Math.min(100, percent)}%` }}
+              />
+            </div>
+            <span className={clsx(
+              "text-[11px] font-black min-w-[32px] text-right",
+              isOverrun ? "text-red-600" : "text-neutral-900 dark:text-white"
+            )}>
+              {percent}%
+            </span>
+          </div>
+        </div>
+
+        {/* Children (expanded) */}
+        {isExpanded && hasChildren && (
+          <div className="animate-in fade-in duration-150">
+            {node.children.map((child) => renderNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 animate-in fade-in duration-300">
       {/* 1. RAB HEADER & ACTIONS */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-bold text-neutral-900">Realization & RAB Budget Tracking</h3>
-          <p className="text-xs text-neutral-500">
-            Perbandingan Alokasi Anggaran RAB Baseline vs Pengeluaran Keuangan Realisasi (Actual Spend)
+          <h3 className="text-sm font-extrabold text-neutral-900 dark:text-white">RAB & Finance Tracking</h3>
+          <p className="text-[11px] text-neutral-500 font-medium mt-0.5">
+            Perbandingan RAB Baseline vs Realisasi Pengeluaran
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="secondary" icon={<Download className="w-4 h-4" />}>
-            Export RAB Realization
-          </Button>
-        </div>
+        <Button size="sm" variant="secondary" icon={<Download className="w-4 h-4" />}>
+          Export RAB
+        </Button>
       </div>
 
       {/* 2. SUMMARY METRIC CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm space-y-1">
-          <div className="text-xs text-neutral-500 font-medium">Total Anggaran RAB (Target)</div>
-          <div className="text-xl font-extrabold text-neutral-900">
-            Rp {totals.totalTarget.toLocaleString("id-ID")}
-          </div>
-          <div className="text-[10px] text-neutral-400 font-medium">Alokasi pagu proyek disetujui</div>
-        </div>
-
-        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm space-y-1">
-          <div className="text-xs text-neutral-500 font-medium">Pengeluaran Biaya (Actual Spend)</div>
-          <div className="text-xl font-extrabold text-blue-600">
-            Rp {totals.totalActual.toLocaleString("id-ID")}
-          </div>
-          <div className="text-[10px] text-blue-600/80 font-medium">
-            {totals.costPercent}% dari total anggaran
+      <div className="grid grid-cols-3 gap-4">
+        <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-28">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Anggaran RAB</p>
+          <div className="space-y-0.5">
+            <p className="text-xl font-black tracking-tight leading-none text-neutral-900 dark:text-white truncate">
+              Rp {totals.totalTarget.toLocaleString("id-ID")}
+            </p>
+            <p className="text-[10px] text-neutral-500 font-semibold">Pagu disetujui</p>
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl border border-neutral-100 bg-white shadow-sm space-y-1">
-          <div className="text-xs text-neutral-500 font-medium">Sisa Anggaran Terseedia</div>
-          <div className={clsx("text-xl font-extrabold", totals.remaining >= 0 ? "text-emerald-600" : "text-red-600")}>
-            Rp {totals.remaining.toLocaleString("id-ID")}
+        <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-28">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Realisasi ({totals.costPercent}%)</p>
+          <div className="space-y-1">
+            <p className="text-xl font-black tracking-tight leading-none text-blue-600 dark:text-blue-400 truncate">
+              Rp {totals.totalActual.toLocaleString("id-ID")}
+            </p>
+            <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${totals.costPercent}%` }} />
+            </div>
           </div>
-          <div className="text-[10px] text-neutral-400 font-medium">
-            {totals.remaining >= 0 ? "🟢 Sesuai Batas Pagu (Cost Savings)" : "🔴 Mengalami Pembengkakan (Overrun)"}
+        </div>
+
+        <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col justify-between h-28">
+          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Sisa Anggaran</p>
+          <div className="space-y-0.5">
+            <p className={clsx("text-xl font-black tracking-tight leading-none truncate", totals.remaining >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400")}>
+              Rp {Math.abs(totals.remaining).toLocaleString("id-ID")}
+            </p>
+            <p className="text-[10px] font-semibold">
+              {totals.remaining >= 0
+                ? <span className="text-emerald-600">On Budget</span>
+                : <span className="text-red-600">Overrun</span>
+              }
+            </p>
           </div>
         </div>
       </div>
 
-      {/* 3. RAB REALIZATION TABLE */}
-      <div className="rounded-2xl border border-neutral-100 bg-white overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-neutral-100 font-bold text-xs text-neutral-700 uppercase tracking-wider">
-          Rincian Realisasi Keuangan per WBS ({leafItems.length} Items)
+      {/* 3. RAB ACCORDION TREE */}
+      <div className="bg-white dark:bg-neutral-900 rounded-[22px] border border-black/[0.05] dark:border-white/[0.05] shadow-[0_2px_8px_rgba(0,0,0,0.02)] overflow-hidden">
+        {/* Header */}
+        <div className="p-4 border-b border-black/[0.04] dark:border-white/[0.04] flex items-center justify-between">
+          <p className="text-xs font-extrabold text-neutral-900 dark:text-white">
+            Rincian Realisasi per WBS ({items.length} Items)
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={expandAllRoots}
+              className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-black/[0.05] dark:border-white/[0.08] bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+            >
+              Expand All
+            </button>
+            <button
+              onClick={collapseAll}
+              className="px-3 py-1.5 text-[10px] font-bold rounded-lg border border-black/[0.05] dark:border-white/[0.08] bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors"
+            >
+              Collapse All
+            </button>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-neutral-50/80 border-b border-neutral-100 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
-                <th className="py-3 px-4 w-28">Kode WBS</th>
-                <th className="py-3 px-4">Nama Pekerjaan</th>
-                <th className="py-3 px-4 text-right">Target RAB</th>
-                <th className="py-3 px-4 text-right">Realisasi Biaya</th>
-                <th className="py-3 px-4 w-40 text-center">% Realisasi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 text-xs">
-              {leafItems.slice(0, 50).map((item) => {
-                const itemTarget = item.targetCost || 15000000;
-                const itemActual = item.actualCost || (item.progressPercent > 0 ? (itemTarget * item.progressPercent) / 100 : 0);
-                const percent = itemTarget > 0 ? Number(((itemActual / itemTarget) * 100).toFixed(1)) : 0;
 
-                return (
-                  <tr key={item.id} className="hover:bg-neutral-50/60 transition-colors">
-                    <td className="py-3.5 px-4 font-extrabold text-neutral-900 whitespace-nowrap">
-                      {item.wbsCode}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-neutral-900">{item.title}</div>
-                      {item.titleEn && (
-                        <div className="text-[10px] text-neutral-400 italic">{item.titleEn}</div>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-semibold text-neutral-800">
-                      Rp {itemTarget.toLocaleString("id-ID")}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-blue-600">
-                      Rp {itemActual.toLocaleString("id-ID")}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span className="font-extrabold text-neutral-900">{percent}%</span>
-                      <div className="h-1.5 w-full bg-neutral-100 rounded-full overflow-hidden mt-1">
-                        <div
-                          className="h-full bg-yellow-500 transition-all"
-                          style={{ width: `${Math.min(100, percent)}%` }}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {/* Column labels */}
+        <div className="flex items-center gap-3 py-2 px-4 bg-neutral-50/60 dark:bg-neutral-800/40 border-b border-black/[0.03] dark:border-white/[0.03] text-[9px] font-black text-neutral-400 uppercase tracking-wider">
+          <div className="w-5 shrink-0" />
+          <span className="min-w-[70px] shrink-0">Kode</span>
+          <span className="flex-1">Nama Pekerjaan</span>
+          <span className="min-w-[110px] text-right shrink-0">Target RAB</span>
+          <span className="min-w-[110px] text-right shrink-0">Realisasi</span>
+          <span className="w-24 text-right shrink-0">% Realisasi</span>
         </div>
+
+        {/* Tree body */}
+        {tree.length === 0 ? (
+          <div className="p-12 text-center text-neutral-500 text-sm">
+            Belum ada data RAB untuk ditampilkan.
+          </div>
+        ) : (
+          <div>
+            {tree.map((node) => renderNode(node, 0))}
+          </div>
+        )}
       </div>
     </div>
   );
