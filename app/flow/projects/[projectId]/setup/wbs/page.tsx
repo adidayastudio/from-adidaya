@@ -644,7 +644,7 @@ export default function ProjectSetupWBSPage() {
         isOpen={showAddDiscipline}
         onClose={() => setShowAddDiscipline(false)}
         onAdd={onAddDiscipline}
-        existingCodes={ballparkTree.map(item => item.code).filter((c): c is string => !!c)}
+        existingCodes={fullWbsTree.map(item => item.code).filter((c): c is string => !!c)}
       />
 
       <ConfirmModal
