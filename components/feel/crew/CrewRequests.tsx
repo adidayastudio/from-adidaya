@@ -333,12 +333,15 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
             if (req && req.type === "LEAVE") {
                 const wsId = await fetchDefaultWorkspaceId();
                 if (wsId) {
-                    const startRaw = req.startDate;
-                    const endRaw = req.endDate || req.startDate;
-                    const start = new Date(startRaw);
-                    const end = new Date(endRaw);
-                    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                        await deleteDailyLogsForDate(req.crewId, d.toISOString().split('T')[0]);
+                    const parseDate = (dStr: string) => {
+                        const parts = dStr.split("-").map(Number);
+                        return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+                    };
+                    const start = parseDate(req.startDate);
+                    const end = parseDate(req.endDate || req.startDate);
+                    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+                        const dateStr = d.toISOString().split('T')[0];
+                        await deleteDailyLogsForDate(req.crewId, dateStr);
                     }
                 }
             }
@@ -355,12 +358,15 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
             if (req && req.type === "LEAVE") {
                 const wsId = await fetchDefaultWorkspaceId();
                 if (wsId) {
-                    const startRaw = req.startDate;
-                    const endRaw = req.endDate || req.startDate;
-                    const start = new Date(startRaw);
-                    const end = new Date(endRaw);
-                    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                        await deleteDailyLogsForDate(req.crewId, d.toISOString().split('T')[0]);
+                    const parseDate = (dStr: string) => {
+                        const parts = dStr.split("-").map(Number);
+                        return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+                    };
+                    const start = parseDate(req.startDate);
+                    const end = parseDate(req.endDate || req.startDate);
+                    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+                        const dateStr = d.toISOString().split('T')[0];
+                        await deleteDailyLogsForDate(req.crewId, dateStr);
                     }
                 }
             }
@@ -377,10 +383,15 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
             if (req && req.type === "LEAVE") {
                 const wsId = await fetchDefaultWorkspaceId();
                 if (wsId) {
-                    const start = new Date(req.startDate);
-                    const end = req.endDate ? new Date(req.endDate) : start;
-                    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                        await deleteDailyLogsForDate(req.crewId, d.toISOString().split('T')[0]);
+                    const parseDate = (dStr: string) => {
+                        const parts = dStr.split("-").map(Number);
+                        return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+                    };
+                    const start = parseDate(req.startDate);
+                    const end = parseDate(req.endDate || req.startDate);
+                    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+                        const dateStr = d.toISOString().split('T')[0];
+                        await deleteDailyLogsForDate(req.crewId, dateStr);
                     }
                 }
             }

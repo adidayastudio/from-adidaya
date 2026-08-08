@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, ArrowUpDown, Plus, Minus, Edit2, FileDown, Users } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, DailyLog, CrewMember, fetchRequests } from "@/lib/api/crew";
+import { CREW_ROLE_LABELS, CrewRole, CrewRequest, fetchCrewMembers, fetchDailyLogs, DailyLog, CrewMember, fetchRequests } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { isCrewPaidHolidayOrSunday } from "@/lib/holidays";
@@ -259,8 +259,16 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                 let approvedReqs: CrewRequest[] = [];
                 try {
                     const requests = await fetchRequests(wsId);
-                    const periodStartStr = period.start.toISOString().split("T")[0];
-                    const periodEndStr = period.end.toISOString().split("T")[0];
+                    // Use LOCAL date formatting — toISOString() converts to UTC which shifts
+                    // dates back 1 day for UTC+ timezones (e.g. midnight WIB = 17:00 prev day UTC)
+                    const formatLocalDate = (dt: Date) => {
+                        const y = dt.getFullYear();
+                        const m = String(dt.getMonth() + 1).padStart(2, '0');
+                        const dd = String(dt.getDate()).padStart(2, '0');
+                        return `${y}-${m}-${dd}`;
+                    };
+                    const periodStartStr = formatLocalDate(period.start);
+                    const periodEndStr = formatLocalDate(period.end);
 
                     approvedReqs = requests.filter(r => {
                         if (r.status !== "APPROVED") return false;
@@ -269,10 +277,12 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                         // Match project if projectSuffix is selected
                         if (projectSuffix) {
                             const reqProj = r.projectCode ? formatProjectCode(r.projectCode) : undefined;
-                            if (reqProj && reqProj !== projectSuffix) return false;
+                            // If request has no project code, exclude it from project-specific payroll
+                            if (!reqProj) return false;
+                            if (reqProj !== projectSuffix) return false;
                         }
 
-                        // Match date range
+                        // Match date range — use startDate (effective date) consistently
                         const reqDate = r.startDate || r.createdAt.split("T")[0];
                         return reqDate >= periodStartStr && reqDate <= periodEndStr;
                     });

@@ -690,7 +690,7 @@ export async function fetchRequests(workspaceId: string, projectId?: string): Pr
         crewRole: r.crew?.role,
         projectCode: r.project_code || r.crew?.current_project_code,
         type: r.type,
-        amount: parseFloat(r.amount) || 0,
+        amount: r.amount != null && !isNaN(parseFloat(r.amount)) ? parseFloat(r.amount) : undefined,
         startDate: r.start_date,
         endDate: r.end_date,
         reason: r.reason,
