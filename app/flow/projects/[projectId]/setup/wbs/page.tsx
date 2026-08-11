@@ -487,6 +487,7 @@ export default function ProjectSetupWBSPage() {
           is_leaf: !item.children || item.children.length === 0,
           notes: notes,
           unit: item.unit || null,
+          ahsp_id: item.ahsp_id || null,
         });
 
         const children = item.children || [];

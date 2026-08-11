@@ -47,15 +47,9 @@ export default function RABDetailAHSP({ item, onApplyPrice, onReloadWbs }: Props
     const [resResults, setResResults] = useState<any[]>([]);
     const [activeCategory, setActiveCategory] = useState<"materials" | "labor" | "tools" | null>(null);
 
-    // Load actual AHSP data if assigned
+    // Load actual AHSP data if assigned directly or via WBS Price Library template
     useEffect(() => {
-        if (!item.ahsp_id) {
-            if (!data) {
-                setData(null);
-                setStandardTotal(0);
-            }
-            return;
-        }
+        let activeAhspId = item.ahsp_id;
 
         const loadDbAhsp = async (ahspId: string) => {
             try {
@@ -67,7 +61,7 @@ export default function RABDetailAHSP({ item, onApplyPrice, onReloadWbs }: Props
                     .single();
 
                 if (!master) {
-                    setData(null);
+                    if (!data) setData(null);
                     return;
                 }
 
@@ -122,8 +116,42 @@ export default function RABDetailAHSP({ item, onApplyPrice, onReloadWbs }: Props
             }
         };
 
-        loadDbAhsp(item.ahsp_id);
-    }, [item.ahsp_id]);
+        const resolveAndLoad = async () => {
+            if (activeAhspId) {
+                loadDbAhsp(activeAhspId);
+                return;
+            }
+
+            // Fallback: Check if Price Library template (work_breakdown_structure) has a default ahsp_id for this WBS code
+            try {
+                // Strip building prefix if multi-building (e.g., A.S.1.1 -> S.1.1)
+                const cleanCode = item.code.replace(/^[A-Z]\./, "");
+                
+                const { data: templateItem } = await supabase
+                    .from("work_breakdown_structure")
+                    .select("ahsp_id")
+                    .or(`code.eq.${item.code},code.eq.${cleanCode}`)
+                    .not("ahsp_id", "is", null)
+                    .limit(1)
+                    .maybeSingle();
+
+                if (templateItem?.ahsp_id) {
+                    item.ahsp_id = templateItem.ahsp_id;
+                    loadDbAhsp(templateItem.ahsp_id);
+                } else if (!data) {
+                    setData(null);
+                    setStandardTotal(0);
+                }
+            } catch (err) {
+                if (!data) {
+                    setData(null);
+                    setStandardTotal(0);
+                }
+            }
+        };
+
+        resolveAndLoad();
+    }, [item.code, item.ahsp_id]);
 
     // Derived Totals
     const totals = useMemo(() => {
