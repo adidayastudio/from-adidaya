@@ -7,7 +7,7 @@ import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { Project } from "@/types/project";
 import ProjectCard from "@/components/project/ProjectCard";
 import CompactProjectCard from "@/components/project/CompactProjectCard";
-import { Folder, Flame, Activity, Clock, CheckSquare, Archive, Plus, ChevronRight, Settings } from "lucide-react";
+import { Folder, Flame, Activity, Clock, CheckSquare, Archive, Plus, ChevronRight, Settings, PauseCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import NewProjectDrawer from "@/components/project/NewProjectDrawer";
 
@@ -21,6 +21,7 @@ const PROJECT_TABS = [
     { id: "focused", label: "Focused", icon: <Flame size={16} /> },
     { id: "active", label: "Active", icon: <Activity size={16} /> },
     { id: "recent", label: "Recent", icon: <Clock size={16} /> },
+    { id: "on_hold", label: "On Hold", icon: <PauseCircle size={16} /> },
     { id: "completed", label: "Completed", icon: <CheckSquare size={16} /> },
     { id: "archived", label: "Archived", icon: <Archive size={16} /> },
 ];
@@ -97,6 +98,7 @@ export default function ProjectPage() {
         if (activeTab === "all") return true;
         if (activeTab === "focused") return p.meta?.isFavorite === true || ((p.meta?.progress || 0) > 0 && (p.meta?.progress || 0) < 40) || p.status === "at-risk";
         if (activeTab === "active") return p.status === "active" || p.status === "on-track" || p.status === "at-risk" || p.status === "delayed" || p.status === "overloaded";
+        if (activeTab === "on_hold") return p.status === "on_hold" || p.status === "on-hold";
         if (activeTab === "completed") return p.status === "completed";
         if (activeTab === "archived") return p.status === "archived";
         if (activeTab === "recent") {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { fetchAllProjects, createProject } from "@/lib/api/projects";
 import { Project } from "@/types/project";
 import CompactProjectCard from "@/components/project/CompactProjectCard";
-import { Plus, ChevronLeft, ListFilter, X, Check, ChevronDown, List, History, Send, Undo2, CheckCircle2, TrendingUp, AlertTriangle, User, Hash, FileCode2, BarChart3, Settings, ArrowUp, ArrowDown, Layout, Layers } from "lucide-react";
+import { Plus, ChevronLeft, ListFilter, X, Check, ChevronDown, List, History, Send, Undo2, CheckCircle2, TrendingUp, AlertTriangle, User, Hash, FileCode2, BarChart3, Settings, ArrowUp, ArrowDown, Layout, Layers, PauseCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import NewProjectDrawer from "@/components/project/NewProjectDrawer";
 import clsx from "clsx";
@@ -15,6 +15,7 @@ const FILTER_TABS = [
     { id: "my", label: "My Projects", icon: User },
     { id: "on-track", label: "On Track", icon: TrendingUp },
     { id: "risky", label: "Risky", icon: AlertTriangle },
+    { id: "on_hold", label: "On Hold", icon: PauseCircle },
     { id: "completed", label: "Completed", icon: CheckCircle2 },
 ];
 
@@ -108,6 +109,9 @@ export default function AllProjectsPage() {
             if (activeFilter === "risky") {
                 const isRisky = p.status === "at-risk" || p.status === "delayed" || (p.meta?.progress || 0) < 40;
                 if (!isRisky) return false;
+            }
+            if (activeFilter === "on_hold") {
+                if (p.status !== "on_hold" && p.status !== "on-hold") return false;
             }
             if (activeFilter === "completed") {
                 if (p.status !== "completed") return false;
