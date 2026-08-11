@@ -98,14 +98,36 @@ export default function RABDetailBOQ({ item, onApplyVolume }: Props) {
         <div className="flex flex-col h-full overflow-hidden">
             {/* SCROLLABLE INPUTS */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6 min-h-0">
+                {/* EXISTING VOLUME / OVERRIDE CARD */}
+                <div className="p-4 bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/80 dark:border-neutral-700 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">Current Volume (WBS / Calc)</span>
+                            <p className="text-xl font-black text-neutral-900 dark:text-white mt-0.5">
+                                {(item.volume || 0).toLocaleString("id-ID", { maximumFractionDigits: 3 })}
+                                <span className="text-xs font-bold text-neutral-400 ml-1.5">{item.unit || "m³"}</span>
+                            </p>
+                        </div>
+                        {item.volume ? (
+                            <span className="px-2.5 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-[10px] font-extrabold rounded-full border border-green-200 dark:border-green-800">
+                                Synced
+                            </span>
+                        ) : (
+                            <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-extrabold rounded-full border border-amber-200 dark:border-amber-800">
+                                Not Set
+                            </span>
+                        )}
+                    </div>
+                </div>
+
                 {/* HEADER */}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pt-2">
                     <h3 className="text-sm font-bold text-neutral-900 flex items-center gap-2">
                         <Calculator className="w-4 h-4 text-neutral-500" />
-                        Calculator
+                        Quick Estimator
                     </h3>
                     <select
-                        className="text-xs border rounded px-2 py-1"
+                        className="text-xs border rounded px-2 py-1 bg-white"
                         value={formula}
                         onChange={(e) => setFormula(e.target.value as FormulaType)}
                     >

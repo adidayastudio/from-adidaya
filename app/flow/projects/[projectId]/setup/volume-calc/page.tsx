@@ -314,25 +314,27 @@ export default function VolumeCalcPage() {
 
       if (metaErr) throw metaErr;
 
-      // 4. Update the volume and unit in the work_breakdown_structure table directly
+      // 4. Update the volume/quantity and unit in project_wbs_items table directly
       await supabase
-        .from("work_breakdown_structure")
+        .from("project_wbs_items")
         .update({
-          volume: totalVolume,
+          quantity: totalVolume,
           unit: selectedWbsUnit
         })
-        .eq("workspace_id", project.workspace_id)
-        .eq("code", selectedWbsCode);
+        .eq("project_id", project.id)
+        .eq("wbs_code", selectedWbsCode);
 
       // Refresh the project context to automatically propagate the updated estimateValues across the app (like RAB page)
       if (refresh) {
         await refresh();
       }
 
-      // Update unit in the active list directly
+      // Update quantity & unit in the active list directly
       setDbWbsItems(prev =>
         prev.map(item =>
-          item.code === selectedWbsCode ? { ...item, unit: selectedWbsUnit } : item
+          (item.wbs_code === selectedWbsCode || item.code === selectedWbsCode)
+            ? { ...item, quantity: totalVolume, unit: selectedWbsUnit }
+            : item
         )
       );
 

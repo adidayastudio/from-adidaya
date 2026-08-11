@@ -409,10 +409,10 @@ export default function ProjectSetupRABPage() {
     };
     
     const updatedItem = findItemInTree(activeTree, selectedDetailItem.code);
-    if (updatedItem) {
-      setSelectedDetailItem(updatedItem);
+    if (updatedItem && updatedItem.ahsp_id !== selectedDetailItem.ahsp_id) {
+      setSelectedDetailItem(prev => prev ? { ...prev, ahsp_id: updatedItem.ahsp_id || prev.ahsp_id } : null);
     }
-  }, [activeTree, selectedDetailItem?.code]);
+  }, [activeTree]);
 
   /* ===== TOTAL PROJECT COST ===== */
   const totalProjectCost = useMemo(() => {

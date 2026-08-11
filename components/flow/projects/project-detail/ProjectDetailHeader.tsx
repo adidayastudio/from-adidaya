@@ -1,5 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
+import Link from "next/link";
+import { useParams, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
 
 import {
   ProjectStatus,
@@ -45,6 +48,15 @@ export interface ProjectHeaderProps {
 export default function ProjectDetailHeader({ project }: { project: ProjectHeaderProps }) {
   const { name, projectNo, code, type, stage, status, progress } = project;
   const theme = STATUS_THEME[status] || STATUS_THEME["active"];
+
+  const params = useParams();
+  const pathname = usePathname() || "";
+  const projectCtx = useContext(ProjectContext);
+  const proj = projectCtx?.project || null;
+
+  const urlParam = (params?.projectId || params?.id) as string;
+  const projectSlug = proj?.project_code || code || urlParam;
+  const basePath = `/project/${projectSlug}`;
 
   // Mock breakdown based on progress
   const design = Math.min(100, Math.floor(progress * 1.2));
@@ -141,6 +153,43 @@ export default function ProjectDetailHeader({ project }: { project: ProjectHeade
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ================= MOBILE / TABLET PILL TABS NAVIGATION ================= */}
+      <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto mt-4 pt-3 pb-1 border-t border-neutral-100 dark:border-neutral-800 hide-scrollbar">
+        {[
+          { label: "Overview", href: `${basePath}` },
+          { label: "Info", href: `${basePath}/setup/info` },
+          { label: "Stages", href: `${basePath}/setup/stages` },
+          { label: "WBS", href: `${basePath}/setup/wbs` },
+          { label: "RAB", href: `${basePath}/setup/rab` },
+          { label: "Schedule", href: `${basePath}/setup/schedule` },
+          { label: "Tasks", href: `${basePath}/tasks` },
+          { label: "Tracking", href: `${basePath}/tracking` },
+          { label: "Activity", href: `${basePath}/activity` },
+          { label: "Docs", href: `${basePath}/docs` },
+          { label: "Reports", href: `${basePath}/reports` },
+        ].map((tab) => {
+          const isExact = tab.href === basePath;
+          const active = isExact 
+            ? (pathname === basePath || pathname === `${basePath}/`)
+            : (pathname?.startsWith(tab.href));
+
+          return (
+            <Link
+              key={tab.label}
+              href={tab.href}
+              className={clsx(
+                "px-3 py-1.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-all shrink-0 border",
+                active
+                  ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border-neutral-900 dark:border-white shadow-sm"
+                  : "bg-white/80 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 border-black/[0.05] dark:border-white/[0.08] hover:bg-neutral-100"
+              )}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

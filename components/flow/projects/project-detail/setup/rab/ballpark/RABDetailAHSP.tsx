@@ -50,8 +50,10 @@ export default function RABDetailAHSP({ item, onApplyPrice, onReloadWbs }: Props
     // Load actual AHSP data if assigned
     useEffect(() => {
         if (!item.ahsp_id) {
-            setData(null);
-            setStandardTotal(0);
+            if (!data) {
+                setData(null);
+                setStandardTotal(0);
+            }
             return;
         }
 
@@ -182,14 +184,109 @@ export default function RABDetailAHSP({ item, onApplyPrice, onReloadWbs }: Props
     // Assign AHSP to WBS item
     const assignAHSP = async (ahspId: string) => {
         try {
-            const { error } = await supabase
-                .from("work_breakdown_structure")
+            setIsLoading(true);
+            const projId = item.projectId || item.project_id;
+            
+            // Try updating project_wbs_items first
+            let { error } = await supabase
+                .from("project_wbs_items")
                 .update({ ahsp_id: ahspId })
-                .eq("id", item.id);
-            if (error) throw error;
+                .eq("project_id", projId)
+                .eq("wbs_code", item.code);
+
+            // Fallback: If DB table schema cache lacks ahsp_id column, store mapping in project meta or work_breakdown_structure
+            if (error) {
+                console.warn("Could not update ahsp_id in project_wbs_items, trying work_breakdown_structure or project.meta fallback:", error.message);
+                
+                const { error: wbsErr } = await supabase
+                    .from("work_breakdown_structure")
+                    .update({ ahsp_id: ahspId })
+                    .eq("code", item.code);
+
+                if (wbsErr) {
+                    // Update project.meta.ahspAssignments as secondary fallback
+                    const { data: projData } = await supabase
+                        .from("projects")
+                        .select("meta")
+                        .eq("id", projId)
+                        .single();
+                        
+                    if (projData) {
+                        const currentMeta = projData.meta || {};
+                        const currentAhspMap = currentMeta.ahspAssignments || {};
+                        await supabase
+                            .from("projects")
+                            .update({
+                                meta: {
+                                    ...currentMeta,
+                                    ahspAssignments: {
+                                        ...currentAhspMap,
+                                        [item.code]: ahspId
+                                    }
+                                }
+                            })
+                            .eq("id", projId);
+                    }
+                }
+            }
+
+            // Immediately load AHSP data for display
+            const { data: master } = await supabase
+                .from("ahsp_masters")
+                .select("id, code, name, unit, overhead_percent")
+                .eq("id", ahspId)
+                .single();
+
+            if (master) {
+                const { data: components } = await supabase
+                    .from("ahsp_components")
+                    .select(`
+                        id, coefficient,
+                        resource:pricing_resources (id, name, unit, price_default, category)
+                    `)
+                    .eq("ahsp_id", ahspId);
+
+                const materials: Resource[] = [];
+                const labor: Resource[] = [];
+                const tools: Resource[] = [];
+
+                if (components) {
+                    components.forEach((c: any) => {
+                        const r = c.resource;
+                        if (!r) return;
+                        const res: Resource = {
+                            id: r.id,
+                            name: r.name,
+                            unit: r.unit || "",
+                            coef: c.coefficient || 0,
+                            price: r.price_default || 0,
+                            total: (c.coefficient || 0) * (r.price_default || 0)
+                        };
+                        const cat = String(r.category || "").toLowerCase();
+                        if (cat === "material") materials.push(res);
+                        else if (cat === "labor") labor.push(res);
+                        else tools.push(res);
+                    });
+                }
+
+                setData({ materials, labor, tools });
+                setOverheadPercent(master.overhead_percent || 10);
+
+                const mat = materials.reduce((s, x) => s + (x.coef * x.price), 0);
+                const lab = labor.reduce((s, x) => s + (x.coef * x.price), 0);
+                const tl = tools.reduce((s, x) => s + (x.coef * x.price), 0);
+                const grand = mat + lab + tl;
+                setStandardTotal(grand + grand * ((master.overhead_percent || 10) / 100));
+
+                // Mutate item.ahsp_id so component knows it has an assigned ahsp_id
+                item.ahsp_id = ahspId;
+            }
+
             onReloadWbs?.();
         } catch (err: any) {
             alert("Failed to assign AHSP: " + err.message);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -435,11 +532,42 @@ export default function RABDetailAHSP({ item, onApplyPrice, onReloadWbs }: Props
                 <button
                     onClick={async () => {
                         try {
-                            const { error } = await supabase
-                                .from("work_breakdown_structure")
+                            const projId = item.projectId || item.project_id;
+                            let { error } = await supabase
+                                .from("project_wbs_items")
                                 .update({ ahsp_id: null })
-                                .eq("id", item.id);
-                            if (error) throw error;
+                                .eq("project_id", projId)
+                                .eq("wbs_code", item.code);
+
+                            if (error) {
+                                await supabase
+                                    .from("work_breakdown_structure")
+                                    .update({ ahsp_id: null })
+                                    .eq("code", item.code);
+
+                                const { data: projData } = await supabase
+                                    .from("projects")
+                                    .select("meta")
+                                    .eq("id", projId)
+                                    .single();
+
+                                if (projData) {
+                                    const currentMeta = projData.meta || {};
+                                    const currentAhspMap = { ...(currentMeta.ahspAssignments || {}) };
+                                    delete currentAhspMap[item.code];
+                                    await supabase
+                                        .from("projects")
+                                        .update({
+                                            meta: {
+                                                ...currentMeta,
+                                                ahspAssignments: currentAhspMap
+                                            }
+                                        })
+                                        .eq("id", projId);
+                                }
+                            }
+
+                            item.ahsp_id = null;
                             setData(null);
                             onReloadWbs?.();
                         } catch (err: any) {
@@ -456,7 +584,7 @@ export default function RABDetailAHSP({ item, onApplyPrice, onReloadWbs }: Props
                     className="flex-[1.5] h-12 bg-brand-red hover:bg-brand-red/90 text-white rounded-full font-bold text-xs active:scale-[0.97] transition-all shadow-lg shadow-brand-red/10 flex items-center justify-center gap-2"
                 >
                     <Save className="w-3.5 h-3.5" strokeWidth={2} />
-                    Use Update Analysis
+                    Gunakan AHSP Ini (Rp {Math.round(totals.final).toLocaleString("id-ID")})
                 </button>
             </div>
         </div>

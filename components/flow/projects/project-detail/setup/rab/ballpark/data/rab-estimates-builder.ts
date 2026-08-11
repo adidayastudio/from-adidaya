@@ -78,12 +78,18 @@ function processNode(node: any, values: EstimateValues, context: EstimateContext
 
     // Existing value from State
     const existingVal = values[node.code];
+    const nodeDefaultVolume = node.quantity ?? node.volume ?? 0;
 
-    const customVal: EstimateValue = existingVal || {
-        volume: 0,
-        unit: defaultUnit,
-        unitPrice: adjustedDefaultPrice,
-    };
+    const customVal: EstimateValue = existingVal
+        ? {
+            ...existingVal,
+            volume: existingVal.volume !== undefined && existingVal.volume !== 0 ? existingVal.volume : nodeDefaultVolume,
+        }
+        : {
+            volume: nodeDefaultVolume,
+            unit: defaultUnit,
+            unitPrice: adjustedDefaultPrice,
+        };
 
     // Recursively process children
     const childItems = node.children ? node.children.map((child: any) => processNode(child, values, context)) : [];
@@ -98,6 +104,7 @@ function processNode(node: any, values: EstimateValues, context: EstimateContext
 
     const item: RABItem = {
         id: node.id,
+        projectId: node.project_id || node.projectId,
         code: node.code,
         nameEn: node.nameEn,
         nameId: node.nameId,

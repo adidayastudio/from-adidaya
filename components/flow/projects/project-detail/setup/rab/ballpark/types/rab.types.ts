@@ -45,6 +45,7 @@ export type RABContext = {
  */
 export type RABItem = {
   id?: string;           // DB UUID
+  projectId?: string;    // DB Project UUID
   code: string;          // S, A, M, I, L, S.1, A.02.01, dst
   nameEn: string;        // English name
   nameId?: string;       // Indonesian name
