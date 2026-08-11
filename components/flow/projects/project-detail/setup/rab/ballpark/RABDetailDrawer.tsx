@@ -19,19 +19,11 @@ type Props = {
 type Tab = "BOQ" | "AHSP";
 
 export default function RABDetailDrawer({ isOpen, onClose, item, initialTab, onApply, onApplyVolume, onReloadWbs }: Props) {
-    const [tab, setTab] = useState<Tab>("BOQ");
-    const [prevItemCode, setPrevItemCode] = useState<string | null>(null);
+    const [tab, setTab] = useState<Tab>(initialTab || "BOQ");
 
     useEffect(() => {
-        if (isOpen && item) {
-            // Only update tab if a NEW item is opened, otherwise keep active tab (e.g. AHSP)
-            if (item.code !== prevItemCode) {
-                setTab(initialTab || "BOQ");
-                setPrevItemCode(item.code);
-            }
-        }
-        if (!isOpen) {
-            setPrevItemCode(null);
+        if (isOpen && initialTab) {
+            setTab(initialTab);
         }
     }, [isOpen, initialTab, item?.code]);
 
