@@ -8,6 +8,8 @@ import { format } from "date-fns";
 import clsx from "clsx";
 import ReportForm from "./reports/ReportForm";
 import { PopoverRoot as Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
+import { useProject } from "@/components/flow/project-context";
+import { fetchProjectBySlug } from "@/lib/flow/repositories/project.repo";
 
 interface TrackingReportsTabProps {
     isActive?: boolean;
@@ -15,7 +17,8 @@ interface TrackingReportsTabProps {
 
 export default function TrackingReportsTab({ isActive }: TrackingReportsTabProps) {
     const params = useParams();
-    const projectId = params.projectId as string;
+    const urlParam = (params?.projectId || params?.id) as string;
+    const { project } = useProject();
 
     const [reports, setReports] = useState<ProjectReport[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -25,16 +28,29 @@ export default function TrackingReportsTab({ isActive }: TrackingReportsTabProps
     const fetchReports = async () => {
         setIsLoading(true);
         try {
+            let targetId = project?.id;
+            if (!targetId && urlParam) {
+                const proj = await fetchProjectBySlug(urlParam);
+                targetId = proj?.id || urlParam;
+            }
+
+            if (!targetId) {
+                setReports([]);
+                return;
+            }
+
             const { data, error } = await supabase
                 .from("project_reports")
                 .select("*")
-                .eq("project_id", projectId)
+                .eq("project_id", targetId)
                 .order("report_date", { ascending: false });
 
-            if (error) throw error;
-            // Map snake_case to camelCase manually if needed, or rely on naming convention match
-            // Supabase returns snake_case by default, types are camelCase. 
-            // We need to map it.
+            if (error) {
+                console.warn("Could not fetch reports from DB:", error.message || error);
+                setReports([]);
+                return;
+            }
+
             const mappedReports: ProjectReport[] = (data || []).map(r => ({
                 id: r.id,
                 projectId: r.project_id,
@@ -51,18 +67,17 @@ export default function TrackingReportsTab({ isActive }: TrackingReportsTabProps
             }));
 
             setReports(mappedReports);
-        } catch (error) {
-            console.error("Error fetching reports:", error);
+        } catch (error: any) {
+            console.warn("Error fetching reports:", error?.message || error);
+            setReports([]);
         } finally {
             setIsLoading(false);
         }
     };
 
     useEffect(() => {
-        if (projectId) {
-            fetchReports();
-        }
-    }, [projectId]);
+        fetchReports();
+    }, [project?.id, urlParam]);
 
     const handleCreateClick = () => {
         setEditingReport(null);

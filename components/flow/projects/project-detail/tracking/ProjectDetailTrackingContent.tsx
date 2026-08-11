@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useProject } from "@/components/flow/project-context";
-import TrackingStagesTab from "./TrackingStagesTab";
 import TrackingRabTab from "./TrackingRabTab";
 import TrackingScheduleTab from "./TrackingScheduleTab";
 import TrackingReportsTab from "./TrackingReportsTab";
@@ -29,7 +28,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 
-type TrackingTab = "schedule" | "stages" | "rab" | "reports";
+type TrackingTab = "schedule" | "rab" | "reports";
 type TabItem<T> = { key: T; label: string; icon?: any; badge?: string };
 
 export default function ProjectDetailTrackingContent() {
@@ -38,7 +37,7 @@ export default function ProjectDetailTrackingContent() {
   const pathname = usePathname();
   const { project } = useProject();
 
-  const initialTab = (searchParams.get("tab") as TrackingTab) || "stages";
+  const initialTab = (searchParams.get("tab") as TrackingTab) || "schedule";
   const [activeTab, setActiveTab] = useState<TrackingTab>(initialTab);
 
   // Real DB Tracking Data State
@@ -94,7 +93,6 @@ export default function ProjectDetailTrackingContent() {
   };
 
   const tabs: TabItem<TrackingTab>[] = [
-    { key: "stages", label: "Stages & Tasks" },
     { key: "schedule", label: "WBS & Volume", badge: `${summaryStats.totalItems} Items` },
     { key: "rab", label: "RAB & Finance" },
     { key: "reports", label: "Site Reports" },
@@ -173,69 +171,6 @@ export default function ProjectDetailTrackingContent() {
 
       {/* 3. DYNAMIC SUMMARY CARDS (ULTRA-CLEAN MINIMALIST KPI CARDS) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
-        {/* CARDS FOR STAGES & TASKS (DESIGN) */}
-        {activeTab === "stages" && (
-          <>
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Progress Desain</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-blue-500/10 text-blue-500">
-                  <Calendar className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-2xl font-black tracking-tight leading-none text-neutral-900 dark:text-white">40.0%</p>
-                <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-600 transition-all duration-500 rounded-full" style={{ width: "40%" }} />
-                </div>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Stage Progress</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-500">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-2xl font-black tracking-tight leading-none text-emerald-600 dark:text-emerald-400">
-                  2 <span className="text-xs font-semibold text-neutral-400">/ 5 Stage</span>
-                </p>
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-semibold truncate">Stage 02-SD Active</p>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Deliverables</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-purple-500/10 text-purple-500">
-                  <FileCheck className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-2xl font-black tracking-tight leading-none text-neutral-900 dark:text-white">
-                  12 <span className="text-xs font-semibold text-neutral-400">Items</span>
-                </p>
-                <p className="text-[10px] text-amber-600 font-semibold truncate">2 Review Pending</p>
-              </div>
-            </div>
-
-            <div className="p-5 rounded-2xl border border-black/[0.04] dark:border-white/[0.05] bg-white dark:bg-neutral-900 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 flex flex-col justify-between h-32">
-              <div className="flex justify-between items-start">
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Schedule Status</p>
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-amber-500/10 text-amber-500">
-                  <Clock className="w-3.5 h-3.5" />
-                </div>
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-2xl font-black tracking-tight leading-none text-emerald-600 dark:text-emerald-400">On Track</p>
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-semibold truncate">SD Finish: 15 Aug</p>
-              </div>
-            </div>
-          </>
-        )}
-
         {/* CARDS FOR BUILD SCOPE (WBS & VOLUME) — Now rendered inside TrackingScheduleTab with 3-tier progress */}
 
         {/* CARDS FOR RAB & FINANCE — Now rendered inside TrackingRabTab */}
@@ -307,10 +242,6 @@ export default function ProjectDetailTrackingContent() {
             onOpenInputModal={openInputModal}
             onRefresh={loadTrackingData}
           />
-        )}
-
-        {activeTab === "stages" && (
-          <TrackingStagesTab />
         )}
 
         {activeTab === "rab" && (

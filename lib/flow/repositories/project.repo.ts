@@ -20,31 +20,42 @@ export async function fetchProject(projectId: string) {
  * Fetch project by slug format: "number-code" (e.g., "036-PRG")
  */
 export async function fetchProjectBySlug(slug: string) {
-    // Check if the slug is a UUID
+    if (!slug) return null;
+    const cleanSlug = decodeURIComponent(slug).trim();
+
+    // 1. Check if UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(slug)) {
-        return fetchProject(slug);
+    if (uuidRegex.test(cleanSlug)) {
+        return fetchProject(cleanSlug).catch(() => null);
     }
 
-    // Parse slug: "036-PRG" -> number="036", code="PRG"
-    const dashIndex = slug.indexOf("-");
-    if (dashIndex === -1) {
-        // Fallback: try as UUID
-        return fetchProject(slug);
+    // 2. Parse number-code format e.g. "036-PRG" or "019-FKS"
+    const dashIndex = cleanSlug.indexOf("-");
+    if (dashIndex !== -1) {
+        const number = cleanSlug.substring(0, dashIndex);
+        const code = cleanSlug.substring(dashIndex + 1);
+
+        const { data } = await supabase
+            .from("projects")
+            .select("*")
+            .ilike("project_number", number)
+            .ilike("project_code", code)
+            .maybeSingle();
+
+        if (data) return data;
     }
 
-    const number = slug.substring(0, dashIndex);
-    const code = slug.substring(dashIndex + 1);
-
-    const { data, error } = await supabase
+    // 3. Fallback: query by project_code (e.g., "PRG" or "FKS")
+    const { data: codeData } = await supabase
         .from("projects")
         .select("*")
-        .eq("project_number", number)
-        .eq("project_code", code)
-        .single();
+        .ilike("project_code", cleanSlug)
+        .maybeSingle();
 
-    if (error) throw error;
-    return data;
+    if (codeData) return codeData;
+
+    // 4. Final attempt: query by id directly
+    return fetchProject(cleanSlug).catch(() => null);
 }
 
 export async function fetchProjectsByWorkspace(workspaceId?: string) {

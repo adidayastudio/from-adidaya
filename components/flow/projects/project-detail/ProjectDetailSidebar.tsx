@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import clsx from "clsx";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
+import { ProjectContext } from "@/components/flow/project-context";
 import {
   LayoutDashboard,
   Activity,
@@ -23,13 +24,18 @@ import {
   ChevronDown,
   FileSpreadsheet,
   UserCheck,
+  CheckSquare,
 } from "lucide-react";
 
 export default function ProjectDetailSidebar() {
   const params = useParams();
   const pathname = usePathname();
-  const projectId = params.projectId as string;
-  const basePath = `/flow/projects/${projectId}`;
+  const projectCtx = useContext(ProjectContext);
+  const project = projectCtx?.project || null;
+
+  const urlParam = (params?.projectId || params?.id) as string;
+  const projectSlug = project?.project_code || urlParam;
+  const basePath = `/project/${projectSlug}`;
 
   // Accordion states for Desktop
   const [planningOpen, setPlanningOpen] = useState(false);
@@ -45,7 +51,7 @@ export default function ProjectDetailSidebar() {
   const moreMenuRef = useRef<HTMLDivElement>(null);
 
   const isPlanningRoute = pathname ? (pathname.includes('/setup') || pathname.includes('/settings')) : false;
-  const isWorkRoute = pathname ? (pathname.includes('/tracking') || pathname.includes('/activity')) : false;
+  const isWorkRoute = pathname ? (pathname.includes('/tracking') || pathname.includes('/tasks') || pathname.includes('/activity')) : false;
 
   // Auto-open accordions when entering their respective routes
   useEffect(() => {
@@ -120,6 +126,7 @@ export default function ProjectDetailSidebar() {
   ];
 
   const WORK_ITEMS = [
+    { label: "Tasks & Deliverables", href: `${basePath}/tasks`, icon: CheckSquare },
     { label: "Tracking", href: `${basePath}/tracking`, icon: BarChart },
     { label: "Activity", href: `${basePath}/activity`, icon: Activity },
   ];

@@ -146,12 +146,21 @@ export function ensureMultiBuildingWBS(wbsTree: any[], project: any): any[] {
         const massTitle = `${prefix}. ${mass.name}`;
 
         const prefixChildren = (nodes: any[]): any[] => {
-            return nodes.map((node) => ({
-                ...node,
-                id: `node-${prefix}-${node.code}-${node.id || idx}`,
-                code: node.code.startsWith(`${prefix}.`) ? node.code : `${prefix}.${node.code}`,
-                children: node.children ? prefixChildren(node.children) : undefined,
-            }));
+            return nodes.map((node) => {
+                let cleanCode = node.code || "";
+                // Normalize double prefix if previously corrupted (e.g. S.S.1.1 -> S.1.1)
+                cleanCode = cleanCode.replace(/^([SAMIL])\.\1\./, "$1.").replace(/^([SAMIL])\.\1$/, "$1");
+
+                const isAlreadyPrefixed = cleanCode === prefix || cleanCode.startsWith(`${prefix}.`);
+                const finalCode = isAlreadyPrefixed ? cleanCode : `${prefix}.${cleanCode}`;
+
+                return {
+                    ...node,
+                    id: `node-${prefix}-${finalCode}-${node.id || idx}`,
+                    code: finalCode,
+                    children: node.children ? prefixChildren(node.children) : undefined,
+                };
+            });
         };
 
         return {

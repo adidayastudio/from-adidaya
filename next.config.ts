@@ -33,11 +33,15 @@ const nextConfig: NextConfig = {
         destination: "/feel/crew",
       },
       {
-        source: "/project/:id/:subpath(setup|tracking|activity|docs|reports)",
+        source: "/project/:id",
+        destination: "/flow/projects/:id",
+      },
+      {
+        source: "/project/:id/:subpath(setup|tracking|tasks|activity|docs|reports|finance|resources|people|crew)",
         destination: "/flow/projects/:id/:subpath",
       },
       {
-        source: "/project/:id/:subpath(setup|tracking|activity|docs|reports)/:path*",
+        source: "/project/:id/:subpath(setup|tracking|tasks|activity|docs|reports|finance|resources|people|crew)/:path*",
         destination: "/flow/projects/:id/:subpath/:path*",
       },
     ];

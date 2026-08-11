@@ -1,8 +1,2 @@
-"use client";
-import { useParams } from "next/navigation";
-import { redirect } from "next/navigation";
-
-export default function ProjectPeopleRedirect() {
-    const params = useParams();
-    redirect(`/project/${params.id}?tab=people`);
-}
+import ProjectPeoplePage from "@/app/flow/projects/[projectId]/people/page";
+export default ProjectPeoplePage;

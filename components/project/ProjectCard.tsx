@@ -40,12 +40,14 @@ export default function ProjectCard({ project, onClick }: ProjectCardProps) {
             onClick={onClick}
             className="relative w-[320px] h-[360px] rounded-[36px] overflow-hidden shrink-0 cursor-pointer active:scale-[0.98] transition-all select-none shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]"
         >
-            {/* Background Image */}
-            <img
-                src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80"
-                alt={project.projectName}
-                className="absolute inset-0 w-full h-full object-cover"
-            />
+            {/* Logo Container / Background */}
+            <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-neutral-100 to-neutral-200 dark:from-neutral-800 dark:to-neutral-900 flex items-center justify-center p-12 pb-24">
+                <img
+                    src="/logo-adidaya-red.svg"
+                    alt={project.projectName}
+                    className="w-24 h-24 object-contain opacity-80"
+                />
+            </div>
 
             {/* Top right star action */}
             {project.meta?.isFavorite && (

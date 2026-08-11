@@ -147,17 +147,21 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
             setScheduleVersions(scheduleData);
 
             // Auto-select first active stage
-            if (!selectedStageId && stagesData.length > 0) {
-                const firstActive = stagesData.find((s) => s.is_active) || stagesData[0];
-                setSelectedStageId(firstActive.id);
-            }
+            setSelectedStageId((prev) => {
+                if (prev) return prev;
+                if (stagesData.length > 0) {
+                    const firstActive = stagesData.find((s) => s.is_active) || stagesData[0];
+                    return firstActive.id;
+                }
+                return null;
+            });
         } catch (err: any) {
             setError(err?.message || "Failed to load project");
             console.error(err);
         } finally {
             setIsLoading(false);
         }
-    }, [projectId, selectedStageId]);
+    }, [projectId]);
 
     // Initial load
     useEffect(() => {

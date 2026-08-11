@@ -24,11 +24,11 @@ export default function CompactProjectCard({ project, onClick }: CompactProjectC
             className="flex items-center justify-between p-3.5 bg-white dark:bg-neutral-800/50 backdrop-blur-xl rounded-[24px] cursor-pointer mb-3 active:scale-[0.98] transition-all border border-black/[0.04] dark:border-white/[0.05] shadow-sm hover:shadow-md dark:shadow-none"
         >
             <div className="flex items-center gap-4">
-                <div className="w-[52px] h-[52px] rounded-2xl overflow-hidden shrink-0 bg-neutral-200">
+                <div className="w-[52px] h-[52px] rounded-2xl overflow-hidden shrink-0 bg-neutral-100 dark:bg-neutral-800/80 p-2.5 flex items-center justify-center border border-black/[0.04] dark:border-white/[0.05]">
                     <img
-                        src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=200&q=80"
+                        src="/logo-adidaya-red.svg"
                         alt={project.projectName}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                     />
                 </div>
 
