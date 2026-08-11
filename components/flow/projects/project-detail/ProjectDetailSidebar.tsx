@@ -250,6 +250,62 @@ export default function ProjectDetailSidebar() {
               <span className="truncate font-semibold">Documents</span>
             </Link>
 
+            {/* Finance */}
+            <Link
+              href={`${basePath}/finance`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
+                isRouteActive(`${basePath}/finance`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60 dark:border-white/10"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
+              )}
+            >
+              <Banknote className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/finance`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Finance</span>
+            </Link>
+
+            {/* Resources */}
+            <Link
+              href={`${basePath}/resources`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
+                isRouteActive(`${basePath}/resources`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60 dark:border-white/10"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
+              )}
+            >
+              <Package className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/resources`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Resources</span>
+            </Link>
+
+            {/* People */}
+            <Link
+              href={`${basePath}/people`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
+                isRouteActive(`${basePath}/people`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60 dark:border-white/10"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
+              )}
+            >
+              <Users className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/people`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">People</span>
+            </Link>
+
+            {/* Crew */}
+            <Link
+              href={`${basePath}/crew`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
+                isRouteActive(`${basePath}/crew`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60 dark:border-white/10"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
+              )}
+            >
+              <UserCheck className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/crew`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Crew</span>
+            </Link>
+
             {/* Reports */}
             <Link
               href={`${basePath}/reports`}
@@ -364,91 +420,16 @@ export default function ProjectDetailSidebar() {
             <FileText className="w-5 h-5" />
           </Link>
 
-          {/* More Menu Toggle (Finance, Resources, People, Reports) */}
-          <div className="relative" ref={moreMenuRef}>
-            <button
-              onClick={handleToggleMore}
-              className={clsx(
-                "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
-                mobileMoreOpen || isRouteActive(`${basePath}/reports`) ? "bg-red-50 text-red-600" : "text-neutral-400"
-              )}
-            >
-              <div className="w-5 h-5 flex items-center justify-center font-bold">•••</div>
-            </button>
-
-            {mobileMoreOpen && (
-              <div className="absolute bottom-full right-0 mb-4 w-52 bg-white/90 backdrop-blur-xl border border-white/50 shadow-xl rounded-2xl p-1.5 animate-in fade-in slide-in-from-bottom-2">
-                <div className="px-3 py-1.5 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">More</div>
-                
-                {/* Reports */}
-                <Link
-                  href={`${basePath}/reports`}
-                  onClick={() => setMobileMoreOpen(false)}
-                  className={clsx(
-                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
-                    isRouteActive(`${basePath}/reports`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
-                  )}
-                >
-                  <FileSpreadsheet className={clsx("w-4 h-4", isRouteActive(`${basePath}/reports`) ? "text-red-600" : "text-neutral-400")} />
-                  Reports
-                </Link>
-
-                <div className="h-px bg-neutral-200/50 my-1" />
-
-                {/* Finance */}
-                <Link
-                  href={`${basePath}/finance`}
-                  onClick={() => setMobileMoreOpen(false)}
-                  className={clsx(
-                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
-                    isRouteActive(`${basePath}/finance`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
-                  )}
-                >
-                  <Banknote className={clsx("w-4 h-4", isRouteActive(`${basePath}/finance`) ? "text-red-600" : "text-neutral-400")} />
-                  Finance
-                </Link>
-
-                {/* Resources */}
-                <Link
-                  href={`${basePath}/resources`}
-                  onClick={() => setMobileMoreOpen(false)}
-                  className={clsx(
-                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
-                    isRouteActive(`${basePath}/resources`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
-                  )}
-                >
-                  <Package className={clsx("w-4 h-4", isRouteActive(`${basePath}/resources`) ? "text-red-600" : "text-neutral-400")} />
-                  Resources
-                </Link>
-
-                {/* People */}
-                <Link
-                  href={`${basePath}/people`}
-                  onClick={() => setMobileMoreOpen(false)}
-                  className={clsx(
-                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
-                    isRouteActive(`${basePath}/people`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
-                  )}
-                >
-                  <Users className={clsx("w-4 h-4", isRouteActive(`${basePath}/people`) ? "text-red-600" : "text-neutral-400")} />
-                  People
-                </Link>
-
-                {/* Crew */}
-                <Link
-                  href={`${basePath}/crew`}
-                  onClick={() => setMobileMoreOpen(false)}
-                  className={clsx(
-                    "w-full text-left px-3 py-2 text-xs font-medium rounded-xl flex items-center gap-3 transition-colors",
-                    isRouteActive(`${basePath}/crew`) ? "bg-red-50 text-red-600" : "text-neutral-600 hover:bg-neutral-50"
-                  )}
-                >
-                  <UserCheck className={clsx("w-4 h-4", isRouteActive(`${basePath}/crew`) ? "text-red-600" : "text-neutral-400")} />
-                  Crew
-                </Link>
-              </div>
+          {/* Reports Button (Mobile) */}
+          <Link
+            href={`${basePath}/reports`}
+            className={clsx(
+              "flex items-center justify-center transition-all duration-200 rounded-full p-2.5",
+              isRouteActive(`${basePath}/reports`) ? "bg-red-50 text-red-600" : "text-neutral-400"
             )}
-          </div>
+          >
+            <FileSpreadsheet className="w-5 h-5" />
+          </Link>
         </div>
       </div>
     </>
