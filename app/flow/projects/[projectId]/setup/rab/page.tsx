@@ -442,9 +442,11 @@ export default function ProjectSetupRABPage() {
   }
 
   function onEstimateCommit(code: string, value: { volume: number; unit: string; unitPrice: number }) {
+    const strippedCode = code.replace(/^[A-Z]\./, "");
     setEstimateValues(prev => ({
       ...prev,
-      [code]: value
+      [code]: value,
+      [strippedCode]: value,
     }));
   }
 
@@ -487,6 +489,22 @@ export default function ProjectSetupRABPage() {
         .eq("id", project.id);
 
       if (error) throw error;
+
+      // Bi-directionally sync volumes & units into project_wbs_items table for each entry in estimateValues
+      for (const [code, val] of Object.entries(estimateValues)) {
+        if (val && typeof val === "object" && (val.volume !== undefined || val.unit !== undefined)) {
+          const stripped = code.replace(/^[A-Z]\./, "");
+          await supabase
+            .from("project_wbs_items")
+            .update({
+              quantity: val.volume ?? null,
+              unit: val.unit ?? null,
+            })
+            .eq("project_id", project.id)
+            .in("wbs_code", [code, stripped]);
+        }
+      }
+
       setRabStatus(status);
       alert(`✅ RAB ${status === "submitted" ? "submitted" : "saved"} successfully!`);
     } catch (err: any) {

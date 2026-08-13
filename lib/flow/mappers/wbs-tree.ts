@@ -76,6 +76,9 @@ export function buildWBSTree(items: any[]): WBSNode[] {
             nameEn: item.title || item.nameEn || item.name || "",
             nameId: item.title_en || item.nameId || item.title || item.description || "",
             unit: item.unit || "m³",
+            quantity: item.quantity ?? item.volume ?? item.qty ?? 0,
+            notes: item.notes || null,
+            ahsp_id: item.ahsp_id || null,
             children: [],
         };
         if (item.id) idMap.set(item.id, node);

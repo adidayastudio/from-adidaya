@@ -122,11 +122,14 @@ export default function VolumeCalcPage() {
 
     async function loadCalcs() {
       try {
+        const strippedCode = selectedWbsCode.replace(/^[A-Z]\./, "");
+        const codesToTry = Array.from(new Set([selectedWbsCode, strippedCode]));
+
         const { data, error } = await supabase
           .from("project_volume_calcs")
           .select("*")
           .eq("project_id", project.id)
-          .eq("wbs_code", selectedWbsCode);
+          .in("wbs_code", codesToTry);
 
         if (error) throw error;
 
@@ -145,6 +148,12 @@ export default function VolumeCalcPage() {
           }));
           setCalcRows(mappedRows);
         } else {
+          // Fallback check: try reading volume from project.meta.estimateValues or project_wbs_items
+          const metaEst = (project?.meta as any)?.estimateValues || {};
+          const estVal = metaEst[selectedWbsCode] || metaEst[strippedCode];
+          const dbWbs = dbWbsItems.find((i: any) => (i.wbs_code === selectedWbsCode || i.code === selectedWbsCode || i.wbs_code === strippedCode));
+          const existingVol = estVal?.volume ?? dbWbs?.quantity ?? dbWbs?.volume ?? 0;
+
           // Initialize with a formula matching unit category
           const defaultFormula =
             unitCategory === "VOLUME"
@@ -159,11 +168,12 @@ export default function VolumeCalcPage() {
             {
               id: Math.random().toString(),
               name: "Kalkulasi Utama",
-              formulaType: defaultFormula,
+              formulaType: existingVol > 0 ? "MANUAL" : defaultFormula,
               length: 0,
               width: 0,
               height: 0,
               count: 1,
+              manualVolume: existingVol,
             },
           ]);
         }
@@ -172,7 +182,7 @@ export default function VolumeCalcPage() {
       }
     }
     loadCalcs();
-  }, [project?.id, selectedWbsCode, unitCategory]);
+  }, [project?.id, selectedWbsCode, unitCategory, dbWbsItems]);
 
   // Dynamic calculations for each row
   const computedRows = useMemo(() => {
@@ -291,19 +301,23 @@ export default function VolumeCalcPage() {
       const currentMeta = project.meta || {};
       const currentEstValues = (currentMeta as any).estimateValues || {};
 
-      const nodeVal = currentEstValues[selectedWbsCode] || {
+      const strippedCode = selectedWbsCode.replace(/^[A-Z]\./, "");
+      const nodeVal = currentEstValues[selectedWbsCode] || currentEstValues[strippedCode] || {
         unitPrice: 0,
+      };
+
+      const updatedVal = {
+        ...nodeVal,
+        volume: totalVolume,
+        unit: selectedWbsUnit,
       };
 
       const updatedMeta = {
         ...currentMeta,
         estimateValues: {
           ...currentEstValues,
-          [selectedWbsCode]: {
-            ...nodeVal,
-            volume: totalVolume,
-            unit: selectedWbsUnit,
-          },
+          [selectedWbsCode]: updatedVal,
+          [strippedCode]: updatedVal,
         },
       };
 
@@ -322,7 +336,7 @@ export default function VolumeCalcPage() {
           unit: selectedWbsUnit
         })
         .eq("project_id", project.id)
-        .eq("wbs_code", selectedWbsCode);
+        .in("wbs_code", [selectedWbsCode, strippedCode]);
 
       // Refresh the project context to automatically propagate the updated estimateValues across the app (like RAB page)
       if (refresh) {

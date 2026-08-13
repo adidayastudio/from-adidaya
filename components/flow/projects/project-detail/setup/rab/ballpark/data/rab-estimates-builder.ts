@@ -63,33 +63,30 @@ function processNode(node: any, values: EstimateValues, context: EstimateContext
     const { rabClass, rf, df, adjustmentFactor } = context;
 
     // 1. Calculate Default Price (Adjusted)
-    // Here we might look up standard prices or use node defaults
-    // For now, let's assume node has a base price or we ignore it
-    const basePrice = node.price || 0;
-
-    // Apply factors (just example)
+    const basePrice = node.unitPrice ?? node.price ?? 0;
     const adjustedDefaultPrice = Math.round(basePrice * rf * df * (adjustmentFactor / 100));
-
-    const defaultUnit = node.unit || "ls";
+    const defaultUnit = node.unit || "m³";
 
     // 2. Resolve final EstimateValue
-    // Logic: If user has edited (in values), use that.
-    // If not, use defaults: volume=0, unitPrice=adjustedDefaultPrice
-
-    // Existing value from State
-    const existingVal = values[node.code];
+    const strippedCode = (node.code || "").replace(/^[A-Z]\./, "");
+    const existingVal = values[node.code] || values[strippedCode];
     const nodeDefaultVolume = node.quantity ?? node.volume ?? 0;
 
-    const customVal: EstimateValue = existingVal
-        ? {
-            ...existingVal,
-            volume: existingVal.volume !== undefined && existingVal.volume !== 0 ? existingVal.volume : nodeDefaultVolume,
-        }
-        : {
-            volume: nodeDefaultVolume,
-            unit: defaultUnit,
-            unitPrice: adjustedDefaultPrice,
-        };
+    const resolvedVolume = (existingVal?.volume !== undefined && existingVal?.volume !== 0)
+        ? existingVal.volume
+        : nodeDefaultVolume;
+
+    const resolvedUnitPrice = (existingVal?.unitPrice !== undefined && existingVal?.unitPrice !== 0)
+        ? existingVal.unitPrice
+        : (adjustedDefaultPrice !== 0 ? adjustedDefaultPrice : (node.unitPrice || 0));
+
+    const resolvedUnit = existingVal?.unit || defaultUnit;
+
+    const customVal: EstimateValue = {
+        volume: resolvedVolume,
+        unit: resolvedUnit,
+        unitPrice: resolvedUnitPrice,
+    };
 
     // Recursively process children
     const childItems = node.children ? node.children.map((child: any) => processNode(child, values, context)) : [];

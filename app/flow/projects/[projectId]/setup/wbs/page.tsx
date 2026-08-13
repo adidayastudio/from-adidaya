@@ -469,11 +469,23 @@ export default function ProjectSetupWBSPage() {
       
       // 3. Flatten tree client-side and prepare rows for project_wbs_items
       const rowsToInsert: any[] = [];
+      const currentMetaEst = (project?.meta as any)?.estimateValues || {};
+
       const traverseAndPrepare = (item: any, parentDbId: string | null = null, indentLevel: number = 0, pos: number = 0) => {
         const code = item.code || "NO-CODE";
         const title = item.nameEn || item.name || "Unnamed";
         const titleEn = item.nameId || item.description || null;
         const notes = item.notes || null;
+
+        // Preserve quantity from item, or fallback to project.meta.estimateValues[code]
+        const fallbackQty = currentMetaEst[code]?.volume;
+        const qtyToSave = (item.quantity !== undefined && item.quantity !== null && item.quantity !== 0)
+          ? item.quantity
+          : (item.volume !== undefined && item.volume !== null && item.volume !== 0)
+          ? item.volume
+          : fallbackQty ?? null;
+
+        const unitToSave = item.unit || currentMetaEst[code]?.unit || null;
 
         rowsToInsert.push({
           id: item.id,
@@ -486,7 +498,8 @@ export default function ProjectSetupWBSPage() {
           parent_id: parentDbId,
           is_leaf: !item.children || item.children.length === 0,
           notes: notes,
-          unit: item.unit || null,
+          unit: unitToSave,
+          quantity: qtyToSave,
           ahsp_id: item.ahsp_id || null,
         });
 
