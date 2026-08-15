@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { Search, Filter, ChevronRight, Eye } from "lucide-react";
 import clsx from "clsx";
-import KickoffDocumentPreview from "@/components/flow/projects/project-detail/tasks/KickoffDocumentPreview";
-import { defaultKickoffData } from "@/components/flow/projects/project-detail/tasks/defaultKickoffData";
+import StageDocumentPreview from "@/components/flow/projects/project-detail/tasks/StageDocumentPreview";
+import { defaultKickoffData } from "@/components/flow/projects/project-detail/tasks/defaultStageDocumentData";
 import { fetchProjectsByWorkspace, fetchAllProjects } from "@/lib/api/projects";
 import { fetchStageTemplates } from "@/lib/api/templates";
 
@@ -69,13 +69,13 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     previewTaskCode: "01-04"
   },
   {
-    id: "tpl-photo-survey",
-    code: "01-02",
-    name: "Photo Survei Tapak",
-    nameId: "Dokumentasi Foto Survei",
-    category: "Photo & Survey",
-    description: "Grid layout for site survey photos, captions, and site observation notes.",
-    previewTaskCode: "04-01"
+    id: "tpl-section-cover",
+    code: "02-00",
+    name: "Section Cover Page",
+    nameId: "Sampul Seksi",
+    category: "Cover & Intro",
+    description: "Dark minimalist section cover divider page with Indonesian section subtitle.",
+    previewTaskCode: "02-00"
   },
   {
     id: "tpl-project-understanding",
@@ -123,8 +123,17 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     previewTaskCode: "02-05"
   },
   {
+    id: "tpl-scope-deliverables",
+    code: "03-01",
+    name: "Kickoff Scope & Deliverables",
+    nameId: "Ruang Lingkup dan Keluaran",
+    category: "Scope of Work",
+    description: "Detailed breakdown of inclusions, exclusions & drawing packages.",
+    previewTaskCode: "03-01"
+  },
+  {
     id: "tpl-drawing-a",
-    code: "02-03",
+    code: "03-02",
     name: "Drawing Concept A",
     nameId: "Gambar Skematik A",
     category: "Drawing & Technical",
@@ -133,7 +142,7 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
   },
   {
     id: "tpl-drawing-b",
-    code: "03-04",
+    code: "03-03",
     name: "Drawing Concept B",
     nameId: "Gambar Skematik B",
     category: "Drawing & Technical",
@@ -141,22 +150,13 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     previewTaskCode: "03-03"
   },
   {
-    id: "tpl-section-cover",
-    code: "02-00",
-    name: "Section Cover Page",
-    nameId: "Sampul Seksi",
-    category: "Cover & Intro",
-    description: "Dark minimalist section cover divider page with Indonesian section subtitle.",
-    previewTaskCode: "02-00"
-  },
-  {
-    id: "tpl-scope-deliverables",
-    code: "03-01",
-    name: "Kickoff Scope & Deliverables",
-    nameId: "Ruang Lingkup dan Keluaran",
-    category: "Scope of Work",
-    description: "Detailed breakdown of inclusions, exclusions & drawing packages.",
-    previewTaskCode: "03-01"
+    id: "tpl-photo-survey",
+    code: "04-01",
+    name: "Photo Survei Tapak",
+    nameId: "Dokumentasi Foto Survei",
+    category: "Photo & Survey",
+    description: "Grid layout for site survey photos, captions, and site observation notes.",
+    previewTaskCode: "04-01"
   },
   {
     id: "tpl-approval",
@@ -346,7 +346,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                 <div
                   key={tpl.id}
                   className={clsx(
-                    "rounded-2xl border transition-all overflow-hidden",
+                    "rounded-3xl border transition-all overflow-hidden",
                     isSelected
                       ? "bg-blue-50/40 dark:bg-blue-950/20 border-blue-600"
                       : "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700"
@@ -384,7 +384,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
 
                   {/* EXPANDABLE PREVIEW CUSTOMIZER FIELDS (DIRECTLY UNDER SELECTED CARD) */}
                   {isSelected && (
-                    <div className="px-3.5 pb-3.5 pt-2.5 border-t border-blue-200/60 dark:border-blue-900/40 bg-white/80 dark:bg-neutral-900/80 space-y-3 animate-in fade-in duration-150">
+                    <div className="px-4 pb-4 pt-3 border-t border-blue-200/60 dark:border-blue-900/40 bg-white/80 dark:bg-neutral-900/80 space-y-3 animate-in fade-in duration-150">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {/* Real Projects Pill Dropdown */}
                         <div className="space-y-1">
@@ -430,6 +430,13 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                           </div>
                         </div>
                       </div>
+
+                      {/* Special info note for Table of Contents */}
+                      {tpl.code === "01-02" && (
+                        <div className="p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-blue-900 dark:text-blue-200 leading-snug">
+                          ℹ️ <strong>Auto-Sync Table of Contents:</strong> In the live project document, this table of contents will automatically aggregate section titles, page numbers, and item order in real-time.
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -474,7 +481,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
           )}
 
           <div className="bg-neutral-100/70 dark:bg-neutral-900/50 p-6 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 flex justify-center">
-            <KickoffDocumentPreview
+            <StageDocumentPreview
               data={livePreviewData}
               activeSection={`KO-${selectedTemplate.code.split("-")[0]}`}
               activeSubTask={selectedTemplate.previewTaskCode}

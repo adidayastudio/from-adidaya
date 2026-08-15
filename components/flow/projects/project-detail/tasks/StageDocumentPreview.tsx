@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { KickoffDocumentData } from "./types";
 import { KO_SECTIONS, koTasks } from "../setup/stages/data/ko";
+import { defaultKickoffData } from "./defaultStageDocumentData";
 import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import clsx from "clsx";
 
@@ -20,7 +21,7 @@ export type DocumentPageItem =
   | { type: "SECTION_COVER"; secCode: string; secNumStr: string; titleEn: string; titleId: string }
   | { type: "TASK_PAGE"; secCode: string; taskCode: string; taskName: string; taskNameId: string; tocPageIndex?: number };
 
-export default function KickoffDocumentPreview({
+export default function StageDocumentPreview({
   data,
   activeSection,
   activeSubTask,
@@ -400,8 +401,88 @@ export default function KickoffDocumentPreview({
                   </div>
                 </div>
               );
-            })() : (
-              /* PLACEHOLDER CONTENT FOR STANDARD TASK PAGES */
+            })() : pageItem.taskCode === "01-03" ? (
+              /* REAL CLEAN TYPOGRAPHY LIST FOR PURPOSE OF STAGE (01-03) */
+              <div className="flex-1 my-auto py-2 space-y-4">
+                <div className="space-y-4">
+                  {(data.purposeList || defaultKickoffData.purposeList).map((item, idx) => (
+                    <div
+                      key={item.id || idx}
+                      className="flex items-baseline gap-3.5 pb-3 border-b border-neutral-100 last:border-0"
+                    >
+                      <span className="font-mono text-xs font-bold text-brand-red shrink-0">
+                        0{idx + 1}
+                      </span>
+                      <div className="space-y-0.5 min-w-0">
+                        <h4 className="text-xs font-bold text-neutral-900 leading-snug">
+                          {item.en}
+                        </h4>
+                        <p className="text-[11px] font-normal italic text-neutral-400 leading-snug">
+                          {item.idText}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : pageItem.taskCode === "01-04" ? (
+              /* CLEAN VERTICAL TIMELINE WITH ACTIVE RED STAGE & STACKED CHILDREN LIST */
+              <div className="flex-1 my-auto py-2 space-y-4">
+                <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2.5 before:bottom-2.5 before:w-0.5 before:bg-neutral-200">
+                  {(data.workflowSteps || defaultKickoffData.workflowSteps).map((step, idx) => {
+                    const isCurrentStage = step.stageName.toLowerCase().includes((data.stageName || "").toLowerCase()) ||
+                                          (data.stageName || "").toLowerCase().includes(step.stageName.toLowerCase());
+
+                    return (
+                      <div key={step.id || idx} className="relative flex items-start gap-3.5">
+                        {/* Timeline Circle Node */}
+                        <span className={clsx(
+                          "absolute -left-6 top-1 w-4 h-4 rounded-full border-2 bg-white flex items-center justify-center font-mono text-[9px] font-bold shrink-0 z-10",
+                          isCurrentStage ? "border-brand-red bg-brand-red text-white" : "border-neutral-300 text-neutral-400"
+                        )} />
+
+                        <div className="flex-1 min-w-0 pb-3 border-b border-neutral-100 last:border-0 space-y-1.5">
+                          {/* Stage Header Row */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className={clsx(
+                                "font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0",
+                                isCurrentStage ? "bg-brand-red text-white" : "bg-neutral-100 text-neutral-600"
+                              )}>
+                                {step.stageCode}
+                              </span>
+                              <h4 className={clsx(
+                                "text-xs font-bold truncate",
+                                isCurrentStage ? "text-brand-red font-black" : "text-neutral-900"
+                              )}>
+                                {step.stageName}
+                              </h4>
+                            </div>
+                            <span className="font-mono text-[10px] font-semibold text-neutral-400 shrink-0">
+                              ⏱ {step.duration}
+                            </span>
+                          </div>
+
+                          {/* Stacked Vertical Children Items (No Columns) */}
+                          <div className="space-y-1 pl-1 pt-0.5">
+                            {step.items?.map((sub, sIdx) => (
+                              <div key={sub.id || sIdx} className="flex items-baseline gap-2 text-[11px] leading-snug">
+                                <span className={clsx("font-bold text-[10px] shrink-0", isCurrentStage ? "text-brand-red" : "text-neutral-400")}>•</span>
+                                <div className="flex items-baseline gap-2 truncate">
+                                  <span className="font-semibold text-neutral-800 shrink-0">{sub.titleEn}</span>
+                                  <span className="font-normal italic text-neutral-400 truncate">({sub.titleId})</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              /* PLACEHOLDER CONTENT FOR OTHER STANDARD TASK PAGES */
               <div className="mb-auto p-8 rounded-2xl bg-neutral-50/80 border border-dashed border-neutral-300 flex flex-col items-center justify-center text-center space-y-2 my-auto min-h-[400px]">
                 <span className="font-mono text-xs font-bold text-neutral-400 uppercase tracking-widest">
                   DOCUMENT CONTENT AREA
@@ -410,7 +491,7 @@ export default function KickoffDocumentPreview({
                   "Content starts from here."
                 </p>
                 <span className="text-xs text-neutral-400 font-medium">
-                  ({pageItem.taskCode} — {pageItem.taskName})
+                  ({pageItem.taskCode} — {displayTaskName})
                 </span>
               </div>
             )}
