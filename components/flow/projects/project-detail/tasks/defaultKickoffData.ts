@@ -2,10 +2,10 @@ import { KickoffDocumentData } from "./types";
 
 export const defaultKickoffData: KickoffDocumentData = {
   // Page 1: Cover
-  projectCode: "#036-PRG",
-  projectName: "Precision Gym 23",
-  projectLocation: "Jakarta Selatan",
-  version: "v1.2025.12.07",
+  projectCode: "#000-ADY",
+  projectName: "[Project Name]",
+  projectLocation: "[Project Location]",
+  version: "v1.YYYY.MM.DD",
   stageName: "Kickoff",
 
   // Page 2: Purpose of Kickoff
@@ -85,108 +85,49 @@ export const defaultKickoffData: KickoffDocumentData = {
     },
   ],
 
-  // Page 5: Scope of Work
+  // Page 5: Scope of Work (5 Standard Disciplines)
   scopeCategories: [
     {
       id: "sc1",
       name: "ARCHITECTURE",
       items: [
-        {
-          id: "sci1",
-          titleEn: "Zoning and space planning",
-          titleId: "Perencanaan pemintakatan ruang",
-          checked: true,
-        },
-        {
-          id: "sci2",
-          titleEn: "Equipment layout",
-          titleId: "Penataan alat",
-          checked: true,
-        },
-        {
-          id: "sci3",
-          titleEn: "Visual concept",
-          titleId: "Konsep visual",
-          checked: true,
-        },
-        {
-          id: "sci4",
-          titleEn: "Material direction",
-          titleId: "Pemilihan material",
-          checked: true,
-        },
+        { id: "sci1", titleEn: "Zoning and space planning", titleId: "Perencanaan pemintakatan ruang", checked: true },
+        { id: "sci2", titleEn: "Equipment layout", titleId: "Penataan alat", checked: true },
+        { id: "sci3", titleEn: "Visual concept", titleId: "Konsep visual", checked: true },
+        { id: "sci4", titleEn: "Material direction", titleId: "Pemilihan material", checked: true },
       ],
     },
     {
       id: "sc2",
-      name: "STRUCTURE AND MEP SYSTEMS",
+      name: "STRUCTURE",
       items: [
-        {
-          id: "sci5",
-          titleEn: "Structural engineering",
-          titleId: "Perhitungan dan rekayasa struktur",
-          checked: true,
-        },
-        {
-          id: "sci6",
-          titleEn: "HVAC System",
-          titleId: "Sistem HVAC",
-          checked: true,
-        },
-        {
-          id: "sci7",
-          titleEn: "Lighting planning",
-          titleId: "Perencanaan pencahayaan",
-          checked: true,
-        },
-        {
-          id: "sci8",
-          titleEn: "Plumbing planning",
-          titleId: "Perencanaan pemipaan",
-          checked: true,
-        },
+        { id: "sci5", titleEn: "Structural engineering", titleId: "Perhitungan dan rekayasa struktur", checked: true },
+        { id: "sci5b", titleEn: "Foundation & framing draft", titleId: "Draf fondasi & rangka", checked: true },
       ],
     },
     {
       id: "sc3",
-      name: "BRANDING",
+      name: "MEP",
       items: [
-        {
-          id: "sci9",
-          titleEn: "Spatial identity",
-          titleId: "Identitas visual ruang",
-          checked: true,
-        },
-        {
-          id: "sci10",
-          titleEn: "Light signage and wayfinding",
-          titleId: "Petunjuk arah sederhana",
-          checked: true,
-        },
+        { id: "sci6", titleEn: "HVAC System", titleId: "Sistem HVAC", checked: true },
+        { id: "sci7", titleEn: "Lighting & Electrical planning", titleId: "Perencanaan pencahayaan & elektrikal", checked: true },
+        { id: "sci8", titleEn: "Plumbing planning", titleId: "Perencanaan pemipaan", checked: true },
       ],
     },
     {
       id: "sc4",
-      name: "PROCUREMENT AND CONSTRUCTION",
+      name: "LANDSCAPE",
       items: [
-        {
-          id: "sci11",
-          titleEn: "Procurement",
-          titleId: "Pengadaan dan pembelian material",
-          checked: true,
-        },
-        {
-          id: "sci12",
-          titleEn: "Construction",
-          titleId: "Pelaksanaan konstruksi",
-          checked: true,
-        },
-        {
-          id: "sci13",
-          titleEn: "Supervision",
-          titleId: "Pengawasan",
-          checked: true,
-        },
+        { id: "sci9", titleEn: "Outdoor zoning & green space", titleId: "Zonasi luar & area hijau", checked: true },
+        { id: "sci10", titleEn: "Hardscape & drainage direction", titleId: "Arahan perkerasan & drainase", checked: true },
+      ],
+    },
+    {
+      id: "sc5",
+      name: "INTERIOR",
+      items: [
+        { id: "sci11", titleEn: "Furniture & Built-in layout", titleId: "Tata letak mebel & kustom", checked: true },
+        { id: "sci12", titleEn: "Ceiling & wall finish direction", titleId: "Arahan plafon & finising dinding", checked: true },
       ],
     },
   ],
@@ -197,7 +138,7 @@ export const defaultKickoffData: KickoffDocumentData = {
       id: "wf1",
       stageCode: "01-KO",
       stageName: "Kick-off",
-      duration: "1 w | 1 mg",
+      duration: "1 week",
       items: [
         { id: "wfi1", titleEn: "Scope of work", titleId: "Ruang lingkup kerja" },
         { id: "wfi2", titleEn: "Initial data", titleId: "Data awal" },
@@ -207,7 +148,7 @@ export const defaultKickoffData: KickoffDocumentData = {
       id: "wf2",
       stageCode: "02-SD",
       stageName: "Schematic Design",
-      duration: "1-2 w | 2-3 mg",
+      duration: "1-2 weeks",
       items: [
         { id: "wfi3", titleEn: "Initial zoning draft", titleId: "Draf zonasi awal" },
         { id: "wfi4", titleEn: "Visual concept and narrative", titleId: "Konsep visual dan narasi" },
@@ -217,7 +158,7 @@ export const defaultKickoffData: KickoffDocumentData = {
       id: "wf3",
       stageCode: "03-DD",
       stageName: "Design Development",
-      duration: "2-3 w | 2-3 mg",
+      duration: "2-3 weeks",
       items: [
         { id: "wfi5", titleEn: "Final layout", titleId: "Tata ruang terpilih" },
         { id: "wfi6", titleEn: "Material and ambience detail", titleId: "Detail material dan suasana" },
@@ -227,7 +168,7 @@ export const defaultKickoffData: KickoffDocumentData = {
       id: "wf4",
       stageCode: "04-ED",
       stageName: "Engineering Drawing",
-      duration: "1-2 m | 1-2 bln",
+      duration: "1-2 months",
       items: [
         { id: "wfi7", titleEn: "Construction drawings", titleId: "Gambar kerja konstruksi" },
       ],
@@ -236,7 +177,7 @@ export const defaultKickoffData: KickoffDocumentData = {
       id: "wf5",
       stageCode: "05-PC",
       stageName: "Procurement",
-      duration: "1-2 w",
+      duration: "1-2 weeks",
       items: [
         { id: "wfi8", titleEn: "Final cost plan", titleId: "Finalisasi RAB" },
         { id: "wfi9", titleEn: "Material procurement", titleId: "Pengadaan material" },

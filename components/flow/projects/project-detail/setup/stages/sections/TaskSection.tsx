@@ -30,19 +30,24 @@ export default function TaskSection({
   }, [totalWeight]);
 
   return (
-    <div className={clsx("border-b border-neutral-100 last:border-0")}>
+    <div className={clsx(
+      "rounded-2xl border transition-all duration-200 mb-4 shadow-2xs",
+      isOpen
+        ? "bg-white/90 dark:bg-neutral-900/90 border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-visible"
+        : "bg-white/60 dark:bg-neutral-900/60 border-neutral-200/60 dark:border-neutral-800/60 hover:bg-white/80 overflow-hidden"
+    )}>
       <div
         onClick={onToggle}
         className={clsx(
-          "flex w-full items-center justify-between gap-4 py-2 transition-colors hover:bg-neutral-50/50 group pr-2 cursor-pointer",
-          isOpen ? "bg-neutral-50/30" : ""
+          "flex w-full items-center justify-between gap-4 px-5 py-3.5 cursor-pointer transition-colors group select-none rounded-t-2xl",
+          isOpen ? "border-b border-neutral-100 dark:border-neutral-800/60 bg-neutral-50/60 dark:bg-neutral-800/40" : ""
         )}
       >
         {/* LEFT: CODE + TITLE */}
-        <div className="flex min-w-0 items-center gap-3 flex-1 pl-2">
+        <div className="flex min-w-0 items-center gap-3.5 flex-1">
           <span className={clsx(
-            "font-mono text-xs font-bold px-2 py-1 transition-all rounded-full flex items-center justify-center min-w-[28px]",
-            isOpen ? "bg-red-600 text-white" : "bg-neutral-100 text-neutral-500"
+            "font-mono text-xs font-bold px-2.5 py-1 transition-all rounded-full flex items-center justify-center min-w-[32px] shadow-2xs",
+            isOpen ? "bg-brand-red text-white" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
           )}>
             {code.split("-").pop()}
           </span>
@@ -53,7 +58,7 @@ export default function TaskSection({
             value={title}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => onTitleChange && onTitleChange(e.target.value)}
-            className="font-medium text-sm text-neutral-900 bg-transparent focus:bg-white focus:ring-1 focus:ring-neutral-200 rounded px-1 -ml-1 w-full max-w-md transition-all focus:outline-none"
+            className="font-bold text-sm text-neutral-900 dark:text-white bg-transparent focus:bg-white dark:focus:bg-neutral-800 focus:ring-1 focus:ring-brand-red/20 rounded-lg px-2.5 py-1 w-full max-w-md transition-all focus:outline-none placeholder-neutral-400"
             placeholder="Section Name..."
           />
         </div>
@@ -64,18 +69,20 @@ export default function TaskSection({
             weight={safeWeight}
             onChange={(val) => onWeightChange && onWeightChange(val)}
           />
-          <ChevronDown
-            className={clsx(
-              "h-4 w-4 text-neutral-400 transition-transform duration-200",
-              isOpen && "rotate-180"
-            )}
-          />
+          <div className="w-7 h-7 rounded-full flex items-center justify-center text-neutral-400 group-hover:text-neutral-700 dark:group-hover:text-neutral-200 transition-colors">
+            <ChevronDown
+              className={clsx(
+                "h-4 w-4 transition-transform duration-200",
+                isOpen && "rotate-180 text-brand-red"
+              )}
+            />
+          </div>
         </div>
       </div>
 
-      {/* CONTENT ANIMATION WRAPPER */}
-      <div className={clsx("overflow-hidden transition-all duration-300 ease-in-out", isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0")}>
-        <div className="pb-4 pt-0 pl-12 pr-0">
+      {/* CONTENT WRAPPER */}
+      <div className={clsx("transition-all duration-300 ease-in-out", isOpen ? "block overflow-visible" : "hidden")}>
+        <div className="p-5 pt-4">
           {children}
         </div>
       </div>

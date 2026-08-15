@@ -16,29 +16,29 @@ export const HO_SECTIONS = [
 
 export const hoTasks: Task[] = [
     // ========== HO-01: General Information (10) ==========
-    { id: "ho-01-01", code: "01-01", name: "Cover", stage: "HO", sectionCode: "HO-01", weight: 1, priority: "low", schemaType: "DELIVERABLE_BASIC" },
-    { id: "ho-01-02", code: "01-02", name: "Table of Contents", stage: "HO", sectionCode: "HO-01", weight: 1, priority: "low", schemaType: "DELIVERABLE_BASIC" },
-    { id: "ho-01-03", code: "01-03", name: "Purpose of HO", stage: "HO", sectionCode: "HO-01", weight: 2, priority: "medium", schemaType: "DESCRIPTION_ONLY" },
-    { id: "ho-01-04", code: "01-04", name: "HO Scope & Deliverables", stage: "HO", sectionCode: "HO-01", weight: 3, priority: "high", schemaType: "DESCRIPTION_ONLY" },
-    { id: "ho-01-05", code: "01-05", name: "Workflow Overview", stage: "HO", sectionCode: "HO-01", weight: 1, priority: "low", schemaType: "DESCRIPTION_ONLY" },
-    { id: "ho-01-06", code: "01-06", name: "Project Understanding", stage: "HO", sectionCode: "HO-01", weight: 2, priority: "high", schemaType: "DESCRIPTION_ONLY" },
+    { id: "ho-01-01", code: "01-01", name: "Cover", nameId: "Sampul", stage: "HO", sectionCode: "HO-01", weight: 1, priority: "low", schemaType: "DELIVERABLE_BASIC" },
+    { id: "ho-01-02", code: "01-02", name: "Table of Contents", nameId: "Daftar Isi", stage: "HO", sectionCode: "HO-01", weight: 1, priority: "low", schemaType: "DELIVERABLE_BASIC" },
+    { id: "ho-01-03", code: "01-03", name: "Purpose of HO", nameId: "Tujuan Serah Terima (Handover)", stage: "HO", sectionCode: "HO-01", weight: 2, priority: "medium", schemaType: "DESCRIPTION_ONLY" },
+    { id: "ho-01-04", code: "01-04", name: "HO Scope & Deliverables", nameId: "Lingkup & Keluaran Serah Terima", stage: "HO", sectionCode: "HO-01", weight: 3, priority: "high", schemaType: "DESCRIPTION_ONLY" },
+    { id: "ho-01-05", code: "01-05", name: "Workflow Overview", nameId: "Tinjauan Alur Kerja", stage: "HO", sectionCode: "HO-01", weight: 1, priority: "low", schemaType: "DESCRIPTION_ONLY" },
+    { id: "ho-01-06", code: "01-06", name: "Project Understanding", nameId: "Pemahaman Proyek", stage: "HO", sectionCode: "HO-01", weight: 2, priority: "high", schemaType: "DESCRIPTION_ONLY" },
 
     // ========== HO-02: Final Inspection (125) ==========
-    { id: "ho-02-01", code: "02-01", name: "Punchlist", stage: "HO", sectionCode: "HO-02", weight: 50, priority: "high", schemaType: "DELIVERABLE_BASIC" },
-    { id: "ho-02-02", code: "02-02", name: "Rectification", stage: "HO", sectionCode: "HO-02", weight: 75, priority: "urgent", schemaType: "DELIVERABLE_BASIC" },
+    { id: "ho-02-01", code: "02-01", name: "Punchlist", nameId: "Daftar Perbaikan (Punchlist)", stage: "HO", sectionCode: "HO-02", weight: 50, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "ho-02-02", code: "02-02", name: "Rectification", nameId: "Perbaikan / Rektifikasi", stage: "HO", sectionCode: "HO-02", weight: 75, priority: "urgent", schemaType: "DELIVERABLE_BASIC" },
 
     // ========== HO-03: As-Built Drawings (200) ==========
-    { id: "ho-03-01", code: "03-01", name: "ARS As-Built Drawing", stage: "HO", sectionCode: "HO-03", weight: 80, priority: "high", schemaType: "DELIVERABLE_BASIC" },
-    { id: "ho-03-02", code: "03-02", name: "STR As-Built Drawing", stage: "HO", sectionCode: "HO-03", weight: 60, priority: "high", schemaType: "DELIVERABLE_BASIC" },
-    { id: "ho-03-03", code: "03-03", name: "MEP As-Built Drawing", stage: "HO", sectionCode: "HO-03", weight: 60, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "ho-03-01", code: "03-01", name: "ARS As-Built Drawing", nameId: "Gambar As-Built Arsitektur", stage: "HO", sectionCode: "HO-03", weight: 80, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "ho-03-02", code: "03-02", name: "STR As-Built Drawing", nameId: "Gambar As-Built Struktur", stage: "HO", sectionCode: "HO-03", weight: 60, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "ho-03-03", code: "03-03", name: "MEP As-Built Drawing", nameId: "Gambar As-Built MEP", stage: "HO", sectionCode: "HO-03", weight: 60, priority: "high", schemaType: "DELIVERABLE_BASIC" },
 
     // ========== HO-04: Documentation (75) ==========
-    { id: "ho-04-01", code: "04-01", name: "Operation & Maintenance Manual", stage: "HO", sectionCode: "HO-04", weight: 45, priority: "high", schemaType: "DELIVERABLE_BASIC" },
-    { id: "ho-04-02", code: "04-02", name: "Warranty Docs", stage: "HO", sectionCode: "HO-04", weight: 30, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "ho-04-01", code: "04-01", name: "Operation & Maintenance Manual", nameId: "Manual Operasi & Pemeliharaan", stage: "HO", sectionCode: "HO-04", weight: 45, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "ho-04-02", code: "04-02", name: "Warranty Docs", nameId: "Dokumen Garansi", stage: "HO", sectionCode: "HO-04", weight: 30, priority: "high", schemaType: "DELIVERABLE_BASIC" },
 
     // ========== HO-05: Handover Approval (90) ==========
-    { id: "ho-05-01", code: "05-01", name: "Client Sign-Off", stage: "HO", sectionCode: "HO-05", weight: 63, priority: "urgent", schemaType: "STATUS_WITH_NOTE" },
-    { id: "ho-05-02", code: "05-02", name: "Project Closure", stage: "HO", sectionCode: "HO-05", weight: 27, priority: "high", schemaType: "STATUS_WITH_NOTE" },
+    { id: "ho-05-01", code: "05-01", name: "Client Sign-Off", nameId: "Persetujuan Klien (Sign-Off)", stage: "HO", sectionCode: "HO-05", weight: 63, priority: "urgent", schemaType: "STATUS_WITH_NOTE" },
+    { id: "ho-05-02", code: "05-02", name: "Project Closure", nameId: "Penutupan Proyek", stage: "HO", sectionCode: "HO-05", weight: 27, priority: "high", schemaType: "STATUS_WITH_NOTE" },
 ];
 // GRAND TOTAL: 500
 

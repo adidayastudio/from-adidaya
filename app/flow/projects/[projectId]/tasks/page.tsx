@@ -36,7 +36,7 @@ export default function ProjectTasksPage() {
       sidebar={<ProjectDetailSidebar />}
       isTransparent
     >
-      <div className="space-y-8 max-w-7xl mx-auto px-4 lg:px-0 animate-in fade-in duration-500">
+      <div className="space-y-8 max-w-4xl mx-auto px-4 md:px-0 animate-in fade-in duration-500">
         <ProjectDetailHeader project={projectForHeader as any} />
         <ProjectTasksEditorContent />
       </div>

@@ -34,6 +34,7 @@ export type Task = {
   id: string;
   code: string;
   name: string;
+  nameId?: string;
   assignee?: string;
   weight?: number;
   deadline?: string;

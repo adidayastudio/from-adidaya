@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, GitBranch, ListOrdered, Target, CheckSquare } from "lucide-react";
+import { ChevronLeft, GitBranch, ListOrdered, Target, CheckSquare, FileText } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -17,13 +17,18 @@ import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
 import StageListTab from "./tabs/StageListTab";
 import StageScopeTab from "./tabs/StageScopeTab";
 import StageTasksTab from "./tabs/StageTasksTab";
+import StageDocumentTab from "./tabs/StageDocumentTab";
+import StageContentTemplateTab from "./tabs/StageContentTemplateTab";
+import { Layout } from "lucide-react";
 
-type TabId = "list" | "scope" | "tasks";
+type TabId = "list" | "scope" | "tasks" | "document" | "content";
 
 const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
     { id: "list", label: "Stage List", icon: ListOrdered, description: "Master sequence of project phases. Determines default workflow." },
     { id: "scope", label: "Scope Stages", icon: Target, description: "Map stages to Scopes. Defines which stages appear for each project type." },
     { id: "tasks", label: "Task Templates", icon: CheckSquare, description: "Standard deliverables per stage. Auto-populates task lists on stage start." },
+    { id: "document", label: "Document Template", icon: FileText, description: "Configure document page templates per stage. Defines default content for auto-generated reports." },
+    { id: "content", label: "Content Template", icon: Layout, description: "Reusable page content block library. Pick presets to restore or build pages." },
 ];
 
 export default function StagesPage() {
@@ -65,7 +70,7 @@ export default function StagesPage() {
             ]} />
 
             <PageWrapper sidebar={<ProjectsSidebar />}>
-                <div className="space-y-6 w-full animate-in fade-in duration-500">
+                <div className="space-y-6 w-full max-w-4xl mx-auto animate-in fade-in duration-500">
 
                     {/* Header */}
                     <div className="flex flex-col gap-2">
@@ -137,6 +142,20 @@ export default function StagesPage() {
                                 )}
                                 {activeTab === "tasks" && (
                                     <StageTasksTab
+                                        workspaceId={workspaceId}
+                                        projectTypeId={selectedTypeId}
+                                        setHeaderActions={setHeaderActions}
+                                    />
+                                )}
+                                {activeTab === "document" && (
+                                    <StageDocumentTab
+                                        workspaceId={workspaceId}
+                                        projectTypeId={selectedTypeId}
+                                        setHeaderActions={setHeaderActions}
+                                    />
+                                )}
+                                {activeTab === "content" && (
+                                    <StageContentTemplateTab
                                         workspaceId={workspaceId}
                                         projectTypeId={selectedTypeId}
                                         setHeaderActions={setHeaderActions}

@@ -47,7 +47,7 @@ export default function WorkStructurePage() {
             ]} />
 
             <PageWrapper sidebar={<ProjectsSidebar />}>
-                <div className="space-y-6 w-full animate-in fade-in duration-500">
+                <div className="space-y-6 w-full max-w-4xl mx-auto animate-in fade-in duration-500">
 
                     {/* Header */}
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

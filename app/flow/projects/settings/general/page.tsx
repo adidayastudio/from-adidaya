@@ -47,7 +47,7 @@ export default function GeneralSettingsPage() {
                 { label: "General" }
             ]} />
             <PageWrapper sidebar={<ProjectsSidebar />}>
-                <div className="space-y-6 w-full animate-in fade-in duration-500">
+                <div className="space-y-6 w-full max-w-4xl mx-auto animate-in fade-in duration-500">
                     {/* Header */}
                     <div className="flex flex-col gap-2">
                         <Link href="/project/settings" className="lg:hidden w-fit">

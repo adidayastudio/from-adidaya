@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
@@ -79,84 +79,102 @@ export default function ProjectDetailHeader({ project }: { project: ProjectHeade
     return () => window.removeEventListener("scroll", handleScroll, true);
   }, []);
 
+  // Pages where sticky header is disabled (scrolls naturally to maximize screen space)
+  const isHeavyContentPage = useMemo(() => {
+    const p = pathname.toLowerCase();
+    return (
+      p.includes('/wbs') ||
+      p.includes('/stages') ||
+      p.includes('/rab') ||
+      p.includes('/volume-calc') ||
+      p.includes('/schedule') ||
+      p.includes('/tasks/editor')
+    );
+  }, [pathname]);
+
   return (
-    <div className={clsx(
-      "sticky top-0 z-20 transition-all duration-300",
-      isScrolled
-        ? "px-6 py-4 bg-white/70 dark:bg-neutral-900/60 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] mt-2"
-        : "px-0 pb-4 pt-2 bg-transparent border-transparent shadow-none mt-0"
-    )}>
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 lg:gap-8">
-        {/* ================= LEFT ================= */}
-        <div className="space-y-2 min-w-0 flex-1">
-
-          {/* Main Title */}
-          <div className="flex items-center gap-3 group">
-            <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 tracking-tight leading-none group-hover:text-neutral-700 transition-colors cursor-default line-clamp-1 lg:line-clamp-none">
-              {name}
-            </h1>
-            <div className={clsx("w-2 h-2 rounded-full ring-2 ring-white", theme.dot)} />
-          </div>
-
-          {/* Meta Row: Project No • Code • Stage */}
-          <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-neutral-600">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 text-xs font-semibold uppercase tracking-wider">
-              #{projectNo}
-            </span>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 text-xs font-semibold uppercase tracking-wider">
-              {code}
-            </span>
-
-            <span className="text-neutral-300 mx-1 hidden sm:inline">•</span>
-
-            <span className={clsx("uppercase tracking-wide text-xs font-bold", theme.badge.split(" ")[1])}>
-              {stageLabel}
-            </span>
-
-            <span className="text-neutral-300 mx-1 hidden sm:inline">•</span>
-
-            <span className="text-neutral-500 font-normal text-xs sm:text-sm">
-              {type === "design-only" ? "Design Only" : type === "build-only" ? "Build Only" : "Design & Build"}
-            </span>
-          </div>
-        </div>
-
-        {/* ================= RIGHT (Progress) ================= */}
-        <div className="w-full lg:w-[280px] shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-neutral-100">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Overall Progress</span>
-            <span className="text-lg font-bold text-neutral-900 leading-none">{progress}%</span>
-          </div>
-
-          {/* Bar */}
-          <div className="h-2 w-full rounded-full bg-neutral-200 overflow-hidden mb-2">
-            <div
-              className={clsx("h-full rounded-full transition-all duration-500", theme.dot)}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-
-          {/* Mini Stats */}
-          <div className="flex justify-between items-center text-[10px] uppercase font-medium text-neutral-400 tracking-wide">
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
-              <span>Design {design}%</span>
+    <>
+      {/* HEADER CARD */}
+      <div
+        className={clsx(
+          "transition-all duration-300",
+          !isHeavyContentPage && "lg:sticky lg:top-0 lg:z-20",
+          isScrolled
+            ? "px-6 py-4 bg-white/70 dark:bg-neutral-900/60 backdrop-blur-md rounded-2xl border border-white/60 dark:border-white/5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] mt-2"
+            : "px-0 pb-4 pt-2 bg-transparent border-transparent shadow-none mt-0"
+        )}
+      >
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 lg:gap-8">
+          {/* ================= LEFT ================= */}
+          <div className="space-y-2 min-w-0 flex-1">
+            {/* Main Title */}
+            <div className="flex items-center gap-3 group">
+              <h1 className="text-2xl lg:text-3xl font-bold text-neutral-900 tracking-tight leading-none group-hover:text-neutral-700 transition-colors cursor-default line-clamp-1 lg:line-clamp-none">
+                {name}
+              </h1>
+              <div className={clsx("w-2 h-2 rounded-full ring-2 ring-white", theme.dot)} />
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
-              <span>Const. {construction}%</span>
+
+            {/* Meta Row: Project No • Code • Stage */}
+            <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-neutral-600">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 text-xs font-semibold uppercase tracking-wider">
+                #{projectNo}
+              </span>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-600 text-xs font-semibold uppercase tracking-wider">
+                {code}
+              </span>
+
+              <span className="text-neutral-300 mx-1 hidden sm:inline">•</span>
+
+              <span className={clsx("uppercase tracking-wide text-xs font-bold", theme.badge.split(" ")[1])}>
+                {stageLabel}
+              </span>
+
+              <span className="text-neutral-300 mx-1 hidden sm:inline">•</span>
+
+              <span className="text-neutral-500 font-normal text-xs sm:text-sm">
+                {type === "design-only" ? "Design Only" : type === "build-only" ? "Build Only" : "Design & Build"}
+              </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
-              <span>Paid {budget}%</span>
+          </div>
+
+          {/* ================= RIGHT (Progress) ================= */}
+          <div className="w-full lg:w-[280px] shrink-0 pt-4 lg:pt-0 border-t lg:border-t-0 border-neutral-100">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">Overall Progress</span>
+              <span className="text-lg font-bold text-neutral-900 leading-none">{progress}%</span>
+            </div>
+
+            {/* Bar */}
+            <div className="h-2 w-full rounded-full bg-neutral-200 overflow-hidden mb-2">
+              <div
+                className={clsx("h-full rounded-full transition-all duration-500", theme.dot)}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            {/* Mini Stats */}
+            <div className="flex justify-between items-center text-[10px] uppercase font-medium text-neutral-400 tracking-wide">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-400"></div>
+                <span>Design {design}%</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-400"></div>
+                <span>Const. {construction}%</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
+                <span>Paid {budget}%</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ================= MOBILE / TABLET PILL TABS NAVIGATION ================= */}
-      <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto mt-4 pt-3 pb-1 border-t border-neutral-100 dark:border-neutral-800 hide-scrollbar">
+      {/* ================= MOBILE / TABLET FLOATING PILL TABS NAVIGATION (OUTSIDE HEADER CARD) ================= */}
+      <div className="lg:hidden sticky top-3 z-30 flex items-center gap-1.5 overflow-x-auto my-3 py-2 px-3 bg-white/80 dark:bg-neutral-900/80 backdrop-blur-xl rounded-full border border-white/60 dark:border-white/10 shadow-[0_4px_20px_rgba(0,0,0,0.06)] hide-scrollbar">
         {[
           { label: "Overview", href: `${basePath}` },
           { label: "Info", href: `${basePath}/setup/info` },
@@ -171,7 +189,7 @@ export default function ProjectDetailHeader({ project }: { project: ProjectHeade
           { label: "Reports", href: `${basePath}/reports` },
         ].map((tab) => {
           const isExact = tab.href === basePath;
-          const active = isExact 
+          const active = isExact
             ? (pathname === basePath || pathname === `${basePath}/`)
             : (pathname?.startsWith(tab.href));
 
@@ -180,10 +198,10 @@ export default function ProjectDetailHeader({ project }: { project: ProjectHeade
               key={tab.label}
               href={tab.href}
               className={clsx(
-                "px-3 py-1.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-all shrink-0 border",
+                "px-3.5 py-1.5 rounded-full text-[12px] font-bold whitespace-nowrap transition-all shrink-0",
                 active
-                  ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border-neutral-900 dark:border-white shadow-sm"
-                  : "bg-white/80 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 border-black/[0.05] dark:border-white/[0.08] hover:bg-neutral-100"
+                  ? "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 shadow-xs"
+                  : "text-neutral-600 dark:text-neutral-300 hover:bg-black/5 dark:hover:bg-white/10"
               )}
             >
               {tab.label}
@@ -191,6 +209,6 @@ export default function ProjectDetailHeader({ project }: { project: ProjectHeade
           );
         })}
       </div>
-    </div>
+    </>
   );
 }

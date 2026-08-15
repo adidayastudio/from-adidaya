@@ -23,7 +23,7 @@ export default function ReportsSettingsPage() {
         <div className="min-h-screen bg-transparent px-5 md:px-0 py-6 md:py-0">
             <Breadcrumb items={[{ label: "Flow" }, { label: "Projects" }, { label: "Settings", href: "/flow/projects/settings" }, { label: "Reports" }]} />
             <PageWrapper sidebar={<ProjectsSidebar />}>
-                <div className="space-y-6 w-full">
+                <div className="space-y-6 w-full max-w-4xl mx-auto animate-in fade-in duration-500">
                     {/* Header */}
                     <div className="flex flex-col gap-2">
                         <Link href="/project/settings" className="lg:hidden w-fit">

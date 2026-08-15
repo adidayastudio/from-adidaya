@@ -757,3 +757,58 @@ button,
 * {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
 }
+
+/* =========================================
+   PRINT / PDF EXPORT MEDIA STYLES
+   ========================================= */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  /* Hide app navigation chrome, header, sidebar, editor panel, and controls */
+  header,
+  nav,
+  aside,
+  .no-print,
+  [role="navigation"] {
+    display: none !important;
+  }
+
+  /* Force display of the editor split grid container during print */
+  body,
+  main,
+  #app-root,
+  .grid,
+  .printable-document {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide the left editor panel (column 4) when printing */
+  .lg\:col-span-4 {
+    display: none !important;
+  }
+
+  /* Make preview panel (column 8) span full width */
+  .lg\:col-span-8 {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
+
+  /* Ensure card container overflow is unclipped */
+  .max-h-\[85vh\] {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}

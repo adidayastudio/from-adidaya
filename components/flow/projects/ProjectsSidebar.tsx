@@ -61,6 +61,10 @@ export default function ProjectsSidebar() {
       return true;
     }
     
+    if (path.includes("general") && (pathname === "/project/settings" || pathname === "/flow/projects/settings" || pathname.includes("general"))) {
+      return true;
+    }
+    
     return pathname.startsWith(path);
   };
 

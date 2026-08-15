@@ -182,6 +182,7 @@ export default function StageTasksTab({ workspaceId, projectTypeId, headerConten
                             id: t.id,
                             code: "XX-XX", // Will be recomputed
                             name: t.taskName,
+                            nameId: (t as any).taskNameId || matchingSeedTask?.nameId || t.taskName,
                             stage: activeStage,
                             sectionCode: sCode,
                             weight: t.weightDefault,
@@ -198,6 +199,11 @@ export default function StageTasksTab({ workspaceId, projectTypeId, headerConten
                         const sCode = linkedSection ? linkedSection.code : task.sectionCode;
                         if (!groupedTasks[sCode]) groupedTasks[sCode] = [];
                         groupedTasks[sCode].push({ ...task, sectionCode: sCode });
+                    });
+
+                    // Recompute task codes (01-01, 01-02, etc.) per section
+                    Object.keys(groupedTasks).forEach(sCode => {
+                        groupedTasks[sCode] = recomputeHierarchy(groupedTasks[sCode], sCode);
                     });
 
                     setLocalSections(uiSections);
@@ -237,6 +243,7 @@ export default function StageTasksTab({ workspaceId, projectTypeId, headerConten
                         id: `seed-task-${t.id}`,
                         code: t.code,
                         name: t.name,
+                        nameId: t.nameId || t.name,
                         stage: stageKey as any,
                         sectionCode: t.sectionCode,
                         weight: t.weight,
@@ -284,10 +291,13 @@ export default function StageTasksTab({ workspaceId, projectTypeId, headerConten
                         id: `seed-task-${t.id}`, // Ensure new ID
                         code: t.code,
                         name: t.name,
+                        nameId: t.nameId,
                         stage: activeStage,
                         sectionCode: t.sectionCode,
                         weight: t.weight,
                         priority: t.priority as any || "low",
+                        schemaType: t.schemaType,
+                        inputConfig: t.inputConfig,
                         parentId: undefined
                     };
                     if (!grouped[t.sectionCode]) grouped[t.sectionCode] = [];
@@ -338,32 +348,54 @@ export default function StageTasksTab({ workspaceId, projectTypeId, headerConten
             });
 
             // Pass 2: Build Payload
-            const finalTasksPayload: StageTaskTemplate[] = tasksToSave.map((t, idx) => {
+            const finalTasksPayload: (StageTaskTemplate & { taskNameId?: string })[] = tasksToSave.map((t, idx) => {
                 const sectionId = sectionsPayload.find(s => s.sectionCode === t.sectionCode)?.id;
                 return {
                     id: t.newId,
                     stageId: activeStageId, // Use UUID
                     taskName: t.name,
+                    taskNameId: t.nameId || t.name,
                     disciplineCode: "ALL",
                     weightDefault: t.weight || 0,
-                    sequenceOrder: idx, // This idx is global? No, it should be relative or global sequence. 
-                    // We need correct sequence.
-                    // Actually, SequenceOrder in DB is Int.
-                    // We can just use the loop index if we flatten carefully or maintain order.
+                    sequenceOrder: idx,
                     isMandatory: false,
                     parentId: t.parentId ? taskMap.get(t.parentId) : undefined, // Resolve new Parent ID
                     sectionId: sectionId
                 };
             });
 
-            await Promise.all([
-                bulkUpdateStageSections(activeStageId, sectionsPayload),
-                bulkUpdateStageTasks(activeStageId, finalTasksPayload)
-            ]);
+            // Execute sequentially to guarantee sections exist before tasks link to section IDs
+            await bulkUpdateStageSections(activeStageId, sectionsPayload);
+            await bulkUpdateStageTasks(activeStageId, finalTasksPayload);
 
             setIsDirty(false);
-            // toast.success("Configuration saved"); // Assuming toast is available
             console.log("Saved successfully");
+
+            // Update in-memory state with assigned IDs and recomputed hierarchy codes
+            const newAllTasks: Record<string, Task[]> = {};
+            Object.entries(allTasks).forEach(([sCode, tasks]) => {
+                const updatedTasks = tasks.map(t => ({
+                    ...t,
+                    id: taskMap.get(t.id) || t.id,
+                    sectionId: sectionsPayload.find(s => s.sectionCode === sCode)?.id || t.sectionId
+                }));
+                newAllTasks[sCode] = recomputeHierarchy(updatedTasks, sCode);
+            });
+            setAllTasks(newAllTasks);
+
+            // Sync to localStorage draft for instant live update in Document Template
+            if (typeof window !== "undefined") {
+                const flatTasks = Object.values(newAllTasks).flat().map(t => ({
+                    id: t.id,
+                    code: t.code,
+                    name: t.name,
+                    taskName: t.name,
+                    taskNameId: t.nameId || t.name,
+                    sectionCode: t.sectionCode,
+                    sectionId: t.sectionId
+                }));
+                localStorage.setItem(`tasks_draft_${activeStage}`, JSON.stringify(flatTasks));
+            }
 
             // Reload to get real IDs?
             // Optionally reload. 
@@ -374,7 +406,7 @@ export default function StageTasksTab({ workspaceId, projectTypeId, headerConten
             // Just let the user know.
 
         } catch (e) {
-            console.error("Save failed", e);
+            console.error("Save failed", e instanceof Error ? e.message : JSON.stringify(e, null, 2));
             // toast.error("Save failed"); // Assuming toast is available
         } finally {
             setIsLoading(false);
@@ -883,7 +915,7 @@ export default function StageTasksTab({ workspaceId, projectTypeId, headerConten
                 <div className="w-full md:w-auto">{headerContent}</div>
             </div>
 
-            <div className="space-y-0 divide-y divide-neutral-100 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="space-y-3.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 {currentSections.map(section => renderSection(section.code, section.title))}
             </div>
 
