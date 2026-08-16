@@ -294,6 +294,82 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     description: "Landscape wide 2-3 column matrix grid for space requirements with column count toggle.",
     previewTaskCode: "02-04"
   },
+
+  // --- SECTION 02 KOP V2 PORTRAIT TEMPLATES (02-01-V2P to 02-04-V2P) ---
+  {
+    id: "tpl-project-understanding-v2p",
+    code: "02-01-V2P",
+    name: "Project Understanding Kop v2 (Portrait)",
+    nameId: "Pemahaman Proyek Kop v2 (Portrait)",
+    category: "Client Brief and Objectives",
+    description: "Key architectural concept & design direction breakdown in Kop v2 portrait framework.",
+    previewTaskCode: "02-01"
+  },
+  {
+    id: "tpl-client-needs-v2p",
+    code: "02-02-V2P",
+    name: "Client Needs & Vision Kop v2 (Portrait)",
+    nameId: "Visi & Kebutuhan Klien Kop v2 (Portrait)",
+    category: "Client Brief and Objectives",
+    description: "Client spatial & stylistic requirements questionnaire in Kop v2 portrait framework.",
+    previewTaskCode: "02-02"
+  },
+  {
+    id: "tpl-functional-req-v2p",
+    code: "02-03-V2P",
+    name: "Functional Requirements Kop v2 (Portrait)",
+    nameId: "Kebutuhan Fungsional Space Kop v2 (Portrait)",
+    category: "Client Brief and Objectives",
+    description: "Space requirements & occupancy count list in Kop v2 portrait framework.",
+    previewTaskCode: "02-03"
+  },
+  {
+    id: "tpl-functional-req-matrix-v2p",
+    code: "02-04-V2P",
+    name: "Functional Requirements Matrix Kop v2 (Portrait)",
+    nameId: "Matriks Kebutuhan Fungsional Kop v2 (Portrait)",
+    category: "Client Brief and Objectives",
+    description: "Detailed space requirement matrix table in Kop v2 portrait framework.",
+    previewTaskCode: "02-04"
+  },
+
+  // --- SECTION 02 KOP V2 LANDSCAPE TEMPLATES (02-01-V2L to 02-04-V2L) ---
+  {
+    id: "tpl-project-understanding-v2l",
+    code: "02-01-V2L",
+    name: "Project Understanding Kop v2 (Landscape)",
+    nameId: "Pemahaman Proyek Kop v2 (Landscape)",
+    category: "Client Brief and Objectives",
+    description: "2-column concept breakdown with right Kop v2 sidebar in landscape framework.",
+    previewTaskCode: "02-01"
+  },
+  {
+    id: "tpl-client-needs-v2l",
+    code: "02-02-V2L",
+    name: "Client Needs & Vision Kop v2 (Landscape)",
+    nameId: "Visi & Kebutuhan Klien Kop v2 (Landscape)",
+    category: "Client Brief and Objectives",
+    description: "Client requirements summary with right Kop v2 sidebar in landscape framework.",
+    previewTaskCode: "02-02"
+  },
+  {
+    id: "tpl-functional-req-v2l",
+    code: "02-03-V2L",
+    name: "Functional Requirements Kop v2 (Landscape)",
+    nameId: "Kebutuhan Fungsional Space Kop v2 (Landscape)",
+    category: "Client Brief and Objectives",
+    description: "Space requirement matrix table with right Kop v2 sidebar in landscape framework.",
+    previewTaskCode: "02-03"
+  },
+  {
+    id: "tpl-functional-req-matrix-v2l",
+    code: "02-04-V2L",
+    name: "Functional Requirements Matrix Kop v2 (Landscape)",
+    nameId: "Matriks Kebutuhan Fungsional Kop v2 (Landscape)",
+    category: "Client Brief and Objectives",
+    description: "Multi-column space matrix with right Kop v2 sidebar in landscape framework.",
+    previewTaskCode: "02-04"
+  },
   // --- SECTION 03 SCOPE OF WORK PORTRAIT TEMPLATES (03-01-P to 03-04-P) ---
   {
     id: "tpl-design-scope-p",
@@ -677,13 +753,14 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
 
     let matchesFormat = true;
     if (selectedFormat === "V1-P") {
-      matchesFormat = (tpl.code.endsWith("-P") && !tpl.code.includes("-v2")) || (!tpl.code.endsWith("-L") && !tpl.code.includes("-v2"));
+      matchesFormat = (tpl.code.endsWith("-P") && !tpl.code.includes("V2") && !tpl.code.includes("-v2")) || 
+                      (!tpl.code.endsWith("-L") && !tpl.code.includes("V2") && !tpl.code.includes("-v2") && !tpl.code.endsWith("-V2P") && !tpl.code.endsWith("-V2L"));
     } else if (selectedFormat === "V1-L") {
-      matchesFormat = tpl.code.endsWith("-L") && !tpl.code.includes("-v2");
+      matchesFormat = tpl.code.endsWith("-L") && !tpl.code.includes("V2") && !tpl.code.includes("-v2") && !tpl.code.endsWith("-V2L");
     } else if (selectedFormat === "V2-P") {
-      matchesFormat = tpl.code.includes("-v2-P") || tpl.code.endsWith("-V2P");
+      matchesFormat = tpl.code.includes("-v2-P") || tpl.code.includes("-V2-P") || tpl.code.endsWith("-V2P") || tpl.code.endsWith("-v2p");
     } else if (selectedFormat === "V2-L") {
-      matchesFormat = tpl.code.includes("-v2-L") || tpl.code.endsWith("-V2L");
+      matchesFormat = tpl.code.includes("-v2-L") || tpl.code.includes("-V2-L") || tpl.code.endsWith("-V2L") || tpl.code.endsWith("-v2l");
     }
 
     return matchesSearch && matchesCategory && matchesFormat;
@@ -745,8 +822,8 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                 { id: "ALL", label: "All Formats" },
                 { id: "V1-P", label: "V1 · Portrait" },
                 { id: "V1-L", label: "V1 · Landscape" },
-                { id: "V2-P", label: "V2 (Gambar Kerja) · Portrait" },
-                { id: "V2-L", label: "V2 (Gambar Kerja) · Landscape" }
+                { id: "V2-P", label: "V2 · Portrait" },
+                { id: "V2-L", label: "V2 · Landscape" }
               ].map((fmt) => (
                 <button
                   key={fmt.id}
@@ -969,7 +1046,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Project Understanding (02-01) */}
-                      {tpl.code.startsWith("02-01") && (
+                      {(tpl.code.startsWith("02-01") || tpl.code.endsWith("02-01-V2P") || tpl.code.endsWith("02-01-V2L")) && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1019,7 +1096,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Client's Needs & Vision (02-02) */}
-                      {tpl.code.startsWith("02-02") && (
+                      {(tpl.code.startsWith("02-02") || tpl.code.endsWith("02-02-V2P") || tpl.code.endsWith("02-02-V2L")) && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1051,7 +1128,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                         </div>
                       )}
                       {/* Sample Input Content ONLY for Functional Requirements (02-03) */}
-                      {tpl.code.startsWith("02-03") && (
+                      {(tpl.code.startsWith("02-03") || tpl.code.endsWith("02-03-V2P") || tpl.code.endsWith("02-03-V2L")) && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1093,55 +1170,58 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                         </div>
                       )}
 
-                      {/* Sample Input Content ONLY for Budget Expectation (02-04) / Target & Formula */}
-                      {(tpl.code === "02-04" || tpl.code.startsWith("02-04")) && (
+                      {/* Sample Input Content ONLY for Functional Requirements Matrix (02-04) */}
+                      {(tpl.code === "02-04" || tpl.code.startsWith("02-04") || tpl.code.endsWith("02-04-V2P") || tpl.code.endsWith("02-04-V2L")) && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
                           </span>
 
                           <div className="space-y-2 text-xs">
-                            {/* Header Inputs: Client Ceiling & Area x Price Formula */}
+                            {/* Matrix Zone Card Input */}
                             <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
-                              <span className="text-[10px] font-bold text-brand-red uppercase block">1. Target & Formula</span>
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">Zone Matrix Card</span>
                               <div className="space-y-1 pt-0.5">
                                 <div className="flex items-center justify-between gap-1.5">
-                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CLIENT CEILING</span>
-                                  <span className="text-xs font-mono font-bold text-neutral-900 dark:text-neutral-100">Rp 2.000.000.000</span>
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ZONE</span>
+                                  <span className="text-xs font-bold text-brand-red">01. Ground Floor Zone</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
-                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">AREA (AUTO)</span>
-                                  <span className="text-xs font-mono font-bold text-brand-red">450 m²</span>
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ROOM 1</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate">Lobby & Reception (45 m²)</span>
                                 </div>
                                 <div className="flex items-center justify-between gap-1.5">
-                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">EST. PRICE / M²</span>
-                                  <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">Rp 3.333.333 / m²</span>
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ROOM 2</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate">Locker & Shower Room (60 m²)</span>
                                 </div>
                               </div>
                             </div>
 
-                            {/* Discipline Row Input */}
-                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
-                              <span className="text-[10px] font-bold text-brand-red uppercase block">2. Discipline Row</span>
-                              <div className="space-y-1 pt-0.5">
-                                <div className="flex items-center justify-between gap-1.5">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CATEGORY</span>
-                                    <span className="text-xs font-bold text-brand-red">Structure</span>
+                            {/* Column Controls */}
+                            <div className="space-y-2 pt-1">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                                Sample Input Content & Column Controls
+                              </span>
+                              <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                                <span className="text-[10px] font-bold text-brand-red uppercase block">Matrix Column Selector (2 - 3 Columns)</span>
+                                <div className="flex items-center justify-between gap-1.5 pt-0.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">GRID COLUMNS</span>
+                                  <div className="flex items-center gap-2">
+                                    {[2, 3].map((c) => (
+                                      <button
+                                        key={c}
+                                        onClick={() => setMatrixColCount(c)}
+                                        className={clsx(
+                                          "w-7 h-7 rounded-full text-xs font-mono font-bold flex items-center justify-center transition-all",
+                                          matrixColCount === c
+                                            ? "bg-brand-red text-white shadow-xs"
+                                            : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 hover:bg-neutral-200"
+                                        )}
+                                      >
+                                        {c}
+                                      </button>
+                                    ))}
                                   </div>
-                                  <span className="text-[10px] font-mono font-bold text-neutral-600 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded shrink-0">33.3% Weight</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
-                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · EN</span>
-                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Foundation, concrete & steel framework</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · ID</span>
-                                  <span className="text-[11px] font-normal italic text-neutral-500">Pondasi, beton bertulang & rangka baja</span>
-                                </div>
-                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
-                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TARGET BUDGET</span>
-                                  <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">Rp 500.000.000</span>
                                 </div>
                               </div>
                             </div>
@@ -1694,16 +1774,16 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
             <StageDocumentPreview
               data={{
                 ...livePreviewData,
-                frameworkVersion: selectedTemplate.code.includes("-v2") || selectedFormat.startsWith("V2") ? "v2" : "v1"
+                frameworkVersion: selectedTemplate.code.includes("V2") || selectedTemplate.code.includes("-v2") || selectedFormat.startsWith("V2") ? "v2" : "v1"
               }}
               activeSection={`KO-${selectedTemplate.code.split("-")[0]}`}
               activeSubTask={
                 selectedTemplate.code === "02-05"
                   ? activeSubPage === 2 ? "02-05_p2" : "02-05"
-                  : selectedTemplate.previewTaskCode || selectedTemplate.code
+                  : selectedTemplate.code
               }
               customOrientation={
-                selectedTemplate.code.endsWith("-L") || drawingOrientation === "landscape"
+                selectedTemplate.code.endsWith("-L") || selectedTemplate.code.endsWith("-V2L") || selectedTemplate.code.includes("-v2-L") || selectedFormat.endsWith("-L") || drawingOrientation === "landscape"
                   ? "landscape"
                   : "portrait"
               }

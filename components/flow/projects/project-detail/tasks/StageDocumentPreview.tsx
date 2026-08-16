@@ -637,125 +637,6 @@ export default function StageDocumentPreview({
         }
 
         if (pageItem.taskCode === "01-01" || pageItem.taskCode === "02-00") {
-          if (frameworkVersion === "v2" && !isLandscape) {
-            return (
-              <div className="absolute inset-0 w-full h-full bg-white p-4 flex flex-col gap-4 overflow-hidden select-none">
-                {/* CANVAS WORKSPACE: 01-01 SECTION COVER CONTENT */}
-                <div className="flex-1 w-full relative bg-white p-8 flex flex-col justify-center items-center text-center">
-                  <div className="space-y-3 max-w-lg my-auto">
-                    <span className="font-mono text-xs font-black text-brand-red uppercase tracking-widest block">
-                      SECTION 01
-                    </span>
-                    <h1 className="text-3xl font-black text-neutral-900 leading-tight">
-                      General Information
-                    </h1>
-                    <p className="text-sm font-semibold text-neutral-500 italic">
-                      Informasi Umum Proyek
-                    </p>
-                  </div>
-                </div>
-
-                {/* BOTTOM HORIZONTAL KOP TITLE BLOCK (STRICT EQUAL 4-ROW HEIGHT GRID ~120PX / 3CM) */}
-                <div className="h-[120px] max-h-[3cm] w-full border-t-2 border-neutral-900 pt-1 grid grid-cols-12 gap-x-2 text-[8px] shrink-0 items-stretch">
-                  {/* COL 1: PROJECTS (2 ROWS), LOCATION (1 ROW), STAGE (1 ROW) - SPANS 3 COLS */}
-                  <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
-                    {/* Row 1 & 2: Projects (RATA ATAS BARIS) */}
-                    <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
-                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Projects</span>
-                      <span className="font-mono text-[7.5px] font-bold text-neutral-800 leading-tight mt-0.5">{data.projectCode || "039-RBH"} </span>
-                      <span className="font-extrabold text-[9px] text-neutral-900 leading-tight truncate">{data.projectName || "Ruby House"}</span>
-                    </div>
-
-                    {/* Row 3: Location */}
-                    <div className="border-b border-neutral-100 flex flex-col justify-center">
-                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Location</span>
-                      <span className="font-bold text-[8px] text-neutral-900 block truncate">{data.projectLocation || "Serang, Banten"}</span>
-                    </div>
-
-                    {/* Row 4: Stage */}
-                    <div className="flex flex-col justify-center">
-                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Stage</span>
-                      <span className="font-bold text-[8px] text-brand-red block leading-tight truncate">{data.stageName || "Kickoff"}</span>
-                    </div>
-                  </div>
-
-                  {/* COL 2: OWNER (ROW 1), ARCHITECT (ROW 2), STRUCTURAL (ROW 3), MEP (ROW 4) - SPANS 3 COLS */}
-                  <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5 text-[7.5px]">
-                    {/* Row 1: Owner */}
-                    <div className="flex items-center justify-between border-b border-neutral-100">
-                      <span className="font-medium text-neutral-400">Owner</span>
-                      <span className="font-bold text-neutral-900 truncate">{data.clientName || "-"}</span>
-                    </div>
-                    {/* Row 2: Architect */}
-                    <div className="flex items-center justify-between border-b border-neutral-100">
-                      <span className="font-medium text-neutral-400">Architect</span>
-                      <span className="font-bold text-neutral-900 truncate">Adidaya Studio</span>
-                    </div>
-                    {/* Row 3: Structural */}
-                    <div className="flex items-center justify-between border-b border-neutral-100">
-                      <span className="font-medium text-neutral-400">Structural</span>
-                      <span className="font-medium text-neutral-600">-</span>
-                    </div>
-                    {/* Row 4: MEP */}
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-neutral-400">MEP</span>
-                      <span className="font-medium text-neutral-600">-</span>
-                    </div>
-                  </div>
-
-                  {/* COL 3: DRAWING TITLE (ROWS 1-2), SCALE/REV/DATE (ROW 3), PA/DRW (ROW 4) - SPANS 3 COLS */}
-                  <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
-                    {/* Row 1 & 2: Drawing Title (RATA ATAS BARIS) */}
-                    <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
-                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Title</span>
-                      <h3 className="text-[10.5px] font-black text-neutral-900 leading-tight mt-1">General Information</h3>
-                    </div>
-
-                    {/* Row 3: Scale, Rev, Date */}
-                    <div className="border-b border-neutral-100 flex items-center">
-                      <div className="grid grid-cols-3 gap-1 font-mono text-[7px] w-full">
-                        <div><span className="text-neutral-400 font-medium block text-[6px]">Scale</span><strong className="text-neutral-900">1:200</strong></div>
-                        <div><span className="text-neutral-400 font-medium block text-[6px]">Rev.</span><strong className="text-neutral-900">001</strong></div>
-                        <div><span className="text-neutral-400 font-medium block text-[6px]">Date</span><strong className="text-neutral-900">26.06.28</strong></div>
-                      </div>
-                    </div>
-
-                    {/* Row 4: PA & DRW */}
-                    <div className="flex items-center justify-between font-mono text-[7.5px]">
-                      <span className="text-neutral-400 font-medium">PA: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.paInitials || (data as any)?.principalArchitectInitials || "ANK").substring(0, 3)}</strong></span>
-                      <span className="text-neutral-400 font-medium">DRW: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.drwInitials || (data as any)?.drafterInitials || "ANK").substring(0, 3)}</strong></span>
-                    </div>
-                  </div>
-
-                  {/* COL 4: DRAWING NUMBER (ROWS 1-2), DISCLAIMER (ROW 3), ADIDAYA LOGO (ROW 4) - SPANS 3 COLS */}
-                  <div className="col-span-3 flex flex-col justify-between pl-1 grid grid-rows-4 gap-y-0.5">
-                    {/* Row 1 & 2: Drawing Number (RATA ATAS BARIS) */}
-                    <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
-                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Number</span>
-                      <div className="flex items-baseline justify-between font-mono font-black text-xl text-neutral-900 tracking-tight mt-1">
-                        <span>01-01</span>
-                        <span className="text-xs font-bold text-neutral-600">{pageNumber}</span>
-                      </div>
-                    </div>
-
-                    {/* Row 3: Legal Disclaimer */}
-                    <div className="border-b border-neutral-100 flex items-center">
-                      <p className="text-[6px] text-neutral-400 leading-tight">
-                        No part of this document may be reproduced without written approval.
-                      </p>
-                    </div>
-
-                    {/* Row 4: Adidaya Studio Logo Centered */}
-                    <div className="flex items-center justify-center font-black text-brand-red gap-1 text-[10px]">
-                      <span>adidaya</span>
-                      <span className="text-brand-red font-bold">*</span>
-                      <span className="font-normal text-neutral-900">studio</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          }
           return renderSectionCover("01", "General Information", "Informasi Umum Proyek");
         }
 
@@ -853,7 +734,301 @@ export default function StageDocumentPreview({
                         </div>
                       </div>
                     );
-                  })() : pageItem.taskCode.endsWith("03") ? (
+                  })() : (pageItem.taskCode === "02-01" || pageItem.taskCode.endsWith("02-01") || pageItem.taskCode.endsWith("02-01-V2L")) ? (
+                    /* PROJECT UNDERSTANDING (02-01) */
+                    <div className="flex-1 my-auto py-2">
+                      <div className="grid grid-cols-12 gap-8 items-start">
+                        <div className="col-span-5 space-y-2 pr-4 border-r border-neutral-100">
+                          <span className="text-[10px] font-mono font-bold text-brand-red uppercase block">
+                            EXECUTIVE SUMMARY
+                          </span>
+                          <p className="text-xs font-semibold text-neutral-900 leading-relaxed">
+                            {data.understandingIntroEn || defaultKickoffData.understandingIntroEn}
+                          </p>
+                          <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed">
+                            {data.understandingIntroId || defaultKickoffData.understandingIntroId}
+                          </p>
+                        </div>
+                        <div className="col-span-7 space-y-4">
+                          <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase block">
+                            KEY CONCEPT DRIVERS & PARAMETERS
+                          </span>
+                          {(data.understandingCards || defaultKickoffData.understandingCards).map((card, idx) => (
+                            <div key={card.id || idx} className="space-y-1 pb-3 border-b border-neutral-100 last:border-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-bold text-brand-red">0{idx + 1}</span>
+                                <h4 className="text-xs font-bold text-neutral-900">{card.titleEn}</h4>
+                                <span className="text-xs font-normal italic text-neutral-400">({card.titleId})</span>
+                              </div>
+                              <p className="text-xs font-medium text-neutral-700 leading-relaxed pl-6">
+                                {card.descEn}
+                              </p>
+                              <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed pl-6">
+                                {card.descId}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "02-02" || pageItem.taskCode.endsWith("02-02") || pageItem.taskCode.endsWith("02-02-V2L")) ? (
+                    /* CLIENT NEEDS & VISION (02-02) */
+                    <div className="flex-1 my-auto py-2">
+                      <div className="columns-2 gap-8 space-y-4">
+                        {[
+                          {
+                            num: "01",
+                            titleEn: "Spatial Flexibility & Scalability",
+                            titleId: "Fleksibilitas & Skalabilitas Ruang",
+                            descEn: "Spaces must accommodate peak training hours seamlessly without feeling overcrowded.",
+                            descId: "Area harus dapat menampung jam puncak latihan secara efisien tanpa terasa sempit."
+                          },
+                          {
+                            num: "02",
+                            titleEn: "Character-Driven Brand Ambience",
+                            titleId: "Suasana Merek Berkarakter Kuat",
+                            descEn: "Material selection and lighting ambiance should reflect precision, strength, and modern aesthetics.",
+                            descId: "Pemilihan material dan pencahayaan harus mencerminkan presisi, kekuatan, dan estetika modern."
+                          },
+                          {
+                            num: "03",
+                            titleEn: "Seamless Member Journey",
+                            titleId: "Alur Pengalaman Anggota yang Lancar",
+                            descEn: "Intuitive transition from reception, locker areas, main workout floor, to recovery zones.",
+                            descId: "Transisi intuitif dari resepsionis, loker, area latihan utama, hingga zona pemulihan."
+                          },
+                          {
+                            num: "04",
+                            titleEn: "Integrated Technology & Smart Control",
+                            titleId: "Teknologi Terintegrasi & Kontrol Pintar",
+                            descEn: "Smart access control, automated lighting scenes, and integrated sound zones.",
+                            descId: "Akses kontrol pintar, skenario pencahayaan otomatis, dan zona tata suara terintegrasi."
+                          }
+                        ].map((item) => (
+                          <div key={item.num} className="space-y-1 pb-3 border-b border-neutral-100 break-inside-avoid">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-brand-red">{item.num}</span>
+                              <h4 className="text-xs font-bold text-neutral-900">{item.titleEn}</h4>
+                              <span className="text-xs font-normal italic text-neutral-400">({item.titleId})</span>
+                            </div>
+                            <p className="text-xs font-medium text-neutral-700 leading-relaxed pl-6">
+                              {item.descEn}
+                            </p>
+                            <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed pl-6">
+                              {item.descId}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "02-03" || pageItem.taskCode.endsWith("02-03") || pageItem.taskCode.endsWith("02-03-V2L")) ? (
+                    /* FUNCTIONAL REQUIREMENTS (02-03) */
+                    <div className="flex-1 my-auto py-2 space-y-4">
+                      <div className="w-full">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                              <th className="py-2.5 px-1">Floor <span className="font-sans font-normal italic text-neutral-400 normal-case">(Lantai)</span></th>
+                              <th className="py-2.5 px-2">Room Name <span className="font-sans font-normal italic text-neutral-400 normal-case">(Nama Ruang)</span></th>
+                              <th className="py-2.5 px-2 text-right">Area <span className="font-sans font-normal italic text-neutral-400 normal-case">(Luasan)</span></th>
+                              <th className="py-2.5 px-2 text-right">Capacity <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kapasitas)</span></th>
+                              <th className="py-2.5 px-2 text-left">Notes <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keterangan)</span></th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-xs">
+                            {[
+                              {
+                                floorLabel: "Floor 01",
+                                subtotalArea: "105 m²",
+                                subtotalCap: "35 Pax",
+                                rooms: [
+                                  { roomEn: "Lobby & Reception Area", roomId: "Area Resepsionis & Lobi", area: "45 m²", cap: "15 Pax", noteEn: "Includes turnstile & waiting lounge", noteId: "Termasuk turnstile & ruang tunggu" },
+                                  { roomEn: "Locker & Shower Room", roomId: "Ruang Loker & Bilas", area: "60 m²", cap: "20 Pax", noteEn: "Wet zone with anti-slip flooring", noteId: "Area basah dengan lantai anti-selip" },
+                                ]
+                              },
+                              {
+                                floorLabel: "Floor 02",
+                                subtotalArea: "275 m²",
+                                subtotalCap: "80 Pax",
+                                rooms: [
+                                  { roomEn: "Main Workout & Free Weight Zone", roomId: "Area Latihan Utama & Beban", area: "180 m²", cap: "50 Pax", noteEn: "High-impact acoustic flooring", noteId: "Lantai akustik tahan benturan" },
+                                  { roomEn: "Cardio & Endurance Area", roomId: "Area Kardio & Ketahanan", area: "95 m²", cap: "30 Pax", noteEn: "Optimized power outlets & ventilation", noteId: "Stopkontak & ventilasi teroptimasi" },
+                                ]
+                              },
+                              {
+                                floorLabel: "Floor 03",
+                                subtotalArea: "70 m²",
+                                subtotalCap: "12 Pax",
+                                rooms: [
+                                  { roomEn: "Recovery & Ice Bath Lounge", roomId: "Area Pemulihan & Es", area: "70 m²", cap: "12 Pax", noteEn: "Waterproof membrane & drainage system", noteId: "Membran tahan air & sistem drainase" },
+                                ]
+                              }
+                            ].map((group, gIdx) => (
+                              <React.Fragment key={gIdx}>
+                                {group.rooms.map((row, rIdx) => (
+                                  <tr key={rIdx} className="border-b border-neutral-100">
+                                    {rIdx === 0 && (
+                                      <td
+                                        rowSpan={group.rooms.length + 1}
+                                        className="py-2.5 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top border-r border-neutral-100 pr-3"
+                                      >
+                                        {group.floorLabel}
+                                      </td>
+                                    )}
+                                    <td className="py-2.5 px-2 align-top">
+                                      <span className="font-semibold text-neutral-800 block leading-tight">{row.roomEn}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{row.roomId}</span>
+                                    </td>
+                                    <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">
+                                      {row.area}
+                                    </td>
+                                    <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">
+                                      {row.cap}
+                                    </td>
+                                    <td className="py-2.5 px-2 align-top">
+                                      <span className="font-medium text-neutral-700 block leading-tight text-[11px]">{row.noteEn}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{row.noteId}</span>
+                                    </td>
+                                  </tr>
+                                ))}
+                                <tr className="bg-neutral-50/70 border-b border-neutral-200/80 font-semibold text-[11px]">
+                                  <td className="py-1.5 px-2 text-neutral-500 text-right font-mono italic">
+                                    Subtotal {group.floorLabel}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono font-bold text-neutral-800">
+                                    {group.subtotalArea}
+                                  </td>
+                                  <td className="py-1.5 px-2 text-right font-mono text-neutral-600">
+                                    {group.subtotalCap}
+                                  </td>
+                                  <td className="py-1.5 px-2"></td>
+                                </tr>
+                              </React.Fragment>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t-2 border-neutral-900 font-bold text-xs">
+                              <td colSpan={2} className="py-2.5 px-1 text-neutral-900">
+                                Total Programmed Area <span className="font-sans font-normal italic text-neutral-400 text-[11px]">(Total Luasan)</span>
+                              </td>
+                              <td className="py-2.5 px-2 text-right font-mono text-brand-red text-sm">450 m²</td>
+                              <td className="py-2.5 px-2 text-right font-mono text-neutral-800 text-xs">127 Pax</td>
+                              <td className="py-2.5 px-2 text-neutral-400 text-[11px] font-normal italic">3 Floors Total</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "02-04" || pageItem.taskCode.endsWith("02-04") || pageItem.taskCode.endsWith("02-04-V2L")) ? (() => {
+                    const cols = customMatrixColCount || 3;
+                    const dataGroups = [
+                      {
+                        floorLabel: "01. Ground Floor Zone",
+                        rooms: [
+                          { roomEn: "Lobby & Reception Area", area: "45 m²", cap: "15 Pax" },
+                          { roomEn: "Locker & Shower Room", area: "60 m²", cap: "20 Pax" }
+                        ]
+                      },
+                      {
+                        floorLabel: "02. Main Workout Floor",
+                        rooms: [
+                          { roomEn: "Main Workout & Free Weight", area: "180 m²", cap: "50 Pax" },
+                          { roomEn: "Cardio & Endurance Area", area: "95 m²", cap: "30 Pax" }
+                        ]
+                      },
+                      {
+                        floorLabel: "03. Recovery & Wellness",
+                        rooms: [
+                          { roomEn: "Recovery & Ice Bath Lounge", area: "70 m²", cap: "12 Pax" },
+                          { roomEn: "Sauna & Infrared Cabin", area: "40 m²", cap: "8 Pax" }
+                        ]
+                      },
+                      {
+                        floorLabel: "04. Utility & Back of House",
+                        rooms: [
+                          { roomEn: "MEP & Electrical Room", area: "35 m²", cap: "4 Pax" },
+                          { roomEn: "Staff Rest & Storage", area: "25 m²", cap: "6 Pax" }
+                        ]
+                      },
+                      {
+                        floorLabel: "05. Outdoor & Parking",
+                        rooms: [
+                          { roomEn: "Valet & Drop-off Zone", area: "120 m²", cap: "30 Pax" },
+                          { roomEn: "Outdoor Terrace Lounge", area: "80 m²", cap: "25 Pax" }
+                        ]
+                      },
+                      {
+                        floorLabel: "06. Admin & Management",
+                        rooms: [
+                          { roomEn: "Manager Office & Meeting", area: "40 m²", cap: "8 Pax" }
+                        ]
+                      }
+                    ];
+
+                    const totalAreaSum = dataGroups.reduce((acc, g) => acc + g.rooms.reduce((rAcc, r) => rAcc + parseInt(r.area), 0), 0);
+                    const totalCapSum = dataGroups.reduce((acc, g) => acc + g.rooms.reduce((rAcc, r) => rAcc + parseInt(r.cap), 0), 0);
+
+                    return (
+                      <div className="flex-1 my-auto py-2 space-y-4">
+                        <div className="flex items-center justify-between pb-2 border-b border-neutral-200 text-xs font-mono select-none">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-neutral-400 uppercase">TOTAL PROGRAMMED AREA:</span>
+                            <span className="font-black text-brand-red text-sm">{totalAreaSum} m²</span>
+                          </div>
+                          {cols === 2 && (
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-neutral-400 uppercase">TOTAL CAPACITY:</span>
+                              <span className="font-bold text-neutral-800">{totalCapSum} Pax</span>
+                            </div>
+                          )}
+                          <span className="text-[10px] text-neutral-400 font-sans italic">6 Zones Total</span>
+                        </div>
+
+                        <div className={clsx(cols === 2 ? "columns-2 gap-8 space-y-5" : "columns-3 gap-6 space-y-5")}>
+                          {dataGroups.map((group, gIdx) => {
+                            const zoneSubtotalArea = group.rooms.reduce((sum, r) => sum + parseInt(r.area), 0);
+                            const zoneSubtotalCap = group.rooms.reduce((sum, r) => sum + parseInt(r.cap), 0);
+
+                            return (
+                              <div key={gIdx} className="space-y-2 break-inside-avoid pb-3 border-b border-neutral-200">
+                                <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                                  <span className="font-mono text-xs font-bold text-brand-red uppercase truncate">{group.floorLabel}</span>
+                                  <span className="font-mono text-xs font-bold text-brand-red">
+                                    {zoneSubtotalArea} m²
+                                  </span>
+                                </div>
+
+                                <table className="w-full text-left border-collapse">
+                                  <tbody>
+                                    {group.rooms.map((rm, rIdx) => (
+                                      <tr key={rIdx} className="border-b border-neutral-100 last:border-0 text-xs">
+                                        <td className="py-1.5 pr-2 font-semibold text-neutral-800 align-top">
+                                          {rm.roomEn}
+                                        </td>
+                                        <td className="py-1.5 px-1 font-mono font-bold text-neutral-900 text-right whitespace-nowrap align-top">
+                                          {rm.area}
+                                        </td>
+                                        {cols === 2 && (
+                                          <td className="py-1.5 pl-2 font-mono font-bold text-neutral-500 text-right whitespace-nowrap align-top">
+                                            {rm.cap}
+                                          </td>
+                                        )}
+                                      </tr>
+                                    ))}
+                                    <tr className="font-mono font-bold text-[11px] border-t border-neutral-200">
+                                      <td className="py-1.5 pr-2 text-right uppercase text-neutral-400">Subtotal</td>
+                                      <td className="py-1.5 px-1 text-right text-brand-red">{zoneSubtotalArea} m²</td>
+                                      {cols === 2 && <td className="py-1.5 pl-2 text-right text-neutral-600">{zoneSubtotalCap} Pax</td>}
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })() : (pageItem.taskCode.endsWith("03") || pageItem.taskCode.endsWith("01-03")) ? (
                     /* PURPOSE OF STAGE (01-03-V2L) — 2 COLUMNS IN LANDSCAPE */
                     <div className="flex-1 my-auto py-2">
                       <div className="columns-2 gap-8 space-y-4">
@@ -1101,8 +1276,8 @@ export default function StageDocumentPreview({
                       </div>
                     </div>
                   );
-                })() : pageItem.taskCode.endsWith("03") ? (
-                  /* PURPOSE OF STAGE (01-03) — RESTORED V1 CLEAN TYPOGRAPHY LIST */
+                })() : (pageItem.taskCode === "01-03" || pageItem.taskCode.endsWith("01-03") || pageItem.taskCode.endsWith("01-03-V2P") || pageItem.taskCode.endsWith("01-03-V2L")) ? (
+                  /* PURPOSE OF STAGE (01-03) */
                   <div className="flex-1 my-auto py-2">
                     <div className="space-y-4 max-w-3xl">
                       {(data.purposeList || defaultKickoffData.purposeList).map((item, idx) => (
@@ -1125,8 +1300,8 @@ export default function StageDocumentPreview({
                       ))}
                     </div>
                   </div>
-                ) : pageItem.taskCode.endsWith("04") ? (
-                  /* WORKFLOW OVERVIEW (01-04) — RESTORED V1 CLEAN WORKFLOW TIMELINE */
+                ) : (pageItem.taskCode === "01-04" || pageItem.taskCode.endsWith("01-04") || pageItem.taskCode.endsWith("01-04-V2P") || pageItem.taskCode.endsWith("01-04-V2L")) ? (
+                  /* WORKFLOW OVERVIEW (01-04) */
                   <div className="flex-1 my-auto py-2">
                     <div className="space-y-4 max-w-3xl">
                       {(data.workflowSteps || defaultKickoffData.workflowSteps).map((step, idx) => {
@@ -1187,7 +1362,329 @@ export default function StageDocumentPreview({
                       })}
                     </div>
                   </div>
-                ) : (
+                ) : pageItem.taskCode.endsWith("02-01") ? (
+                  /* PROJECT UNDERSTANDING (02-01) */
+                  <div className="flex-1 my-auto py-2">
+                    {isLandscape ? (
+                      <div className="grid grid-cols-12 gap-8 items-start">
+                        <div className="col-span-5 space-y-2 pr-4 border-r border-neutral-100">
+                          <span className="text-[10px] font-mono font-bold text-brand-red uppercase block">
+                            EXECUTIVE SUMMARY
+                          </span>
+                          <p className="text-xs font-semibold text-neutral-900 leading-relaxed">
+                            {data.understandingIntroEn || defaultKickoffData.understandingIntroEn}
+                          </p>
+                          <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed">
+                            {data.understandingIntroId || defaultKickoffData.understandingIntroId}
+                          </p>
+                        </div>
+                        <div className="col-span-7 space-y-4">
+                          <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase block">
+                            KEY CONCEPT DRIVERS & PARAMETERS
+                          </span>
+                          {(data.understandingCards || defaultKickoffData.understandingCards).map((card, idx) => (
+                            <div key={card.id || idx} className="space-y-1 pb-3 border-b border-neutral-100 last:border-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-bold text-brand-red">0{idx + 1}</span>
+                                <h4 className="text-xs font-bold text-neutral-900">{card.titleEn}</h4>
+                                <span className="text-xs font-normal italic text-neutral-400">({card.titleId})</span>
+                              </div>
+                              <p className="text-xs font-medium text-neutral-700 leading-relaxed pl-6">
+                                {card.descEn}
+                              </p>
+                              <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed pl-6">
+                                {card.descId}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="space-y-1.5 pb-4 border-b border-neutral-100">
+                          <p className="text-xs font-semibold text-neutral-900 leading-relaxed">
+                            {data.understandingIntroEn || defaultKickoffData.understandingIntroEn}
+                          </p>
+                          <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed">
+                            {data.understandingIntroId || defaultKickoffData.understandingIntroId}
+                          </p>
+                        </div>
+                        <div className="space-y-4">
+                          {(data.understandingCards || defaultKickoffData.understandingCards).map((card, idx) => (
+                            <div key={card.id || idx} className="space-y-1 pb-3 border-b border-neutral-100 last:border-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-bold text-brand-red">0{idx + 1}</span>
+                                <h4 className="text-xs font-bold text-neutral-900">{card.titleEn}</h4>
+                                <span className="text-xs font-normal italic text-neutral-400">({card.titleId})</span>
+                              </div>
+                              <p className="text-xs font-medium text-neutral-700 leading-relaxed pl-6">
+                                {card.descEn}
+                              </p>
+                              <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed pl-6">
+                                {card.descId}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : pageItem.taskCode.endsWith("02-02") ? (
+                  /* CLIENT NEEDS & VISION (02-02) */
+                  <div className="flex-1 my-auto py-2">
+                    <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4 max-w-3xl")}>
+                      {[
+                        {
+                          num: "01",
+                          titleEn: "Spatial Flexibility & Scalability",
+                          titleId: "Fleksibilitas & Skalabilitas Ruang",
+                          descEn: "Spaces must accommodate peak training hours seamlessly without feeling overcrowded.",
+                          descId: "Area harus dapat menampung jam puncak latihan secara efisien tanpa terasa sempit."
+                        },
+                        {
+                          num: "02",
+                          titleEn: "Character-Driven Brand Ambience",
+                          titleId: "Suasana Merek Berkarakter Kuat",
+                          descEn: "Material selection and lighting ambiance should reflect precision, strength, and modern aesthetics.",
+                          descId: "Pemilihan material dan pencahayaan harus mencerminkan presisi, kekuatan, dan estetika modern."
+                        },
+                        {
+                          num: "03",
+                          titleEn: "Seamless Mechanical & System Integration",
+                          titleId: "Integrasi Sistem Mekanikal yang Rapi",
+                          descEn: "Acoustic control, fresh air ventilation, and high-load power routing must be integrated cleanly.",
+                          descId: "Pengendalian akustik, sirkulasi udara bersih, dan kelistrikan beban tinggi terintegrasi rapi."
+                        },
+                        {
+                          num: "04",
+                          titleEn: "Operational Efficiency & Maintenance",
+                          titleId: "Efisiensi Operasional & Perawatan Mudah",
+                          descEn: "Durable surface finishes with clear service access for long-term low maintenance costs.",
+                          descId: "Finishing permukaan tahan lama dengan akses servis mudah untuk biaya perawatan rendah."
+                        }
+                      ].map((item, idx) => (
+                        <div key={idx} className="space-y-1 pb-3 border-b border-neutral-100 break-inside-avoid">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-brand-red">{item.num}</span>
+                            <h4 className="text-xs font-bold text-neutral-900">{item.titleEn}</h4>
+                          </div>
+                          <p className="text-[10px] font-normal italic text-neutral-400">{item.titleId}</p>
+                          <p className="text-xs font-medium text-neutral-700 leading-relaxed pt-1">{item.descEn}</p>
+                          <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed">{item.descId}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (pageItem.taskCode === "02-03" || pageItem.taskCode.endsWith("02-03") || pageItem.taskCode.endsWith("02-03-V2P") || pageItem.taskCode.endsWith("02-03-V2L")) ? (
+                  /* FUNCTIONAL REQUIREMENTS (02-03) — MATCHING V1 RICH TABLE */
+                  <div className="flex-1 my-auto py-2 space-y-4">
+                    <div className="w-full">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                            <th className="py-2.5 px-1">Floor <span className="font-sans font-normal italic text-neutral-400 normal-case">(Lantai)</span></th>
+                            <th className="py-2.5 px-2">Room Name <span className="font-sans font-normal italic text-neutral-400 normal-case">(Nama Ruang)</span></th>
+                            <th className="py-2.5 px-2 text-right">Area <span className="font-sans font-normal italic text-neutral-400 normal-case">(Luasan)</span></th>
+                            <th className="py-2.5 px-2 text-right">Capacity <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kapasitas)</span></th>
+                            <th className="py-2.5 px-2 text-left">Notes <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keterangan)</span></th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-xs">
+                          {[
+                            {
+                              floorLabel: "Floor 01",
+                              subtotalArea: "105 m²",
+                              subtotalCap: "35 Pax",
+                              rooms: [
+                                { roomEn: "Lobby & Reception Area", roomId: "Area Resepsionis & Lobi", area: "45 m²", cap: "15 Pax", noteEn: "Includes turnstile & waiting lounge", noteId: "Termasuk turnstile & ruang tunggu" },
+                                { roomEn: "Locker & Shower Room", roomId: "Ruang Loker & Bilas", area: "60 m²", cap: "20 Pax", noteEn: "Wet zone with anti-slip flooring", noteId: "Area basah dengan lantai anti-selip" },
+                              ]
+                            },
+                            {
+                              floorLabel: "Floor 02",
+                              subtotalArea: "275 m²",
+                              subtotalCap: "80 Pax",
+                              rooms: [
+                                { roomEn: "Main Workout & Free Weight Zone", roomId: "Area Latihan Utama & Beban", area: "180 m²", cap: "50 Pax", noteEn: "High-impact acoustic flooring", noteId: "Lantai akustik tahan benturan" },
+                                { roomEn: "Cardio & Endurance Area", roomId: "Area Kardio & Ketahanan", area: "95 m²", cap: "30 Pax", noteEn: "Optimized power outlets & ventilation", noteId: "Stopkontak & ventilasi teroptimasi" },
+                              ]
+                            },
+                            {
+                              floorLabel: "Floor 03",
+                              subtotalArea: "70 m²",
+                              subtotalCap: "12 Pax",
+                              rooms: [
+                                { roomEn: "Recovery & Ice Bath Lounge", roomId: "Area Pemulihan & Es", area: "70 m²", cap: "12 Pax", noteEn: "Waterproof membrane & drainage system", noteId: "Membran tahan air & sistem drainase" },
+                              ]
+                            }
+                          ].map((group, gIdx) => (
+                            <React.Fragment key={gIdx}>
+                              {group.rooms.map((row, rIdx) => (
+                                <tr key={rIdx} className="border-b border-neutral-100">
+                                  {rIdx === 0 && (
+                                    <td
+                                      rowSpan={group.rooms.length + 1}
+                                      className="py-2.5 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top border-r border-neutral-100 pr-3"
+                                    >
+                                      {group.floorLabel}
+                                    </td>
+                                  )}
+                                  <td className="py-2.5 px-2 align-top">
+                                    <span className="font-semibold text-neutral-800 block leading-tight">{row.roomEn}</span>
+                                    <span className="font-normal italic text-neutral-400 text-[10px] block">{row.roomId}</span>
+                                  </td>
+                                  <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">
+                                    {row.area}
+                                  </td>
+                                  <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">
+                                    {row.cap}
+                                  </td>
+                                  <td className="py-2.5 px-2 align-top">
+                                    <span className="font-medium text-neutral-700 block leading-tight text-[11px]">{row.noteEn}</span>
+                                    <span className="font-normal italic text-neutral-400 text-[10px] block">{row.noteId}</span>
+                                  </td>
+                                </tr>
+                              ))}
+                              <tr className="bg-neutral-50/70 border-b border-neutral-200/80 font-semibold text-[11px]">
+                                <td className="py-1.5 px-2 text-neutral-500 text-right font-mono italic">
+                                  Subtotal {group.floorLabel}
+                                </td>
+                                <td className="py-1.5 px-2 text-right font-mono font-bold text-neutral-800">
+                                  {group.subtotalArea}
+                                </td>
+                                <td className="py-1.5 px-2 text-right font-mono text-neutral-600">
+                                  {group.subtotalCap}
+                                </td>
+                                <td className="py-1.5 px-2"></td>
+                              </tr>
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-neutral-900 font-bold text-xs">
+                            <td colSpan={2} className="py-2.5 px-1 text-neutral-900">
+                              Total Programmed Area <span className="font-sans font-normal italic text-neutral-400 text-[11px]">(Total Luasan)</span>
+                            </td>
+                            <td className="py-2.5 px-2 text-right font-mono text-brand-red text-sm">450 m²</td>
+                            <td className="py-2.5 px-2 text-right font-mono text-neutral-800 text-xs">127 Pax</td>
+                            <td className="py-2.5 px-2 text-neutral-400 text-[11px] font-normal italic">3 Floors Total</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </div>
+                ) : (pageItem.taskCode === "02-04" || pageItem.taskCode.endsWith("02-04") || pageItem.taskCode.endsWith("02-04-V2P") || pageItem.taskCode.endsWith("02-04-V2L")) ? (() => {
+                  const cols = customMatrixColCount || 3;
+                  const dataGroups = [
+                    {
+                      floorLabel: "01. Ground Floor Zone",
+                      rooms: [
+                        { roomEn: "Lobby & Reception Area", area: "45 m²", cap: "15 Pax" },
+                        { roomEn: "Locker & Shower Room", area: "60 m²", cap: "20 Pax" }
+                      ]
+                    },
+                    {
+                      floorLabel: "02. Main Workout Floor",
+                      rooms: [
+                        { roomEn: "Main Workout & Free Weight", area: "180 m²", cap: "50 Pax" },
+                        { roomEn: "Cardio & Endurance Area", area: "95 m²", cap: "30 Pax" }
+                      ]
+                    },
+                    {
+                      floorLabel: "03. Recovery & Wellness",
+                      rooms: [
+                        { roomEn: "Recovery & Ice Bath Lounge", area: "70 m²", cap: "12 Pax" },
+                        { roomEn: "Sauna & Infrared Cabin", area: "40 m²", cap: "8 Pax" }
+                      ]
+                    },
+                    {
+                      floorLabel: "04. Utility & Back of House",
+                      rooms: [
+                        { roomEn: "MEP & Electrical Room", area: "35 m²", cap: "4 Pax" },
+                        { roomEn: "Staff Rest & Storage", area: "25 m²", cap: "6 Pax" }
+                      ]
+                    },
+                    {
+                      floorLabel: "05. Outdoor & Parking",
+                      rooms: [
+                        { roomEn: "Valet & Drop-off Zone", area: "120 m²", cap: "30 Pax" },
+                        { roomEn: "Outdoor Terrace Lounge", area: "80 m²", cap: "25 Pax" }
+                      ]
+                    },
+                    {
+                      floorLabel: "06. Admin & Management",
+                      rooms: [
+                        { roomEn: "Manager Office & Meeting", area: "40 m²", cap: "8 Pax" }
+                      ]
+                    }
+                  ];
+
+                  const totalAreaSum = dataGroups.reduce((acc, g) => acc + g.rooms.reduce((rAcc, r) => rAcc + parseInt(r.area), 0), 0);
+                  const totalCapSum = dataGroups.reduce((acc, g) => acc + g.rooms.reduce((rAcc, r) => rAcc + parseInt(r.cap), 0), 0);
+
+                  return (
+                    <div className="flex-1 my-auto py-2 space-y-4">
+                      {/* Clean Top Total Summary Line */}
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 text-xs font-mono select-none">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-neutral-400 uppercase">TOTAL PROGRAMMED AREA:</span>
+                          <span className="font-black text-brand-red text-sm">{totalAreaSum} m²</span>
+                        </div>
+                        {cols === 2 && (
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-neutral-400 uppercase">TOTAL CAPACITY:</span>
+                            <span className="font-bold text-neutral-800">{totalCapSum} Pax</span>
+                          </div>
+                        )}
+                        <span className="text-[10px] text-neutral-400 font-sans italic">6 Zones Total</span>
+                      </div>
+
+                      {/* Multi-Column Flow Grid */}
+                      <div className={clsx(cols === 2 ? "columns-2 gap-8 space-y-5" : "columns-3 gap-6 space-y-5")}>
+                        {dataGroups.map((group, gIdx) => {
+                          const zoneSubtotalArea = group.rooms.reduce((sum, r) => sum + parseInt(r.area), 0);
+                          const zoneSubtotalCap = group.rooms.reduce((sum, r) => sum + parseInt(r.cap), 0);
+
+                          return (
+                            <div key={gIdx} className="space-y-2 break-inside-avoid pb-3 border-b border-neutral-200">
+                              <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                                <span className="font-mono text-xs font-bold text-brand-red uppercase truncate">{group.floorLabel}</span>
+                                <span className="font-mono text-xs font-bold text-brand-red">
+                                  {zoneSubtotalArea} m²
+                                </span>
+                              </div>
+
+                              <table className="w-full text-left border-collapse">
+                                <tbody>
+                                  {group.rooms.map((rm, rIdx) => (
+                                    <tr key={rIdx} className="border-b border-neutral-100 last:border-0 text-xs">
+                                      <td className="py-1.5 pr-2 font-semibold text-neutral-800 align-top">
+                                        {rm.roomEn}
+                                      </td>
+                                      <td className="py-1.5 px-1 font-mono font-bold text-neutral-900 text-right whitespace-nowrap align-top">
+                                        {rm.area}
+                                      </td>
+                                      {cols === 2 && (
+                                        <td className="py-1.5 pl-2 font-mono font-bold text-neutral-500 text-right whitespace-nowrap align-top">
+                                          {rm.cap}
+                                        </td>
+                                      )}
+                                    </tr>
+                                  ))}
+                                  <tr className="font-mono font-bold text-[11px] border-t border-neutral-200">
+                                    <td className="py-1.5 pr-2 text-right uppercase text-neutral-400">Subtotal</td>
+                                    <td className="py-1.5 px-1 text-right text-brand-red">{zoneSubtotalArea} m²</td>
+                                    {cols === 2 && <td className="py-1.5 pl-2 text-right text-neutral-600">{zoneSubtotalCap} Pax</td>}
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })() : (
                   <div className="flex-1 my-auto p-6 rounded-xl bg-neutral-50/80 border border-dashed border-neutral-300 flex flex-col items-center justify-center text-center space-y-1">
                     <span className="font-mono text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                       ARCHITECTURAL CANVAS WORKSPACE
@@ -3295,7 +3792,17 @@ export default function StageDocumentPreview({
 
   const currentTaskCode = pagesList[activePage - 1]?.type === "TASK_PAGE" ? (pagesList[activePage - 1] as any)?.taskCode : "";
   const subTaskCode = activeSubTask || "";
-  const isLandscape = customOrientation === "landscape" || subTaskCode.endsWith("-L") || (typeof currentTaskCode === "string" && (currentTaskCode.endsWith("-L") || ["04-07", "04-08", "04-09", "04-10", "04-11", "04-12", "04-13"].includes(currentTaskCode)));
+  const isLandscape = 
+    customOrientation === "landscape" || 
+    subTaskCode.endsWith("-L") || 
+    subTaskCode.endsWith("-V2L") || 
+    subTaskCode.endsWith("-v2l") || 
+    (typeof currentTaskCode === "string" && (
+      currentTaskCode.endsWith("-L") || 
+      currentTaskCode.endsWith("-V2L") || 
+      currentTaskCode.endsWith("-v2l") || 
+      ["04-07", "04-08", "04-09", "04-10", "04-11", "04-12", "04-13"].includes(currentTaskCode)
+    ));
   const sheetWidth = isLandscape ? 1123 : 794;
   const sheetHeight = isLandscape ? 794 : 1123;
 
