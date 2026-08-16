@@ -333,7 +333,107 @@ export default function StageDocumentPreview({
   );
 
   const renderSectionCover = (secNumStr: string, titleEn: string, titleId: string) => {
-    if (frameworkVersion === "v2" && !isLandscape) {
+    if (frameworkVersion === "v2") {
+      if (isLandscape) {
+        return (
+          <div className="absolute inset-0 w-full h-full bg-white p-4 flex gap-4 overflow-hidden select-none">
+            {/* CANVAS WORKSPACE: SECTION COVER CONTENT */}
+            <div className="flex-1 h-full relative bg-white p-8 flex flex-col justify-center items-center text-center">
+              <div className="space-y-3 max-w-lg my-auto">
+                <span className="font-mono text-xs font-black text-brand-red uppercase tracking-widest block">
+                  SECTION {secNumStr}
+                </span>
+                <h1 className="text-3xl font-black text-neutral-900 leading-tight">
+                  {titleEn}
+                </h1>
+                <p className="text-sm font-semibold text-neutral-500 italic">
+                  {titleId}
+                </p>
+              </div>
+            </div>
+
+            {/* RIGHT SIDEBAR ARCHITECTURAL KOP TITLE BLOCK */}
+            <div className="w-[151px] max-w-[4cm] h-full flex flex-col justify-between border-l border-neutral-900 pl-2.5 shrink-0 py-0.5 text-[9px]">
+              <div className="space-y-2 flex-1 flex flex-col justify-between">
+                <div className="space-y-2 pt-0">
+                  <div className="border-b border-neutral-200 pb-1">
+                    <span className="text-[8px] font-medium text-neutral-400 block leading-none">Projects</span>
+                    <span className="font-mono text-[9px] font-bold text-neutral-800 block">{data.projectCode || "039-RBH"}</span>
+                    <span className="font-extrabold text-[11px] text-neutral-900 block leading-tight">{data.projectName || "Ruby House"}</span>
+                  </div>
+                  <div className="border-b border-neutral-200 pb-1.5">
+                    <span className="text-[8px] font-medium text-neutral-400 block leading-none">Location</span>
+                    <span className="font-bold text-[10px] text-neutral-900 block leading-tight">{data.projectLocation || "Serang, Banten"}</span>
+                  </div>
+                  <div className="border-b border-neutral-200 pb-1.5">
+                    <span className="text-[8px] font-medium text-neutral-400 block leading-none">Owner</span>
+                    <span className="font-bold text-[10px] text-neutral-900 block leading-tight">{data.clientName || "-"}</span>
+                  </div>
+                  <div className="border-b border-neutral-200 pb-1.5">
+                    <span className="text-[8px] font-medium text-neutral-400 block leading-none">Architect</span>
+                    <span className="font-bold text-[10px] text-neutral-900 block leading-tight">Adidaya Studio</span>
+                  </div>
+                  <div className="border-b border-neutral-200 pb-1.5">
+                    <span className="text-[8px] font-medium text-neutral-400 block leading-none">Structural Engineer</span>
+                    <span className="font-medium text-[10px] text-neutral-600 block leading-tight">-</span>
+                  </div>
+                  <div className="border-b border-neutral-200 pb-1.5">
+                    <span className="text-[8px] font-medium text-neutral-400 block leading-none">MEP Engineer</span>
+                    <span className="font-medium text-[10px] text-neutral-600 block leading-tight">-</span>
+                  </div>
+                </div>
+
+                <div className="border-t border-neutral-900 pt-2 pb-1 space-y-1">
+                  <span className="text-[8px] font-medium text-neutral-400 block leading-none">Drawing Title</span>
+                  <h3 className="text-xs font-black text-neutral-900 leading-tight">{titleEn}</h3>
+                </div>
+
+                <div className="border-t border-b border-neutral-900 py-1 text-[9px] space-y-1">
+                  <div className="flex items-center justify-between border-b border-neutral-200 pb-1">
+                    <span className="text-neutral-400 font-medium">Status</span>
+                    <span className="font-bold text-neutral-900">For Construction</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 text-[8px] border-b border-neutral-200 pb-1 font-mono">
+                    <div><span className="text-neutral-400 font-medium block">Scale</span><span className="font-bold text-neutral-900 text-[9px]">1:200</span></div>
+                    <div><span className="text-neutral-400 font-medium block">Rev.</span><span className="font-bold text-neutral-900 text-[9px]">001</span></div>
+                    <div><span className="text-neutral-400 font-medium block">Date</span><span className="font-bold text-neutral-900 text-[9px]">26.06.28</span></div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-[8px] font-mono">
+                    <div>
+                      <span className="text-neutral-400 font-medium block">PA</span>
+                      <span className="font-bold text-neutral-900 uppercase">{((data as any)?.paInitials || "ANK").substring(0, 3)}</span>
+                    </div>
+                    <div>
+                      <span className="text-neutral-400 font-medium block">DRW</span>
+                      <span className="font-bold text-neutral-900 uppercase">{((data as any)?.drwInitials || "ANK").substring(0, 3)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-b border-neutral-900 pb-2 space-y-0.5">
+                  <span className="text-[8px] font-medium text-neutral-400 block leading-none">Drawing Number</span>
+                  <div className="flex items-baseline justify-between font-mono font-black text-lg text-neutral-900 tracking-tight">
+                    <span>{secNumStr}-01</span>
+                    <span>1</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 space-y-2 border-t border-neutral-200 shrink-0 text-center">
+                <p className="text-[7px] text-neutral-400 leading-tight">
+                  No part of this document may be reproduced without written approval.
+                </p>
+                <div className="font-black text-brand-red tracking-tight flex items-center justify-center gap-1 text-xs pt-1">
+                  <span>adidaya</span>
+                  <span className="text-brand-red font-bold">*</span>
+                  <span className="font-normal text-neutral-900">studio</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="absolute inset-0 w-full h-full bg-white p-4 flex flex-col gap-4 overflow-hidden select-none">
           {/* CANVAS WORKSPACE: SECTION COVER CONTENT */}
@@ -351,9 +451,8 @@ export default function StageDocumentPreview({
             </div>
           </div>
 
-          {/* BOTTOM HORIZONTAL KOP TITLE BLOCK (STRICT EQUAL 4-ROW HEIGHT GRID ~120PX / 3CM) */}
+          {/* BOTTOM HORIZONTAL KOP TITLE BLOCK */}
           <div className="h-[120px] max-h-[3cm] w-full border-t-2 border-neutral-900 pt-1 grid grid-cols-12 gap-x-2 text-[8px] shrink-0 items-stretch">
-            {/* COL 1: PROJECTS (2 ROWS), LOCATION (1 ROW), STAGE (1 ROW) */}
             <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
               <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
                 <span className="text-[7px] font-medium text-neutral-400 block leading-none">Projects</span>
@@ -370,7 +469,6 @@ export default function StageDocumentPreview({
               </div>
             </div>
 
-            {/* COL 2: OWNER, ARCHITECT, STRUCTURAL, MEP */}
             <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5 text-[7.5px]">
               <div className="flex items-center justify-between border-b border-neutral-100">
                 <span className="font-medium text-neutral-400">Owner</span>
@@ -390,7 +488,6 @@ export default function StageDocumentPreview({
               </div>
             </div>
 
-            {/* COL 3: DRAWING TITLE */}
             <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
               <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
                 <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Title</span>
@@ -404,12 +501,11 @@ export default function StageDocumentPreview({
                 </div>
               </div>
               <div className="flex items-center justify-between font-mono text-[7.5px]">
-                <span className="text-neutral-400 font-medium">PA: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.paInitials || (data as any)?.principalArchitectInitials || "ANK").substring(0, 3)}</strong></span>
-                <span className="text-neutral-400 font-medium">DRW: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.drwInitials || (data as any)?.drafterInitials || "ANK").substring(0, 3)}</strong></span>
+                <span className="text-neutral-400 font-medium">PA: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.paInitials || "ANK").substring(0, 3)}</strong></span>
+                <span className="text-neutral-400 font-medium">DRW: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.drwInitials || "ANK").substring(0, 3)}</strong></span>
               </div>
             </div>
 
-            {/* COL 4: DRAWING NUMBER */}
             <div className="col-span-3 flex flex-col justify-between pl-1 grid grid-rows-4 gap-y-0.5">
               <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
                 <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Number</span>
@@ -687,6 +783,256 @@ export default function StageDocumentPreview({
 
         if (frameworkVersion === "v2") {
           const isImagePage = pageItem.taskCode.startsWith("04-") && !["04-00"].includes(pageItem.taskCode);
+
+          if (isLandscape) {
+            return (
+              <div className="absolute inset-0 w-full h-full bg-white p-4 flex gap-4 overflow-hidden select-none">
+                {/* CANVAS WORKSPACE: REAL TASK CONTENT */}
+                <div className={clsx("flex-1 h-full relative bg-white flex flex-col justify-between overflow-hidden", !isImagePage && "pt-[0.5cm] px-[0.5cm]")}>
+                  <div className="space-y-1 mb-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col">
+                        <h2 className="text-2xl font-extrabold text-neutral-900 tracking-tight">
+                          {displayTaskName}
+                        </h2>
+                        <p className="text-sm font-semibold text-neutral-500 italic">
+                          {displayTaskNameId}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="h-0.5 bg-brand-red w-full mt-2 opacity-80" />
+                  </div>
+
+                  {/* DYNAMIC CONTENT AREA (LANDSCAPE 2-COLUMNS) */}
+                  {isTOC ? (() => {
+                    const ITEMS_PER_PAGE = 36;
+                    const pageIdxOffset = (pageItem as any).tocPageIndex ?? 0;
+                    const allTocEntries = pagesList.filter(item => item.type !== "MAIN_COVER");
+                    const startIndex = pageIdxOffset * ITEMS_PER_PAGE;
+                    const visibleEntries = allTocEntries.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+                    return (
+                      <div className="flex-1 my-auto py-1 space-y-1 overflow-hidden">
+                        <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                          {visibleEntries.map((item, idx) => {
+                            const globalIdx = startIndex + idx;
+                            const pageNum = globalIdx + 2;
+                            const isSec = item.type === "SECTION_COVER";
+                            const titleEn = isSec ? item.titleEn : item.taskName;
+                            const titleId = isSec ? item.titleId : (item.taskNameId !== item.taskName ? item.taskNameId : "");
+
+                            return (
+                              <div
+                                key={globalIdx}
+                                className={clsx(
+                                  "flex items-center justify-between text-[11px] py-[2px] transition-colors leading-snug",
+                                  isSec ? "font-bold text-neutral-900 border-b border-neutral-200 pt-1.5 pb-0.5" : "text-neutral-700 font-medium"
+                                )}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                                  <span className="font-mono text-[10px] font-bold text-neutral-400 shrink-0 w-10">
+                                    {isSec ? `SEC ${item.secNumStr}` : item.taskCode}
+                                  </span>
+                                  <div className="flex items-baseline gap-2 truncate">
+                                    <span className={clsx("truncate", isSec ? "font-extrabold uppercase text-neutral-900" : "font-semibold text-neutral-800")}>
+                                      {titleEn}
+                                    </span>
+                                    {titleId && (
+                                      <span className="text-[10px] font-normal italic text-neutral-400 shrink-0 truncate max-w-[140px]">
+                                        {titleId}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <span className="font-mono text-[11px] font-bold text-neutral-900 shrink-0 ml-2">
+                                  {pageNum}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })() : pageItem.taskCode.endsWith("03") ? (
+                    /* PURPOSE OF STAGE (01-03-V2L) — 2 COLUMNS IN LANDSCAPE */
+                    <div className="flex-1 my-auto py-2">
+                      <div className="columns-2 gap-8 space-y-4">
+                        {(data.purposeList || defaultKickoffData.purposeList).map((item, idx) => (
+                          <div
+                            key={item.id || idx}
+                            className="flex items-baseline gap-3.5 pb-3 border-b border-neutral-100 break-inside-avoid"
+                          >
+                            <span className="font-mono text-xs font-bold text-brand-red shrink-0">
+                              0{idx + 1}
+                            </span>
+                            <div className="space-y-0.5 min-w-0">
+                              <h4 className="text-xs font-bold text-neutral-900 leading-snug">
+                                {item.en}
+                              </h4>
+                              <p className="text-[11px] font-normal italic text-neutral-400 leading-snug">
+                                {item.idText}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : pageItem.taskCode.endsWith("04") ? (
+                    /* WORKFLOW OVERVIEW (01-04-V2L) — 2 COLUMNS IN LANDSCAPE */
+                    <div className="flex-1 my-auto py-2">
+                      <div className="columns-2 gap-8 space-y-4">
+                        {(data.workflowSteps || defaultKickoffData.workflowSteps).map((step, idx) => {
+                          const currentStageStr = (data.stageName || "Kickoff").toLowerCase();
+                          const stepNameStr = step.stageName.toLowerCase();
+                          const stepCodeStr = step.stageCode.toLowerCase();
+
+                          const isCurrentStage =
+                            stepNameStr.includes(currentStageStr) ||
+                            currentStageStr.includes(stepNameStr) ||
+                            (currentStageStr.includes("kickoff") && (stepCodeStr.includes("ko") || stepNameStr.includes("kick"))) ||
+                            (currentStageStr.includes("engineering") && (stepCodeStr.includes("ed") || stepNameStr.includes("engineer")));
+
+                          return (
+                            <div key={step.id || idx} className="relative flex items-start gap-3.5 pl-6 pb-3 border-b border-neutral-100 break-inside-avoid before:absolute before:left-2 before:top-2.5 before:bottom-0 before:w-0.5 before:bg-neutral-200">
+                              <span className={clsx(
+                                "absolute left-0 top-1 w-4 h-4 rounded-full border-2 bg-white flex items-center justify-center font-mono text-[9px] font-bold shrink-0 z-10",
+                                isCurrentStage ? "border-brand-red bg-brand-red text-white" : "border-neutral-300 text-neutral-400"
+                              )} />
+
+                              <div className="flex-1 min-w-0 space-y-1.5">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className={clsx(
+                                      "font-mono text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0",
+                                      isCurrentStage ? "bg-brand-red text-white" : "bg-neutral-100 text-neutral-600"
+                                    )}>
+                                      {step.stageCode}
+                                    </span>
+                                    <h4 className={clsx(
+                                      "text-xs font-bold truncate",
+                                      isCurrentStage ? "text-brand-red font-black" : "text-neutral-900"
+                                    )}>
+                                      {step.stageName}
+                                    </h4>
+                                  </div>
+                                  <span className="font-mono text-[10px] font-semibold text-neutral-400 shrink-0">
+                                    ⏱ {step.duration}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] font-normal text-neutral-500 italic leading-relaxed">
+                                  {step.description}
+                                </p>
+                                {step.items && step.items.length > 0 && (
+                                  <ul className="space-y-0.5 pt-0.5 pl-2">
+                                    {step.items.map((sub: any, sIdx: number) => (
+                                      <li key={sub.id || sIdx} className="text-[10px] font-medium text-neutral-600 flex items-center gap-1.5">
+                                        <span className="text-brand-red text-[8px]">▪</span>
+                                        <span>{sub.titleEn}</span>
+                                        {sub.titleId && <span className="text-neutral-400 italic font-normal">({sub.titleId})</span>}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex-1 my-auto p-6 rounded-xl bg-neutral-50/80 border border-dashed border-neutral-300 flex flex-col items-center justify-center text-center space-y-1">
+                      <span className="font-mono text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                        ARCHITECTURAL CANVAS WORKSPACE
+                      </span>
+                      <p className="text-xs font-semibold text-neutral-600 italic">
+                        "Content starts from here."
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* RIGHT SIDEBAR ARCHITECTURAL KOP TITLE BLOCK */}
+                <div className="w-[151px] max-w-[4cm] h-full flex flex-col justify-between border-l border-neutral-900 pl-2.5 shrink-0 py-0.5 text-[9px]">
+                  <div className="space-y-2 flex-1 flex flex-col justify-between">
+                    <div className="space-y-2 pt-0">
+                      <div className="border-b border-neutral-200 pb-1">
+                        <span className="text-[8px] font-medium text-neutral-400 block leading-none">Projects</span>
+                        <span className="font-mono text-[9px] font-bold text-neutral-800 block">{data.projectCode || "039-RBH"}</span>
+                        <span className="font-extrabold text-[11px] text-neutral-900 block leading-tight">{data.projectName || "Ruby House"}</span>
+                      </div>
+                      <div className="border-b border-neutral-200 pb-1.5">
+                        <span className="text-[8px] font-medium text-neutral-400 block leading-none">Location</span>
+                        <span className="font-bold text-[10px] text-neutral-900 block leading-tight">{data.projectLocation || "Serang, Banten"}</span>
+                      </div>
+                      <div className="border-b border-neutral-200 pb-1.5">
+                        <span className="text-[8px] font-medium text-neutral-400 block leading-none">Owner</span>
+                        <span className="font-bold text-[10px] text-neutral-900 block leading-tight">{data.clientName || "-"}</span>
+                      </div>
+                      <div className="border-b border-neutral-200 pb-1.5">
+                        <span className="text-[8px] font-medium text-neutral-400 block leading-none">Architect</span>
+                        <span className="font-bold text-[10px] text-neutral-900 block leading-tight">Adidaya Studio</span>
+                      </div>
+                      <div className="border-b border-neutral-200 pb-1.5">
+                        <span className="text-[8px] font-medium text-neutral-400 block leading-none">Structural Engineer</span>
+                        <span className="font-medium text-[10px] text-neutral-600 block leading-tight">-</span>
+                      </div>
+                      <div className="border-b border-neutral-200 pb-1.5">
+                        <span className="text-[8px] font-medium text-neutral-400 block leading-none">MEP Engineer</span>
+                        <span className="font-medium text-[10px] text-neutral-600 block leading-tight">-</span>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-neutral-900 pt-2 pb-1 space-y-1">
+                      <span className="text-[8px] font-medium text-neutral-400 block leading-none">Drawing Title</span>
+                      <h3 className="text-xs font-black text-neutral-900 leading-tight">{displayTaskName}</h3>
+                    </div>
+
+                    <div className="border-t border-b border-neutral-900 py-1 text-[9px] space-y-1">
+                      <div className="flex items-center justify-between border-b border-neutral-200 pb-1">
+                        <span className="text-neutral-400 font-medium">Status</span>
+                        <span className="font-bold text-neutral-900">For Construction</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1 text-[8px] border-b border-neutral-200 pb-1 font-mono">
+                        <div><span className="text-neutral-400 font-medium block">Scale</span><span className="font-bold text-neutral-900 text-[9px]">1:200</span></div>
+                        <div><span className="text-neutral-400 font-medium block">Rev.</span><span className="font-bold text-neutral-900 text-[9px]">001</span></div>
+                        <div><span className="text-neutral-400 font-medium block">Date</span><span className="font-bold text-neutral-900 text-[9px]">26.06.28</span></div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1 text-[8px] font-mono">
+                        <div>
+                          <span className="text-neutral-400 font-medium block">PA</span>
+                          <span className="font-bold text-neutral-900 uppercase">{((data as any)?.paInitials || "ANK").substring(0, 3)}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-400 font-medium block">DRW</span>
+                          <span className="font-bold text-neutral-900 uppercase">{((data as any)?.drwInitials || "ANK").substring(0, 3)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-b border-neutral-900 pb-2 space-y-0.5">
+                      <span className="text-[8px] font-medium text-neutral-400 block leading-none">Drawing Number</span>
+                      <div className="flex items-baseline justify-between font-mono font-black text-lg text-neutral-900 tracking-tight">
+                        <span>{pageItem.taskCode.replace(/^[A-Z]{2}-/, "")}</span>
+                        <span>{pageNumber}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 space-y-2 border-t border-neutral-200 shrink-0 text-center">
+                    <p className="text-[7px] text-neutral-400 leading-tight">
+                      No part of this document may be reproduced without written approval.
+                    </p>
+                    <div className="font-black text-brand-red tracking-tight flex items-center justify-center gap-1 text-xs pt-1">
+                      <span>adidaya</span>
+                      <span className="text-brand-red font-bold">*</span>
+                      <span className="font-normal text-neutral-900">studio</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div className="absolute inset-0 w-full h-full bg-white p-4 flex flex-col gap-4 overflow-hidden select-none">
               {/* CANVAS WORKSPACE: REAL TASK CONTENT */}

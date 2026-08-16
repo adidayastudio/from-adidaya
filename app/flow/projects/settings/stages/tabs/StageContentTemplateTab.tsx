@@ -97,6 +97,53 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     previewTaskCode: "01-04"
   },
 
+  // --- SECTION 01 GENERAL INFORMATION LANDSCAPE TEMPLATES (01-00-L to 01-04-L) ---
+  {
+    id: "tpl-main-cover-l",
+    code: "01-00-L",
+    name: "Main Project Cover (Landscape)",
+    nameId: "Sampul Utama Proyek (Landscape)",
+    category: "General Information",
+    description: "Standard Studio Adidaya red main document cover in landscape orientation.",
+    previewTaskCode: "01-00"
+  },
+  {
+    id: "tpl-section-cover-l",
+    code: "01-01-L",
+    name: "Section Cover Page (Landscape)",
+    nameId: "Sampul Seksi (Landscape)",
+    category: "General Information",
+    description: "Dark minimalist section cover divider page in landscape orientation.",
+    previewTaskCode: "01-01"
+  },
+  {
+    id: "tpl-toc-l",
+    code: "01-02-L",
+    name: "Table of Contents (Landscape)",
+    nameId: "Daftar Isi Halaman (Landscape)",
+    category: "General Information",
+    description: "Auto-synchronizing 2-column index table of contents in landscape orientation.",
+    previewTaskCode: "01-02"
+  },
+  {
+    id: "tpl-purpose-l",
+    code: "01-03-L",
+    name: "Purpose of Stage (Landscape)",
+    nameId: "Tujuan Tahapan Pekerjaan (Landscape)",
+    category: "General Information",
+    description: "Executive summary list outlining primary objectives in 2-column landscape layout.",
+    previewTaskCode: "01-03"
+  },
+  {
+    id: "tpl-workflow-l",
+    code: "01-04-L",
+    name: "Workflow Overview (Landscape)",
+    nameId: "Tinjauan Alur Kerja (Landscape)",
+    category: "General Information",
+    description: "Step-by-step stage progress breakdown in 2-column landscape layout.",
+    previewTaskCode: "01-04"
+  },
+
   // --- SECTION 01 KOP V2 PORTRAIT TEMPLATES (01-01-V2P to 01-04-V2P) ---
   {
     id: "tpl-section-cover-v2p",
