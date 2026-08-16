@@ -667,7 +667,8 @@ export default function StageDocumentPreview({
           .replace(/\bKO\b/g, stageNameIdStr);
 
         if (frameworkVersion === "v2") {
-          const isImagePage = pageItem.taskCode.startsWith("04-") && !["04-00"].includes(pageItem.taskCode);
+          const isFullBleedPage = pageItem.taskCode.includes("04-06") || pageItem.taskCode.includes("04-05-L");
+          const isImagePage = isFullBleedPage;
 
           if (isLandscape) {
             return (
@@ -1446,19 +1447,21 @@ export default function StageDocumentPreview({
             <div className="absolute inset-0 w-full h-full bg-white p-4 flex flex-col gap-4 overflow-hidden select-none">
               {/* CANVAS WORKSPACE: REAL TASK CONTENT */}
               <div className={clsx("flex-1 w-full relative bg-white flex flex-col justify-between overflow-hidden", !isImagePage && "pt-[0.5cm] px-[0.5cm]")}>
-                <div className="space-y-1 mb-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex flex-col">
-                      <h2 className="text-2xl font-extrabold text-neutral-900 tracking-tight">
-                        {displayTaskName}
-                      </h2>
-                      <p className="text-sm font-semibold text-neutral-500 italic">
-                        {displayTaskNameId}
-                      </p>
+                {!pageItem.taskCode.includes("04-06") && !pageItem.taskCode.includes("04-05-L") && (
+                  <div className="space-y-1 mb-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col">
+                        <h2 className="text-2xl font-extrabold text-neutral-900 tracking-tight">
+                          {displayTaskName}
+                        </h2>
+                        <p className="text-sm font-semibold text-neutral-500 italic">
+                          {displayTaskNameId}
+                        </p>
+                      </div>
                     </div>
+                    <div className="h-0.5 bg-brand-red w-full mt-2 opacity-80" />
                   </div>
-                  <div className="h-0.5 bg-brand-red w-full mt-2 opacity-80" />
-                </div>
+                )}
 
                 {/* DYNAMIC CONTENT AREA */}
                 {isTOC ? (() => {
@@ -2146,6 +2149,188 @@ export default function StageDocumentPreview({
                             </ul>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "04-01" || pageItem.taskCode.endsWith("04-01") || pageItem.taskCode.endsWith("04-01-V2P")) ? (
+                    /* 04-01-V2P: SINGLE IMAGE PORTRAIT */
+                    <div className="flex-1 py-2 flex flex-col justify-between space-y-4 h-full">
+                      <div className="relative w-full flex-1 rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-md">
+                        <img
+                          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                          alt="Schematic Drawing"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-3 right-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                          SCALE 1 : 100 @ A3
+                        </div>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "04-02" || pageItem.taskCode.endsWith("04-02") || pageItem.taskCode.endsWith("04-02-V2P")) ? (
+                    /* 04-02-V2P: MULTIPLE IMAGE PORTRAIT */
+                    <div className="flex-1 py-2 flex flex-col justify-between space-y-4 h-full">
+                      <div className="grid grid-cols-2 gap-4 flex-1">
+                        {[
+                          { img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80", tag: "NORTH FACADE VIEW" },
+                          { img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80", tag: "MAIN ACCESS ROAD" },
+                          { img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80", tag: "EXISTING BOUNDARY WALL" },
+                          { img: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=600&q=80", tag: "NEIGHBORING SETBACK" }
+                        ].map((item, idx) => (
+                          <div key={idx} className="relative w-full h-full rounded-xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm">
+                            <img src={item.img} alt={item.tag} className="w-full h-full object-cover" />
+                            <div className="absolute bottom-2 left-2 bg-neutral-900/80 backdrop-blur-xs px-2 py-1 rounded text-[9px] font-mono font-bold text-white tracking-wider">
+                              {item.tag}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "04-03" || pageItem.taskCode.endsWith("04-03") || pageItem.taskCode.endsWith("04-03-V2P")) ? (
+                    /* 04-03-V2P: IMAGE AND DESC PORTRAIT */
+                    <div className="flex-1 py-2 flex flex-col space-y-4 h-full">
+                      <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-md">
+                        <img
+                          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                          alt="Schematic Drawing"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-3 right-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                          SCALE 1 : 100 @ A3
+                        </div>
+                      </div>
+
+                      <div className="pt-3 space-y-2 text-xs border-t border-neutral-200/60 flex-1">
+                        <span className="text-xs font-mono font-bold text-brand-red uppercase block">Main Design Issues & Concept Notes</span>
+                        <p className="text-xs font-medium text-neutral-800 leading-relaxed">
+                          This schematic layout emphasizes optimal spatial orientation and natural light distribution across all primary zones. The cantilevered structure minimizes ground footprint while enhancing passive ventilation throughout the interior volume.
+                        </p>
+                        <p className="text-[11px] font-normal italic text-neutral-500 leading-relaxed">
+                          Tata letak skematik ini menekankan orientasi ruang optimal dan distribusi pencahayaan alami di seluruh zona utama. Struktur kantilever meminimalkan tapak lahan sambil meningkatkan ventilasi pasif di seluruh volume interior.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "04-04" || pageItem.taskCode.endsWith("04-04") || pageItem.taskCode.endsWith("04-04-V2P")) ? (
+                    /* 04-04-V2P: IMAGE AND POINT PORTRAIT */
+                    <div className="flex-1 py-2 flex flex-col space-y-4 h-full">
+                      <div className="relative w-full aspect-[5/4] rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-md">
+                        <img
+                          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                          alt="Drawing Layout"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-3 right-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                          SCALE 1 : 100 @ A3
+                        </div>
+                      </div>
+
+                      <div className="pt-3 space-y-2 text-xs border-t border-neutral-200/60 flex-1">
+                        <span className="text-xs font-mono font-bold text-brand-red uppercase block">Key Technical Highlights</span>
+                        <div className="grid grid-cols-2 gap-x-6 gap-y-2 pl-1">
+                          <ul className="space-y-2">
+                            {[
+                              { num: "01", en: "Cantilevered Living Pavilion (4.5m Projection)", id: "Pavilion Utama Cantilever 4.5 Meter" },
+                              { num: "02", en: "North-South Passive Solar Orientation", id: "Orientasi Pasif Utara-Selatan" },
+                              { num: "03", en: "Integrated Cross-Ventilation Sky Louvers", id: "Ventilasi Silang Terintegrasi Atap" }
+                            ].map((pt, pIdx) => (
+                              <li key={pIdx} className="flex items-start gap-2 text-xs">
+                                <span className="font-mono text-xs font-bold text-brand-red shrink-0">{pt.num}</span>
+                                <div>
+                                  <span className="font-semibold text-neutral-800 leading-tight block">{pt.en}</span>
+                                  <span className="text-neutral-400 italic text-[10px] block leading-tight">{pt.id}</span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+
+                          <ul className="space-y-2">
+                            {[
+                              { num: "04", en: "Rainwater Harvesting & Filtration System", id: "Sistem Pemanenan Air Hujan" },
+                              { num: "05", en: "High-Performance Double Glazed Facade", id: "Fasad Kaca Ganda Efisiensi Tinggi" },
+                              { num: "06", en: "Recessed Ambient LED Cove Lighting", id: "Pencahayaan LED Cove Tersembunyi" }
+                            ].map((pt, pIdx) => (
+                              <li key={pIdx} className="flex items-start gap-2 text-xs">
+                                <span className="font-mono text-xs font-bold text-brand-red shrink-0">{pt.num}</span>
+                                <div>
+                                  <span className="font-semibold text-neutral-800 leading-tight block">{pt.en}</span>
+                                  <span className="text-neutral-400 italic text-[10px] block leading-tight">{pt.id}</span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "04-05" || pageItem.taskCode.endsWith("04-05") || pageItem.taskCode.endsWith("04-05-V2P")) ? (
+                    /* 04-05-V2P: MULTIPLE IMAGE AND DESC PORTRAIT */
+                    <div className="flex-1 py-2 flex flex-col justify-start space-y-4 h-full">
+                      <div className="py-0.5 overflow-hidden flex-1 flex flex-col justify-evenly">
+                        {[
+                          {
+                            img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=500&q=80",
+                            titleEn: "01. Main Facade Entrance & Wood Cladding",
+                            titleId: "Akses Fasad Utama & Panel Kayu",
+                            descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal."
+                          },
+                          {
+                            img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=500&q=80",
+                            titleEn: "02. Outdoor Terrace & Infinity Pool Deck",
+                            titleId: "Teras Luar & Dek Kolam Renang",
+                            descId: "Area teras luar luas terintegrasi batu alam."
+                          },
+                          {
+                            img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=500&q=80",
+                            titleEn: "03. Living Lounge Spatial Flow & High Ceiling",
+                            titleId: "Ruang Keluarga Plafon Tinggi",
+                            descId: "Pavilion ruang keluarga memaksimalkan pencahayaan alami."
+                          }
+                        ].map((row, rIdx) => (
+                          <div key={rIdx} className="grid grid-cols-12 items-start border-b border-neutral-200/60 last:border-0 min-w-0 gap-3 py-1.5">
+                            <div className="col-span-5 relative w-full rounded-xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-2xs shrink-0 aspect-[16/9]">
+                              <img src={row.img} alt={row.titleEn} className="w-full h-full object-cover" />
+                              <div className="absolute top-1.5 left-1.5 bg-neutral-900/85 backdrop-blur-md px-1.5 py-0.5 rounded-full text-[8px] font-mono font-bold text-white shadow-xs border border-white/20">
+                                0{rIdx + 1}
+                              </div>
+                            </div>
+                            <div className="col-span-7 space-y-0.5 min-w-0">
+                              <h4 className="font-black text-neutral-900 leading-tight truncate text-[11px]">{row.titleEn}</h4>
+                              <p className="font-semibold italic text-neutral-400 leading-tight truncate text-[10px]">{row.titleId}</p>
+                              <p className="text-[9px] font-normal italic text-neutral-500 leading-tight line-clamp-2">{row.descId}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "04-06" || pageItem.taskCode.endsWith("04-06") || pageItem.taskCode.endsWith("04-06-V2P")) ? (
+                    /* 04-06-V2P: FULL BLEED IMAGE OVERLAY PORTRAIT */
+                    <div className="absolute inset-0 w-full h-full overflow-hidden bg-neutral-900 flex flex-col justify-between p-12 select-none">
+                      <img
+                        src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80"
+                        alt="Full Bleed Architectural Visualization"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/85 via-neutral-950/40 to-neutral-950/90 pointer-events-none" />
+
+                      <div className="relative z-10 flex items-start justify-between border-b border-white/20 pb-4">
+                        <div>
+                          <span className="font-mono text-xs font-bold text-brand-red uppercase tracking-widest block">
+                            ARCHITECTURAL VISUALIZATION
+                          </span>
+                          <h2 className="text-2xl font-black text-white tracking-tight mt-0.5">
+                            {displayTaskName}
+                          </h2>
+                          <p className="text-xs font-semibold text-neutral-300 italic">
+                            {displayTaskNameId}
+                          </p>
+                        </div>
+                        <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/10 text-white backdrop-blur-md border border-white/20">
+                          FULL-BLEED
+                        </span>
+                      </div>
+
+                      <div className="relative z-10 space-y-1 max-w-xl">
+                        <h4 className="text-sm font-bold text-white">Main Entrance & Facade Lighting Ambience</h4>
+                        <p className="text-xs text-neutral-300 leading-relaxed italic">
+                          Tampilan suasana pencahayaan fasad dan pintu masuk utama pada malam hari.
+                        </p>
                       </div>
                     </div>
                   ) : (

@@ -624,23 +624,70 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     previewTaskCode: "04-05-L"
   },
 
-  // --- SECTION 04 V2 KOP GAMBAR KERJA PLACEHOLDERS ---
+  // --- SECTION 04 V2 KOP PORTRAIT TEMPLATES (04-01-V2P to 04-06-V2P) ---
   {
     id: "tpl-v2-single-image-p",
     code: "04-01-V2P",
-    name: "Single Image (Kop V2 Gambar Kerja Portrait)",
-    nameId: "Gambar Tunggal (Kop V2 Gambar Kerja Portrait)",
+    name: "Single Image Kop v2 (Portrait)",
+    nameId: "Gambar Tunggal Kop v2 (Portrait)",
     category: "Drawings, Diagram, and Image",
-    description: "Standard Working Drawing (Kop Gambar Kerja V2) Portrait single drawing layout [Placeholder].",
+    description: "Portrait layout with page title and full single drawing image container in Kop v2 framework.",
     previewTaskCode: "04-01"
   },
   {
+    id: "tpl-v2-multiple-image-p",
+    code: "04-02-V2P",
+    name: "Multiple Image Kop v2 (Portrait)",
+    nameId: "Multi Gambar Grid Kop v2 (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait grid gallery layout for displaying 4 drawing images in Kop v2 framework.",
+    previewTaskCode: "04-02"
+  },
+  {
+    id: "tpl-v2-image-desc-p",
+    code: "04-03-V2P",
+    name: "Image and Desc Kop v2 (Portrait)",
+    nameId: "Gambar & Deskripsi Kop v2 (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait layout with main drawing image and descriptive paragraph in Kop v2 framework.",
+    previewTaskCode: "04-03"
+  },
+  {
+    id: "tpl-v2-image-points-p",
+    code: "04-04-V2P",
+    name: "Image and Point Kop v2 (Portrait)",
+    nameId: "Gambar & Poin-Poin Kop v2 (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait drawing layout with key highlight bullet points in Kop v2 framework.",
+    previewTaskCode: "04-04"
+  },
+  {
+    id: "tpl-v2-multiple-image-desc-p",
+    code: "04-05-V2P",
+    name: "Multiple Image and Desc Kop v2 (Portrait)",
+    nameId: "Multi Gambar & Deskripsi Kop v2 (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait multi-image grid combined with summary description text in Kop v2 framework.",
+    previewTaskCode: "04-05"
+  },
+  {
+    id: "tpl-v2-full-image-overlay-p",
+    code: "04-06-V2P",
+    name: "Full Bleed Image Overlay Kop v2 (Portrait)",
+    nameId: "Gambar Penuh Overlay Kop v2 (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait full-page edge-to-edge background image with dark floating title overlay in Kop v2 framework.",
+    previewTaskCode: "04-06"
+  },
+
+  // --- SECTION 04 V2 KOP LANDSCAPE TEMPLATE (04-07-V2L) ---
+  {
     id: "tpl-v2-single-image-l",
     code: "04-07-V2L",
-    name: "Single Image (Kop V2 Gambar Kerja Landscape)",
-    nameId: "Gambar Tunggal (Kop V2 Gambar Kerja Landscape)",
+    name: "Single Image Kop v2 (Landscape)",
+    nameId: "Gambar Tunggal Kop v2 (Landscape)",
     category: "Drawings, Diagram, and Image",
-    description: "Standard Working Drawing (Kop Gambar Kerja V2) Landscape wide drawing layout [Placeholder].",
+    description: "Landscape wide drawing layout with right Kop v2 sidebar framework.",
     previewTaskCode: "04-07"
   },
   // --- SECTION 05 BUDGET TEMPLATES (05-01-P & 05-01-L) ---
