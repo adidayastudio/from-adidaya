@@ -41,10 +41,13 @@ export const koTasks: Task[] = [
   { id: "ko-03-04", code: "03-04", name: "Project Assumptions", nameId: "Asumsi Pekerjaan Proyek", stage: "KO", sectionCode: "KO-03", weight: 15, priority: "medium" },
   // Section Total: 100
 
-  // ========== KO-04: Site Data Collection (80) ==========
-  { id: "ko-04-01", code: "04-01", name: "Site Photos and Videos", nameId: "Foto dan Video Tapak", stage: "KO", sectionCode: "KO-04", weight: 32, priority: "high", schemaType: "DELIVERABLE_BASIC", inputConfig: { allowedExtensions: [".jpg", ".png", ".mp4"] } },
-  { id: "ko-04-02", code: "04-02", name: "Existing Drawings", nameId: "Gambar Kerja Eksisting", stage: "KO", sectionCode: "KO-04", weight: 16, priority: "medium", schemaType: "DELIVERABLE_BASIC", inputConfig: { allowedExtensions: [".dwg", ".pdf"] } },
-  { id: "ko-04-03", code: "04-03", name: "Measurement & Verification", nameId: "Pengukuran & Verifikasi", stage: "KO", sectionCode: "KO-04", weight: 32, priority: "high" },
+  // ========== KO-04: Site Data Collection & Drawings (80) ==========
+  { id: "ko-04-01", code: "04-01", name: "Single Image", nameId: "Gambar Tunggal", stage: "KO", sectionCode: "KO-04", weight: 15, priority: "high" },
+  { id: "ko-04-02", code: "04-02", name: "Multiple Image", nameId: "Multi Gambar Grid", stage: "KO", sectionCode: "KO-04", weight: 15, priority: "medium" },
+  { id: "ko-04-03", code: "04-03", name: "Image and Desc", nameId: "Gambar & Deskripsi", stage: "KO", sectionCode: "KO-04", weight: 15, priority: "high" },
+  { id: "ko-04-04", code: "04-04", name: "Image and Point", nameId: "Gambar & Poin-Poin", stage: "KO", sectionCode: "KO-04", weight: 15, priority: "medium" },
+  { id: "ko-04-05", code: "04-05", name: "Multiple Image and Desc", nameId: "Multi Gambar & Deskripsi", stage: "KO", sectionCode: "KO-04", weight: 10, priority: "medium" },
+  { id: "ko-04-06", code: "04-06", name: "Full Bleed Image Overlay", nameId: "Gambar Penuh Overlay", stage: "KO", sectionCode: "KO-04", weight: 10, priority: "low" },
   // Section Total: 80
 
   // ========== KO-05: Regulation & Zoning Check (80) ==========

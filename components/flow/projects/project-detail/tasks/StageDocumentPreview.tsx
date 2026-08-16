@@ -196,6 +196,7 @@ export default function StageDocumentPreview({
   React.useEffect(() => {
     if (activeSubTask) {
       const cleanSub = activeSubTask.replace(/^[A-Z]{2}-/, "");
+      // Try exact match first
       if (taskPageIndex[activeSubTask]) {
         setActivePage(taskPageIndex[activeSubTask]);
         return;
@@ -204,8 +205,18 @@ export default function StageDocumentPreview({
         setActivePage(taskPageIndex[cleanSub]);
         return;
       }
+      // Try stripping orientation suffix (-P, -L) for template catalog codes
+      const baseSub = cleanSub.replace(/-(P|L)$/, "");
+      if (baseSub !== cleanSub && taskPageIndex[baseSub]) {
+        setActivePage(taskPageIndex[baseSub]);
+        return;
+      }
       if (activeSection && taskPageIndex[`${activeSection}_${cleanSub}`]) {
         setActivePage(taskPageIndex[`${activeSection}_${cleanSub}`]);
+        return;
+      }
+      if (activeSection && baseSub !== cleanSub && taskPageIndex[`${activeSection}_${baseSub}`]) {
+        setActivePage(taskPageIndex[`${activeSection}_${baseSub}`]);
         return;
       }
     }
@@ -1455,8 +1466,8 @@ export default function StageDocumentPreview({
                   </div>
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-01" || pageItem.taskCode === "04-07" ? (
-              /* 04-01 / 04-07: SINGLE IMAGE STANDARD (PORTRAIT & LANDSCAPE TOP-DOWN) */
+            ) : pageItem.taskCode === "04-01" || pageItem.taskCode === "04-01-P" || pageItem.taskCode === "04-07" || pageItem.taskCode === "04-01-L" || (pageItem.taskCode.startsWith("04-01")) ? (
+              /* 04-01 / 04-07 / 04-01-L: SINGLE IMAGE STANDARD (PORTRAIT & LANDSCAPE TOP-DOWN) */
               <div className="flex-1 py-1 flex flex-col space-y-3 min-h-0">
                 <div className="flex items-center justify-between pb-2 border-b border-neutral-200 shrink-0">
                   <div>
@@ -1483,16 +1494,16 @@ export default function StageDocumentPreview({
                   </div>
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-08" ? (
-              /* 04-08: MULTIPLE IMAGE LANDSCAPE (DYNAMIC 1-3 PHOTO GRID BASED ON SELECTOR) */
-              <div className="flex-1 py-1 flex flex-col justify-start space-y-4 h-full">
-                <div className="flex items-center justify-between pb-3 border-b border-neutral-200 shrink-0">
+            ) : pageItem.taskCode.includes("04-02-L") || (isLandscape && (pageItem.taskCode.includes("04-02") || pageItem.taskCode.includes("04-08"))) ? (
+              /* 04-02-L: MULTIPLE IMAGE LANDSCAPE (SELECTOR 1-3 PHOTOS WITH CAPTION & DESC BELOW) */
+              <div className="flex-1 py-1 flex flex-col justify-between space-y-3 h-full overflow-hidden">
+                <div className="flex items-center justify-between pb-2 border-b border-neutral-200 shrink-0">
                   <div>
                     <h3 className="text-base font-black text-neutral-900">
                       Multi-Angle Portfolio Study
                     </h3>
                     <p className="text-xs font-semibold text-neutral-500 italic">
-                      Studi Visual Multi-Sudut (Landscape Multi-Photo Grid)
+                      Studi Visual Multi-Sudut & Ringkasan Narasi
                     </p>
                   </div>
                   <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
@@ -1500,12 +1511,11 @@ export default function StageDocumentPreview({
                   </span>
                 </div>
 
-                {/* Dynamic Row Gallery Grid (1, 2, or 3 Photos) */}
                 <div
                   className={clsx(
-                    "grid gap-5 py-2 items-start",
+                    "grid gap-4 flex-1 items-start my-auto py-1",
                     customPhotoCount === 1
-                      ? "grid-cols-1 max-w-2xl mx-auto w-full"
+                      ? "grid-cols-1 max-w-xl mx-auto w-full"
                       : customPhotoCount === 2
                       ? "grid-cols-2"
                       : "grid-cols-3"
@@ -1514,54 +1524,54 @@ export default function StageDocumentPreview({
                   {[
                     {
                       img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80",
-                      title: "01. Main Facade Entrance",
-                      sub: "Tampak Depan Utama & Panel Kayu",
+                      titleEn: "01. Main Facade Entrance",
+                      titleId: "Akses Fasad Utama & Panel Kayu",
                       descEn: "High-impact entrance featuring vertical timber louvers & cove lighting.",
                       descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal & pencahayaan tersembunyi."
                     },
                     {
                       img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80",
-                      title: "02. Outdoor Pool Terrace",
-                      sub: "Teras Luar & Dek Kolam Renang",
+                      titleEn: "02. Outdoor Pool Terrace",
+                      titleId: "Teras Luar & Dek Kolam Renang",
                       descEn: "Expansive outdoor deck integrated with natural stone pavers.",
                       descId: "Area teras luar luas terintegrasi penataan batu alam."
                     },
                     {
                       img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80",
-                      title: "03. Living Lounge Flow",
-                      sub: "Interior Ruang Keluarga Plafon Tinggi",
+                      titleEn: "03. Living Lounge Flow",
+                      titleId: "Interior Ruang Keluarga Plafon Tinggi",
                       descEn: "Double-height living pavilion maximizing natural daylight.",
                       descId: "Pavilion ruang keluarga dengan pencahayaan alami maksimal."
                     }
-                  ].slice(0, Math.min(3, Math.max(1, customPhotoCount))).map((item, iIdx) => (
-                    <div key={iIdx} className="flex flex-col space-y-1.5">
+                  ].slice(0, Math.min(3, Math.max(1, customPhotoCount))).map((row, rIdx) => (
+                    <div key={rIdx} className="flex flex-col space-y-1.5 min-w-0">
                       <div
                         className={clsx(
-                          "relative w-full rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm",
-                          customPhotoCount === 1 ? "aspect-[16/9]" : "aspect-[4/3]"
+                          "relative w-full rounded-xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-2xs",
+                          customPhotoCount === 1 ? "aspect-[16/9]" : "aspect-[16/10]"
                         )}
                       >
-                        <img src={item.img} alt={item.title} className="w-full h-full object-cover" />
-                        <div className="absolute top-2.5 left-2.5 bg-neutral-900/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold text-white shadow-sm border border-white/20">
-                          0{iIdx + 1}
+                        <img src={row.img} alt={row.titleEn} className="w-full h-full object-cover" />
+                        <div className="absolute top-2 left-2 bg-neutral-900/85 backdrop-blur-md px-2 py-0.5 rounded-full text-[9px] font-mono font-bold text-white shadow-2xs border border-white/20">
+                          0{rIdx + 1}
                         </div>
                       </div>
                       <div className="px-0.5 pt-0.5 space-y-1">
                         <div>
-                          <span className="text-xs font-bold text-neutral-800 block truncate leading-tight">{item.title}</span>
-                          <span className="text-[10px] font-semibold italic text-neutral-400 block truncate leading-tight">{item.sub}</span>
+                          <h4 className="text-[11px] font-black text-neutral-900 leading-tight block truncate">{row.titleEn}</h4>
+                          <p className="text-[10px] font-semibold italic text-neutral-400 leading-tight block truncate">{row.titleId}</p>
                         </div>
                         <div className="space-y-0.5 pt-0.5 border-t border-neutral-100">
-                          <p className="text-[11px] font-medium text-neutral-700 leading-snug line-clamp-2">{item.descEn}</p>
-                          <p className="text-[10px] text-neutral-400 italic leading-snug line-clamp-2">{item.descId}</p>
+                          <p className="text-[10px] font-normal text-neutral-700 leading-snug line-clamp-2">{row.descEn}</p>
+                          <p className="text-[9px] text-neutral-400 italic leading-snug line-clamp-2">{row.descId}</p>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-02" ? (
-              /* 04-02: MULTIPLE IMAGE PORTRAIT (2x2 GRID) */
+            ) : pageItem.taskCode.includes("04-02-P") || (!isLandscape && pageItem.taskCode.includes("04-02")) ? (
+              /* 04-02-P: MULTIPLE IMAGE PORTRAIT (2x2 GRID AS ORIGINAL) */
               <div className="flex-1 my-auto py-2 flex flex-col justify-between space-y-4 h-full">
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
                   <div>
@@ -1599,8 +1609,8 @@ export default function StageDocumentPreview({
                   ))}
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-09" ? (
-              /* 04-09: IMAGE AND DESC LANDSCAPE (2-COLUMN SPLIT LAYOUT - LEFT IMAGE + RIGHT DESC PANEL) */
+            ) : pageItem.taskCode.includes("04-03-L") || (isLandscape && (pageItem.taskCode.includes("04-03") || pageItem.taskCode.includes("04-09"))) ? (
+              /* 04-03-L: IMAGE AND DESC LANDSCAPE (LEFT IMAGE + RIGHT DESC) */
               <div className="flex-1 py-1 flex flex-col space-y-4 h-full">
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-200 shrink-0">
                   <div>
@@ -1608,7 +1618,7 @@ export default function StageDocumentPreview({
                       Schematic Design Concept Overview
                     </h3>
                     <p className="text-xs font-semibold text-neutral-500 italic">
-                      Gambaran Konsep Desain Skematik (Landscape Split)
+                      Gambaran Konsep Desain Skematik
                     </p>
                   </div>
                   <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
@@ -1616,9 +1626,7 @@ export default function StageDocumentPreview({
                   </span>
                 </div>
 
-                {/* 2-Column Split: Left Image (16:9/4:3) & Right Narrative Box */}
                 <div className="grid grid-cols-12 gap-6 flex-1 items-stretch py-1">
-                  {/* Left Column: Image Viewport */}
                   <div className="col-span-7 relative rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm min-h-[300px]">
                     <img
                       src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
@@ -1630,7 +1638,6 @@ export default function StageDocumentPreview({
                     </div>
                   </div>
 
-                  {/* Right Column: Description & Concept Notes (Clean Layout without Outer Card Border/Bg) */}
                   <div className="col-span-5 flex flex-col justify-start space-y-3 py-1">
                     <div className="space-y-2">
                       <span className="text-xs font-mono font-bold text-brand-red uppercase block">
@@ -1646,8 +1653,8 @@ export default function StageDocumentPreview({
                   </div>
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-03" ? (
-              /* 04-03: IMAGE AND DESC PORTRAIT */
+            ) : pageItem.taskCode.includes("04-03-P") || (!isLandscape && pageItem.taskCode.includes("04-03")) ? (
+              /* 04-03-P: IMAGE AND DESC PORTRAIT (ORIGINAL TOP IMAGE + BOTTOM DESC) */
               <div className="flex-1 py-2 flex flex-col space-y-4 h-full">
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
                   <div>
@@ -1684,8 +1691,8 @@ export default function StageDocumentPreview({
                   </p>
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-10" ? (
-              /* 04-10: IMAGE AND POINT LANDSCAPE (2-COLUMN SPLIT LAYOUT - LEFT IMAGE + RIGHT BULLET POINTS SINGLE COLUMN) */
+            ) : pageItem.taskCode.includes("04-04-L") || (isLandscape && (pageItem.taskCode.includes("04-04") || pageItem.taskCode.includes("04-10"))) ? (
+              /* 04-04-L: IMAGE AND POINT LANDSCAPE (LEFT IMAGE + RIGHT POINTS) */
               <div className="flex-1 py-1 flex flex-col space-y-4 h-full">
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-200 shrink-0">
                   <div>
@@ -1693,7 +1700,7 @@ export default function StageDocumentPreview({
                       Technical Layout & Key Highlights
                     </h3>
                     <p className="text-xs font-semibold text-neutral-500 italic">
-                      Tata Letak Teknis & Poin-Poin Utama (Landscape Split)
+                      Tata Letak Teknis & Poin-Poin Utama
                     </p>
                   </div>
                   <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
@@ -1701,10 +1708,8 @@ export default function StageDocumentPreview({
                   </span>
                 </div>
 
-                {/* 2-Column Split: Left Image & Right Bullet Points (1 Column Vertical Stack) */}
                 <div className="grid grid-cols-12 gap-6 flex-1 items-stretch py-1">
-                  {/* Left Column: Image Viewport */}
-                  <div className="col-span-7 relative rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm min-h-[300px]">
+                  <div className="col-span-7 relative rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm min-h-[280px]">
                     <img
                       src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
                       alt="Drawing Layout"
@@ -1715,14 +1720,12 @@ export default function StageDocumentPreview({
                     </div>
                   </div>
 
-                  {/* Right Column: Bullet Points List in Single Column (Clean Layout without Outer Card Border/Bg) */}
                   <div className="col-span-5 flex flex-col justify-start space-y-3 py-1">
                     <div className="space-y-3">
                       <span className="text-xs font-mono font-bold text-brand-red uppercase block">
                         Key Technical Highlights
                       </span>
 
-                      {/* Single Column Vertical Bullet List */}
                       <ul className="space-y-2.5">
                         {[
                           { num: "01", en: "Cantilevered Living Pavilion (4.5m Projection)", id: "Pavilion Utama Cantilever 4.5 Meter" },
@@ -1743,8 +1746,8 @@ export default function StageDocumentPreview({
                   </div>
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-04" ? (
-              /* 04-04: IMAGE AND POINT PORTRAIT */
+            ) : pageItem.taskCode.includes("04-04-P") || (!isLandscape && pageItem.taskCode.includes("04-04")) ? (
+              /* 04-04-P: IMAGE AND POINT PORTRAIT (ORIGINAL TOP IMAGE + BOTTOM 2-COLUMN BULLETS) */
               <div className="flex-1 py-2 flex flex-col space-y-4 h-full">
                 <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
                   <div>
@@ -1808,48 +1811,10 @@ export default function StageDocumentPreview({
                   </div>
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-11" ? (
-              /* 04-11: DOUBLE IMAGE LANDSCAPE (1x2 ROW GRID - 2 IMAGES SIDE BY SIDE WITH CAPTIONS) */
-              <div className="flex-1 py-1 flex flex-col justify-start space-y-4 h-full">
-                <div className="flex items-center justify-between pb-3 border-b border-neutral-200 shrink-0">
-                  <div>
-                    <h3 className="text-base font-black text-neutral-900">
-                      Multi-Angle Portfolio Study
-                    </h3>
-                    <p className="text-xs font-semibold text-neutral-500 italic">
-                      Studi Visual Multi-Sudut (Double Image Landscape 2 Kolom)
-                    </p>
-                  </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
-                    FACADE-01
-                  </span>
-                </div>
-
-                {/* 1x2 Row Gallery Grid (Double Image Landscape 16:9 / 4:3 Ratio) */}
-                <div className="grid grid-cols-2 gap-5 py-2">
-                  {[
-                    { img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80", title: "01. Main Facade Entrance", sub: "Tampak Depan Utama & Panel Kayu" },
-                    { img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80", title: "02. Outdoor Pool Terrace", sub: "Teras Luar & Dek Kolam Renang" }
-                  ].map((item, iIdx) => (
-                    <div key={iIdx} className="flex flex-col space-y-2">
-                      <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm">
-                        <img src={item.img} alt={item.title} className="w-full h-full object-cover" />
-                        <div className="absolute top-2.5 left-2.5 bg-neutral-900/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold text-white shadow-sm border border-white/20">
-                          0{iIdx + 1}
-                        </div>
-                      </div>
-                      <div className="px-0.5 pt-0.5 space-y-0.5">
-                        <span className="text-xs font-bold text-neutral-800 block truncate leading-tight">{item.title}</span>
-                        <span className="text-[11px] font-medium italic text-neutral-400 block truncate leading-tight">{item.sub}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : pageItem.taskCode === "04-05" ? (
-              /* 04-05: MULTIPLE IMAGE AND DESC PORTRAIT */
+            ) : pageItem.taskCode.includes("04-05-P") || (!isLandscape && pageItem.taskCode.includes("04-05")) ? (
+              /* 04-05-P: MULTIPLE IMAGE AND DESC PORTRAIT (ORIGINAL PORTRAIT 04-05 WITH DYNAMIC 1-5 PHOTOS) */
               <div className="flex-1 py-2 flex flex-col justify-start space-y-4 h-full">
-                <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200 shrink-0">
                   <div>
                     <h3 className="text-base font-black text-neutral-900">
                       Multi-Angle Portfolio Study
@@ -1863,54 +1828,68 @@ export default function StageDocumentPreview({
                   </span>
                 </div>
 
-                {/* 1-3 PHOTOS: Stack Rapat ke Atas (NO LDR GAP), Aspect Ratio 16:9 Proporsional Sempurna (NO GEPENG) */}
-                <div className="py-1 space-y-4 overflow-hidden">
+                <div className="py-0.5 overflow-hidden flex-1 flex flex-col justify-evenly">
                   {[
                     {
                       img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=500&q=80",
                       titleEn: "01. Main Facade Entrance & Wood Cladding",
                       titleId: "Akses Fasad Utama & Panel Kayu",
-                      descEn: "High-impact entrance featuring vertical timber louvers & cove lighting.",
                       descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal."
                     },
                     {
                       img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=500&q=80",
                       titleEn: "02. Outdoor Terrace & Infinity Pool Deck",
                       titleId: "Teras Luar & Dek Kolam Renang",
-                      descEn: "Expansive outdoor deck integrated with natural stone pavers.",
                       descId: "Area teras luar luas terintegrasi batu alam."
                     },
                     {
                       img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=500&q=80",
                       titleEn: "03. Living Lounge Spatial Flow & High Ceiling",
                       titleId: "Ruang Keluarga Plafon Tinggi",
-                      descEn: "Double-height living pavilion maximizing natural daylight.",
                       descId: "Pavilion ruang keluarga memaksimalkan pencahayaan alami."
+                    },
+                    {
+                      img: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=500&q=80",
+                      titleEn: "04. Side Garden & Boundary Wall Detail",
+                      titleId: "Taman Samping & Detail Dinding Pembatas",
+                      descId: "Penataan taman samping dengan lampu dinding & vegetasi tropis."
+                    },
+                    {
+                      img: "https://images.unsplash.com/photo-1600585152220-90363fe7e115?auto=format&fit=crop&w=500&q=80",
+                      titleEn: "05. Master Suite Private Balcony View",
+                      titleId: "Balkon Privat Kamar Utama",
+                      descId: "Balkon privat lantai atas menghadap ke taman belakang."
                     }
-                  ].slice(0, Math.min(3, Math.max(1, customPhotoCount))).map((row, rIdx) => (
-                    <div key={rIdx} className="grid grid-cols-12 gap-5 items-start py-2 border-b border-neutral-200/60 last:border-0">
-                      {/* Left Photo - Fixed Proportional Aspect Ratio 16:9 (Span 6 of 12 - TIDAK PERNAH GEPENG) */}
-                      <div className="col-span-6 relative w-full aspect-[16/9] rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-2xs shrink-0">
+                  ].slice(0, Math.min(5, Math.max(1, customPhotoCount))).map((row, rIdx) => (
+                    <div key={rIdx} className={clsx(
+                      "grid grid-cols-12 items-start border-b border-neutral-200/60 last:border-0 min-w-0",
+                      customPhotoCount <= 2 ? "gap-4 py-2" : customPhotoCount === 3 ? "gap-3 py-1.5" : "gap-3 py-1"
+                    )}>
+                      <div
+                        className={clsx(
+                          "col-span-5 relative w-full rounded-xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-2xs shrink-0",
+                          customPhotoCount <= 2 ? "aspect-[16/10]" : customPhotoCount === 3 ? "aspect-[16/9]" : "aspect-[16/7]"
+                        )}
+                      >
                         <img src={row.img} alt={row.titleEn} className="w-full h-full object-cover" />
-                        <div className="absolute top-2.5 left-2.5 bg-neutral-900/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold text-white shadow-xs border border-white/20">
+                        <div className="absolute top-1.5 left-1.5 bg-neutral-900/85 backdrop-blur-md px-1.5 py-0.5 rounded-full text-[8px] font-mono font-bold text-white shadow-xs border border-white/20">
                           0{rIdx + 1}
                         </div>
                       </div>
 
-                      {/* Right Title & Bilingual Description - TOP ALIGNED (Span 6 of 12) */}
-                      <div className="col-span-6 space-y-1.5 min-w-0 pt-0.5">
-                        <div>
-                          <h4 className="text-xs font-black text-neutral-900 leading-tight">{row.titleEn}</h4>
-                          <p className="text-[10px] font-semibold italic text-neutral-400 leading-tight">{row.titleId}</p>
-                        </div>
-                        <p className="text-[10px] font-normal italic text-neutral-400 leading-tight line-clamp-2">{row.descId}</p>
+                      <div className="col-span-7 space-y-0.5 min-w-0">
+                        <h4 className={clsx("font-black text-neutral-900 leading-tight truncate", customPhotoCount >= 4 ? "text-[10px]" : "text-[11px]")}>{row.titleEn}</h4>
+                        <p className={clsx("font-semibold italic text-neutral-400 leading-tight truncate", customPhotoCount >= 4 ? "text-[9px]" : "text-[10px]")}>{row.titleId}</p>
+                        {customPhotoCount <= 3 && (
+                          <p className="text-[9px] font-normal italic text-neutral-500 leading-tight line-clamp-2">{row.descId}</p>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-06" || pageItem.taskCode === "04-12" ? (
-              /* 04-06 / 04-12: TRUE FULL BLEED OVERLAY (IDENTICAL CONTAINER STRUCTURE & EXACT COPY OF HEADER, TITLE & FOOTER) */
+            ) : pageItem.taskCode === "04-05" || pageItem.taskCode === "04-05-L" || pageItem.taskCode === "04-06" || pageItem.taskCode === "04-06-P" ? (
+              /* FULL BLEED OVERLAY (04-05-L ON LANDSCAPE / 04-06-P ON PORTRAIT) */
               <div className="absolute inset-0 w-full h-full overflow-hidden bg-neutral-900 flex flex-col justify-between p-12 select-none">
                 {/* 100% Full Bleed Background Photo */}
                 <img

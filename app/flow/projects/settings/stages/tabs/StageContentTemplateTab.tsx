@@ -274,10 +274,10 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     description: "Landscape wide 2-column table for project assumptions & site conditions.",
     previewTaskCode: "03-04"
   },
-  // --- SECTION 04 PORTRAIT TEMPLATES (04-01 to 04-06) ---
+  // --- SECTION 04 PORTRAIT TEMPLATES (04-01-P to 04-06-P) ---
   {
     id: "tpl-single-image-p",
-    code: "04-01",
+    code: "04-01-P",
     name: "Single Image (Portrait)",
     nameId: "Gambar Tunggal (Portrait)",
     category: "Drawings, Diagram, and Image",
@@ -286,104 +286,95 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
   },
   {
     id: "tpl-multiple-image-p",
-    code: "04-02",
+    code: "04-02-P",
     name: "Multiple Image (Portrait)",
     nameId: "Multi Gambar Grid (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait grid gallery layout for displaying 4 drawing images or survey photos.",
-    previewTaskCode: "04-02"
+    previewTaskCode: "04-02-P"
   },
   {
     id: "tpl-image-desc-p",
-    code: "04-03",
+    code: "04-03-P",
     name: "Image and Desc (Portrait)",
     nameId: "Gambar & Deskripsi (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait layout featuring page title, main drawing image, and concise descriptive paragraph.",
-    previewTaskCode: "04-03"
+    previewTaskCode: "04-03-P"
   },
   {
     id: "tpl-image-points-p",
-    code: "04-04",
+    code: "04-04-P",
     name: "Image and Point (Portrait)",
     nameId: "Gambar & Poin-Poin (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait single drawing layout with key highlight bullet points and technical notes.",
-    previewTaskCode: "04-04"
+    previewTaskCode: "04-04-P"
   },
   {
     id: "tpl-multiple-image-desc-p",
-    code: "04-05",
+    code: "04-05-P",
     name: "Multiple Image and Desc (Portrait)",
     nameId: "Multi Gambar & Deskripsi (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait 3-image grid combined with brief summary description text.",
-    previewTaskCode: "04-05"
+    previewTaskCode: "04-05-P"
   },
   {
     id: "tpl-full-image-overlay-p",
-    code: "04-06",
+    code: "04-06-P",
     name: "Full Bleed Image Overlay (Portrait)",
     nameId: "Gambar Penuh Overlay (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait full-page edge-to-edge background image with dark floating title overlay.",
-    previewTaskCode: "04-06"
+    previewTaskCode: "04-06-P"
   },
 
-  // --- SECTION 04 LANDSCAPE TEMPLATES (04-07 to 04-12) ---
+  // --- SECTION 04 LANDSCAPE TEMPLATES (04-01-L to 04-05-L) ---
   {
     id: "tpl-single-image-l",
-    code: "04-07",
+    code: "04-01-L",
     name: "Single Image (Landscape)",
     nameId: "Gambar Tunggal (Landscape)",
     category: "Drawings, Diagram, and Image",
     description: "Landscape wide-format layout with page title and max-width single drawing container.",
-    previewTaskCode: "04-07"
+    previewTaskCode: "04-01-L"
   },
   {
     id: "tpl-multiple-image-l",
-    code: "04-08",
+    code: "04-02-L",
     name: "Multiple Image (Landscape)",
     nameId: "Multi Gambar Grid (Landscape)",
     category: "Drawings, Diagram, and Image",
-    description: "Landscape wide 4-column gallery grid for site photos and technical drawings.",
-    previewTaskCode: "04-08"
+    description: "Landscape multi photo grid with selector (1-3 photos), title, caption, and description.",
+    previewTaskCode: "04-02-L"
   },
   {
     id: "tpl-image-desc-l",
-    code: "04-09",
+    code: "04-03-L",
     name: "Image and Desc (Landscape)",
     nameId: "Gambar & Deskripsi (Landscape)",
     category: "Drawings, Diagram, and Image",
     description: "Landscape 2-column split layout with left image and right narrative description.",
-    previewTaskCode: "04-09"
+    previewTaskCode: "04-03-L"
   },
   {
     id: "tpl-image-points-l",
-    code: "04-10",
+    code: "04-04-L",
     name: "Image and Point (Landscape)",
     nameId: "Gambar & Poin-Poin (Landscape)",
     category: "Drawings, Diagram, and Image",
     description: "Landscape 2-column split layout with left image and right technical bullet points.",
-    previewTaskCode: "04-10"
+    previewTaskCode: "04-04-L"
   },
   {
     id: "tpl-full-image-overlay-l",
-    code: "04-12",
+    code: "04-05-L",
     name: "Full Bleed Image Overlay (Landscape)",
     nameId: "Gambar Penuh Overlay (Landscape)",
     category: "Drawings, Diagram, and Image",
     description: "Landscape full-page edge-to-edge background image with dark floating title overlay.",
-    previewTaskCode: "04-12"
-  },
-  {
-    id: "tpl-single-image-sidebar-l",
-    code: "04-13",
-    name: "Single Image Sidebar (Landscape)",
-    nameId: "Gambar Tunggal Sidebar Kanan (Landscape)",
-    category: "Drawings, Diagram, and Image",
-    description: "Landscape wide-format layout with dedicated right sidebar for header, title, details, and footer.",
-    previewTaskCode: "04-13"
+    previewTaskCode: "04-05-L"
   },
 
   // --- SECTION 04 V2 KOP GAMBAR KERJA PLACEHOLDERS ---
@@ -542,9 +533,9 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
 
     let matchesFormat = true;
     if (selectedFormat === "V1-P") {
-      matchesFormat = tpl.code.endsWith("-P") || ["04-01", "04-02", "04-03", "04-04", "04-05", "04-06"].includes(tpl.code) || (!tpl.code.endsWith("-L") && !tpl.code.endsWith("-V2P") && !tpl.code.endsWith("-V2L"));
+      matchesFormat = tpl.code.endsWith("-P") || (!tpl.code.endsWith("-L") && !tpl.code.endsWith("-V2P") && !tpl.code.endsWith("-V2L"));
     } else if (selectedFormat === "V1-L") {
-      matchesFormat = tpl.code.endsWith("-L") || ["04-07", "04-08", "04-09", "04-10", "04-12", "04-13"].includes(tpl.code);
+      matchesFormat = tpl.code.endsWith("-L");
     } else if (selectedFormat === "V2-P") {
       matchesFormat = tpl.code.endsWith("-V2P");
     } else if (selectedFormat === "V2-L") {
@@ -1300,73 +1291,65 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                               </div>
                             )}
 
-                            {/* Block 3 FOR MULTIPLE IMAGE GRID TEMPLATES (04-02 & 04-08): Multi Image Grid Items & Photo Count Selector for 04-08 */}
-                            {(tpl.code === "04-02" || tpl.code === "04-08" || tpl.code === "04-05") && (
+                            {/* Block 3 FOR MULTIPLE IMAGE GRID TEMPLATES (04-02-L): Multi Image Grid Items & Photo Count Selector for Landscape */}
+                            {tpl.code === "04-02-L" && (
                               <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
-                                <span className="text-[10px] font-bold text-brand-red uppercase block">3. Multi Image Items & Selector ({tpl.code === "04-02" ? "4 Items" : "1 - 3 Items"})</span>
+                                <span className="text-[10px] font-bold text-brand-red uppercase block">3. Multi Image Items & Selector (1 - 3 Items)</span>
                                 <div className="space-y-1.5 pt-0.5">
-                                  {(tpl.code === "04-08" || tpl.code === "04-05") && (
-                                    <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-neutral-100 dark:border-neutral-800">
-                                      <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">PHOTO COUNT</span>
-                                      <div className="flex items-center gap-1.5">
-                                        {[1, 2, 3].map((num) => (
-                                          <button
-                                            key={num}
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setPhotoCount(num);
-                                            }}
-                                            className={clsx(
-                                              "text-xs font-mono font-bold px-3 py-1 rounded-lg border transition-all cursor-pointer",
-                                              photoCount === num
-                                                ? "bg-brand-red text-white border-brand-red shadow-xs scale-105"
-                                                : "text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200"
-                                            )}
-                                          >
-                                            {num}
-                                          </button>
-                                        ))}
-                                      </div>
+                                  <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-neutral-100 dark:border-neutral-800">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">PHOTO COUNT SELECTOR</span>
+                                    <div className="flex items-center gap-1.5">
+                                      {[1, 2, 3].map((num) => (
+                                        <button
+                                          key={num}
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPhotoCount(num);
+                                          }}
+                                          className={clsx(
+                                            "text-xs font-mono font-bold w-7 h-7 rounded-full border transition-all cursor-pointer flex items-center justify-center",
+                                            photoCount === num
+                                              ? "bg-brand-red text-white border-brand-red shadow-xs scale-105"
+                                              : "text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200"
+                                          )}
+                                        >
+                                          {num}
+                                        </button>
+                                      ))}
                                     </div>
-                                  )}
-                                  <div className="space-y-2 pt-0.5 pl-1">
-                                    {[
-                                      {
-                                        num: "01",
-                                        titleEn: "Main Facade Entrance",
-                                        subtitleId: "Tampak Depan Utama & Panel Kayu",
-                                        descEn: "High-impact entrance featuring vertical timber louvers & cove lighting.",
-                                        descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal & pencahayaan tersembunyi."
-                                      },
-                                      {
-                                        num: "02",
-                                        titleEn: "Outdoor Pool Terrace",
-                                        subtitleId: "Teras Luar & Dek Kolam Renang",
-                                        descEn: "Expansive outdoor deck integrated with natural stone pavers.",
-                                        descId: "Area teras luar luas terintegrasi penataan batu alam."
-                                      }
-                                    ].map((item, iIdx) => (
-                                      <div key={iIdx} className="space-y-1 text-xs pb-1.5 border-b border-neutral-100 dark:border-neutral-800 last:border-0 last:pb-0">
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="text-[10px] font-mono font-bold text-brand-red shrink-0">{item.num}</span>
-                                          <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TITLE (EN)</span>
-                                          <span className="text-[11px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{item.titleEn}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 pl-4">
-                                          <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">SUBTITLE (ID)</span>
-                                          <span className="text-[10px] font-medium italic text-neutral-500 truncate">{item.subtitleId}</span>
-                                        </div>
-                                        <div className="flex items-start gap-1.5 pl-4 pt-0.5 border-t border-neutral-100/60 dark:border-neutral-800/60">
-                                          <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0 mt-0.5">DESC (EN)</span>
-                                          <span className="text-[10px] font-medium text-neutral-700 dark:text-neutral-300 leading-snug truncate">{item.descEn}</span>
-                                        </div>
-                                        <div className="flex items-start gap-1.5 pl-4">
-                                          <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0 mt-0.5">DESC (ID)</span>
-                                          <span className="text-[10px] font-normal italic text-neutral-500 leading-snug truncate">{item.descId}</span>
-                                        </div>
-                                      </div>
-                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Block 3 FOR 04-05-P (PORTRAIT MULTIPLE IMAGE & DESC): DYNAMIC SELECTOR (1 - 5 PHOTOS) */}
+                            {(tpl.code === "04-05" || tpl.code === "04-05-P") && (
+                              <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                                <span className="text-[10px] font-bold text-brand-red uppercase block">3. Multi Image & Desc Selector (1 - 5 Photos)</span>
+                                <div className="space-y-1.5 pt-0.5">
+                                  <div className="flex items-center justify-between gap-1 pb-1 border-b border-neutral-100 dark:border-neutral-800">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">PHOTOS</span>
+                                    <div className="flex items-center gap-1">
+                                      {[1, 2, 3, 4, 5].map((num) => (
+                                        <button
+                                          key={num}
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setPhotoCount(num);
+                                          }}
+                                          className={clsx(
+                                            "text-[11px] font-mono font-bold w-6 h-6 rounded-full border transition-all cursor-pointer flex items-center justify-center",
+                                            photoCount === num
+                                              ? "bg-brand-red text-white border-brand-red shadow-xs scale-105"
+                                              : "text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200"
+                                          )}
+                                        >
+                                          {num}
+                                        </button>
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -1432,7 +1415,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
               activeSubTask={
                 selectedTemplate.code === "02-05"
                   ? activeSubPage === 2 ? "02-05_p2" : "02-05"
-                  : selectedTemplate.previewTaskCode || selectedTemplate.code.replace(/-(P|L|V2P|V2L)$/, "")
+                  : selectedTemplate.code
               }
               customOrientation={drawingOrientation}
               customPhotoCount={photoCount}
