@@ -68,7 +68,7 @@ export const koTasks: Task[] = [
   // Section Total: 30
 
   // ========== KO-08: Kickoff Approval (10) ==========
-  { id: "ko-08-01", code: "08-01", name: "Internal Approval", nameId: "Persetujuan Internal", stage: "KO", sectionCode: "KO-08", weight: 4, priority: "high" },
+  { id: "ko-08-01", code: "08-01", name: "Signoff & Approval", nameId: "Persetujuan Dokumen", stage: "KO", sectionCode: "KO-08", weight: 4, priority: "high" },
   { id: "ko-08-02", code: "08-02", name: "Client Approval", nameId: "Persetujuan Klien", stage: "KO", sectionCode: "KO-08", weight: 5, priority: "urgent" },
   { id: "ko-08-03", code: "08-03", name: "Notes", nameId: "Catatan", stage: "KO", sectionCode: "KO-08", weight: 1, priority: "low" },
   // Section Total: 10

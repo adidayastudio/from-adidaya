@@ -453,14 +453,24 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     description: "Landscape wide format 12-month visual timeline Gantt schedule chart.",
     previewTaskCode: "06-02-L"
   },
+  // --- SECTION 08 APPROVAL TEMPLATES (08-01-P & 08-01-L) ---
   {
-    id: "tpl-approval",
-    code: "08-01",
-    name: "Signoff & Approval",
-    nameId: "Persetujuan Dokumen",
+    id: "tpl-approval-p",
+    code: "08-01-P",
+    name: "Signoff & Approval (Portrait)",
+    nameId: "Persetujuan Dokumen (Portrait)",
     category: "Approval",
-    description: "Official 2-column signature verification page for Studio & Client.",
-    previewTaskCode: "08-01"
+    description: "Portrait format approval document with declaration text followed by signature blocks below.",
+    previewTaskCode: "08-01-P"
+  },
+  {
+    id: "tpl-approval-l",
+    code: "08-01-L",
+    name: "Signoff & Approval (Landscape)",
+    nameId: "Persetujuan Dokumen (Landscape)",
+    category: "Approval",
+    description: "Landscape 2-column split layout: left declaration text, right signature verification blocks.",
+    previewTaskCode: "08-01-L"
   }
 ];
 
@@ -1511,7 +1521,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content for 08-01 Signoff & Approval */}
-                      {tpl.code === "08-01" && (
+                      {tpl.code.startsWith("08-01") && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
