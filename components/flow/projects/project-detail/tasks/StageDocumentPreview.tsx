@@ -120,7 +120,7 @@ export default function StageDocumentPreview({
       const taskNameId = t.taskNameId || t.nameId || taskName;
 
       const cleanTaskCode = taskCodeNum.replace(/^[A-Z]{2}-/, "");
-      const isMainCoverTask = idx === 0 && tIdx === 0 && (cleanTaskCode === "01-00");
+      const isMainCoverTask = (cleanTaskCode === "01-00" || cleanTaskCode === "00-00");
       const pageNo = isMainCoverTask ? 1 : pagesList.length + 1;
       
       taskPageIndex[taskCodeNum] = pageNo;
@@ -196,6 +196,14 @@ export default function StageDocumentPreview({
   const totalPages = pagesList.length;
   console.log("[DocPreview] totalPages:", totalPages);
 
+  // Derive framework version (v1 or v2) based on activeSubTask
+  const isV2Framework = Boolean(
+    (activeSubTask && activeSubTask.includes("v2")) ||
+    (activeSection && activeSection.includes("v2")) ||
+    (data as any)?.frameworkVersion === "v2"
+  );
+  const frameworkVersion = isV2Framework ? "v2" : "v1";
+
   // Auto-sync preview page when active section or active subtask changes
   React.useEffect(() => {
     if (activeSubTask) {
@@ -211,6 +219,16 @@ export default function StageDocumentPreview({
       }
 
       const cleanSub = activeSubTask.replace(/^[A-Z]{2}-/, "");
+
+      if (cleanSub === "01-00" || cleanSub === "01-00-P" || cleanSub === "01-00-L" || cleanSub === "00-00") {
+        setActivePage(1);
+        return;
+      }
+      if (cleanSub === "01-01" || cleanSub === "01-01-P" || cleanSub === "01-01-L") {
+        setActivePage(2);
+        return;
+      }
+
       // Try exact match first
       if (taskPageIndex[activeSubTask]) {
         setActivePage(taskPageIndex[activeSubTask]);
@@ -247,27 +265,6 @@ export default function StageDocumentPreview({
       );
       if (matchedIdx !== -1) {
         setActivePage(matchedIdx + 1);
-        return;
-      }
-    }
-
-    // Force page for template if task code matched nothing
-    if (activeSubTask) {
-      if (activeSubTask.includes("00-00-v2")) {
-        const firstTaskIdx = pagesList.findIndex(
-          (p) => p.type === "TASK_PAGE" && p.taskCode !== "01-01" && p.taskCode !== "02-00" && !p.taskCode.endsWith("-00")
-        );
-        setActivePage(firstTaskIdx !== -1 ? firstTaskIdx + 1 : 2);
-        return;
-      }
-
-      // If we selected a template code, find any page in that section or default to page 1
-      const secPrefix = activeSubTask.split("-")[0];
-      const secMatchedIdx = pagesList.findIndex(
-        (p) => p.secCode && p.secCode.endsWith(secPrefix)
-      );
-      if (secMatchedIdx !== -1) {
-        setActivePage(secMatchedIdx + 1);
         return;
       }
     }
@@ -335,40 +332,150 @@ export default function StageDocumentPreview({
     </div>
   );
 
-  const renderSectionCover = (secNumStr: string, titleEn: string, titleId: string) => (
-    <div className="relative w-full h-full bg-neutral-950 text-white p-16 flex flex-col justify-between overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-black opacity-95" />
-      <div className="absolute top-0 right-0 w-[450px] h-[450px] bg-neutral-800/20 rounded-full blur-3xl pointer-events-none" />
+  const renderSectionCover = (secNumStr: string, titleEn: string, titleId: string) => {
+    if (frameworkVersion === "v2" && !isLandscape) {
+      return (
+        <div className="absolute inset-0 w-full h-full bg-white p-4 flex flex-col gap-4 overflow-hidden select-none">
+          {/* CANVAS WORKSPACE: SECTION COVER CONTENT */}
+          <div className="flex-1 w-full relative rounded border border-dashed border-neutral-300 bg-neutral-100/60 p-8 flex flex-col justify-between items-center text-center">
+            <div className="w-full flex items-center justify-between text-[10px] font-mono font-bold text-neutral-400">
+              <span>SECTION COVER</span>
+              <span>SECTION {secNumStr}</span>
+            </div>
+            <div className="space-y-3 max-w-lg my-auto">
+              <span className="font-mono text-xs font-black text-brand-red uppercase tracking-widest block">
+                SECTION {secNumStr}
+              </span>
+              <h1 className="text-3xl font-black text-neutral-900 leading-tight">
+                {titleEn}
+              </h1>
+              <p className="text-sm font-semibold text-neutral-500 italic">
+                {titleId}
+              </p>
+            </div>
+            <div className="text-[9px] font-mono text-neutral-400">
+              ADIDAYA STUDIO — DRAWING FRAMEWORK V2 (PORTRAIT)
+            </div>
+          </div>
 
-      {/* Header Logo - Right Aligned */}
-      <div className="relative z-10 flex justify-end">
-        <div className="flex items-center gap-2 text-2xl font-bold tracking-tight">
-          <span>adidaya</span>
-          <span className="text-brand-red font-extrabold">*</span>
-          <span className="font-light text-neutral-400">studio</span>
+          {/* BOTTOM HORIZONTAL KOP TITLE BLOCK (STRICT EQUAL 4-ROW HEIGHT GRID ~120PX / 3CM) */}
+          <div className="h-[120px] max-h-[3cm] w-full border-t-2 border-neutral-900 pt-1 grid grid-cols-12 gap-x-2 text-[8px] shrink-0 items-stretch">
+            {/* COL 1: PROJECTS (2 ROWS), LOCATION (1 ROW), STAGE (1 ROW) */}
+            <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
+              <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
+                <span className="text-[7px] font-medium text-neutral-400 block leading-none">Projects</span>
+                <span className="font-mono text-[7.5px] font-bold text-neutral-800 leading-tight mt-0.5">{data.projectCode || "039-RBH"} </span>
+                <span className="font-extrabold text-[9px] text-neutral-900 leading-tight truncate">{data.projectName || "Ruby House"}</span>
+              </div>
+              <div className="border-b border-neutral-100 flex flex-col justify-center">
+                <span className="text-[7px] font-medium text-neutral-400 block leading-none">Location</span>
+                <span className="font-bold text-[8px] text-neutral-900 block truncate">{data.projectLocation || "Serang, Banten"}</span>
+              </div>
+              <div className="flex flex-col justify-center">
+                <span className="text-[7px] font-medium text-neutral-400 block leading-none">Stage</span>
+                <span className="font-bold text-[8px] text-brand-red block leading-tight truncate">{data.stageName || "Kickoff"}</span>
+              </div>
+            </div>
+
+            {/* COL 2: OWNER, ARCHITECT, STRUCTURAL, MEP */}
+            <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5 text-[7.5px]">
+              <div className="flex items-center justify-between border-b border-neutral-100">
+                <span className="font-medium text-neutral-400">Owner</span>
+                <span className="font-bold text-neutral-900 truncate">{data.clientName || "-"}</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-neutral-100">
+                <span className="font-medium text-neutral-400">Architect</span>
+                <span className="font-bold text-neutral-900 truncate">Adidaya Studio</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-neutral-100">
+                <span className="font-medium text-neutral-400">Structural</span>
+                <span className="font-medium text-neutral-600">-</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-neutral-400">MEP</span>
+                <span className="font-medium text-neutral-600">-</span>
+              </div>
+            </div>
+
+            {/* COL 3: DRAWING TITLE */}
+            <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
+              <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
+                <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Title</span>
+                <h3 className="text-[10.5px] font-black text-neutral-900 leading-tight mt-1">{titleEn}</h3>
+              </div>
+              <div className="border-b border-neutral-100 flex items-center">
+                <div className="grid grid-cols-3 gap-1 font-mono text-[7px] w-full">
+                  <div><span className="text-neutral-400 font-medium block text-[6px]">Scale</span><strong className="text-neutral-900">1:200</strong></div>
+                  <div><span className="text-neutral-400 font-medium block text-[6px]">Rev.</span><strong className="text-neutral-900">001</strong></div>
+                  <div><span className="text-neutral-400 font-medium block text-[6px]">Date</span><strong className="text-neutral-900">26.06.28</strong></div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between font-mono text-[7.5px]">
+                <span className="text-neutral-400 font-medium">PA: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.paInitials || (data as any)?.principalArchitectInitials || "ANK").substring(0, 3)}</strong></span>
+                <span className="text-neutral-400 font-medium">DRW: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.drwInitials || (data as any)?.drafterInitials || "ANK").substring(0, 3)}</strong></span>
+              </div>
+            </div>
+
+            {/* COL 4: DRAWING NUMBER */}
+            <div className="col-span-3 flex flex-col justify-between pl-1 grid grid-rows-4 gap-y-0.5">
+              <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
+                <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Number</span>
+                <div className="flex items-baseline justify-between font-mono font-black text-xl text-neutral-900 tracking-tight mt-1">
+                  <span>{secNumStr}-01</span>
+                  <span className="text-xs font-bold text-neutral-600">1</span>
+                </div>
+              </div>
+              <div className="border-b border-neutral-100 flex items-center">
+                <p className="text-[6px] text-neutral-400 leading-tight">
+                  No part of this document may be reproduced without written approval.
+                </p>
+              </div>
+              <div className="flex items-center justify-center font-black text-brand-red gap-1 text-[10px]">
+                <span>adidaya</span>
+                <span className="text-brand-red font-bold">*</span>
+                <span className="font-normal text-neutral-900">studio</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="relative w-full h-full bg-neutral-950 text-white p-16 flex flex-col justify-between overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-950 to-black opacity-95" />
+        <div className="absolute top-0 right-0 w-[450px] h-[450px] bg-neutral-800/20 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Header Logo - Right Aligned */}
+        <div className="relative z-10 flex justify-end">
+          <div className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+            <span>adidaya</span>
+            <span className="text-brand-red font-extrabold">*</span>
+            <span className="font-light text-neutral-400">studio</span>
+          </div>
+        </div>
+
+        {/* Main Section Title - Right Aligned */}
+        <div className="relative z-10 my-auto text-right space-y-3 max-w-lg ml-auto">
+          <h1 className="text-4xl font-extrabold tracking-tight leading-tight break-words text-white">
+            {titleEn}
+          </h1>
+          <p className="text-xl text-neutral-400 font-medium italic break-words">
+            {titleId}
+          </p>
+        </div>
+
+        {/* Bottom Right Info */}
+        <div className="relative z-10 flex flex-col items-end gap-2 text-right">
+          <span className="text-2xl font-black tracking-wider font-mono text-white">{data.projectCode}</span>
+          <span className="text-xl font-bold tracking-wide text-neutral-300">Section {secNumStr}</span>
+          <span className="px-3.5 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold tracking-wider border border-white/30 text-white font-mono">
+            {data.version}
+          </span>
         </div>
       </div>
-
-      {/* Main Section Title - Right Aligned */}
-      <div className="relative z-10 my-auto text-right space-y-3 max-w-lg ml-auto">
-        <h1 className="text-4xl font-extrabold tracking-tight leading-tight break-words text-white">
-          {titleEn}
-        </h1>
-        <p className="text-xl text-neutral-400 font-medium italic break-words">
-          {titleId}
-        </p>
-      </div>
-
-      {/* Bottom Right Info */}
-      <div className="relative z-10 flex flex-col items-end gap-2 text-right">
-        <span className="text-2xl font-black tracking-wider font-mono text-white">{data.projectCode}</span>
-        <span className="text-xl font-bold tracking-wide text-neutral-300">Section {secNumStr}</span>
-        <span className="px-3.5 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold tracking-wider border border-white/30 text-white font-mono">
-          {data.version}
-        </span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderSinglePageItem = (pageItem: DocumentPageItem, pageNumber: number) => {
     switch (pageItem.type) {
@@ -388,16 +495,16 @@ export default function StageDocumentPreview({
 
             <div className="relative z-10 my-auto text-right space-y-3 max-w-lg ml-auto">
               <h1 className="text-4xl font-extrabold tracking-tight leading-tight break-words">
-                {data.projectName}
+                {data.projectName || "[Project Name]"}
               </h1>
-              <p className="text-xl text-white/90 font-medium break-words">{data.projectLocation}</p>
+              <p className="text-xl text-white/90 font-medium break-words">{data.projectLocation || "[Project Location]"}</p>
             </div>
 
             <div className="relative z-10 flex flex-col items-end gap-2 text-right">
-              <span className="text-2xl font-black tracking-wider font-mono">{data.projectCode}</span>
+              <span className="text-2xl font-black tracking-wider font-mono">{data.projectCode || "#000-ADY"}</span>
               <span className="text-xl font-bold tracking-wide">{data.stageName || "[Stage]"}</span>
               <span className="px-3.5 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold tracking-wider border border-white/30">
-                {data.version}
+                {data.version || "v1.YYYY.MM.DD"}
               </span>
             </div>
           </div>
@@ -407,7 +514,166 @@ export default function StageDocumentPreview({
         return renderSectionCover(pageItem.secNumStr, pageItem.titleEn, pageItem.titleId);
 
       case "TASK_PAGE":
+        if (pageItem.taskCode === "01-00") {
+          // Explicit Main Project Cover
+          return (
+            <div className="relative w-full h-full bg-brand-red text-white p-16 flex flex-col justify-between overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-red-600 via-brand-red to-red-800 opacity-90" />
+              <div className="absolute top-0 right-0 w-[450px] h-[450px] bg-red-400/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative z-10 flex justify-end">
+                <div className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+                  <span>adidaya</span>
+                  <span className="text-white font-extrabold">*</span>
+                  <span className="font-light">studio</span>
+                </div>
+              </div>
+
+              <div className="relative z-10 my-auto text-right space-y-3 max-w-lg ml-auto">
+                <h1 className="text-4xl font-extrabold tracking-tight leading-tight break-words">
+                  {data.projectName || "[Project Name]"}
+                </h1>
+                <p className="text-xl text-white/90 font-medium break-words">{data.projectLocation || "[Project Location]"}</p>
+              </div>
+
+              <div className="relative z-10 flex flex-col items-end gap-2 text-right">
+                <span className="text-2xl font-black tracking-wider font-mono">{data.projectCode || "#000-ADY"}</span>
+                <span className="text-xl font-bold tracking-wide">{data.stageName || "[Stage]"}</span>
+                <span className="px-3.5 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold tracking-wider border border-white/30">
+                  {data.version || "v1.YYYY.MM.DD"}
+                </span>
+              </div>
+            </div>
+          );
+        }
+
         if (pageItem.taskCode === "01-01" || pageItem.taskCode === "02-00") {
+          if (frameworkVersion === "v2" && !isLandscape) {
+            return (
+              <div className="absolute inset-0 w-full h-full bg-white p-4 flex flex-col gap-4 overflow-hidden select-none">
+                {/* CANVAS WORKSPACE: 01-01 SECTION COVER CONTENT */}
+                <div className="flex-1 w-full relative rounded border border-dashed border-neutral-300 bg-neutral-100/60 p-8 flex flex-col justify-between items-center text-center">
+                  <div className="w-full flex items-center justify-between text-[10px] font-mono font-bold text-neutral-400">
+                    <span>SECTION COVER</span>
+                    <span>SECTION 01</span>
+                  </div>
+                  <div className="space-y-3 max-w-lg my-auto">
+                    <span className="font-mono text-xs font-black text-brand-red uppercase tracking-widest block">
+                      SECTION 01
+                    </span>
+                    <h1 className="text-3xl font-black text-neutral-900 leading-tight">
+                      General Information
+                    </h1>
+                    <p className="text-sm font-semibold text-neutral-500 italic">
+                      Informasi Umum Proyek
+                    </p>
+                  </div>
+                  <div className="text-[9px] font-mono text-neutral-400">
+                    ADIDAYA STUDIO — DRAWING FRAMEWORK V2 (PORTRAIT)
+                  </div>
+                </div>
+
+                {/* BOTTOM HORIZONTAL KOP TITLE BLOCK (STRICT EQUAL 4-ROW HEIGHT GRID ~120PX / 3CM) */}
+                <div className="h-[120px] max-h-[3cm] w-full border-t-2 border-neutral-900 pt-1 grid grid-cols-12 gap-x-2 text-[8px] shrink-0 items-stretch">
+                  {/* COL 1: PROJECTS (2 ROWS), LOCATION (1 ROW), STAGE (1 ROW) - SPANS 3 COLS */}
+                  <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
+                    {/* Row 1 & 2: Projects (RATA ATAS BARIS) */}
+                    <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
+                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Projects</span>
+                      <span className="font-mono text-[7.5px] font-bold text-neutral-800 leading-tight mt-0.5">{data.projectCode || "039-RBH"} </span>
+                      <span className="font-extrabold text-[9px] text-neutral-900 leading-tight truncate">{data.projectName || "Ruby House"}</span>
+                    </div>
+
+                    {/* Row 3: Location */}
+                    <div className="border-b border-neutral-100 flex flex-col justify-center">
+                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Location</span>
+                      <span className="font-bold text-[8px] text-neutral-900 block truncate">{data.projectLocation || "Serang, Banten"}</span>
+                    </div>
+
+                    {/* Row 4: Stage */}
+                    <div className="flex flex-col justify-center">
+                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Stage</span>
+                      <span className="font-bold text-[8px] text-brand-red block leading-tight truncate">{data.stageName || "Kickoff"}</span>
+                    </div>
+                  </div>
+
+                  {/* COL 2: OWNER (ROW 1), ARCHITECT (ROW 2), STRUCTURAL (ROW 3), MEP (ROW 4) - SPANS 3 COLS */}
+                  <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5 text-[7.5px]">
+                    {/* Row 1: Owner */}
+                    <div className="flex items-center justify-between border-b border-neutral-100">
+                      <span className="font-medium text-neutral-400">Owner</span>
+                      <span className="font-bold text-neutral-900 truncate">{data.clientName || "-"}</span>
+                    </div>
+                    {/* Row 2: Architect */}
+                    <div className="flex items-center justify-between border-b border-neutral-100">
+                      <span className="font-medium text-neutral-400">Architect</span>
+                      <span className="font-bold text-neutral-900 truncate">Adidaya Studio</span>
+                    </div>
+                    {/* Row 3: Structural */}
+                    <div className="flex items-center justify-between border-b border-neutral-100">
+                      <span className="font-medium text-neutral-400">Structural</span>
+                      <span className="font-medium text-neutral-600">-</span>
+                    </div>
+                    {/* Row 4: MEP */}
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-neutral-400">MEP</span>
+                      <span className="font-medium text-neutral-600">-</span>
+                    </div>
+                  </div>
+
+                  {/* COL 3: DRAWING TITLE (ROWS 1-2), SCALE/REV/DATE (ROW 3), PA/DRW (ROW 4) - SPANS 3 COLS */}
+                  <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
+                    {/* Row 1 & 2: Drawing Title (RATA ATAS BARIS) */}
+                    <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
+                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Title</span>
+                      <h3 className="text-[10.5px] font-black text-neutral-900 leading-tight mt-1">General Information</h3>
+                    </div>
+
+                    {/* Row 3: Scale, Rev, Date */}
+                    <div className="border-b border-neutral-100 flex items-center">
+                      <div className="grid grid-cols-3 gap-1 font-mono text-[7px] w-full">
+                        <div><span className="text-neutral-400 font-medium block text-[6px]">Scale</span><strong className="text-neutral-900">1:200</strong></div>
+                        <div><span className="text-neutral-400 font-medium block text-[6px]">Rev.</span><strong className="text-neutral-900">001</strong></div>
+                        <div><span className="text-neutral-400 font-medium block text-[6px]">Date</span><strong className="text-neutral-900">26.06.28</strong></div>
+                      </div>
+                    </div>
+
+                    {/* Row 4: PA & DRW */}
+                    <div className="flex items-center justify-between font-mono text-[7.5px]">
+                      <span className="text-neutral-400 font-medium">PA: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.paInitials || (data as any)?.principalArchitectInitials || "ANK").substring(0, 3)}</strong></span>
+                      <span className="text-neutral-400 font-medium">DRW: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.drwInitials || (data as any)?.drafterInitials || "ANK").substring(0, 3)}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* COL 4: DRAWING NUMBER (ROWS 1-2), DISCLAIMER (ROW 3), ADIDAYA LOGO (ROW 4) - SPANS 3 COLS */}
+                  <div className="col-span-3 flex flex-col justify-between pl-1 grid grid-rows-4 gap-y-0.5">
+                    {/* Row 1 & 2: Drawing Number (RATA ATAS BARIS) */}
+                    <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
+                      <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Number</span>
+                      <div className="flex items-baseline justify-between font-mono font-black text-xl text-neutral-900 tracking-tight mt-1">
+                        <span>01-01</span>
+                        <span className="text-xs font-bold text-neutral-600">{pageNumber}</span>
+                      </div>
+                    </div>
+
+                    {/* Row 3: Legal Disclaimer */}
+                    <div className="border-b border-neutral-100 flex items-center">
+                      <p className="text-[6px] text-neutral-400 leading-tight">
+                        No part of this document may be reproduced without written approval.
+                      </p>
+                    </div>
+
+                    {/* Row 4: Adidaya Studio Logo Centered */}
+                    <div className="flex items-center justify-center font-black text-brand-red gap-1 text-[10px]">
+                      <span>adidaya</span>
+                      <span className="text-brand-red font-bold">*</span>
+                      <span className="font-normal text-neutral-900">studio</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          }
           return renderSectionCover("01", "General Information", "Informasi Umum Proyek");
         }
 

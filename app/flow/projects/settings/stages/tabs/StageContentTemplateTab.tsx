@@ -1616,14 +1616,21 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
 
           <div className="flex justify-center">
             <StageDocumentPreview
-              data={livePreviewData}
+              data={{
+                ...livePreviewData,
+                frameworkVersion: selectedTemplate.code.includes("-v2") || selectedFormat.startsWith("V2") ? "v2" : "v1"
+              }}
               activeSection={`KO-${selectedTemplate.code.split("-")[0]}`}
               activeSubTask={
                 selectedTemplate.code === "02-05"
                   ? activeSubPage === 2 ? "02-05_p2" : "02-05"
-                  : selectedTemplate.code
+                  : selectedTemplate.previewTaskCode || selectedTemplate.code
               }
-              customOrientation={drawingOrientation}
+              customOrientation={
+                selectedTemplate.code.endsWith("-L") || drawingOrientation === "landscape"
+                  ? "landscape"
+                  : "portrait"
+              }
               customPhotoCount={photoCount}
               customMatrixColCount={matrixColCount}
               hideToolbar={true}
