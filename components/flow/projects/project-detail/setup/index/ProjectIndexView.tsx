@@ -25,6 +25,7 @@ import clsx from "clsx";
 // Document Preview Imports
 import KickoffDocumentPreview from "@/components/flow/projects/project-detail/tasks/KickoffDocumentPreview";
 import DCRDailyConstructionReportPreview from "@/components/flow/projects/project-detail/tasks/DCRDailyConstructionReportPreview";
+import CrewDailyLogReportPreview from "@/components/flow/projects/project-detail/tasks/CrewDailyLogReportPreview";
 import { defaultKickoffData } from "@/components/flow/projects/project-detail/tasks/defaultKickoffData";
 import { KO_SECTIONS } from "@/components/flow/projects/project-detail/setup/stages/data/ko";
 import { SD_SECTIONS } from "@/components/flow/projects/project-detail/setup/stages/data/sd";
@@ -1559,6 +1560,18 @@ export default function ProjectIndexView({
                     projectName: projectName || "JPF - Masterplan & Architecture",
                     contractorName: "PT. ADIDAYA KREASI NUSA",
                   }}
+                  onSelectNode={(nodeId) => {
+                    setSelectedDocId(nodeId);
+                  }}
+                />
+              ) : selectedDocId === "95-03-00" ||
+                selectedDocId === "95-00-00" ||
+                selectedNodeObj?.code === "95 03 00" ||
+                selectedNodeObj?.title?.toLowerCase().includes("crew daily log") ? (
+                /* 95 03 00 CREW DAILY LOG & TIMESHEET FORMAT */
+                <CrewDailyLogReportPreview
+                  isProjectDetail={!!projectTag}
+                  projectName={projectName}
                   onSelectNode={(nodeId) => {
                     setSelectedDocId(nodeId);
                   }}

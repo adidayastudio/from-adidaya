@@ -97,7 +97,25 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
         }
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     }, [selectedProject, forceProjectSuffix]);
-    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(() => {
+        const dateParam = searchParams.get("date");
+        if (dateParam) {
+            const parsed = new Date(dateParam);
+            if (!isNaN(parsed.getTime())) return parsed;
+        }
+        return new Date();
+    });
+
+    // Sync date FROM URL
+    useEffect(() => {
+        const dateParam = searchParams.get("date");
+        if (dateParam) {
+            const parsed = new Date(dateParam);
+            if (!isNaN(parsed.getTime()) && parsed.toDateString() !== selectedDate.toDateString()) {
+                setSelectedDate(parsed);
+            }
+        }
+    }, [searchParams]);
     const [entries, setEntries] = useState<DailyEntry[]>([]);
     const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
     const [sortBy, setSortBy] = useState<"name" | "status">("name");
