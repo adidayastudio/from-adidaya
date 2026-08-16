@@ -31,6 +31,25 @@ const CATEGORIES = [
 ] as const;
 
 const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] = [
+  // --- KOP V2 BLANK CANVAS TEMPLATES (00-00-v2-P & 00-00-v2-L) ---
+  {
+    id: "tpl-kop-v2-p",
+    code: "00-00-v2-P",
+    name: "Drawing Title Block Kop v2 (Portrait)",
+    nameId: "Kop Gambar Arsitektur v2 (Portrait)",
+    category: "General Information",
+    description: "Portrait blank canvas layout with full architectural drawing Kop Title Block sidebar frame.",
+    previewTaskCode: "00-00-v2-P"
+  },
+  {
+    id: "tpl-kop-v2-l",
+    code: "00-00-v2-L",
+    name: "Drawing Title Block Kop v2 (Landscape)",
+    nameId: "Kop Gambar Arsitektur v2 (Landscape)",
+    category: "General Information",
+    description: "Landscape wide format blank canvas with right-side Kop Title Block sidebar frame.",
+    previewTaskCode: "00-00-v2-L"
+  },
   // --- SECTION 01 GENERAL INFORMATION PORTRAIT TEMPLATES (01-00-P to 01-04-P) ---
   {
     id: "tpl-main-cover-p",
@@ -582,13 +601,13 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
 
     let matchesFormat = true;
     if (selectedFormat === "V1-P") {
-      matchesFormat = tpl.code.endsWith("-P") || (!tpl.code.endsWith("-L") && !tpl.code.endsWith("-V2P") && !tpl.code.endsWith("-V2L"));
+      matchesFormat = (tpl.code.endsWith("-P") && !tpl.code.includes("-v2")) || (!tpl.code.endsWith("-L") && !tpl.code.includes("-v2"));
     } else if (selectedFormat === "V1-L") {
-      matchesFormat = tpl.code.endsWith("-L");
+      matchesFormat = tpl.code.endsWith("-L") && !tpl.code.includes("-v2");
     } else if (selectedFormat === "V2-P") {
-      matchesFormat = tpl.code.endsWith("-V2P");
+      matchesFormat = tpl.code.includes("-v2-P") || tpl.code.endsWith("-V2P");
     } else if (selectedFormat === "V2-L") {
-      matchesFormat = tpl.code.endsWith("-V2L");
+      matchesFormat = tpl.code.includes("-v2-L") || tpl.code.endsWith("-V2L");
     }
 
     return matchesSearch && matchesCategory && matchesFormat;
@@ -650,8 +669,8 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                 { id: "ALL", label: "All Formats" },
                 { id: "V1-P", label: "V1 · Portrait" },
                 { id: "V1-L", label: "V1 · Landscape" },
-                { id: "V2-P", label: "V2 (Gambar Kerja) · Portrait [Placeholder]" },
-                { id: "V2-L", label: "V2 (Gambar Kerja) · Landscape [Placeholder]" }
+                { id: "V2-P", label: "V2 (Gambar Kerja) · Portrait" },
+                { id: "V2-L", label: "V2 (Gambar Kerja) · Landscape" }
               ].map((fmt) => (
                 <button
                   key={fmt.id}

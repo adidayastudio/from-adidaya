@@ -199,6 +199,17 @@ export default function StageDocumentPreview({
   // Auto-sync preview page when active section or active subtask changes
   React.useEffect(() => {
     if (activeSubTask) {
+      if (activeSubTask.includes("00-00-v2")) {
+        // Virtual preview page for Kop V2 - find first real content task page (skip section covers)
+        const firstTaskIdx = pagesList.findIndex(
+          (p) => p.type === "TASK_PAGE" && p.taskCode !== "01-01" && p.taskCode !== "02-00" && !p.taskCode.endsWith("-00")
+        );
+        if (firstTaskIdx !== -1) {
+          setActivePage(firstTaskIdx + 1);
+          return;
+        }
+      }
+
       const cleanSub = activeSubTask.replace(/^[A-Z]{2}-/, "");
       // Try exact match first
       if (taskPageIndex[activeSubTask]) {
@@ -240,8 +251,16 @@ export default function StageDocumentPreview({
       }
     }
 
-    // Force page 1 for section 01 or cover page if task code matched nothing
+    // Force page for template if task code matched nothing
     if (activeSubTask) {
+      if (activeSubTask.includes("00-00-v2")) {
+        const firstTaskIdx = pagesList.findIndex(
+          (p) => p.type === "TASK_PAGE" && p.taskCode !== "01-01" && p.taskCode !== "02-00" && !p.taskCode.endsWith("-00")
+        );
+        setActivePage(firstTaskIdx !== -1 ? firstTaskIdx + 1 : 2);
+        return;
+      }
+
       // If we selected a template code, find any page in that section or default to page 1
       const secPrefix = activeSubTask.split("-")[0];
       const secMatchedIdx = pagesList.findIndex(
@@ -254,6 +273,13 @@ export default function StageDocumentPreview({
     }
 
     if (activeSection && sectionCoverPageIndex[activeSection]) {
+      if (activeSection === "KO-00" || (activeSubTask && activeSubTask.includes("00-00-v2"))) {
+        const firstTaskIdx = pagesList.findIndex(
+          (p) => p.type === "TASK_PAGE" && p.taskCode !== "01-01" && p.taskCode !== "02-00" && !p.taskCode.endsWith("-00")
+        );
+        setActivePage(firstTaskIdx !== -1 ? firstTaskIdx + 1 : 2);
+        return;
+      }
       setActivePage(sectionCoverPageIndex[activeSection]);
       return;
     }
@@ -1174,6 +1200,251 @@ export default function StageDocumentPreview({
                   </div>
                 </div>
               </div>
+            ) : (activeSubTask && activeSubTask.includes("00-00-v2")) || pageItem.taskCode.includes("00-00-v2") || pageItem.taskCode.startsWith("KO-00-00") ? (
+              /* KOP V2 BLANK CANVAS ARCHITECTURAL DRAWING TITLE BLOCK PREVIEW (PORTRAIT & LANDSCAPE) */
+              isLandscape ? (
+                /* LANDSCAPE KOP V2: RIGHT SIDEBAR TITLE BLOCK (MAX 4CM WIDE) */
+                <div className="absolute inset-0 w-full h-full bg-white p-4 flex gap-4 overflow-hidden select-none">
+                  {/* CANVAS WORKSPACE (DRAWING AREA) */}
+                  <div className="flex-1 h-full relative rounded border border-dashed border-neutral-300 bg-neutral-100/60 p-6 flex flex-col justify-between items-center text-center">
+                    <div className="w-full flex items-center justify-between text-[10px] font-mono font-bold text-neutral-400">
+                      <span>DRAWING CANVAS VIEWPORT</span>
+                      <span>SCALE 1 : 200</span>
+                    </div>
+                    <div className="space-y-1 max-w-sm">
+                      <span className="font-mono text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest block">
+                        ARCHITECTURAL CANVAS WORKSPACE
+                      </span>
+                      <p className="text-[11px] font-semibold text-neutral-500 italic">
+                        "Primary floor plans, sections, elevations, or 3D drawings are placed inside this canvas boundary."
+                      </p>
+                    </div>
+                    <div className="text-[9px] font-mono text-neutral-400">
+                      ADIDAYA STUDIO — DRAWING FRAMEWORK V2 (LANDSCAPE)
+                    </div>
+                  </div>
+
+                  {/* RIGHT SIDEBAR ARCHITECTURAL KOP TITLE BLOCK (MAX 4CM LEBAR) */}
+                  <div className="w-[151px] max-w-[4cm] h-full flex flex-col justify-between border-l border-neutral-900 pl-2.5 shrink-0 py-0.5 text-[9px]">
+                    <div className="space-y-2 flex-1 flex flex-col justify-between">
+                      {/* METADATA STACK (Projects, Location, Owner, Architect, Structural, MEP) */}
+                      <div className="space-y-2 pt-0">
+                        {/* Projects */}
+                        <div className="border-b border-neutral-200 pb-1">
+                          <span className="text-[8px] font-medium text-neutral-400 block leading-none">Projects</span>
+                          <span className="font-mono text-[9px] font-bold text-neutral-800 block">{data.projectCode || "039-RBH"}</span>
+                          <span className="font-extrabold text-[11px] text-neutral-900 block leading-tight">{data.projectName || "Ruby House"}</span>
+                        </div>
+
+                        {/* Location */}
+                        <div className="border-b border-neutral-200 pb-1.5">
+                          <span className="text-[8px] font-medium text-neutral-400 block leading-none">Location</span>
+                          <span className="font-bold text-[10px] text-neutral-900 block leading-tight">{data.projectLocation || "Jl. Kol. T.B. Suwandi 12B, Serang, Banten, 42116"}</span>
+                        </div>
+
+                        {/* Owner */}
+                        <div className="border-b border-neutral-200 pb-1.5">
+                          <span className="text-[8px] font-medium text-neutral-400 block leading-none">Owner</span>
+                          <span className="font-bold text-[10px] text-neutral-900 block leading-tight">{data.clientName || "-"}</span>
+                        </div>
+
+                        {/* Architect */}
+                        <div className="border-b border-neutral-200 pb-1.5">
+                          <span className="text-[8px] font-medium text-neutral-400 block leading-none">Architect</span>
+                          <span className="font-bold text-[10px] text-neutral-900 block leading-tight">Adidaya Studio</span>
+                        </div>
+
+                        {/* Structural Engineer */}
+                        <div className="border-b border-neutral-200 pb-1.5">
+                          <span className="text-[8px] font-medium text-neutral-400 block leading-none">Structural Engineer</span>
+                          <span className="font-medium text-[10px] text-neutral-600 block leading-tight">-</span>
+                        </div>
+
+                        {/* MEP Engineer */}
+                        <div className="border-b border-neutral-200 pb-1.5">
+                          <span className="text-[8px] font-medium text-neutral-400 block leading-none">MEP Engineer</span>
+                          <span className="font-medium text-[10px] text-neutral-600 block leading-tight">-</span>
+                        </div>
+                      </div>
+
+                      {/* DRAWING TITLE BLOCK */}
+                      <div className="border-t border-neutral-900 pt-2 pb-1 space-y-1">
+                        <span className="text-[8px] font-medium text-neutral-400 block leading-none">Drawing Title</span>
+                        <h3 className="text-xs font-black text-neutral-900 leading-tight">Denah Lantai 1</h3>
+                      </div>
+
+                      {/* STATUS / SCALE / REV / DATE / INITIALS TABLE */}
+                      <div className="border-t border-b border-neutral-900 py-1 text-[9px] space-y-1">
+                        <div className="flex items-center justify-between border-b border-neutral-200 pb-1">
+                          <span className="text-neutral-400 font-medium">Status</span>
+                          <span className="font-bold text-neutral-900">For Construction</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1 text-[8px] border-b border-neutral-200 pb-1 font-mono">
+                          <div><span className="text-neutral-400 font-medium block">Scale</span><span className="font-bold text-neutral-900 text-[9px]">1:200</span></div>
+                          <div><span className="text-neutral-400 font-medium block">Rev.</span><span className="font-bold text-neutral-900 text-[9px]">001</span></div>
+                          <div><span className="text-neutral-400 font-medium block">Date</span><span className="font-bold text-neutral-900 text-[9px]">26.06.28</span></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-1 text-[8px] font-mono">
+                          <div>
+                            <span className="text-neutral-400 font-medium block">PA</span>
+                            <span className="font-bold text-neutral-900 uppercase">
+                              {((data as any)?.paInitials || (data as any)?.principalArchitectInitials || "ANK").substring(0, 3)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-neutral-400 font-medium block">DRW</span>
+                            <span className="font-bold text-neutral-900 uppercase">
+                              {((data as any)?.drwInitials || (data as any)?.drafterInitials || "ANK").substring(0, 3)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* DRAWING NUMBER */}
+                      <div className="border-b border-neutral-900 pb-2 space-y-0.5">
+                        <span className="text-[8px] font-medium text-neutral-400 block leading-none">Drawing Number</span>
+                        <div className="flex items-baseline justify-between font-mono font-black text-lg text-neutral-900 tracking-tight">
+                          <span>01-01</span>
+                          <span>{pageNumber}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* FOOTER: LEGAL DISCLAIMER & ADIDAYA STUDIO LOGO (CENTERED) */}
+                    <div className="pt-2 space-y-2 border-t border-neutral-200 shrink-0 text-center">
+                      <p className="text-[7px] text-neutral-400 leading-tight">
+                        No part of this document may be reproduced and transmitted in any form except with the written approval from the architect.
+                      </p>
+                      <div className="font-black text-brand-red tracking-tight flex items-center justify-center gap-1 text-xs pt-1">
+                        <span>adidaya</span>
+                        <span className="text-brand-red font-bold">*</span>
+                        <span className="font-normal text-neutral-900">studio</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* PORTRAIT KOP V2: BOTTOM HORIZONTAL FOOTER TITLE BLOCK (MAX 4CM HEIGHT) */
+                <div className="absolute inset-0 w-full h-full bg-white p-4 flex flex-col gap-4 overflow-hidden select-none">
+                  {/* CANVAS WORKSPACE (TOP DRAWING AREA) */}
+                  <div className="flex-1 w-full relative rounded border border-dashed border-neutral-300 bg-neutral-100/60 p-6 flex flex-col justify-between items-center text-center">
+                    <div className="w-full flex items-center justify-between text-[10px] font-mono font-bold text-neutral-400">
+                      <span>DRAWING CANVAS VIEWPORT</span>
+                      <span>SCALE 1 : 200</span>
+                    </div>
+                    <div className="space-y-1 max-w-md">
+                      <span className="font-mono text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest block">
+                        ARCHITECTURAL CANVAS WORKSPACE (PORTRAIT)
+                      </span>
+                      <p className="text-xs font-semibold text-neutral-500 italic">
+                        "Primary floor plans, sections, elevations, or 3D drawings are placed inside this canvas boundary."
+                      </p>
+                    </div>
+                    <div className="text-[9px] font-mono text-neutral-400">
+                      ADIDAYA STUDIO — DRAWING FRAMEWORK V2 (PORTRAIT)
+                    </div>
+                  </div>
+
+                  {/* BOTTOM HORIZONTAL KOP TITLE BLOCK (STRICT EQUAL 4-ROW HEIGHT GRID ~120PX / 3CM) */}
+                  <div className="h-[120px] max-h-[3cm] w-full border-t-2 border-neutral-900 pt-1 grid grid-cols-12 gap-x-2 text-[8px] shrink-0 items-stretch">
+                    {/* COL 1: PROJECTS (2 ROWS), LOCATION (1 ROW), STAGE (1 ROW) - SPANS 3 COLS */}
+                    <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
+                      {/* Row 1 & 2: Projects (RATA ATAS BARIS) */}
+                      <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
+                        <span className="text-[7px] font-medium text-neutral-400 block leading-none">Projects</span>
+                        <span className="font-mono text-[7.5px] font-bold text-neutral-800 leading-tight mt-0.5">{data.projectCode || "039-RBH"} </span>
+                        <span className="font-extrabold text-[9px] text-neutral-900 leading-tight truncate">{data.projectName || "Ruby House"}</span>
+                      </div>
+
+                      {/* Row 3: Location */}
+                      <div className="border-b border-neutral-100 flex flex-col justify-center">
+                        <span className="text-[7px] font-medium text-neutral-400 block leading-none">Location</span>
+                        <span className="font-bold text-[8px] text-neutral-900 block truncate">{data.projectLocation || "Serang, Banten"}</span>
+                      </div>
+
+                      {/* Row 4: Stage */}
+                      <div className="flex flex-col justify-center">
+                        <span className="text-[7px] font-medium text-neutral-400 block leading-none">Stage</span>
+                        <span className="font-bold text-[8px] text-brand-red block leading-tight truncate">{data.stageName || "Kickoff"}</span>
+                      </div>
+                    </div>
+
+                    {/* COL 2: OWNER (ROW 1), ARCHITECT (ROW 2), STRUCTURAL (ROW 3), MEP (ROW 4) - SPANS 3 COLS */}
+                    <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5 text-[7.5px]">
+                      {/* Row 1: Owner */}
+                      <div className="flex items-center justify-between border-b border-neutral-100">
+                        <span className="font-medium text-neutral-400">Owner</span>
+                        <span className="font-bold text-neutral-900 truncate">{data.clientName || "-"}</span>
+                      </div>
+                      {/* Row 2: Architect */}
+                      <div className="flex items-center justify-between border-b border-neutral-100">
+                        <span className="font-medium text-neutral-400">Architect</span>
+                        <span className="font-bold text-neutral-900 truncate">Adidaya Studio</span>
+                      </div>
+                      {/* Row 3: Structural */}
+                      <div className="flex items-center justify-between border-b border-neutral-100">
+                        <span className="font-medium text-neutral-400">Structural</span>
+                        <span className="font-medium text-neutral-600">-</span>
+                      </div>
+                      {/* Row 4: MEP */}
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-neutral-400">MEP</span>
+                        <span className="font-medium text-neutral-600">-</span>
+                      </div>
+                    </div>
+
+                    {/* COL 3: DRAWING TITLE (ROWS 1-2), SCALE/REV/DATE (ROW 3), PA/DRW (ROW 4) - SPANS 3 COLS */}
+                    <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
+                      {/* Row 1 & 2: Drawing Title (RATA ATAS BARIS) */}
+                      <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
+                        <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Title</span>
+                        <h3 className="text-[10.5px] font-black text-neutral-900 leading-tight mt-1">Denah Lantai 1</h3>
+                      </div>
+
+                      {/* Row 3: Scale, Rev, Date */}
+                      <div className="border-b border-neutral-100 flex items-center">
+                        <div className="grid grid-cols-3 gap-1 font-mono text-[7px] w-full">
+                          <div><span className="text-neutral-400 font-medium block text-[6px]">Scale</span><strong className="text-neutral-900">1:200</strong></div>
+                          <div><span className="text-neutral-400 font-medium block text-[6px]">Rev.</span><strong className="text-neutral-900">001</strong></div>
+                          <div><span className="text-neutral-400 font-medium block text-[6px]">Date</span><strong className="text-neutral-900">26.06.28</strong></div>
+                        </div>
+                      </div>
+
+                      {/* Row 4: PA & DRW */}
+                      <div className="flex items-center justify-between font-mono text-[7.5px]">
+                        <span className="text-neutral-400 font-medium">PA: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.paInitials || (data as any)?.principalArchitectInitials || "ANK").substring(0, 3)}</strong></span>
+                        <span className="text-neutral-400 font-medium">DRW: <strong className="text-neutral-900 uppercase font-bold">{((data as any)?.drwInitials || (data as any)?.drafterInitials || "ANK").substring(0, 3)}</strong></span>
+                      </div>
+                    </div>
+
+                    {/* COL 4: DRAWING NUMBER (ROWS 1-2), DISCLAIMER (ROW 3), ADIDAYA LOGO (ROW 4) - SPANS 3 COLS */}
+                    <div className="col-span-3 flex flex-col justify-between pl-1 grid grid-rows-4 gap-y-0.5">
+                      {/* Row 1 & 2: Drawing Number (RATA ATAS BARIS) */}
+                      <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
+                        <span className="text-[7px] font-medium text-neutral-400 block leading-none">Drawing Number</span>
+                        <div className="flex items-baseline justify-between font-mono font-black text-xl text-neutral-900 tracking-tight mt-1">
+                          <span>01-01</span>
+                          <span className="text-xs font-bold text-neutral-600">{pageNumber}</span>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Legal Disclaimer */}
+                      <div className="border-b border-neutral-100 flex items-center">
+                        <p className="text-[6px] text-neutral-400 leading-tight">
+                          No part of this document may be reproduced without written approval.
+                        </p>
+                      </div>
+
+                      {/* Row 4: Adidaya Studio Logo Centered */}
+                      <div className="flex items-center justify-center font-black text-brand-red gap-1 text-[10px]">
+                        <span>adidaya</span>
+                        <span className="text-brand-red font-bold">*</span>
+                        <span className="font-normal text-neutral-900">studio</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
             ) : pageItem.taskCode === "08-01" || pageItem.taskCode.startsWith("08-01") || pageItem.taskCode.startsWith("KO-08-01") ? (
               /* REAL DOCUMENT APPROVAL PREVIEW (08-01-P & 08-01-L) */
               <div className="flex-1 my-auto py-2">
@@ -2174,7 +2445,8 @@ export default function StageDocumentPreview({
   const [drawingOrientation, setDrawingOrientation] = useState<"portrait" | "landscape">("landscape");
 
   const currentTaskCode = pagesList[activePage - 1]?.type === "TASK_PAGE" ? (pagesList[activePage - 1] as any)?.taskCode : "";
-  const isLandscape = customOrientation === "landscape" || (typeof currentTaskCode === "string" && (currentTaskCode.endsWith("-L") || ["04-07", "04-08", "04-09", "04-10", "04-11", "04-12", "04-13"].includes(currentTaskCode)));
+  const subTaskCode = activeSubTask || "";
+  const isLandscape = customOrientation === "landscape" || subTaskCode.endsWith("-L") || (typeof currentTaskCode === "string" && (currentTaskCode.endsWith("-L") || ["04-07", "04-08", "04-09", "04-10", "04-11", "04-12", "04-13"].includes(currentTaskCode)));
   const sheetWidth = isLandscape ? 1123 : 794;
   const sheetHeight = isLandscape ? 794 : 1123;
 
@@ -2207,6 +2479,7 @@ export default function StageDocumentPreview({
   );
 
   const currentPageItem = pagesList[activePage - 1] || pagesList[0];
+  const isKopV2Active = Boolean(activeSubTask && activeSubTask.includes("00-00-v2"));
 
   return (
     <div ref={containerRef} className="w-full space-y-4">
@@ -2269,7 +2542,9 @@ export default function StageDocumentPreview({
 
       {/* DOCUMENT CANVAS CONTAINER */}
       <div className="flex flex-col items-center gap-6 py-4">
-        {viewMode === "single" ? (
+        {isKopV2Active ? (
+          renderA4Sheet(renderSinglePageItem({ type: "TASK_PAGE", secCode: "KO-00", taskCode: activeSubTask || "00-00-v2-P", taskName: "Drawing Title Block Kop v2", taskNameId: "Kop Gambar Arsitektur v2" }, 1), 1)
+        ) : viewMode === "single" ? (
           renderA4Sheet(renderSinglePageItem(currentPageItem, activePage), activePage)
         ) : (
           pagesList.map((item, idx) => renderA4Sheet(renderSinglePageItem(item, idx + 1), idx + 1))
