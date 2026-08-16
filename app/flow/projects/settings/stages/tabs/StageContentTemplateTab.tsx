@@ -445,6 +445,82 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     description: "Landscape wide 2-column table for project assumptions & site conditions.",
     previewTaskCode: "03-04"
   },
+
+  // --- SECTION 03 KOP V2 PORTRAIT TEMPLATES (03-01-V2P to 03-04-V2P) ---
+  {
+    id: "tpl-design-scope-v2p",
+    code: "03-01-V2P",
+    name: "Design Scope & Deliverables Kop v2 (Portrait)",
+    nameId: "Lingkup Kerja & Keluaran Desain Kop v2 (Portrait)",
+    category: "Scope of Work",
+    description: "Architectural, structural, and MEP design package in Kop v2 portrait framework.",
+    previewTaskCode: "03-01"
+  },
+  {
+    id: "tpl-construction-scope-v2p",
+    code: "03-02-V2P",
+    name: "Construction Scope & Deliverables Kop v2 (Portrait)",
+    nameId: "Lingkup Kerja & Pelaksanaan Konstruksi Kop v2 (Portrait)",
+    category: "Scope of Work",
+    description: "Technical working drawings FOR-CON & BoQ in Kop v2 portrait framework.",
+    previewTaskCode: "03-02"
+  },
+  {
+    id: "tpl-exclusions-v2p",
+    code: "03-03-V2P",
+    name: "Scope Exclusions Kop v2 (Portrait)",
+    nameId: "Pengecualian Lingkup Kerja Kop v2 (Portrait)",
+    category: "Scope of Work",
+    description: "Table of project scope exclusions in Kop v2 portrait framework.",
+    previewTaskCode: "03-03"
+  },
+  {
+    id: "tpl-assumptions-v2p",
+    code: "03-04-V2P",
+    name: "Project Assumptions Kop v2 (Portrait)",
+    nameId: "Asumsi Pekerjaan Proyek Kop v2 (Portrait)",
+    category: "Scope of Work",
+    description: "Table of site conditions & client assumptions in Kop v2 portrait framework.",
+    previewTaskCode: "03-04"
+  },
+
+  // --- SECTION 03 KOP V2 LANDSCAPE TEMPLATES (03-01-V2L to 03-04-V2L) ---
+  {
+    id: "tpl-design-scope-v2l",
+    code: "03-01-V2L",
+    name: "Design Scope & Deliverables Kop v2 (Landscape)",
+    nameId: "Lingkup Kerja & Keluaran Desain Kop v2 (Landscape)",
+    category: "Scope of Work",
+    description: "Multi-column design scope with right Kop v2 sidebar in landscape framework.",
+    previewTaskCode: "03-01"
+  },
+  {
+    id: "tpl-construction-scope-v2l",
+    code: "03-02-V2L",
+    name: "Construction Scope & Deliverables Kop v2 (Landscape)",
+    nameId: "Lingkup Kerja & Pelaksanaan Konstruksi Kop v2 (Landscape)",
+    category: "Scope of Work",
+    description: "Multi-column construction scope with right Kop v2 sidebar in landscape framework.",
+    previewTaskCode: "03-02"
+  },
+  {
+    id: "tpl-exclusions-v2l",
+    code: "03-03-V2L",
+    name: "Scope Exclusions Kop v2 (Landscape)",
+    nameId: "Pengecualian Lingkup Kerja Kop v2 (Landscape)",
+    category: "Scope of Work",
+    description: "Multi-column scope exclusions table with right Kop v2 sidebar in landscape framework.",
+    previewTaskCode: "03-03"
+  },
+  {
+    id: "tpl-assumptions-v2l",
+    code: "03-04-V2L",
+    name: "Project Assumptions Kop v2 (Landscape)",
+    nameId: "Asumsi Pekerjaan Proyek Kop v2 (Landscape)",
+    category: "Scope of Work",
+    description: "2-column project assumptions table with right Kop v2 sidebar in landscape framework.",
+    previewTaskCode: "03-04"
+  },
   // --- SECTION 04 PORTRAIT TEMPLATES (04-01-P to 04-06-P) ---
   {
     id: "tpl-single-image-p",
@@ -1283,7 +1359,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Design Scope & Deliverables (03-01) */}
-                      {tpl.code.startsWith("03-01") && (
+                      {(tpl.code.startsWith("03-01") || tpl.code.endsWith("03-01-V2P") || tpl.code.endsWith("03-01-V2L")) && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1315,7 +1391,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Construction Scope & Deliverables (03-02) */}
-                      {tpl.code.startsWith("03-02") && (
+                      {(tpl.code.startsWith("03-02") || tpl.code.endsWith("03-02-V2P") || tpl.code.endsWith("03-02-V2L")) && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1347,7 +1423,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Scope Exclusions (03-03) */}
-                      {tpl.code.startsWith("03-03") && (
+                      {(tpl.code.startsWith("03-03") || tpl.code.endsWith("03-03-V2P") || tpl.code.endsWith("03-03-V2L")) && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1379,7 +1455,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Project Assumptions (03-04) */}
-                      {tpl.code.startsWith("03-04") && (
+                      {(tpl.code.startsWith("03-04") || tpl.code.endsWith("03-04-V2P") || tpl.code.endsWith("03-04-V2L")) && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content

@@ -1684,7 +1684,237 @@ export default function StageDocumentPreview({
                       </div>
                     </div>
                   );
-                })() : (
+                })() : (pageItem.taskCode === "03-01" || pageItem.taskCode.endsWith("03-01") || pageItem.taskCode.endsWith("03-01-V2P") || pageItem.taskCode.endsWith("03-01-V2L")) ? (
+                    /* DESIGN SCOPE & DELIVERABLES (03-01) */
+                    <div className="flex-1 my-auto py-2">
+                      <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4")}>
+                        {[
+                          {
+                            nameEn: "01. Architecture",
+                            nameId: "Arsitektur Utama",
+                            items: [
+                              { en: "Site Plan & Floor Layout Plan", idText: "Rencana Tapak & Denah Tata Letak", included: true },
+                              { en: "Building Elevations & Key Sections", idText: "Tampak Bangunan & Potongan Utama", included: true },
+                              { en: "3D Exterior & Interior Render Package", idText: "Paket Visual Render 3D Eksterior & Interior", included: true },
+                              { en: "Custom Kinetic Facade Construction Details", idText: "Detail Konstruksi Fasad Kinetik Khusus", included: false }
+                            ]
+                          },
+                          {
+                            nameEn: "02. Structure & Civils",
+                            nameId: "Struktur & Sipil",
+                            items: [
+                              { en: "Foundation Plan & Column/Beam Framing", idText: "Rencana Pondasi & Penulangan Kolom/Balok", included: true },
+                              { en: "Structural Calculation Report", idText: "Laporan Perhitungan Struktur", included: true },
+                              { en: "Geotechnical Deep Soil Boring Sondir Test", idText: "Uji Sondir Geoteknik Tanah Dalam", included: false }
+                            ]
+                          },
+                          {
+                            nameEn: "03. MEP Engineering",
+                            nameId: "Mekanikal, Elektrikal & Plambing",
+                            items: [
+                              { en: "Electrical Single Line & Lighting Layout", idText: "Diagram Kelistrikan & Tata Letak Lampu", included: true },
+                              { en: "Plumbing Clean/Waste Water System", idText: "Sistem Plambing Air Bersih & Kotor", included: true },
+                              { en: "Smart Home Automation System Integration", idText: "Integrasi Sistem Otomasi Smart Home", included: false }
+                            ]
+                          }
+                        ].map((row, rIdx) => (
+                          <div key={rIdx} className="space-y-2 pb-3 border-b border-neutral-200 break-inside-avoid">
+                            <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                              <span className="font-mono text-xs font-bold text-brand-red uppercase">{row.nameEn}</span>
+                              <span className="text-[10px] font-mono font-normal italic text-neutral-400">({row.nameId})</span>
+                            </div>
+                            <ul className="space-y-2 pt-1">
+                              {row.items.map((item, iIdx) => (
+                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                                    <span className={`font-bold select-none ${item.included ? "text-emerald-600" : "text-neutral-400"}`}>
+                                      {item.included ? "✓" : "✕"}
+                                    </span>
+                                    <div>
+                                      <span className={`font-medium ${item.included ? "text-neutral-800" : "text-neutral-400 line-through"}`}>{item.en}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                                    </div>
+                                  </div>
+                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shrink-0 ${
+                                    item.included
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-neutral-100 text-neutral-400 border border-neutral-200"
+                                  }`}>
+                                    {item.included ? "INCLUDED ✓" : "EXCLUDED ✕"}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "03-02" || pageItem.taskCode.endsWith("03-02") || pageItem.taskCode.endsWith("03-02-V2P") || pageItem.taskCode.endsWith("03-02-V2L")) ? (
+                    /* CONSTRUCTION SCOPE & DELIVERABLES (03-02) */
+                    <div className="flex-1 my-auto py-2">
+                      <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4")}>
+                        {[
+                          {
+                            nameEn: "01. FOR-CON Working Drawings",
+                            nameId: "Gambar Kerja Detail Siap Bangun",
+                            items: [
+                              { en: "Detailed Construction Working Drawings (FOR-CON)", idText: "Gambar Kerja Detail Konstruksi Siap Bangun", included: true },
+                              { en: "Architectural & Interior Joinery Details", idText: "Detail Arsitektur & Joinery Fit-Out", included: true },
+                              { en: "MEP Connection & Pipe Routing Details", idText: "Detail Sambungan MEP & Jalur Pipa", included: true }
+                            ]
+                          },
+                          {
+                            nameEn: "02. BoQ & RAB Budgeting",
+                            nameId: "Anggaran Biaya & BoQ",
+                            items: [
+                              { en: "Bill of Quantities (BoQ) Breakdown", idText: "Rincian Bill of Quantities (BoQ) Volume Pekerjaan", included: true },
+                              { en: "RAB Construction Cost Budget Estimation", idText: "Estimasi Rencana Anggaran Biaya (RAB) Konstruksi", included: true }
+                            ]
+                          },
+                          {
+                            nameEn: "03. Site Supervision & Control",
+                            nameId: "Pengawasan Lapangan",
+                            items: [
+                              { en: "Weekly Periodic Site Inspection & Supervision", idText: "Inspeksi & Pengawasan Lapangan Periodik Mingguan", included: true },
+                              { en: "Full-Time Daily Resident Site Engineer", idText: "Pengawas Harian Penuh Waktu di Lokasi", included: false },
+                              { en: "Punch List Fixes & Final Handover Inspection", idText: "Daftar Perbaikan Sisa & Inspeksi Serah Terima", included: true }
+                            ]
+                          }
+                        ].map((row, rIdx) => (
+                          <div key={rIdx} className="space-y-2 pb-3 border-b border-neutral-200 break-inside-avoid">
+                            <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                              <span className="font-mono text-xs font-bold text-brand-red uppercase">{row.nameEn}</span>
+                              <span className="text-[10px] font-mono font-normal italic text-neutral-400">({row.nameId})</span>
+                            </div>
+                            <ul className="space-y-2 pt-1">
+                              {row.items.map((item, iIdx) => (
+                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                                    <span className={`font-bold select-none ${item.included ? "text-emerald-600" : "text-neutral-400"}`}>
+                                      {item.included ? "✓" : "✕"}
+                                    </span>
+                                    <div>
+                                      <span className={`font-medium ${item.included ? "text-neutral-800" : "text-neutral-400 line-through"}`}>{item.en}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                                    </div>
+                                  </div>
+                                  <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shrink-0 ${
+                                    item.included
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-neutral-100 text-neutral-400 border border-neutral-200"
+                                  }`}>
+                                    {item.included ? "INCLUDED ✓" : "EXCLUDED ✕"}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "03-03" || pageItem.taskCode.endsWith("03-03") || pageItem.taskCode.endsWith("03-03-V2P") || pageItem.taskCode.endsWith("03-03-V2L")) ? (
+                    /* SCOPE EXCLUSIONS (03-03) */
+                    <div className="flex-1 my-auto py-2">
+                      <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4")}>
+                        {[
+                          {
+                            nameEn: "01. Permitting & Legal",
+                            nameId: "Perizinan & Retribusi Resmi",
+                            items: [
+                              { en: "Building Permit (PBG/SLF) Official Government Fees", idText: "Biaya Retribusi Resmi Perizinan Bangunan Gedung (PBG/SLF)", included: false },
+                              { en: "Neighborhood & Local Community Discretionary Approvals", idText: "Persetujuan Lingkungan Warga & Komunitas Lokal", included: false }
+                            ]
+                          },
+                          {
+                            nameEn: "02. Site & Soil Investigations",
+                            nameId: "Pengujian Lahan & Tanah",
+                            items: [
+                              { en: "Deep Soil Boring Test & Geotechnical Investigation", idText: "Uji Sondir & Penyelidikan Tanah Dalam (Geoteknik)", included: false },
+                              { en: "Environmental Impact Assessment (AMDAL/UKL-UPL)", idText: "Dokumen Analisis Mengenai Dampak Lingkungan (AMDAL)", included: false }
+                            ]
+                          },
+                          {
+                            nameEn: "03. Specialist Installations",
+                            nameId: "Instalasi Spesialis Khusus",
+                            items: [
+                              { en: "PLN Transformer Substation Upgrade Connection", idText: "Penyambungan & Penambahan Daya PLN Trafo Khusus", included: false },
+                              { en: "Specialist Audio-Visual & Custom Smart Home Automation", idText: "Sistem Audio Visual Khusus & Otomasi Smart Home", included: false }
+                            ]
+                          }
+                        ].map((row, rIdx) => (
+                          <div key={rIdx} className="space-y-2 pb-3 border-b border-neutral-200 break-inside-avoid">
+                            <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                              <span className="font-mono text-xs font-bold text-brand-red uppercase">{row.nameEn}</span>
+                              <span className="text-[10px] font-mono font-normal italic text-neutral-400">({row.nameId})</span>
+                            </div>
+                            <ul className="space-y-2 pt-1">
+                              {row.items.map((item, iIdx) => (
+                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                                    <span className="font-bold select-none text-neutral-400">✕</span>
+                                    <div>
+                                      <span className="font-medium text-neutral-400 line-through">{item.en}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                                    </div>
+                                  </div>
+                                  <span className="inline-block px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shrink-0 bg-neutral-100 text-neutral-400 border border-neutral-200">
+                                    EXCLUDED ✕
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode === "03-04" || pageItem.taskCode.endsWith("03-04") || pageItem.taskCode.endsWith("03-04-V2P") || pageItem.taskCode.endsWith("03-04-V2L")) ? (
+                    /* PROJECT ASSUMPTIONS (03-04) */
+                    <div className="flex-1 my-auto py-2">
+                      <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4")}>
+                        {[
+                          {
+                            nameEn: "01. Site & Ground Access",
+                            nameId: "Akses & Kondisi Tapak",
+                            items: [
+                              { en: "Site soil has standard minimum bearing capacity of 1.5 kg/cm²", idText: "Tanah tapak memiliki daya dukung standar min 1.5 kg/cm²", assumed: true },
+                              { en: "Unobstructed truck access roads available to the building perimeter", idText: "Akses jalan truk ke keliling tapak tersedia tanpa hambatan", assumed: true }
+                            ]
+                          },
+                          {
+                            nameEn: "02. Utilities & Infrastructure",
+                            nameId: "Utilitas & Infrastruktur",
+                            items: [
+                              { en: "Municipal clean water line & main drainage available at site boundary", idText: "Jaringan air bersih & drainase induk kota tersedia di batas tapak", assumed: true },
+                              { en: "Existing 3-phase temporary electricity power supply active during site work", idText: "Pasokan listrik sementara 3-fase aktif selama kerja tapak", assumed: true }
+                            ]
+                          }
+                        ].map((row, rIdx) => (
+                          <div key={rIdx} className="space-y-2 pb-3 border-b border-neutral-200 break-inside-avoid">
+                            <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                              <span className="font-mono text-xs font-bold text-brand-red uppercase">{row.nameEn}</span>
+                              <span className="text-[10px] font-mono font-normal italic text-neutral-400">({row.nameId})</span>
+                            </div>
+                            <ul className="space-y-2 pt-1">
+                              {row.items.map((item, iIdx) => (
+                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                                    <span className="font-bold select-none text-blue-600">ℹ</span>
+                                    <div>
+                                      <span className="font-medium text-neutral-800">{item.en}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                                    </div>
+                                  </div>
+                                  <span className="inline-block px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shrink-0 bg-blue-50 text-blue-700 border border-blue-200">
+                                    ASSUMED ℹ
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
                   <div className="flex-1 my-auto p-6 rounded-xl bg-neutral-50/80 border border-dashed border-neutral-300 flex flex-col items-center justify-center text-center space-y-1">
                     <span className="font-mono text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                       ARCHITECTURAL CANVAS WORKSPACE
