@@ -468,7 +468,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
           ...projects.map((p) => {
             const rawNum = p.projectNumber || (p as any).number || "";
             const numPadded = rawNum ? String(rawNum).padStart(3, "0") : "";
-            const rawCode = p.projectCode || p.code || "ADY";
+            const rawCode = p.projectCode || (p as any).code || "ADY";
             const cleanCodeStr = rawCode.replace(/^#/, "").toUpperCase();
 
             // Construct standard format: #[number]-[code] e.g. #036-PRG or fallback to rawCode
@@ -476,7 +476,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
               ? `#${numPadded}-${cleanCodeStr}`
               : (rawCode.startsWith("#") ? rawCode : `#${rawCode}`);
 
-            const name = p.projectName || p.name || "[Project Name]";
+            const name = p.projectName || (p as any).name || "[Project Name]";
             let locationStr = "[Project Location]";
             const rawLoc = (p as any).location;
             if (typeof rawLoc === "string") {

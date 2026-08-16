@@ -90,7 +90,7 @@ export default function StageDocumentTab({ workspaceId, projectTypeId, setHeader
             setIsLoadingData(true);
             try {
                 const stages = await fetchStageTemplates(workspaceId, projectTypeId);
-                const stageModel = stages.find(s => s.stageCode === activeStage || s.code === activeStage || s.name.toUpperCase().startsWith(activeStage));
+                const stageModel = stages.find(s => s.stageCode === activeStage || (s as any).code === activeStage || s.stageName.toUpperCase().startsWith(activeStage));
 
                 if (stageModel && stageModel.id) {
                     const [dbSections, dbTasks] = await Promise.all([
@@ -117,7 +117,7 @@ export default function StageDocumentTab({ workspaceId, projectTypeId, setHeader
                         const sectionMap = new Map(dbSections.map(s => [s.id, s.sectionCode]));
 
                         let mappedTasks = dbTasks.map(t => {
-                            const resolvedSectionCode = sectionMap.get(t.sectionId || "") || t.sectionCode;
+                            const resolvedSectionCode = sectionMap.get(t.sectionId || "") || (t as any).sectionCode;
                             return {
                                 ...t,
                                 id: t.id,
