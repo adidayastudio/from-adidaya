@@ -1594,6 +1594,93 @@ export default function StageDocumentPreview({
                         </p>
                       </div>
                     </div>
+                  ) : (pageItem.taskCode.includes("05-01")) ? (
+                    /* 05-01-V2L: BUDGET EXPECTATION LANDSCAPE KOP V2 */
+                    <div className="flex-1 py-1 flex flex-col h-full overflow-hidden">
+                      {/* 1. Top Section: Client Ceiling & Formula */}
+                      <div className="space-y-2 pb-2 border-b border-neutral-200 shrink-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                              Client Budget Ceiling <span className="font-sans font-normal italic text-neutral-400 normal-case">(Plafon Maksimal Anggaran Klien)</span>
+                            </span>
+                            <span className="text-sm font-black font-mono text-neutral-900">
+                              Rp 2.000.000.000
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              WITHIN BUDGET
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Formula Row */}
+                        <div className="flex items-center gap-3 text-[11px] font-mono">
+                          <div>
+                            <span className="text-[8px] font-bold text-neutral-400 uppercase block">BUILDING AREA</span>
+                            <span className="font-bold text-neutral-900">450 m²</span>
+                          </div>
+                          <span className="text-neutral-400 font-bold">×</span>
+                          <div>
+                            <span className="text-[8px] font-bold text-neutral-400 uppercase block">EST. / M²</span>
+                            <span className="font-bold text-neutral-900">Rp 3.333.333 / m²</span>
+                          </div>
+                          <span className="text-neutral-400 font-bold">=</span>
+                          <div>
+                            <span className="text-[8px] font-bold text-neutral-400 uppercase block">TOTAL TARGET</span>
+                            <span className="font-bold text-brand-red">Rp 1.500.000.000</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2. Discipline Breakdown Table */}
+                      <div className="flex-1 overflow-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-neutral-300 text-[9px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                              <th className="py-1.5 px-1">Scope <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kategori)</span></th>
+                              <th className="py-1.5 px-2">Description <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keterangan)</span></th>
+                              <th className="py-1.5 px-2 text-right">Weight %</th>
+                              <th className="py-1.5 px-2 text-right">Target Budget</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-200/60 text-[11px]">
+                            {[
+                              { catEn: "Structure", catId: "Pekerjaan Struktur", descEn: "Foundation, reinforced concrete & steel beam framework", descId: "Pondasi, beton bertulang & rangka baja", weight: "33.3%", budget: "Rp 500.000.000" },
+                              { catEn: "Architecture", catId: "Pekerjaan Arsitektur", descEn: "Facade, brick partition wall, waterproofing & roof", descId: "Fasad, dinding bata, waterproofing & atap", weight: "23.3%", budget: "Rp 350.000.000" },
+                              { catEn: "MEP", catId: "Pekerjaan MEP", descEn: "Electrical main panel, fresh air HVAC, plumbing & drainage", descId: "Panel listrik utama, AC & ventilasi, plambing", weight: "16.7%", budget: "Rp 250.000.000" },
+                              { catEn: "Interior", catId: "Pekerjaan Interior", descEn: "Custom joinery, acoustic flooring, wall finish & ceiling", descId: "Joinery kustom, lantai akustik, finishing dinding", weight: "14.7%", budget: "Rp 220.000.000" },
+                              { catEn: "Landscape", catId: "Pekerjaan Lanskap", descEn: "Outdoor greenery, hardscape pathway & exterior lightings", descId: "Area hijau luar, jaluran hardscape & lampu luar", weight: "5.3%", budget: "Rp 80.000.000" },
+                              { catEn: "Design Fee", catId: "Biaya Desain", descEn: "Comprehensive architectural & engineering design service", descId: "Jasa desain arsitektur & rekayasa lengkap", weight: "6.7%", budget: "Rp 100.000.000" },
+                            ].map((row, rIdx) => (
+                              <tr key={rIdx}>
+                                <td className="py-1.5 px-1 font-mono text-[10px] font-bold text-brand-red whitespace-nowrap align-top">
+                                  {row.catEn}
+                                  <span className="font-sans font-normal italic text-neutral-400 text-[9px] block">{row.catId}</span>
+                                </td>
+                                <td className="py-1.5 px-2 align-top">
+                                  <span className="font-semibold text-neutral-800 block leading-tight text-[10px]">{row.descEn}</span>
+                                  <span className="font-normal italic text-neutral-400 text-[9px] block">{row.descId}</span>
+                                </td>
+                                <td className="py-1.5 px-2 font-mono text-[10px] text-neutral-600 text-right whitespace-nowrap align-top">{row.weight}</td>
+                                <td className="py-1.5 px-2 font-mono text-[10px] font-bold text-neutral-800 text-right whitespace-nowrap align-top">{row.budget}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t border-neutral-300 font-bold text-[11px]">
+                              <td colSpan={2} className="py-2 px-1 text-neutral-900">
+                                Total Budget Expectation <span className="font-sans font-normal italic text-neutral-400 text-[10px]">(Total Estimasi Anggaran)</span>
+                              </td>
+                              <td className="py-2 px-2 text-right font-mono text-neutral-700">100%</td>
+                              <td className="py-2 px-2 text-right font-mono text-brand-red text-xs">Rp 1.500.000.000</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex-1 my-auto p-6 rounded-xl bg-neutral-50/80 border border-dashed border-neutral-300 flex flex-col items-center justify-center text-center space-y-1">
                       <span className="font-mono text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
@@ -2593,6 +2680,94 @@ export default function StageDocumentPreview({
                         <p className="text-xs font-medium text-neutral-300 leading-relaxed italic">
                           Tampilan suasana pencahayaan fasad dan pintu masuk utama pada malam hari.
                         </p>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode.includes("05-01")) ? (
+                    /* 05-01-V2P: BUDGET EXPECTATION PORTRAIT KOP V2 */
+                    <div className="flex-1 py-2 flex flex-col space-y-4 overflow-hidden">
+                      {/* 1. Top Section: Client Ceiling & Formula */}
+                      <div className="space-y-3 pb-3 border-b border-neutral-200 shrink-0">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                              Client Budget Ceiling <span className="font-sans font-normal italic text-neutral-400 normal-case">(Plafon Maksimal Anggaran Klien)</span>
+                            </span>
+                            <span className="text-base font-black font-mono text-neutral-900">
+                              Rp 2.000.000.000
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              WITHIN CLIENT&apos;S BUDGET
+                            </span>
+                            <span className="text-[10px] font-normal italic text-neutral-400 block mt-0.5">(Sesuai Batas Anggaran)</span>
+                          </div>
+                        </div>
+
+                        {/* Formula Calculation Summary Row */}
+                        <div className="flex items-center gap-4 text-xs font-mono pt-1">
+                          <div>
+                            <span className="text-[9px] font-bold text-neutral-400 uppercase block">BUILDING AREA <span className="font-sans font-normal italic text-neutral-400 normal-case">(LUASAN)</span></span>
+                            <span className="font-bold text-neutral-900">450 m²</span>
+                          </div>
+                          <span className="text-neutral-400 font-bold">×</span>
+                          <div>
+                            <span className="text-[9px] font-bold text-neutral-400 uppercase block">EST. / M² <span className="font-sans font-normal italic text-neutral-400 normal-case">(HARGA PER M²)</span></span>
+                            <span className="font-bold text-neutral-900">Rp 3.333.333 / m²</span>
+                          </div>
+                          <span className="text-neutral-400 font-bold">=</span>
+                          <div>
+                            <span className="text-[9px] font-bold text-neutral-400 uppercase block">TOTAL TARGET ESTIMATE</span>
+                            <span className="font-bold text-brand-red">Rp 1.500.000.000</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 2. Discipline Breakdown Table */}
+                      <div className="flex-1 overflow-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                              <th className="py-2.5 px-1">Scope Category <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kategori Lingkup)</span></th>
+                              <th className="py-2.5 px-2">Description <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keterangan Pekerjaan)</span></th>
+                              <th className="py-2.5 px-2 text-right">Weight % <span className="font-sans font-normal italic text-neutral-400 normal-case">(Bobot)</span></th>
+                              <th className="py-2.5 px-2 text-right">Target Budget <span className="font-sans font-normal italic text-neutral-400 normal-case">(Target Anggaran)</span></th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-neutral-200/60 text-xs">
+                            {[
+                              { catEn: "Structure", catId: "Pekerjaan Struktur", descEn: "Foundation, reinforced concrete & steel beam framework", descId: "Pondasi, beton bertulang & rangka baja", weight: "33.3%", budget: "Rp 500.000.000" },
+                              { catEn: "Architecture", catId: "Pekerjaan Arsitektur", descEn: "Facade, brick partition wall, waterproofing & roof", descId: "Fasad, dinding bata, waterproofing & atap", weight: "23.3%", budget: "Rp 350.000.000" },
+                              { catEn: "MEP", catId: "Pekerjaan MEP", descEn: "Electrical main panel, fresh air HVAC, plumbing & drainage", descId: "Panel listrik utama, AC & ventilasi, plambing", weight: "16.7%", budget: "Rp 250.000.000" },
+                              { catEn: "Interior", catId: "Pekerjaan Interior", descEn: "Custom joinery, acoustic flooring, wall finish & ceiling", descId: "Joinery kustom, lantai akustik, finishing dinding", weight: "14.7%", budget: "Rp 220.000.000" },
+                              { catEn: "Landscape", catId: "Pekerjaan Lanskap", descEn: "Outdoor greenery, hardscape pathway & exterior lightings", descId: "Area hijau luar, jaluran hardscape & lampu luar", weight: "5.3%", budget: "Rp 80.000.000" },
+                              { catEn: "Design Fee", catId: "Biaya Desain", descEn: "Comprehensive architectural & engineering design service", descId: "Jasa desain arsitektur & rekayasa lengkap", weight: "6.7%", budget: "Rp 100.000.000" },
+                            ].map((row, rIdx) => (
+                              <tr key={rIdx}>
+                                <td className="py-2.5 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top">
+                                  {row.catEn}
+                                  <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.catId}</span>
+                                </td>
+                                <td className="py-2.5 px-2 align-top">
+                                  <span className="font-semibold text-neutral-800 block leading-tight">{row.descEn}</span>
+                                  <span className="font-normal italic text-neutral-400 text-[10px] block">{row.descId}</span>
+                                </td>
+                                <td className="py-2.5 px-2 font-mono text-xs text-neutral-600 text-right whitespace-nowrap align-top">{row.weight}</td>
+                                <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">{row.budget}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t border-neutral-300 font-bold text-xs">
+                              <td colSpan={2} className="py-3 px-1 text-neutral-900">
+                                Total Budget Expectation <span className="font-sans font-normal italic text-neutral-400 text-[11px]">(Total Estimasi Anggaran)</span>
+                              </td>
+                              <td className="py-3 px-2 text-right font-mono text-neutral-700">100%</td>
+                              <td className="py-3 px-2 text-right font-mono text-brand-red text-sm">Rp 1.500.000.000</td>
+                            </tr>
+                          </tfoot>
+                        </table>
                       </div>
                     </div>
                   ) : (

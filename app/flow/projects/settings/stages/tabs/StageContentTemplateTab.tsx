@@ -726,6 +726,29 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     description: "Landscape full-page edge-to-edge background image with right Kop v2 sidebar framework.",
     previewTaskCode: "04-05-V2L"
   },
+
+  // --- SECTION 05 V2 KOP PORTRAIT TEMPLATES (05-01-V2P) ---
+  {
+    id: "tpl-v2-budget-p",
+    code: "05-01-V2P",
+    name: "Budget Expectation Kop v2 (Portrait)",
+    nameId: "Ekspektasi Anggaran Biaya Kop v2 (Portrait)",
+    category: "Budget",
+    description: "Portrait budget estimation breakdown with bottom Kop v2 title block.",
+    previewTaskCode: "05-01-V2P"
+  },
+
+  // --- SECTION 05 V2 KOP LANDSCAPE TEMPLATES (05-01-V2L) ---
+  {
+    id: "tpl-v2-budget-l",
+    code: "05-01-V2L",
+    name: "Budget Expectation Kop v2 (Landscape)",
+    nameId: "Ekspektasi Anggaran Biaya Kop v2 (Landscape)",
+    category: "Budget",
+    description: "Landscape wide format budget estimation breakdown with right Kop v2 sidebar.",
+    previewTaskCode: "05-01-V2L"
+  },
+
   // --- SECTION 05 BUDGET TEMPLATES (05-01-P & 05-01-L) ---
   {
     id: "tpl-budget-p",
