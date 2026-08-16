@@ -462,9 +462,10 @@ export default function CrewDailyLogReportPreview({
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60 font-medium">
                 {[
                   { code: "95 01 00", name: "Crew Directory", description: "Daftar induk profil personil, keahlian, sertifikasi K3, dan data kontak.", nodeId: "95-01-00" },
-                  { code: "95 02 00", name: "Crew Assignment", description: "Penyusunan alokasi tim personil ke dalam zona dan sub-pekerjaan WBS.", nodeId: "95-02-00" },
-                  { code: "95 04 00", name: "Crew Payroll", description: "Kalkulasi rekapitulasi upah harian, mingguan, dan honor lembur personil.", nodeId: "95-04-00" },
-                  { code: "41 02 00", name: "WBS Work Activities", description: "Target uraian aktivitas harian proyek tempat personil ditugaskan.", nodeId: "41-02-00" },
+                  { code: "95 10 00", name: "Crew Assignment", description: "Penyusunan alokasi tim personil ke dalam zona dan sub-pekerjaan WBS.", nodeId: "95-10-00" },
+                  { code: "95 21 00", name: "Attendance", description: "Rekapitulasi jumlah kehadiran personil per kategori jabatan.", nodeId: "95-21-00" },
+                  { code: "95 25 00", name: "Working Hours", description: "Rekapitulasi total jam kerja (regular dan lembur) personil.", nodeId: "95-25-00" },
+                  { code: "95 30 00", name: "Crew Payroll", description: "Kalkulasi rekapitulasi upah harian, mingguan, dan honor lembur personil.", nodeId: "95-30-00" },
                   { code: "71 01 00", name: "DCR — Daily Construction Report", description: "Laporan harian utama yang merangkum total kehadiran personil per shift.", nodeId: "71-01-00" }
                 ].map((item) => (
                   <tr

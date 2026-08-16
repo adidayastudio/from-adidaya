@@ -240,10 +240,10 @@ export default function DCRDailyConstructionReportPreview({
                     nodeId: "41-02-00",
                   },
                   {
-                    code: "95 03 00",
+                    code: "95 20 00",
                     name: "Crew & Manpower Attendance Log",
                     description: "Source data of personnel attendance, PM, site manager, supervisor, foreman, craftsman, & operators.",
-                    nodeId: "95-03-00",
+                    nodeId: "95-20-00",
                   },
                   {
                     code: "95 01 00",
