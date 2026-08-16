@@ -51,14 +51,14 @@ export const koTasks: Task[] = [
   // Section Total: 80
 
   // ========== KO-05: Regulation & Zoning Check (80) ==========
-  { id: "ko-05-01", code: "05-01", name: "Zoning Regulation", nameId: "Peraturan Tata Kota", stage: "KO", sectionCode: "KO-05", weight: 24, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+  { id: "ko-05-01", code: "05-01", name: "Budget Expectation", nameId: "Ekspektasi Anggaran Biaya", stage: "KO", sectionCode: "KO-05", weight: 24, priority: "high", schemaType: "DELIVERABLE_BASIC" },
   { id: "ko-05-02", code: "05-02", name: "Building Code Check", nameId: "Pemeriksaan Kode Bangunan", stage: "KO", sectionCode: "KO-05", weight: 40, priority: "high" },
   { id: "ko-05-03", code: "05-03", name: "Height & GSB Analysis", nameId: "Analisis Tinggi & GSB", stage: "KO", sectionCode: "KO-05", weight: 16, priority: "medium" },
   // Section Total: 80
 
   // ========== KO-06: Initial Budget Range (50) ==========
-  { id: "ko-06-01", code: "06-01", name: "Design Fee", nameId: "Biaya Desain", stage: "KO", sectionCode: "KO-06", weight: 15, priority: "medium", schemaType: "CURRENCY_RANGE", inputConfig: { currency: "IDR" } },
-  { id: "ko-06-02", code: "06-02", name: "Construction Cost Benchmark", nameId: "Patokan Biaya Konstruksi", stage: "KO", sectionCode: "KO-06", weight: 20, priority: "high", schemaType: "DESCRIPTION_ONLY", inputData: { description: "Use External Estimator: /flow/rab" } },
+  { id: "ko-06-01", code: "06-01", name: "Timeline Expectation", nameId: "Ekspektasi Lini Waktu", stage: "KO", sectionCode: "KO-06", weight: 15, priority: "medium", schemaType: "CURRENCY_RANGE", inputConfig: { currency: "IDR" } },
+  { id: "ko-06-02", code: "06-02", name: "Visual Timeline Chart", nameId: "Grafik Visual Timeline", stage: "KO", sectionCode: "KO-06", weight: 20, priority: "high" },
   { id: "ko-06-03", code: "06-03", name: "Area vs Cost Analysis", nameId: "Analisis Luas vs Biaya", stage: "KO", sectionCode: "KO-06", weight: 15, priority: "medium" },
   // Section Total: 50
 

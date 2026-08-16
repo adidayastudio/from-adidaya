@@ -396,23 +396,62 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     description: "Standard Working Drawing (Kop Gambar Kerja V2) Landscape wide drawing layout [Placeholder].",
     previewTaskCode: "04-07"
   },
+  // --- SECTION 05 BUDGET TEMPLATES (05-01-P & 05-01-L) ---
   {
-    id: "tpl-budget",
-    code: "05-01",
-    name: "Budget Expectation",
-    nameId: "Ekspektasi Anggaran Biaya",
+    id: "tpl-budget-p",
+    code: "05-01-P",
+    name: "Budget Expectation (Portrait)",
+    nameId: "Ekspektasi Anggaran Biaya (Portrait)",
     category: "Budget",
     description: "Initial cost estimation benchmark ranges and target allocation.",
     previewTaskCode: "05-01"
   },
   {
-    id: "tpl-timeline",
-    code: "06-01",
-    name: "Timeline Expectation",
-    nameId: "Ekspektasi Lini Waktu",
+    id: "tpl-budget-l",
+    code: "05-01-L",
+    name: "Budget Expectation (Landscape)",
+    nameId: "Ekspektasi Anggaran Biaya (Landscape)",
+    category: "Budget",
+    description: "Landscape wide format cost estimation benchmark ranges and target allocation table.",
+    previewTaskCode: "05-01-L"
+  },
+
+  // --- SECTION 06 TIMELINE TEMPLATES (06-01-P & 06-01-L) ---
+  {
+    id: "tpl-timeline-p",
+    code: "06-01-P",
+    name: "Timeline Expectation (Portrait)",
+    nameId: "Ekspektasi Lini Waktu (Portrait)",
     category: "Timeline",
     description: "Design & construction schedule draft with target completion milestones.",
     previewTaskCode: "06-01"
+  },
+  {
+    id: "tpl-timeline-l",
+    code: "06-01-L",
+    name: "Timeline Expectation (Landscape)",
+    nameId: "Ekspektasi Lini Waktu (Landscape)",
+    category: "Timeline",
+    description: "Landscape wide format design & construction schedule table.",
+    previewTaskCode: "06-01-L"
+  },
+  {
+    id: "tpl-timeline-chart-p",
+    code: "06-02-P",
+    name: "Visual Timeline Chart (Portrait)",
+    nameId: "Grafik Visual Timeline (Portrait)",
+    category: "Timeline",
+    description: "Portrait 12-month visual timeline Gantt schedule chart.",
+    previewTaskCode: "06-02-P"
+  },
+  {
+    id: "tpl-timeline-chart-l",
+    code: "06-02-L",
+    name: "Visual Timeline Chart (Landscape)",
+    nameId: "Grafik Visual Timeline (Landscape)",
+    category: "Timeline",
+    description: "Landscape wide format 12-month visual timeline Gantt schedule chart.",
+    previewTaskCode: "06-02-L"
   },
   {
     id: "tpl-approval",
@@ -736,14 +775,14 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       </div>
 
                       {/* Special info note for Table of Contents (01-02) */}
-                      {tpl.code === "01-02" && (
+                      {tpl.code.startsWith("01-02") && (
                         <div className="p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-blue-900 dark:text-blue-200 leading-snug">
                           ℹ️ <strong>Auto-Sync Table of Contents:</strong> In the live project document, this table of contents will automatically aggregate section titles, page numbers, and item order in real-time.
                         </div>
                       )}
 
                       {/* Sample Input Content ONLY for Purpose of Stage (01-03) */}
-                      {tpl.code === "01-03" && (
+                      {tpl.code.startsWith("01-03") && (
                         <div className="space-y-2 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -788,7 +827,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Workflow Overview (01-04) */}
-                      {tpl.code === "01-04" && (
+                      {tpl.code.startsWith("01-04") && (
                         <div className="space-y-2 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -825,7 +864,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Project Understanding (02-01) */}
-                      {tpl.code === "02-01" && (
+                      {tpl.code.startsWith("02-01") && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -875,7 +914,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Client's Needs & Vision (02-02) */}
-                      {tpl.code === "02-02" && (
+                      {tpl.code.startsWith("02-02") && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -907,7 +946,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                         </div>
                       )}
                       {/* Sample Input Content ONLY for Functional Requirements (02-03) */}
-                      {tpl.code === "02-03" && (
+                      {tpl.code.startsWith("02-03") && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -949,8 +988,8 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                         </div>
                       )}
 
-                      {/* Sample Input Content ONLY for Budget Expectation (02-04) */}
-                      {tpl.code === "02-04" && (
+                      {/* Sample Input Content ONLY for Budget Expectation (02-04) / Target & Formula */}
+                      {(tpl.code === "02-04" || tpl.code.startsWith("02-04")) && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1006,7 +1045,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Target Timeline & Schedule (02-05) */}
-                      {tpl.code === "02-05" && (
+                      {tpl.code.startsWith("02-05") && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1059,7 +1098,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Design Scope & Deliverables (03-01) */}
-                      {tpl.code === "03-01" && (
+                      {tpl.code.startsWith("03-01") && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1091,7 +1130,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Construction Scope & Deliverables (03-02) */}
-                      {tpl.code === "03-02" && (
+                      {tpl.code.startsWith("03-02") && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1123,7 +1162,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                       )}
 
                       {/* Sample Input Content ONLY for Scope Exclusions (03-03) */}
-                      {tpl.code === "03-03" && (
+                      {tpl.code.startsWith("03-03") && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
                             Sample Input Content
@@ -1147,6 +1186,38 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · ID</span>
                                   <span className="text-[11px] font-normal italic text-neutral-500">Retribusi Resmi Perizinan Bangunan (PBG)</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Project Assumptions (03-04) */}
+                      {tpl.code.startsWith("03-04") && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">Project Assumption Row</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CATEGORY</span>
+                                    <span className="text-xs font-bold text-brand-red">01. Site & Ground Access</span>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">ASSUMED ✓</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Site soil has standard minimum bearing capacity of 1.5 kg/cm²</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Tanah tapak memiliki daya dukung standar min 1.5 kg/cm²</span>
                                 </div>
                               </div>
                             </div>
@@ -1354,6 +1425,112 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                                 </div>
                               </div>
                             )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content for 05-01 Budget Expectation */}
+                      {tpl.code.startsWith("05-01") && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            {/* Header Inputs: Client Ceiling & Area x Price Formula */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">1. Target & Formula</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CLIENT CEILING</span>
+                                  <span className="text-xs font-mono font-bold text-neutral-900 dark:text-neutral-100">Rp 2.000.000.000</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">AREA (AUTO)</span>
+                                  <span className="text-xs font-mono font-bold text-brand-red">450 m²</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">EST. PRICE / M²</span>
+                                  <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">Rp 3.333.333 / m²</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Discipline Row Input */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">2. Discipline Row</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CATEGORY</span>
+                                    <span className="text-xs font-bold text-brand-red">Structure</span>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-neutral-600 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded shrink-0">33.3% Weight</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Foundation, concrete & steel framework</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Pondasi, beton bertulang & rangka baja</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TARGET BUDGET</span>
+                                  <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">Rp 500.000.000</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content for 06-01 Timeline Expectation */}
+                      {tpl.code.startsWith("06-01") && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">1. Milestone Target</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">STAGE</span>
+                                  <span className="text-xs font-bold text-brand-red">01. Design Phase</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TARGET WEEKS</span>
+                                  <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">4 Weeks</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content for 08-01 Signoff & Approval */}
+                      {tpl.code === "08-01" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">1. Signatory Parties</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">STUDIO PRINCIPAL</span>
+                                  <span className="text-xs font-bold text-neutral-900 dark:text-neutral-100">ADIDAYA STUDIO</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CLIENT SIGNATURE</span>
+                                  <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">PROJECT OWNER</span>
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       )}
