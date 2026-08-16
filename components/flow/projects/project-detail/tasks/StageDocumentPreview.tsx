@@ -202,8 +202,8 @@ export default function StageDocumentPreview({
 
   // Derive framework version (v1 or v2) based on activeSubTask
   const isV2Framework = Boolean(
-    (activeSubTask && (activeSubTask.toLowerCase().includes("v2") || activeSubTask.endsWith("-V2P") || activeSubTask.endsWith("-V2L"))) ||
-    (activeSection && activeSection.toLowerCase().includes("v2")) ||
+    (activeSubTask && /v2/i.test(activeSubTask)) ||
+    (activeSection && /v2/i.test(activeSection)) ||
     (data as any)?.frameworkVersion === "v2"
   );
   const frameworkVersion = isV2Framework ? "v2" : "v1";
@@ -667,7 +667,7 @@ export default function StageDocumentPreview({
           .replace(/\bKO\b/g, stageNameIdStr);
 
         if (frameworkVersion === "v2") {
-          const isFullBleedPage = pageItem.taskCode.includes("04-06") || pageItem.taskCode.includes("04-05-L");
+          const isFullBleedPage = pageItem.taskCode.includes("04-06") || pageItem.taskCode.includes("04-05");
           const isImagePage = isFullBleedPage;
 
           if (isLandscape) {
@@ -675,6 +675,8 @@ export default function StageDocumentPreview({
               <div className="absolute inset-0 w-full h-full bg-white p-4 flex gap-4 overflow-hidden select-none">
                 {/* CANVAS WORKSPACE: REAL TASK CONTENT */}
                 <div className={clsx("flex-1 h-full relative bg-white flex flex-col justify-between overflow-hidden", !isImagePage && "pt-[0.5cm] px-[0.5cm]")}>
+                  {/* Title header - hidden for full bleed pages */}
+                  {!isFullBleedPage && (
                   <div className="space-y-1 mb-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex flex-col">
@@ -688,6 +690,7 @@ export default function StageDocumentPreview({
                     </div>
                     <div className="h-0.5 bg-brand-red w-full mt-2 opacity-80" />
                   </div>
+                  )}
 
                   {/* DYNAMIC CONTENT AREA (LANDSCAPE 2-COLUMNS) */}
                   {isTOC ? (() => {
@@ -1263,7 +1266,7 @@ export default function StageDocumentPreview({
                         ))}
                       </div>
                     </div>
-                  ) : (pageItem.taskCode.endsWith("03") || pageItem.taskCode.endsWith("01-03")) ? (
+                  ) : ((pageItem.taskCode.endsWith("03") || pageItem.taskCode.endsWith("01-03")) && !pageItem.taskCode.includes("04-03")) ? (
                     /* PURPOSE OF STAGE (01-03-V2L) — 2 COLUMNS IN LANDSCAPE */
                     <div className="flex-1 my-auto py-2">
                       <div className="columns-2 gap-8 space-y-4">
@@ -1287,7 +1290,7 @@ export default function StageDocumentPreview({
                         ))}
                       </div>
                     </div>
-                  ) : pageItem.taskCode.endsWith("04") ? (
+                  ) : (pageItem.taskCode.endsWith("04") && !pageItem.taskCode.includes("04-04")) ? (
                     /* WORKFLOW OVERVIEW (01-04-V2L) — 2 COLUMNS IN LANDSCAPE */
                     <div className="flex-1 my-auto py-2">
                       <div className="columns-2 gap-8 space-y-4">
@@ -1347,6 +1350,248 @@ export default function StageDocumentPreview({
                             </div>
                           );
                         })}
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode.includes("04-01")) ? (
+                    /* 04-01-V2L: SINGLE DRAWING IMAGE LANDSCAPE KOP V2 */
+                    <div className="flex-1 py-1 flex flex-col space-y-2 min-h-0">
+                      <div className="relative w-full flex-1 rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-md min-h-[300px]">
+                        <img
+                          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                          alt="Architectural Ground Floor Plan"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-3 right-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                          SCALE 1 : 100 @ A3
+                        </div>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode.includes("04-02")) ? (
+                    /* 04-02-V2L: MULTIPLE IMAGE LANDSCAPE KOP V2 (SELECTOR 1-6 PHOTOS) */
+                    <div className="flex-1 py-1 flex flex-col justify-between h-full overflow-hidden">
+                      {(() => {
+                        const allPhotos = [
+                          {
+                            img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80",
+                            titleEn: "01. Main Facade Entrance",
+                            titleId: "Akses Fasad Utama & Panel Kayu",
+                            descEn: "High-impact entrance featuring vertical timber louvers & cove lighting.",
+                            descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal & pencahayaan tersembunyi."
+                          },
+                          {
+                            img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80",
+                            titleEn: "02. Outdoor Pool Terrace",
+                            titleId: "Teras Luar & Dek Kolam Renang",
+                            descEn: "Expansive outdoor deck integrated with natural stone pavers.",
+                            descId: "Area teras luar luas terintegrasi penataan batu alam."
+                          },
+                          {
+                            img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80",
+                            titleEn: "03. Living Lounge Flow",
+                            titleId: "Interior Ruang Keluarga Plafon Tinggi",
+                            descEn: "Double-height living pavilion maximizing natural daylight.",
+                            descId: "Pavilion ruang keluarga dengan pencahayaan alami maksimal."
+                          },
+                          {
+                            img: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=600&q=80",
+                            titleEn: "04. Side Perimeter Landscape",
+                            titleId: "Sempadan Samping & Taman Tapak",
+                            descEn: "Side setback zone with layered tropical planting & permeable paving.",
+                            descId: "Zona sempadan samping dengan tanaman tropis berlapis & paving permeabel."
+                          },
+                          {
+                            img: "https://images.unsplash.com/photo-1600573472592-401b489a3cdc?auto=format&fit=crop&w=600&q=80",
+                            titleEn: "05. Rear Garden Terrace",
+                            titleId: "Teras Taman Belakang",
+                            descEn: "Private rear garden with stepped terracing and water feature.",
+                            descId: "Taman belakang privat dengan teras bertingkat dan fitur air."
+                          },
+                          {
+                            img: "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?auto=format&fit=crop&w=600&q=80",
+                            titleEn: "06. Upper Level Balcony",
+                            titleId: "Balkon Lantai Atas",
+                            descEn: "Cantilevered upper balcony overlooking the main garden axis.",
+                            descId: "Balkon cantilever lantai atas menghadap sumbu taman utama."
+                          }
+                        ];
+                        const count = Math.min(6, Math.max(1, customPhotoCount));
+                        const photos = allPhotos.slice(0, count);
+
+                        const renderCard = (row: typeof allPhotos[0], rIdx: number, aspectClass: string) => (
+                          <div key={rIdx} className="flex flex-col space-y-1 min-w-0 h-full">
+                            <div className={clsx("relative w-full rounded-xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-2xs h-full", aspectClass)}>
+                              <img src={row.img} alt={row.titleEn} className="w-full h-full object-cover" />
+                              <div className="absolute top-1.5 left-1.5 bg-neutral-900/85 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-mono font-bold text-white shadow-2xs border border-white/20">
+                                0{rIdx + 1}
+                              </div>
+                            </div>
+                            <div className="px-0.5 space-y-0.5 shrink-0">
+                              <h4 className="text-[10px] font-black text-neutral-900 leading-tight truncate">{row.titleEn}</h4>
+                              <p className="text-[9px] font-semibold italic text-neutral-400 leading-tight truncate">{row.titleId}</p>
+                            </div>
+                          </div>
+                        );
+
+                        /* 1 photo: centered single */
+                        if (count === 1) {
+                          return (
+                            <div className="flex-1 flex items-center justify-center py-2">
+                              <div className="w-full max-w-xl">
+                                {renderCard(photos[0], 0, "aspect-[16/9]")}
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        /* 2 photos: 2 columns */
+                        if (count === 2) {
+                          return (
+                            <div className="grid grid-cols-2 gap-3 flex-1 items-start my-auto py-1">
+                              {photos.map((row, rIdx) => renderCard(row, rIdx, "aspect-[16/10]"))}
+                            </div>
+                          );
+                        }
+
+                        /* 3 photos: 1 large left (row-span-2), 2 small stacked right */
+                        if (count === 3) {
+                          return (
+                            <div className="grid grid-cols-2 grid-rows-2 gap-3 flex-1 my-auto py-1">
+                              <div className="row-span-2 flex flex-col space-y-1 min-w-0 h-full">
+                                <div className="relative w-full rounded-xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-2xs h-full">
+                                  <img src={photos[0].img} alt={photos[0].titleEn} className="w-full h-full object-cover" />
+                                  <div className="absolute top-1.5 left-1.5 bg-neutral-900/85 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-mono font-bold text-white shadow-2xs border border-white/20">01</div>
+                                </div>
+                                <div className="px-0.5 space-y-0.5 shrink-0">
+                                  <h4 className="text-[10px] font-black text-neutral-900 leading-tight truncate">{photos[0].titleEn}</h4>
+                                  <p className="text-[9px] font-semibold italic text-neutral-400 leading-tight truncate">{photos[0].titleId}</p>
+                                </div>
+                              </div>
+                              {renderCard(photos[1], 1, "aspect-[16/10]")}
+                              {renderCard(photos[2], 2, "aspect-[16/10]")}
+                            </div>
+                          );
+                        }
+
+                        /* 4 photos: 2x2 grid */
+                        if (count === 4) {
+                          return (
+                            <div className="grid grid-cols-2 gap-3 flex-1 items-start my-auto py-1">
+                              {photos.map((row, rIdx) => renderCard(row, rIdx, "aspect-[16/10]"))}
+                            </div>
+                          );
+                        }
+
+                        /* 5 photos: 3 top + 2 bottom */
+                        if (count === 5) {
+                          return (
+                            <div className="flex flex-col gap-3 flex-1 my-auto py-1">
+                              <div className="grid grid-cols-3 gap-3 flex-1">
+                                {photos.slice(0, 3).map((row, rIdx) => renderCard(row, rIdx, "aspect-[16/10]"))}
+                              </div>
+                              <div className="grid grid-cols-3 gap-3 flex-1">
+                                {photos.slice(3, 5).map((row, rIdx) => renderCard(row, rIdx + 3, "aspect-[16/10]"))}
+                                <div />
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        /* 6 photos: 3 top + 3 bottom */
+                        return (
+                          <div className="flex flex-col gap-3 flex-1 my-auto py-1">
+                            <div className="grid grid-cols-3 gap-3 flex-1">
+                              {photos.slice(0, 3).map((row, rIdx) => renderCard(row, rIdx, "aspect-[16/10]"))}
+                            </div>
+                            <div className="grid grid-cols-3 gap-3 flex-1">
+                              {photos.slice(3, 6).map((row, rIdx) => renderCard(row, rIdx + 3, "aspect-[16/10]"))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (pageItem.taskCode.includes("04-03")) ? (
+                    /* 04-03-V2L: IMAGE & DESC LANDSCAPE KOP V2 */
+                    <div className="flex-1 py-1 flex flex-col h-full">
+                      <div className="grid grid-cols-12 gap-6 flex-1 items-stretch py-1">
+                        <div className="col-span-7 relative rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm min-h-[300px]">
+                          <img
+                            src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                            alt="Drawing Concept"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute bottom-3 left-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                            SCALE 1 : 100 @ A3
+                          </div>
+                        </div>
+
+                        <div className="col-span-5 flex flex-col justify-start space-y-3 py-1">
+                          <div className="space-y-2">
+                            <span className="text-xs font-mono font-bold text-brand-red uppercase block">
+                              Main Design Issues & Concept Notes
+                            </span>
+                            <p className="text-neutral-800 text-xs leading-relaxed font-medium">
+                              This schematic layout emphasizes optimal spatial orientation, seamless indoor-outdoor transitions, and efficient structural grid alignment for maximum natural light.
+                            </p>
+                            <p className="text-neutral-500 text-xs italic leading-relaxed pt-1">
+                              Tata letak skematik ini menekankan orientasi ruang optimal, transisi ruang dalam-luar yang menyatu, dan efisiensi penataan grid struktur untuk pencahayaan alami maksimal.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode.includes("04-04")) ? (
+                    /* 04-04-V2L: IMAGE & POINT LANDSCAPE KOP V2 */
+                    <div className="flex-1 py-1 flex flex-col h-full">
+                      <div className="grid grid-cols-12 gap-6 flex-1 items-stretch py-1">
+                        <div className="col-span-7 relative rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm min-h-[300px]">
+                          <img
+                            src="https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80"
+                            alt="Technical Layout"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute bottom-3 left-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                            SCALE 1 : 100 @ A3
+                          </div>
+                        </div>
+
+                        <div className="col-span-5 flex flex-col justify-start space-y-3 py-1">
+                          <span className="text-xs font-mono font-bold text-brand-red uppercase block">
+                            Key Technical Highlights
+                          </span>
+                          <div className="space-y-3">
+                            {[
+                              { num: "01", titleEn: "Cantilevered Living Pavilion (4.5m Projection)", titleId: "Pavilion Utama Cantilever 4.5 Meter", descEn: "Engineered post-tensioned beam system allowing uninterrupted garden view.", descId: "Sistem balok prategang memungkinkan pemandangan taman tanpa kolom." },
+                              { num: "02", titleEn: "North-South Passive Solar Orientation", titleId: "Orientasi Pasif Utara-Selatan", descEn: "Calculated roof overhangs blocking direct mid-day heat while welcoming ambient light.", descId: "Overhang atap terukur menahan panas siang hari dan memaksimalkan sinar alami." }
+                            ].map((pt, pIdx) => (
+                              <div key={pIdx} className="space-y-1 text-xs pb-2 border-b border-neutral-100 last:border-0">
+                                <div className="flex items-center gap-1.5 font-bold text-neutral-900">
+                                  <span className="font-mono text-brand-red font-bold">0{pIdx + 1}.</span>
+                                  <span className="text-xs font-extrabold">{pt.titleEn}</span>
+                                </div>
+                                <p className="text-[10px] font-semibold italic text-neutral-400 pl-4">{pt.titleId}</p>
+                                <p className="text-[11px] font-normal text-neutral-700 leading-snug pl-4">{pt.descEn}</p>
+                                <p className="text-[10px] text-neutral-400 italic leading-snug pl-4">{pt.descId}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode.includes("04-05") || pageItem.taskCode.includes("04-06")) ? (
+                    /* 04-05-V2L: FULL BLEED IMAGE OVERLAY LANDSCAPE KOP V2 */
+                    <div className="-mt-[0.5cm] -mx-[0.5cm] -mb-[0.5cm] flex-1 relative overflow-hidden bg-neutral-900 flex flex-col justify-end p-8 select-none z-0">
+                      <img
+                        src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80"
+                        alt="Full Bleed Architectural Visualization"
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/90 via-neutral-950/20 to-transparent pointer-events-none" />
+
+                      <div className="relative z-10 space-y-1 max-w-xl">
+                        <h4 className="text-base font-black text-white tracking-tight">Main Entrance & Facade Lighting Ambience</h4>
+                        <p className="text-xs font-medium text-neutral-300 leading-relaxed italic">
+                          Tampilan suasana pencahayaan fasad dan pintu masuk utama pada malam hari.
+                        </p>
                       </div>
                     </div>
                   ) : (
@@ -3929,8 +4174,8 @@ export default function StageDocumentPreview({
                   </div>
                 </div>
               </div>
-            ) : pageItem.taskCode === "04-01" || pageItem.taskCode === "04-01-P" || pageItem.taskCode === "04-07" || pageItem.taskCode === "04-01-L" || (pageItem.taskCode.startsWith("04-01")) ? (
-              /* 04-01 / 04-07 / 04-01-L: SINGLE IMAGE STANDARD (PORTRAIT & LANDSCAPE TOP-DOWN) */
+            ) : pageItem.taskCode === "04-01" || pageItem.taskCode === "04-01-P" || pageItem.taskCode === "04-07" || pageItem.taskCode === "04-01-L" || pageItem.taskCode === "04-01-V2L" || (pageItem.taskCode.startsWith("04-01")) ? (
+              /* 04-01 / 04-07 / 04-01-L / 04-01-V2L: SINGLE IMAGE STANDARD (PORTRAIT & LANDSCAPE TOP-DOWN) */
               <div className="flex-1 py-1 flex flex-col space-y-3 min-h-0">
                 <div className="flex items-center justify-between pb-2 border-b border-neutral-200 shrink-0">
                   <div>
@@ -3957,7 +4202,7 @@ export default function StageDocumentPreview({
                   </div>
                 </div>
               </div>
-            ) : pageItem.taskCode.includes("04-02-L") || (isLandscape && (pageItem.taskCode.includes("04-02") || pageItem.taskCode.includes("04-08"))) ? (
+            ) : pageItem.taskCode.includes("04-02-L") || pageItem.taskCode.includes("04-02-V2L") || (isLandscape && (pageItem.taskCode.includes("04-02") || pageItem.taskCode.includes("04-08"))) ? (
               /* 04-02-L: MULTIPLE IMAGE LANDSCAPE (SELECTOR 1-3 PHOTOS WITH CAPTION & DESC BELOW) */
               <div className="flex-1 py-1 flex flex-col justify-between space-y-3 h-full overflow-hidden">
                 <div className="flex items-center justify-between pb-2 border-b border-neutral-200 shrink-0">

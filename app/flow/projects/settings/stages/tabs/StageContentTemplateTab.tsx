@@ -632,7 +632,7 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     nameId: "Gambar Tunggal Kop v2 (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait layout with page title and full single drawing image container in Kop v2 framework.",
-    previewTaskCode: "04-01"
+    previewTaskCode: "04-01-V2P"
   },
   {
     id: "tpl-v2-multiple-image-p",
@@ -650,7 +650,7 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     nameId: "Gambar & Deskripsi Kop v2 (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait layout with main drawing image and descriptive paragraph in Kop v2 framework.",
-    previewTaskCode: "04-03"
+    previewTaskCode: "04-03-V2P"
   },
   {
     id: "tpl-v2-image-points-p",
@@ -659,7 +659,7 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     nameId: "Gambar & Poin-Poin Kop v2 (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait drawing layout with key highlight bullet points in Kop v2 framework.",
-    previewTaskCode: "04-04"
+    previewTaskCode: "04-04-V2P"
   },
   {
     id: "tpl-v2-multiple-image-desc-p",
@@ -677,18 +677,54 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     nameId: "Gambar Penuh Overlay Kop v2 (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait full-page edge-to-edge background image with dark floating title overlay in Kop v2 framework.",
-    previewTaskCode: "04-06"
+    previewTaskCode: "04-06-V2P"
   },
 
-  // --- SECTION 04 V2 KOP LANDSCAPE TEMPLATE (04-07-V2L) ---
+  // --- SECTION 04 V2 KOP LANDSCAPE TEMPLATES (04-01-V2L to 04-05-V2L) ---
   {
     id: "tpl-v2-single-image-l",
-    code: "04-07-V2L",
+    code: "04-01-V2L",
     name: "Single Image Kop v2 (Landscape)",
     nameId: "Gambar Tunggal Kop v2 (Landscape)",
     category: "Drawings, Diagram, and Image",
     description: "Landscape wide drawing layout with right Kop v2 sidebar framework.",
-    previewTaskCode: "04-07"
+    previewTaskCode: "04-01-V2L"
+  },
+  {
+    id: "tpl-v2-multiple-image-l",
+    code: "04-02-V2L",
+    name: "Multiple Image Kop v2 (Landscape)",
+    nameId: "Multi Gambar Grid Kop v2 (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape multi-photo grid layout with right Kop v2 sidebar framework.",
+    previewTaskCode: "04-02-V2L"
+  },
+  {
+    id: "tpl-v2-image-desc-l",
+    code: "04-03-V2L",
+    name: "Image and Desc Kop v2 (Landscape)",
+    nameId: "Gambar & Deskripsi Kop v2 (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape layout with drawing image and narrative description in right Kop v2 framework.",
+    previewTaskCode: "04-03-V2L"
+  },
+  {
+    id: "tpl-v2-image-points-l",
+    code: "04-04-V2L",
+    name: "Image and Point Kop v2 (Landscape)",
+    nameId: "Gambar & Poin-Poin Kop v2 (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape drawing layout with key technical highlight bullet points in Kop v2 framework.",
+    previewTaskCode: "04-04-V2L"
+  },
+  {
+    id: "tpl-v2-full-image-overlay-l",
+    code: "04-05-V2L",
+    name: "Full Bleed Image Overlay Kop v2 (Landscape)",
+    nameId: "Gambar Penuh Overlay Kop v2 (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape full-page edge-to-edge background image with right Kop v2 sidebar framework.",
+    previewTaskCode: "04-05-V2L"
   },
   // --- SECTION 05 BUDGET TEMPLATES (05-01-P & 05-01-L) ---
   {
@@ -1000,7 +1036,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                   <div
                     onClick={() => {
                       setSelectedTemplate(tpl);
-                      if (tpl.code.endsWith("-L") || ["04-07", "04-08", "04-09", "04-10", "04-12", "04-13"].includes(tpl.code)) {
+                      if (tpl.code.endsWith("-L") || tpl.code.endsWith("-V2L") || ["04-07", "04-08", "04-09", "04-10", "04-12", "04-13"].includes(tpl.code)) {
                         setDrawingOrientation("landscape");
                       } else {
                         setDrawingOrientation("portrait");
@@ -1638,8 +1674,8 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                               </div>
                             )}
 
-                            {/* Block 3 FOR IMAGE AND DESC TEMPLATES (04-03 & 04-09): Concept Notes / Narrative Text */}
-                            {(tpl.code === "04-03" || tpl.code === "04-09") && (
+                             {/* Block 3 FOR IMAGE AND DESC TEMPLATES (04-03, 04-09, 04-03-V2P, 04-03-V2L): Concept Notes / Narrative Text */}
+                            {(tpl.code === "04-03" || tpl.code === "04-09" || tpl.code.startsWith("04-03")) && (
                               <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
                                 <span className="text-[10px] font-bold text-brand-red uppercase block">3. Concept Notes & Narrative Description</span>
                                 <div className="space-y-1 pt-0.5">
@@ -1663,8 +1699,8 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                               </div>
                             )}
 
-                            {/* Block 3 FOR IMAGE AND POINT TEMPLATES (04-04 & 04-10): Key Technical Highlights Bullet List */}
-                            {(tpl.code === "04-04" || tpl.code === "04-10") && (
+                            {/* Block 3 FOR IMAGE AND POINT TEMPLATES (04-04, 04-10, 04-04-V2P, 04-04-V2L): Key Technical Highlights Bullet List */}
+                            {(tpl.code === "04-04" || tpl.code === "04-10" || tpl.code.startsWith("04-04")) && (
                               <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
                                 <span className="text-[10px] font-bold text-brand-red uppercase block">3. Key Technical Highlights (Bullet Points)</span>
                                 <div className="space-y-1.5 pt-0.5">
@@ -1690,33 +1726,31 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                               </div>
                             )}
 
-                            {/* Block 3 FOR MULTIPLE IMAGE GRID TEMPLATES (04-02-L): Multi Image Grid Items & Photo Count Selector for Landscape */}
-                            {tpl.code === "04-02-L" && (
+                            {/* Block 3 FOR MULTIPLE IMAGE GRID TEMPLATES (04-02-L & 04-02-V2L): Multi Image Grid Items & Photo Count Selector (1 - 6 Items) */}
+                            {(tpl.code === "04-02-L" || tpl.code === "04-02-V2L" || tpl.code.startsWith("04-02")) && (
                               <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
-                                <span className="text-[10px] font-bold text-brand-red uppercase block">3. Multi Image Items & Selector (1 - 3 Items)</span>
-                                <div className="space-y-1.5 pt-0.5">
-                                  <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-neutral-100 dark:border-neutral-800">
-                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">PHOTO COUNT SELECTOR</span>
-                                    <div className="flex items-center gap-1.5">
-                                      {[1, 2, 3].map((num) => (
-                                        <button
-                                          key={num}
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setPhotoCount(num);
-                                          }}
-                                          className={clsx(
-                                            "text-xs font-mono font-bold w-7 h-7 rounded-full border transition-all cursor-pointer flex items-center justify-center",
-                                            photoCount === num
-                                              ? "bg-brand-red text-white border-brand-red shadow-xs scale-105"
-                                              : "text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200"
-                                          )}
-                                        >
-                                          {num}
-                                        </button>
-                                      ))}
-                                    </div>
+                                <span className="text-[10px] font-bold text-brand-red uppercase block">3. Multi Image Items & Selector (1 - 6 Items)</span>
+                                <div className="space-y-2 pt-0.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase block">PHOTO NUMBER</span>
+                                  <div className="flex items-center gap-1.5">
+                                    {[1, 2, 3, 4, 5, 6].map((num) => (
+                                      <button
+                                        key={num}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setPhotoCount(num);
+                                        }}
+                                        className={clsx(
+                                          "text-xs font-mono font-bold w-7 h-7 rounded-full border transition-all cursor-pointer flex items-center justify-center",
+                                          photoCount === num
+                                            ? "bg-brand-red text-white border-brand-red shadow-xs scale-105"
+                                            : "text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200"
+                                        )}
+                                      >
+                                        {num}
+                                      </button>
+                                    ))}
                                   </div>
                                 </div>
                               </div>
