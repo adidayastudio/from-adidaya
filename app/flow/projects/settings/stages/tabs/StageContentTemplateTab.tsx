@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Filter, ChevronRight, Eye } from "lucide-react";
+import { Search, Filter, ChevronRight, ChevronLeft, Eye } from "lucide-react";
 import clsx from "clsx";
 import StageDocumentPreview from "@/components/flow/projects/project-detail/tasks/StageDocumentPreview";
 import { defaultKickoffData } from "@/components/flow/projects/project-detail/tasks/defaultStageDocumentData";
@@ -20,25 +20,33 @@ export interface ReusableContentTemplate {
 
 const CATEGORIES = [
   "All Templates",
-  "Cover & Intro",
-  "General Info",
-  "Brief & Objectives",
-  "Photo & Survey",
-  "Timeline & Budget",
+  "General Information",
+  "Client Brief and Objectives",
   "Scope of Work",
-  "Drawing & Technical",
-  "Diagram & Workflow",
-  "Legal & Approval"
+  "Drawings, Diagram, and Image",
+  "Budget",
+  "Timeline",
+  "Misc",
+  "Approval"
 ] as const;
 
 const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] = [
   {
     id: "tpl-main-cover",
-    code: "01-01",
+    code: "01-00",
     name: "Main Project Cover",
     nameId: "Sampul Utama Proyek",
-    category: "Cover & Intro",
+    category: "General Information",
     description: "Standard Studio Adidaya red main document cover with project title & code.",
+    previewTaskCode: "01-00"
+  },
+  {
+    id: "tpl-section-cover",
+    code: "01-01",
+    name: "Section Cover Page",
+    nameId: "Sampul Seksi",
+    category: "General Information",
+    description: "Dark minimalist section cover divider page with Indonesian section subtitle.",
     previewTaskCode: "01-01"
   },
   {
@@ -46,7 +54,7 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     code: "01-02",
     name: "Table of Contents",
     nameId: "Daftar Isi Halaman",
-    category: "General Info",
+    category: "General Information",
     description: "Auto-synchronizing index table of contents for dynamic document sections.",
     previewTaskCode: "01-02"
   },
@@ -55,7 +63,7 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     code: "01-03",
     name: "Purpose of Stage",
     nameId: "Tujuan Tahapan Pekerjaan",
-    category: "General Info",
+    category: "General Information",
     description: "Executive summary list outlining primary objectives and deliverables.",
     previewTaskCode: "01-03"
   },
@@ -64,25 +72,16 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     code: "01-04",
     name: "Workflow Overview",
     nameId: "Tinjauan Alur Kerja",
-    category: "Diagram & Workflow",
+    category: "General Information",
     description: "Step-by-step stage progress breakdown with timeline badges.",
     previewTaskCode: "01-04"
-  },
-  {
-    id: "tpl-section-cover",
-    code: "02-00",
-    name: "Section Cover Page",
-    nameId: "Sampul Seksi",
-    category: "Cover & Intro",
-    description: "Dark minimalist section cover divider page with Indonesian section subtitle.",
-    previewTaskCode: "02-00"
   },
   {
     id: "tpl-project-understanding",
     code: "02-01",
     name: "Project Understanding",
     nameId: "Pemahaman Proyek",
-    category: "Brief & Objectives",
+    category: "Client Brief and Objectives",
     description: "Key architectural concept, site parameters & design direction breakdown.",
     previewTaskCode: "02-01"
   },
@@ -91,7 +90,7 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     code: "02-02",
     name: "Client Needs & Vision",
     nameId: "Visi & Kebutuhan Klien",
-    category: "Brief & Objectives",
+    category: "Client Brief and Objectives",
     description: "Structured questionnaire summary of client spatial & stylistic requirements.",
     previewTaskCode: "02-02"
   },
@@ -100,70 +99,201 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     code: "02-03",
     name: "Functional Requirements",
     nameId: "Kebutuhan Fungsional Space",
-    category: "Brief & Objectives",
+    category: "Client Brief and Objectives",
     description: "Matrix of space requirements, occupancy count & functional relationships.",
     previewTaskCode: "02-03"
   },
   {
-    id: "tpl-budget",
-    code: "02-04",
-    name: "Budget Expectation",
-    nameId: "Ekspektasi Anggaran Biaya",
-    category: "Timeline & Budget",
-    description: "Initial cost estimation benchmark ranges and target allocation.",
-    previewTaskCode: "02-04"
-  },
-  {
-    id: "tpl-timeline",
-    code: "02-05",
-    name: "Timeline Expectation",
-    nameId: "Ekspektasi Lini Waktu",
-    category: "Timeline & Budget",
-    description: "Design & construction schedule draft with target completion milestones.",
-    previewTaskCode: "02-05"
-  },
-  {
-    id: "tpl-scope-deliverables",
+    id: "tpl-design-scope",
     code: "03-01",
-    name: "Kickoff Scope & Deliverables",
-    nameId: "Ruang Lingkup dan Keluaran",
+    name: "Design Scope & Deliverables",
+    nameId: "Lingkup Kerja & Keluaran Desain",
     category: "Scope of Work",
-    description: "Detailed breakdown of inclusions, exclusions & drawing packages.",
+    description: "Architectural, structural, and MEP design package checklist & inclusions.",
     previewTaskCode: "03-01"
   },
   {
-    id: "tpl-drawing-a",
+    id: "tpl-construction-scope",
     code: "03-02",
-    name: "Drawing Concept A",
-    nameId: "Gambar Skematik A",
-    category: "Drawing & Technical",
-    description: "Technical schematic drawing layout option A with title block.",
+    name: "Construction Scope & Deliverables",
+    nameId: "Lingkup Kerja & Pelaksanaan Konstruksi",
+    category: "Scope of Work",
+    description: "Technical working drawings FOR-CON, BoQ, and site supervision scope.",
     previewTaskCode: "03-02"
   },
   {
-    id: "tpl-drawing-b",
+    id: "tpl-exclusions",
     code: "03-03",
-    name: "Drawing Concept B",
-    nameId: "Gambar Skematik B",
-    category: "Drawing & Technical",
-    description: "Technical schematic drawing layout option B with detail annotations.",
+    name: "Scope Exclusions",
+    nameId: "Pengecualian Lingkup Kerja",
+    category: "Scope of Work",
+    description: "Detailed table of project boundary exclusions and un-scoped services.",
     previewTaskCode: "03-03"
   },
   {
-    id: "tpl-photo-survey",
+    id: "tpl-assumptions",
+    code: "03-04",
+    name: "Project Assumptions",
+    nameId: "Asumsi Pekerjaan Proyek",
+    category: "Scope of Work",
+    description: "Detailed table of site conditions, client responsibilities, and structural assumptions.",
+    previewTaskCode: "03-04"
+  },
+  // --- SECTION 04 PORTRAIT TEMPLATES (04-01 to 04-06) ---
+  {
+    id: "tpl-single-image-p",
     code: "04-01",
-    name: "Photo Survei Tapak",
-    nameId: "Dokumentasi Foto Survei",
-    category: "Photo & Survey",
-    description: "Grid layout for site survey photos, captions, and site observation notes.",
+    name: "Single Image (Portrait)",
+    nameId: "Gambar Tunggal (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait layout with page title and full single drawing image container.",
     previewTaskCode: "04-01"
+  },
+  {
+    id: "tpl-multiple-image-p",
+    code: "04-02",
+    name: "Multiple Image (Portrait)",
+    nameId: "Multi Gambar Grid (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait grid gallery layout for displaying 4 drawing images or survey photos.",
+    previewTaskCode: "04-02"
+  },
+  {
+    id: "tpl-image-desc-p",
+    code: "04-03",
+    name: "Image and Desc (Portrait)",
+    nameId: "Gambar & Deskripsi (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait layout featuring page title, main drawing image, and concise descriptive paragraph.",
+    previewTaskCode: "04-03"
+  },
+  {
+    id: "tpl-image-points-p",
+    code: "04-04",
+    name: "Image and Point (Portrait)",
+    nameId: "Gambar & Poin-Poin (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait single drawing layout with key highlight bullet points and technical notes.",
+    previewTaskCode: "04-04"
+  },
+  {
+    id: "tpl-multiple-image-desc-p",
+    code: "04-05",
+    name: "Multiple Image and Desc (Portrait)",
+    nameId: "Multi Gambar & Deskripsi (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait 3-image grid combined with brief summary description text.",
+    previewTaskCode: "04-05"
+  },
+  {
+    id: "tpl-full-image-overlay-p",
+    code: "04-06",
+    name: "Full Bleed Image Overlay (Portrait)",
+    nameId: "Gambar Penuh Overlay (Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Portrait full-page edge-to-edge background image with dark floating title overlay.",
+    previewTaskCode: "04-06"
+  },
+
+  // --- SECTION 04 LANDSCAPE TEMPLATES (04-07 to 04-12) ---
+  {
+    id: "tpl-single-image-l",
+    code: "04-07",
+    name: "Single Image (Landscape)",
+    nameId: "Gambar Tunggal (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape wide-format layout with page title and max-width single drawing container.",
+    previewTaskCode: "04-07"
+  },
+  {
+    id: "tpl-multiple-image-l",
+    code: "04-08",
+    name: "Multiple Image (Landscape)",
+    nameId: "Multi Gambar Grid (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape wide 4-column gallery grid for site photos and technical drawings.",
+    previewTaskCode: "04-08"
+  },
+  {
+    id: "tpl-image-desc-l",
+    code: "04-09",
+    name: "Image and Desc (Landscape)",
+    nameId: "Gambar & Deskripsi (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape 2-column split layout with left image and right narrative description.",
+    previewTaskCode: "04-09"
+  },
+  {
+    id: "tpl-image-points-l",
+    code: "04-10",
+    name: "Image and Point (Landscape)",
+    nameId: "Gambar & Poin-Poin (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape 2-column split layout with left image and right technical bullet points.",
+    previewTaskCode: "04-10"
+  },
+  {
+    id: "tpl-full-image-overlay-l",
+    code: "04-12",
+    name: "Full Bleed Image Overlay (Landscape)",
+    nameId: "Gambar Penuh Overlay (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape full-page edge-to-edge background image with dark floating title overlay.",
+    previewTaskCode: "04-12"
+  },
+  {
+    id: "tpl-single-image-sidebar-l",
+    code: "04-13",
+    name: "Single Image Sidebar (Landscape)",
+    nameId: "Gambar Tunggal Sidebar Kanan (Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Landscape wide-format layout with dedicated right sidebar for header, title, details, and footer.",
+    previewTaskCode: "04-13"
+  },
+
+  // --- SECTION 04 V2 KOP GAMBAR KERJA PLACEHOLDERS ---
+  {
+    id: "tpl-v2-single-image-p",
+    code: "04-01-V2P",
+    name: "Single Image (Kop V2 Gambar Kerja Portrait)",
+    nameId: "Gambar Tunggal (Kop V2 Gambar Kerja Portrait)",
+    category: "Drawings, Diagram, and Image",
+    description: "Standard Working Drawing (Kop Gambar Kerja V2) Portrait single drawing layout [Placeholder].",
+    previewTaskCode: "04-01"
+  },
+  {
+    id: "tpl-v2-single-image-l",
+    code: "04-07-V2L",
+    name: "Single Image (Kop V2 Gambar Kerja Landscape)",
+    nameId: "Gambar Tunggal (Kop V2 Gambar Kerja Landscape)",
+    category: "Drawings, Diagram, and Image",
+    description: "Standard Working Drawing (Kop Gambar Kerja V2) Landscape wide drawing layout [Placeholder].",
+    previewTaskCode: "04-07"
+  },
+  {
+    id: "tpl-budget",
+    code: "05-01",
+    name: "Budget Expectation",
+    nameId: "Ekspektasi Anggaran Biaya",
+    category: "Budget",
+    description: "Initial cost estimation benchmark ranges and target allocation.",
+    previewTaskCode: "05-01"
+  },
+  {
+    id: "tpl-timeline",
+    code: "06-01",
+    name: "Timeline Expectation",
+    nameId: "Ekspektasi Lini Waktu",
+    category: "Timeline",
+    description: "Design & construction schedule draft with target completion milestones.",
+    previewTaskCode: "06-01"
   },
   {
     id: "tpl-approval",
     code: "08-01",
     name: "Signoff & Approval",
     nameId: "Persetujuan Dokumen",
-    category: "Legal & Approval",
+    category: "Approval",
     description: "Official 2-column signature verification page for Studio & Client.",
     previewTaskCode: "08-01"
   }
@@ -184,6 +314,10 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
   const [selectedTemplate, setSelectedTemplate] = useState<ReusableContentTemplate>(PRESET_TEMPLATES[0]);
   const [sortBy, setSortBy] = useState<"code" | "name">("code");
   const [savedSuccess, setSavedSuccess] = useState<string | null>(null);
+  const [activeSubPage, setActiveSubPage] = useState<number>(1);
+  const [drawingOrientation, setDrawingOrientation] = useState<"portrait" | "landscape">("portrait");
+  const [photoCount, setPhotoCount] = useState<number>(3);
+  const [selectedFormat, setSelectedFormat] = useState<string>("ALL");
 
   const [dbProjects, setDbProjects] = useState<{ code: string; name: string; location: string; label: string }[]>([DEFAULT_PROJECT]);
   const [dbStages, setDbStages] = useState<{ id: string; name: string }[]>([DEFAULT_STAGE]);
@@ -270,7 +404,18 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
 
     const matchesCategory = selectedCategory === "All Templates" || tpl.category === selectedCategory;
 
-    return matchesSearch && matchesCategory;
+    let matchesFormat = true;
+    if (selectedFormat === "V1-P") {
+      matchesFormat = ["04-01", "04-02", "04-03", "04-04", "04-05", "04-06"].includes(tpl.code) || !tpl.code.startsWith("04-");
+    } else if (selectedFormat === "V1-L") {
+      matchesFormat = ["04-07", "04-08", "04-09", "04-10", "04-12", "04-13"].includes(tpl.code) || !tpl.code.startsWith("04-");
+    } else if (selectedFormat === "V2-P") {
+      matchesFormat = tpl.code.endsWith("-V2P");
+    } else if (selectedFormat === "V2-L") {
+      matchesFormat = tpl.code.endsWith("-V2L");
+    }
+
+    return matchesSearch && matchesCategory && matchesFormat;
   }).sort((a, b) => {
     if (sortBy === "code") return a.code.localeCompare(b.code, undefined, { numeric: true });
     return a.name.localeCompare(b.name);
@@ -288,10 +433,10 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
   return (
     <div className="space-y-6 pb-12">
       {/* TOP CONTROLS & DROPDOWN FILTERS */}
-      <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md p-4 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-2xs space-y-3">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-3">
+      <div className="bg-white/80 dark:bg-neutral-900/80 backdrop-blur-md p-4 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 shadow-2xs space-y-3 overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 min-w-0">
           {/* Search Input */}
-          <div className="relative w-full lg:w-80">
+          <div className="relative w-full lg:w-72 shrink-0">
             <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -302,22 +447,50 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
             />
           </div>
 
-          {/* Category Pills */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none w-full lg:w-auto">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={clsx(
-                  "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0",
-                  selectedCategory === cat
-                    ? "bg-blue-600 text-white border-transparent shadow-xs"
-                    : "bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100"
-                )}
-              >
-                {cat}
-              </button>
-            ))}
+          {/* Category & Kop Version Pills (Single Flexible Scrollable Container) */}
+          <div className="flex flex-col gap-2 min-w-0 flex-1 overflow-x-auto scrollbar-none">
+            {/* Category Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={clsx(
+                    "px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border shrink-0",
+                    selectedCategory === cat
+                      ? "bg-blue-600 text-white border-transparent shadow-xs"
+                      : "bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-100"
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            {/* Kop Version & Format Pills (Soft Blue Active Styling) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+              <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase mr-1 shrink-0">KOP & FORMAT:</span>
+              {[
+                { id: "ALL", label: "All Formats" },
+                { id: "V1-P", label: "V1 · Portrait" },
+                { id: "V1-L", label: "V1 · Landscape" },
+                { id: "V2-P", label: "V2 (Gambar Kerja) · Portrait [Placeholder]" },
+                { id: "V2-L", label: "V2 (Gambar Kerja) · Landscape [Placeholder]" }
+              ].map((fmt) => (
+                <button
+                  key={fmt.id}
+                  onClick={() => setSelectedFormat(fmt.id)}
+                  className={clsx(
+                    "px-2.5 py-1 rounded-xl text-[10px] font-mono font-bold whitespace-nowrap transition-all border shrink-0",
+                    selectedFormat === fmt.id
+                      ? "bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800 shadow-2xs font-extrabold"
+                      : "bg-neutral-50 dark:bg-neutral-800/60 text-neutral-500 hover:text-neutral-800 border-neutral-200 dark:border-neutral-700"
+                  )}
+                >
+                  {fmt.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -354,7 +527,14 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                 >
                   {/* Card Header (Clickable) */}
                   <div
-                    onClick={() => setSelectedTemplate(tpl)}
+                    onClick={() => {
+                      setSelectedTemplate(tpl);
+                      if (["04-07", "04-08", "04-09", "04-10", "04-11", "04-12", "04-13"].includes(tpl.code)) {
+                        setDrawingOrientation("landscape");
+                      } else if (["04-01", "04-02", "04-03", "04-04", "04-05", "04-06"].includes(tpl.code)) {
+                        setDrawingOrientation("portrait");
+                      }
+                    }}
                     className="p-3.5 cursor-pointer flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0 flex-1">
@@ -375,9 +555,6 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-500">
-                        {tpl.category}
-                      </span>
                       <ChevronRight className={clsx("w-4 h-4 transition-transform", isSelected ? "text-blue-600 rotate-90" : "text-neutral-400")} />
                     </div>
                   </div>
@@ -431,10 +608,628 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                         </div>
                       </div>
 
-                      {/* Special info note for Table of Contents */}
+                      {/* Special info note for Table of Contents (01-02) */}
                       {tpl.code === "01-02" && (
                         <div className="p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-blue-900 dark:text-blue-200 leading-snug">
                           ℹ️ <strong>Auto-Sync Table of Contents:</strong> In the live project document, this table of contents will automatically aggregate section titles, page numbers, and item order in real-time.
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Purpose of Stage (01-03) */}
+                      {tpl.code === "01-03" && (
+                        <div className="space-y-2 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            {/* Item 01 Sample Entry */}
+                            <div className="space-y-1 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-[10px] font-bold text-brand-red">01</span>
+                                <span className="text-[9px] font-bold text-neutral-400 uppercase">EN</span>
+                                <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                                  Align the initial project vision.
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 pl-4">
+                                <span className="text-[9px] font-bold text-neutral-400 uppercase">ID</span>
+                                <span className="text-[11px] font-normal italic text-neutral-500">
+                                  Menyelaraskan visi awal proyek.
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Item 02 Sample Entry */}
+                            <div className="space-y-1 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80 opacity-80">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-[10px] font-bold text-brand-red">02</span>
+                                <span className="text-[9px] font-bold text-neutral-400 uppercase">EN</span>
+                                <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">
+                                  Define the scope of work and boundaries.
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 pl-4">
+                                <span className="text-[9px] font-bold text-neutral-400 uppercase">ID</span>
+                                <span className="text-[11px] font-normal italic text-neutral-500">
+                                  Menentukan ruang lingkup kerja dan batasannya.
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Workflow Overview (01-04) */}
+                      {tpl.code === "01-04" && (
+                        <div className="space-y-2 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            {/* Workflow Stage Item */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <div className="border-b border-neutral-100 dark:border-neutral-800 pb-1.5 space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-mono text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-brand-red text-white">02-SD</span>
+                                  <span className="text-xs font-bold text-neutral-800 dark:text-neutral-200">Schematic Design</span>
+                                </div>
+                                <div>
+                                  <span className="text-[10px] font-mono font-bold text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-md inline-block">
+                                    ⏱ 1-2 weeks
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1 pt-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Initial zoning draft</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Draf zonasi awal</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Project Understanding (02-01) */}
+                      {tpl.code === "02-01" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2.5 text-xs">
+                            {/* 1. Main Paragraph Input Type */}
+                            <div className="space-y-1 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">1. Main Paragraph</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Precision Gym 23 is an enhanced premium...</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Precision Gym 23 adalah pengembangan...</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 2. Key Issue Items Input Type */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">2. KEY ISSUES</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-mono text-[10px] font-bold text-brand-red">01</span>
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TITLE · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">User Flow</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TITLE · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Alur Pengguna</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">User movement must feel smoother...</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Alur gerak pengguna harus lebih...</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Client's Needs & Vision (02-02) */}
+                      {tpl.code === "02-02" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2.5 text-xs">
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-mono text-[10px] font-bold text-brand-red">01</span>
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TITLE · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Spatial Flexibility & Scalability</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TITLE · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Fleksibilitas & Skalabilitas Ruang</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">Spaces must accommodate peak training hours...</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Area harus dapat menampung jam puncak...</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {/* Sample Input Content ONLY for Functional Requirements (02-03) */}
+                      {tpl.code === "02-03" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">Spatial Program Row</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">FLOOR</span>
+                                    <span className="text-xs font-bold text-brand-red">Floor 01</span>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <span className="text-[10px] font-mono font-bold text-neutral-600 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">45 m²</span>
+                                    <span className="text-[10px] font-mono font-bold text-neutral-500 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">15 Pax</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ROOM · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 truncate">Lobby & Reception Area</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ROOM · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500 truncate">Area Resepsionis & Lobi</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">NOTE · EN</span>
+                                  <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">Includes turnstile & waiting lounge</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">NOTE · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Termasuk turnstile & ruang tunggu</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Budget Expectation (02-04) */}
+                      {tpl.code === "02-04" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            {/* Header Inputs: Client Ceiling & Area x Price Formula */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">1. Target & Formula</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CLIENT CEILING</span>
+                                  <span className="text-xs font-mono font-bold text-neutral-900 dark:text-neutral-100">Rp 2.000.000.000</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">AREA (AUTO)</span>
+                                  <span className="text-xs font-mono font-bold text-brand-red">450 m²</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">EST. PRICE / M²</span>
+                                  <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">Rp 3.333.333 / m²</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Discipline Row Input */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">2. Discipline Row</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CATEGORY</span>
+                                    <span className="text-xs font-bold text-brand-red">Structure</span>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-neutral-600 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded shrink-0">33.3% Weight</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Foundation, concrete & steel framework</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DESC · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Pondasi, beton bertulang & rangka baja</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TARGET BUDGET</span>
+                                  <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">Rp 500.000.000</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Target Timeline & Schedule (02-05) */}
+                      {tpl.code === "02-05" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            {/* Block 1: Table Schedule Input */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">1. Table Schedule Row</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">PHASE</span>
+                                    <span className="text-xs font-bold text-brand-red">01. Design Phase</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">SUB-STAGE</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Schematic Design</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DURATION</span>
+                                  <span className="text-xs font-mono font-bold text-neutral-800 dark:text-neutral-200">4 Weeks (Sep - Oct 2026)</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Block 2: Gantt Chart Input */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">2. Gantt Chart View Bar</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">BAR LABEL</span>
+                                    <span className="text-xs font-bold text-brand-red">02. Procurement & Site Prep</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">SPAN MONTHS</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Dec 2026 – Jan 2027 (2 Mos)</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">COLOR THEME</span>
+                                  <span className="text-xs font-mono font-bold text-brand-red">Red Highlight</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Design Scope & Deliverables (03-01) */}
+                      {tpl.code === "03-01" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">Design Scope Item</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">DISCIPLINE</span>
+                                    <span className="text-xs font-bold text-brand-red">01. Architecture</span>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">INCLUDED ✓</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Site Plan & Floor Layout Plan</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Rencana Tapak & Denah Tata Letak</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Construction Scope & Deliverables (03-02) */}
+                      {tpl.code === "03-02" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">Execution Scope Item</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">SCOPE</span>
+                                    <span className="text-xs font-bold text-brand-red">01. FOR-CON Working Drawings</span>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">INCLUDED ✓</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Detailed Construction Drawings (FOR-CON)</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Gambar Kerja Detail Siap Bangun</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Scope Exclusions (03-03) */}
+                      {tpl.code === "03-03" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">Scope Exclusion Row</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CATEGORY</span>
+                                    <span className="text-xs font-bold text-brand-red">01. Permitting & Legal</span>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-neutral-600 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded shrink-0">EXCLUDED ✕</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Building Permit (PBG/SLF) Official Fees</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Retribusi Resmi Perizinan Bangunan (PBG)</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Project Assumptions (03-04) */}
+                      {tpl.code === "03-04" && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">Project Assumption Row</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CATEGORY</span>
+                                    <span className="text-xs font-bold text-brand-red">01. Site & Ground Conditions</span>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">ASSUMED ✓</span>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · EN</span>
+                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Site Soil Bearing Capacity & Firm Land Access</span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · ID</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500">Daya Dukung Tanah Keras & Akses Jalan</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sample Input Content ONLY for Section 04 Drawing Templates */}
+                      {tpl.code.startsWith("04-") && (
+                        <div className="space-y-2.5 pt-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                            Sample Input Content
+                          </span>
+
+                          <div className="space-y-2 text-xs">
+                            {/* Block 1: Drawing Header Titles & Custom Code Badge */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">1. Drawing Header Titles & Code Tag</span>
+                              <div className="space-y-1.5 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TITLE (EN)</span>
+                                    <span className="text-xs font-bold text-neutral-900 dark:text-white truncate">
+                                      {tpl.code === "04-04" || tpl.code === "04-10" ? "Technical Layout & Key Highlights" : "Schematic Design Concept Overview"}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] font-mono font-bold text-white bg-neutral-900 px-2 py-0.5 rounded-md shrink-0">
+                                    {tpl.code === "04-04" || tpl.code === "04-10" ? "A-02-01" : "CONCEPT-A"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">SUBTITLE (ID)</span>
+                                  <span className="text-[11px] font-normal italic text-neutral-500 truncate">
+                                    {tpl.code === "04-04" || tpl.code === "04-10" ? "Tata Letak Teknis & Poin-Poin Utama" : "Gambaran Konsep Desain Skematik"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Block 2: Image Attachment & Scale (Optional) */}
+                            <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">2. Image Attachment & Scale</span>
+                              <div className="space-y-1 pt-0.5">
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">FILE</span>
+                                  <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">schematic-concept-option-a.png</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">SCALE (OPTIONAL)</span>
+                                  <span className="text-[10px] font-mono font-semibold text-neutral-600 bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">1 : 100 @ A3</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Block 3 FOR IMAGE AND DESC TEMPLATES (04-03 & 04-09): Concept Notes / Narrative Text */}
+                            {(tpl.code === "04-03" || tpl.code === "04-09") && (
+                              <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                                <span className="text-[10px] font-bold text-brand-red uppercase block">3. Concept Notes & Narrative Description</span>
+                                <div className="space-y-1 pt-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">HEADING (EN)</span>
+                                    <span className="text-xs font-bold text-brand-red">MAIN DESIGN ISSUES & CONCEPT NOTES</span>
+                                  </div>
+                                  <div className="flex items-start gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0 mt-0.5">DESC (EN)</span>
+                                    <span className="text-[11px] font-medium text-neutral-800 dark:text-neutral-200 leading-snug">
+                                      This schematic layout emphasizes optimal spatial orientation and natural light...
+                                    </span>
+                                  </div>
+                                  <div className="flex items-start gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0 mt-0.5">DESC (ID)</span>
+                                    <span className="text-[10px] font-normal italic text-neutral-500 leading-snug">
+                                      Tata letak skematik ini menekankan orientasi ruang optimal...
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Block 3 FOR IMAGE AND POINT TEMPLATES (04-04 & 04-10): Key Technical Highlights Bullet List */}
+                            {(tpl.code === "04-04" || tpl.code === "04-10") && (
+                              <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                                <span className="text-[10px] font-bold text-brand-red uppercase block">3. Key Technical Highlights (Bullet Points)</span>
+                                <div className="space-y-1.5 pt-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">HEADING (EN)</span>
+                                    <span className="text-xs font-bold text-brand-red">KEY TECHNICAL HIGHLIGHTS</span>
+                                  </div>
+                                  <div className="space-y-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1 pl-1">
+                                    {[
+                                      { num: "01", en: "Cantilevered Living Pavilion (4.5m Projection)", id: "Pavilion Utama Cantilever 4.5 Meter" },
+                                      { num: "02", en: "North-South Passive Solar Orientation", id: "Orientasi Pasif Utara-Selatan" }
+                                    ].map((pt, pIdx) => (
+                                      <div key={pIdx} className="space-y-0.5 text-xs">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] font-mono font-bold text-brand-red shrink-0">{pt.num}</span>
+                                          <span className="text-[11px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{pt.en}</span>
+                                        </div>
+                                        <span className="text-[10px] font-normal italic text-neutral-500 block pl-4 truncate">{pt.id}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Block 3 FOR MULTIPLE IMAGE GRID TEMPLATES (04-02 & 04-08): Multi Image Grid Items & Photo Count Selector for 04-08 */}
+                            {(tpl.code === "04-02" || tpl.code === "04-08" || tpl.code === "04-05") && (
+                              <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                                <span className="text-[10px] font-bold text-brand-red uppercase block">3. Multi Image Items & Selector ({tpl.code === "04-02" ? "4 Items" : "1 - 3 Items"})</span>
+                                <div className="space-y-1.5 pt-0.5">
+                                  {(tpl.code === "04-08" || tpl.code === "04-05") && (
+                                    <div className="flex items-center justify-between gap-1.5 pb-1 border-b border-neutral-100 dark:border-neutral-800">
+                                      <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">PHOTO COUNT</span>
+                                      <div className="flex items-center gap-1.5">
+                                        {[1, 2, 3].map((num) => (
+                                          <button
+                                            key={num}
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setPhotoCount(num);
+                                            }}
+                                            className={clsx(
+                                              "text-xs font-mono font-bold px-3 py-1 rounded-lg border transition-all cursor-pointer",
+                                              photoCount === num
+                                                ? "bg-brand-red text-white border-brand-red shadow-xs scale-105"
+                                                : "text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200"
+                                            )}
+                                          >
+                                            {num}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div className="space-y-2 pt-0.5 pl-1">
+                                    {[
+                                      {
+                                        num: "01",
+                                        titleEn: "Main Facade Entrance",
+                                        subtitleId: "Tampak Depan Utama & Panel Kayu",
+                                        descEn: "High-impact entrance featuring vertical timber louvers & cove lighting.",
+                                        descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal & pencahayaan tersembunyi."
+                                      },
+                                      {
+                                        num: "02",
+                                        titleEn: "Outdoor Pool Terrace",
+                                        subtitleId: "Teras Luar & Dek Kolam Renang",
+                                        descEn: "Expansive outdoor deck integrated with natural stone pavers.",
+                                        descId: "Area teras luar luas terintegrasi penataan batu alam."
+                                      }
+                                    ].map((item, iIdx) => (
+                                      <div key={iIdx} className="space-y-1 text-xs pb-1.5 border-b border-neutral-100 dark:border-neutral-800 last:border-0 last:pb-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-[10px] font-mono font-bold text-brand-red shrink-0">{item.num}</span>
+                                          <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">TITLE (EN)</span>
+                                          <span className="text-[11px] font-semibold text-neutral-800 dark:text-neutral-200 truncate">{item.titleEn}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 pl-4">
+                                          <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">SUBTITLE (ID)</span>
+                                          <span className="text-[10px] font-medium italic text-neutral-500 truncate">{item.subtitleId}</span>
+                                        </div>
+                                        <div className="flex items-start gap-1.5 pl-4 pt-0.5 border-t border-neutral-100/60 dark:border-neutral-800/60">
+                                          <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0 mt-0.5">DESC (EN)</span>
+                                          <span className="text-[10px] font-medium text-neutral-700 dark:text-neutral-300 leading-snug truncate">{item.descEn}</span>
+                                        </div>
+                                        <div className="flex items-start gap-1.5 pl-4">
+                                          <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0 mt-0.5">DESC (ID)</span>
+                                          <span className="text-[10px] font-normal italic text-neutral-500 leading-snug truncate">{item.descId}</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -456,35 +1251,57 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-extrabold text-neutral-500 uppercase tracking-wider flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5 text-blue-600" />
-              Page Preview: {selectedTemplate.name}
+              Page Preview: {selectedTemplate.code} {selectedTemplate.name}
             </span>
             <div className="flex items-center gap-3">
-              <span className="text-xs font-mono font-bold text-neutral-400">
-                Code: {selectedTemplate.code}
-              </span>
-              <button
-                onClick={() => {
-                  setSavedSuccess(selectedTemplate.name);
-                  setTimeout(() => setSavedSuccess(null), 2500);
-                }}
-                className="px-3.5 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
-              >
-                <span>Save Page Template</span>
-              </button>
+
+              {/* Multi-Page Navigation Toggle Controls (< >) for templates with multiple pages */}
+              {selectedTemplate.code === "02-05" && (
+                <div className="flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl border border-neutral-200 dark:border-neutral-700">
+                  <button
+                    onClick={() => setActiveSubPage(Math.max(1, activeSubPage - 1))}
+                    disabled={activeSubPage <= 1}
+                    className="p-1 rounded-lg text-neutral-600 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-700 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
+                    title="Previous Page"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-[11px] font-mono font-bold text-neutral-700 dark:text-neutral-300 px-1">
+                    {activeSubPage}/2
+                  </span>
+                  <button
+                    onClick={() => setActiveSubPage(Math.min(2, activeSubPage + 1))}
+                    disabled={activeSubPage >= 2}
+                    className="p-1 rounded-lg text-neutral-600 dark:text-neutral-300 hover:bg-white dark:hover:bg-neutral-700 disabled:opacity-40 disabled:hover:bg-transparent transition-all"
+                    title="Next Page"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
             </div>
           </div>
 
-          {savedSuccess && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 animate-in fade-in duration-200 flex items-center justify-between">
-              <span>✓ Template "{savedSuccess}" saved successfully!</span>
-            </div>
-          )}
-
-          <div className="bg-neutral-100/70 dark:bg-neutral-900/50 p-6 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 flex justify-center">
+          <div className="flex justify-center">
             <StageDocumentPreview
               data={livePreviewData}
               activeSection={`KO-${selectedTemplate.code.split("-")[0]}`}
-              activeSubTask={selectedTemplate.previewTaskCode}
+              activeSubTask={
+                selectedTemplate.code === "02-05"
+                  ? activeSubPage === 2 ? "02-05_p2" : "02-05"
+                  : selectedTemplate.code
+              }
+              customTasks={PRESET_TEMPLATES.map((t) => ({
+                id: `ko-${t.code}`,
+                code: t.code,
+                name: t.name,
+                nameId: t.nameId,
+                stage: "KO",
+                sectionCode: `KO-${t.code.split("-")[0]}`
+              }))}
+              customOrientation={drawingOrientation}
+              customPhotoCount={photoCount}
               hideToolbar={true}
             />
           </div>

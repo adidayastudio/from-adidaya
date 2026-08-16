@@ -8,8 +8,8 @@ import { Task } from "../types";
 
 export const PC_SECTIONS = [
     { code: "PC-01", title: "General Information", weight: 25 },           // 0.25%
-    { code: "PC-02", title: "Vendor List", weight: 75 },                   // 0.75%
-    { code: "PC-03", title: "Material Specification", weight: 200 },       // 2.00%
+    { code: "PC-02", title: "Material Specification", weight: 200 },       // 2.00%
+    { code: "PC-03", title: "Vendor List", weight: 75 },                   // 0.75%
     { code: "PC-04", title: "Request for Quotation", weight: 50 },         // 0.50%
     { code: "PC-05", title: "Quotation Comparison", weight: 50 },          // 0.50%
     { code: "PC-06", title: "Vendor Selection", weight: 75 },              // 0.75%
@@ -26,15 +26,15 @@ export const pcTasks: Task[] = [
     { id: "pc-01-05", code: "01-05", name: "Workflow Overview", nameId: "Tinjauan Alur Kerja", stage: "PC", sectionCode: "PC-01", weight: 3, priority: "low", schemaType: "DESCRIPTION_ONLY" },
     { id: "pc-01-06", code: "01-06", name: "Project Understanding", nameId: "Pemahaman Proyek", stage: "PC", sectionCode: "PC-01", weight: 6, priority: "high", schemaType: "DESCRIPTION_ONLY" },
 
-    // ========== PC-02: Vendor List (75) ==========
-    { id: "pc-02-01", code: "02-01", name: "Material Vendor List", nameId: "Daftar Pemasok / Vendor Material", stage: "PC", sectionCode: "PC-02", weight: 41, priority: "high", schemaType: "DELIVERABLE_BASIC" },
-    { id: "pc-02-02", code: "02-02", name: "Contractor/Subcontractor List", nameId: "Daftar Kontraktor / Subkontraktor", stage: "PC", sectionCode: "PC-02", weight: 34, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    // ========== PC-02: Material Specification (200) ==========
+    { id: "pc-02-01", code: "02-01", name: "Outline Material Specs", nameId: "Garis Besar Spesifikasi Material", stage: "PC", sectionCode: "PC-02", weight: 30, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "pc-02-02", code: "02-02", name: "Architecture Material Specs/RKS", nameId: "Spesifikasi Material / RKS Arsitektur", stage: "PC", sectionCode: "PC-02", weight: 60, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "pc-02-03", code: "02-03", name: "Structure Material Specs/RKS", nameId: "Spesifikasi Material / RKS Struktur", stage: "PC", sectionCode: "PC-02", weight: 50, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "pc-02-04", code: "02-04", name: "MEP Material Specs/RKS", nameId: "Spesifikasi Material / RKS MEP", stage: "PC", sectionCode: "PC-02", weight: 60, priority: "high", schemaType: "DELIVERABLE_BASIC" },
 
-    // ========== PC-03: Material Specification (200) ==========
-    { id: "pc-03-01", code: "03-01", name: "Outline Material Specs", nameId: "Garis Besar Spesifikasi Material", stage: "PC", sectionCode: "PC-03", weight: 30, priority: "high", schemaType: "DELIVERABLE_BASIC" },
-    { id: "pc-03-02", code: "03-02", name: "Architecture Material Specs/RKS", nameId: "Spesifikasi Material / RKS Arsitektur", stage: "PC", sectionCode: "PC-03", weight: 60, priority: "high", schemaType: "DELIVERABLE_BASIC" },
-    { id: "pc-03-03", code: "03-03", name: "Structure Material Specs/RKS", nameId: "Spesifikasi Material / RKS Struktur", stage: "PC", sectionCode: "PC-03", weight: 50, priority: "high", schemaType: "DELIVERABLE_BASIC" },
-    { id: "pc-03-04", code: "03-04", name: "MEP Material Specs/RKS", nameId: "Spesifikasi Material / RKS MEP", stage: "PC", sectionCode: "PC-03", weight: 60, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    // ========== PC-03: Vendor List (75) ==========
+    { id: "pc-03-01", code: "03-01", name: "Material Vendor List", nameId: "Daftar Pemasok / Vendor Material", stage: "PC", sectionCode: "PC-03", weight: 41, priority: "high", schemaType: "DELIVERABLE_BASIC" },
+    { id: "pc-03-02", code: "03-02", name: "Contractor/Subcontractor List", nameId: "Daftar Kontraktor / Subkontraktor", stage: "PC", sectionCode: "PC-03", weight: 34, priority: "high", schemaType: "DELIVERABLE_BASIC" },
 
     // ========== PC-04: Request for Quotation (50) ==========
     { id: "pc-04-01", code: "04-01", name: "RFQ Preparation", nameId: "Persiapan Penawaran (RFQ)", stage: "PC", sectionCode: "PC-04", weight: 28, priority: "high", schemaType: "DELIVERABLE_BASIC" },

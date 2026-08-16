@@ -35,10 +35,10 @@ export const koTasks: Task[] = [
   // Section Total: 120
 
   // ========== KO-03: Scope of Work Definition (100) ==========
-  { id: "ko-03-01", code: "03-01", name: "Kickoff Scope & Deliverables", nameId: "Ruang Lingkup dan Keluaran KO", stage: "KO", sectionCode: "KO-03", weight: 20, priority: "high" },
-  { id: "ko-03-02", code: "03-02", name: "Design Scope", nameId: "Lingkup Desain", stage: "KO", sectionCode: "KO-03", weight: 30, priority: "high" },
-  { id: "ko-03-03", code: "03-03", name: "Construction Scope", nameId: "Lingkup Konstruksi", stage: "KO", sectionCode: "KO-03", weight: 30, priority: "high" },
-  { id: "ko-03-04", code: "03-04", name: "Exclusions & Assumptions", nameId: "Pengecualian & Asumsi", stage: "KO", sectionCode: "KO-03", weight: 20, priority: "medium" },
+  { id: "ko-03-01", code: "03-01", name: "Design Scope & Deliverables", nameId: "Lingkup Kerja & Keluaran Desain", stage: "KO", sectionCode: "KO-03", weight: 35, priority: "high" },
+  { id: "ko-03-02", code: "03-02", name: "Construction Scope & Deliverables", nameId: "Lingkup Kerja & Pelaksanaan Konstruksi", stage: "KO", sectionCode: "KO-03", weight: 35, priority: "high" },
+  { id: "ko-03-03", code: "03-03", name: "Scope Exclusions", nameId: "Pengecualian Lingkup Kerja", stage: "KO", sectionCode: "KO-03", weight: 15, priority: "medium" },
+  { id: "ko-03-04", code: "03-04", name: "Project Assumptions", nameId: "Asumsi Pekerjaan Proyek", stage: "KO", sectionCode: "KO-03", weight: 15, priority: "medium" },
   // Section Total: 100
 
   // ========== KO-04: Site Data Collection (80) ==========

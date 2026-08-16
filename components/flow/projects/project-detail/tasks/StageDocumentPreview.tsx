@@ -14,6 +14,8 @@ type Props = {
   customSections?: { code: string; title: string }[];
   customTasks?: any[];
   hideToolbar?: boolean;
+  customOrientation?: "portrait" | "landscape";
+  customPhotoCount?: number;
 };
 
 export type DocumentPageItem =
@@ -28,6 +30,8 @@ export default function StageDocumentPreview({
   customSections,
   customTasks,
   hideToolbar = false,
+  customOrientation,
+  customPhotoCount = 3,
 }: Props) {
   const [activePage, setActivePage] = useState<number>(1);
   const [viewMode, setViewMode] = useState<"single" | "all">("single");
@@ -117,6 +121,7 @@ export default function StageDocumentPreview({
       const isCoverTask = idx === 0 && tIdx === 0 && (taskName || "").toLowerCase().includes("cover");
 
       const pageNo = isCoverTask ? 1 : pagesList.length + 1;
+      
       taskPageIndex[taskCodeNum] = pageNo;
       taskPageIndex[cleanTaskCode] = pageNo;
       taskPageIndex[`${secCode}_${taskCodeNum}`] = pageNo;
@@ -127,8 +132,11 @@ export default function StageDocumentPreview({
         return;
       }
 
-      // Check if this task is TOC (01-02)
+      // Check if this task is TOC (01-02), Timeline (02-05), or Scope (03-01)
       const isTOC = taskCodeNum === "01-02" || taskCodeNum === "KO-01-02";
+      const isTimeline = taskCodeNum === "02-05" || taskCodeNum === "KO-02-05";
+      const isScope = taskCodeNum === "03-01" || taskCodeNum === "KO-03-01";
+
       if (isTOC) {
         // Compute total items and how many TOC pages needed (24 items per page)
         const ITEMS_PER_PAGE = 24;
@@ -145,6 +153,29 @@ export default function StageDocumentPreview({
             tocPageIndex: p
           });
         }
+      } else if (isTimeline) {
+        // Target Timeline & Schedule (02-05) gets 2 pages: Page 1 (Table) & Page 2 (Visual Gantt Chart)
+        taskPageIndex["02-05"] = pageNo;
+        taskPageIndex["02-05_p1"] = pageNo;
+        taskPageIndex["02-05_p2"] = pageNo + 1;
+        taskPageIndex[`${secCode}_02-05_p2`] = pageNo + 1;
+
+        pagesList.push({
+          type: "TASK_PAGE",
+          secCode,
+          taskCode: taskCodeNum,
+          taskName: `${taskName} — Table Schedule`,
+          taskNameId: `${taskNameId} — Tabel Jadwal`,
+          subPage: 1
+        });
+        pagesList.push({
+          type: "TASK_PAGE",
+          secCode,
+          taskCode: taskCodeNum,
+          taskName: `${taskName} — Visual Timeline Chart`,
+          taskNameId: `${taskNameId} — Grafik Visual Timeline`,
+          subPage: 2
+        });
       } else {
         pagesList.push({
           type: "TASK_PAGE",
@@ -306,6 +337,10 @@ export default function StageDocumentPreview({
         return renderSectionCover(pageItem.secNumStr, pageItem.titleEn, pageItem.titleId);
 
       case "TASK_PAGE":
+        if (pageItem.taskCode === "01-01" || pageItem.taskCode === "02-00") {
+          return renderSectionCover("01", "General Information", "Informasi Umum Proyek");
+        }
+
         const isTOC = pageItem.taskCode === "01-02" || pageItem.taskCode === "KO-01-02";
         const currentStageName = data.stageName || "Kickoff";
 
@@ -481,6 +516,1357 @@ export default function StageDocumentPreview({
                   })}
                 </div>
               </div>
+            ) : pageItem.taskCode === "02-01" ? (
+              /* REAL CLEAN DOCUMENT TEXT PARAGRAPHS FOR PROJECT UNDERSTANDING (02-01) */
+              <div className="flex-1 my-auto py-2 space-y-5">
+                {/* 1. Main Project Summary Paragraph (EN & ID) */}
+                <div className="space-y-1.5 pb-4 border-b border-neutral-100">
+                  <p className="text-xs font-semibold text-neutral-900 leading-relaxed">
+                    {data.understandingIntroEn || defaultKickoffData.understandingIntroEn}
+                  </p>
+                  <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed">
+                    {data.understandingIntroId || defaultKickoffData.understandingIntroId}
+                  </p>
+                </div>
+
+                {/* 2. Key Issues Narrative Paragraphs (No Cards) */}
+                <div className="space-y-4">
+                  {(data.understandingCards || defaultKickoffData.understandingCards).map((card, idx) => (
+                    <div key={card.id || idx} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-brand-red">0{idx + 1}</span>
+                        <h4 className="text-xs font-bold text-neutral-900">{card.titleEn}</h4>
+                        <span className="text-xs font-normal italic text-neutral-400">({card.titleId})</span>
+                      </div>
+                      <p className="text-xs font-medium text-neutral-700 leading-relaxed pl-6">
+                        {card.descEn}
+                      </p>
+                      <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed pl-6">
+                        {card.descId}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : pageItem.taskCode === "02-02" ? (
+              /* REAL CLEAN DOCUMENT PREVIEW FOR CLIENT'S NEEDS & VISION (02-02) (NO CARDS) */
+              <div className="flex-1 my-auto py-2 space-y-5">
+                <div className="space-y-4">
+                  {[
+                    {
+                      num: "01",
+                      titleEn: "Spatial Flexibility & Scalability",
+                      titleId: "Fleksibilitas & Skalabilitas Ruang",
+                      descEn: "Spaces must accommodate peak training hours seamlessly without feeling overcrowded.",
+                      descId: "Area harus dapat menampung jam puncak latihan secara efisien tanpa terasa sempit."
+                    },
+                    {
+                      num: "02",
+                      titleEn: "Character-Driven Brand Ambience",
+                      titleId: "Suasana Merek Berkarakter Kuat",
+                      descEn: "Material selection and lighting ambiance should reflect precision, strength, and modern aesthetics.",
+                      descId: "Pemilihan material dan pencahayaan harus mencerminkan presisi, kekuatan, dan estetika modern."
+                    },
+                    {
+                      num: "03",
+                      titleEn: "Seamless Member Journey",
+                      titleId: "Alur Pengalaman Anggota yang Lancar",
+                      descEn: "Intuitive transition from reception, locker areas, main workout floor, to recovery zones.",
+                      descId: "Transisi intuitif dari resepsionis, loker, area latihan utama, hingga zona pemulihan."
+                    }
+                  ].map((item) => (
+                    <div key={item.num} className="space-y-1 pb-3 border-b border-neutral-100 last:border-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-brand-red">{item.num}</span>
+                        <h4 className="text-xs font-bold text-neutral-900">{item.titleEn}</h4>
+                        <span className="text-xs font-normal italic text-neutral-400">({item.titleId})</span>
+                      </div>
+                      <p className="text-xs font-medium text-neutral-700 leading-relaxed pl-6">
+                        {item.descEn}
+                      </p>
+                      <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed pl-6">
+                        {item.descId}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : pageItem.taskCode === "02-03" ? (
+              /* REAL DOCUMENT PREVIEW FOR FUNCTIONAL REQUIREMENTS (02-03) - MERGED FLOORS, ENGLISH HEADERS FIRST, FLOOR SUBTOTALS */
+              <div className="flex-1 my-auto py-2 space-y-4">
+                <div className="w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                        <th className="py-2.5 px-1">Floor <span className="font-sans font-normal italic text-neutral-400 normal-case">(Lantai)</span></th>
+                        <th className="py-2.5 px-2">Room Name <span className="font-sans font-normal italic text-neutral-400 normal-case">(Nama Ruang)</span></th>
+                        <th className="py-2.5 px-2 text-right">Area <span className="font-sans font-normal italic text-neutral-400 normal-case">(Luasan)</span></th>
+                        <th className="py-2.5 px-2 text-right">Capacity <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kapasitas)</span></th>
+                        <th className="py-2.5 px-2 text-left">Notes <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keterangan)</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-xs">
+                      {[
+                        {
+                          floorLabel: "Floor 01",
+                          subtotalArea: "105 m²",
+                          subtotalCap: "35 Pax",
+                          rooms: [
+                            { roomEn: "Lobby & Reception Area", roomId: "Area Resepsionis & Lobi", area: "45 m²", cap: "15 Pax", noteEn: "Includes turnstile & waiting lounge", noteId: "Termasuk turnstile & ruang tunggu" },
+                            { roomEn: "Locker & Shower Room", roomId: "Ruang Loker & Bilas", area: "60 m²", cap: "20 Pax", noteEn: "Wet zone with anti-slip flooring", noteId: "Area basah dengan lantai anti-selip" },
+                          ]
+                        },
+                        {
+                          floorLabel: "Floor 02",
+                          subtotalArea: "275 m²",
+                          subtotalCap: "80 Pax",
+                          rooms: [
+                            { roomEn: "Main Workout & Free Weight Zone", roomId: "Area Latihan Utama & Beban", area: "180 m²", cap: "50 Pax", noteEn: "High-impact acoustic flooring", noteId: "Lantai akustik tahan benturan" },
+                            { roomEn: "Cardio & Endurance Area", roomId: "Area Kardio & Ketahanan", area: "95 m²", cap: "30 Pax", noteEn: "Optimized power outlets & ventilation", noteId: "Stopkontak & ventilasi teroptimasi" },
+                          ]
+                        },
+                        {
+                          floorLabel: "Floor 03",
+                          subtotalArea: "70 m²",
+                          subtotalCap: "12 Pax",
+                          rooms: [
+                            { roomEn: "Recovery & Ice Bath Lounge", roomId: "Area Pemulihan & Es", area: "70 m²", cap: "12 Pax", noteEn: "Waterproof membrane & drainage system", noteId: "Membran tahan air & sistem drainase" },
+                          ]
+                        }
+                      ].map((group, gIdx) => (
+                        <React.Fragment key={gIdx}>
+                          {group.rooms.map((row, rIdx) => (
+                            <tr key={rIdx} className="border-b border-neutral-100">
+                              {rIdx === 0 && (
+                                <td
+                                  rowSpan={group.rooms.length}
+                                  className="py-2.5 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top border-r border-neutral-100 pr-3"
+                                >
+                                  {group.floorLabel}
+                                </td>
+                              )}
+                              <td className="py-2.5 px-2 align-top">
+                                <span className="font-semibold text-neutral-800 block leading-tight">{row.roomEn}</span>
+                                <span className="font-normal italic text-neutral-400 text-[10px] block">{row.roomId}</span>
+                              </td>
+                              <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">
+                                {row.area}
+                              </td>
+                              <td className="py-2.5 px-2 font-mono text-xs font-semibold text-neutral-500 text-right whitespace-nowrap align-top">
+                                {row.cap}
+                              </td>
+                              <td className="py-2.5 px-2 align-top">
+                                <span className="text-[11px] font-medium text-neutral-600 block leading-tight">{row.noteEn}</span>
+                                <span className="text-[10px] font-normal italic text-neutral-400 block">{row.noteId}</span>
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Floor Subtotal Row */}
+                          <tr className="bg-neutral-50/70 border-b border-neutral-200/80 font-semibold text-[11px]">
+                            <td colSpan={2} className="py-1.5 px-2 text-neutral-500 text-right font-mono italic">
+                              Subtotal {group.floorLabel}
+                            </td>
+                            <td className="py-1.5 px-2 text-right font-mono font-bold text-neutral-800">
+                              {group.subtotalArea}
+                            </td>
+                            <td className="py-1.5 px-2 text-right font-mono text-neutral-600">
+                              {group.subtotalCap}
+                            </td>
+                            <td className="py-1.5 px-2"></td>
+                          </tr>
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-neutral-900 font-bold text-xs">
+                        <td colSpan={2} className="py-2.5 px-1 text-neutral-900">
+                          Total Programmed Area <span className="font-sans font-normal italic text-neutral-400 text-[11px]">(Total Luasan)</span>
+                        </td>
+                        <td className="py-2.5 px-2 text-right font-mono text-brand-red text-sm">450 m²</td>
+                        <td className="py-2.5 px-2 text-right font-mono text-neutral-800 text-xs">127 Pax</td>
+                        <td className="py-2.5 px-2 text-neutral-400 text-[11px] font-normal italic">3 Floors Total</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "02-04" ? (
+              /* REAL BUDGET EXPECTATION PREVIEW (02-04) - NO CARDS, AREA X PRICE FORMULA BREAKDOWN */
+              <div className="flex-1 my-auto py-2 space-y-5">
+                {/* 1. Top Section (No Cards): Client Ceiling & Area x Construction Price Formula */}
+                <div className="space-y-3 pb-3 border-b border-neutral-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                        Client Budget Ceiling <span className="font-sans font-normal italic text-neutral-400 normal-case">(Plafon Maksimal Anggaran Klien)</span>
+                      </span>
+                      <span className="text-base font-black font-mono text-neutral-900">
+                        Rp 2.000.000.000
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold font-mono bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        WITHIN CLIENT'S BUDGET
+                      </span>
+                      <span className="text-[10px] font-normal italic text-neutral-400 block mt-0.5">(Sesuai Batas Anggaran)</span>
+                    </div>
+                  </div>
+
+                  {/* Formula Calculation Summary Row */}
+                  <div className="flex items-center gap-4 text-xs font-mono pt-1">
+                    <div>
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase block">BUILDING AREA <span className="font-sans font-normal italic text-neutral-400 normal-case">(LUASAN)</span></span>
+                      <span className="font-bold text-neutral-900">450 m²</span>
+                    </div>
+                    <span className="text-neutral-400 font-bold">×</span>
+                    <div>
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase block">EST. EST / M² <span className="font-sans font-normal italic text-neutral-400 normal-case">(HARGA PER M²)</span></span>
+                      <span className="font-bold text-neutral-900">Rp 3.333.333 / m²</span>
+                    </div>
+                    <span className="text-neutral-400 font-bold">=</span>
+                    <div>
+                      <span className="text-[9px] font-bold text-neutral-400 uppercase block">TOTAL TARGET ESTIMATE</span>
+                      <span className="font-bold text-brand-red">Rp 1.500.000.000</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Discipline Breakdown Table with Description (No Price/m2 per scope) */}
+                <div className="w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                        <th className="py-2.5 px-1">Scope Category <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kategori Lingkup)</span></th>
+                        <th className="py-2.5 px-2">Description <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keterangan Pekerjaan)</span></th>
+                        <th className="py-2.5 px-2 text-right">Weight % <span className="font-sans font-normal italic text-neutral-400 normal-case">(Bobot)</span></th>
+                        <th className="py-2.5 px-2 text-right">Target Budget <span className="font-sans font-normal italic text-neutral-400 normal-case">(Target Anggaran)</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200/60 text-xs">
+                      {[
+                        { catEn: "Structure", catId: "Pekerjaan Struktur", descEn: "Foundation, reinforced concrete & steel beam framework", descId: "Pondasi, beton bertulang & rangka baja", areaShare: "33.3%", budget: "Rp 500.000.000" },
+                        { catEn: "Architecture", catId: "Pekerjaan Arsitektur", descEn: "Facade, brick partition wall, waterproofing & roof", descId: "Fasad, dinding bata, waterproofing & atap", areaShare: "23.3%", budget: "Rp 350.000.000" },
+                        { catEn: "MEP", catId: "Pekerjaan MEP", descEn: "Electrical main panel, fresh air HVAC, plumbing & drainage", descId: "Panel listrik utama, AC & ventilasi, plambing", areaShare: "16.7%", budget: "Rp 250.000.000" },
+                        { catEn: "Interior", catId: "Pekerjaan Interior", descEn: "Custom joinery, acoustic flooring, wall finish & ceiling", descId: "Joinery kustom, lantai akustik, finishing dinding", areaShare: "14.7%", budget: "Rp 220.000.000" },
+                        { catEn: "Landscape", catId: "Pekerjaan Lanskap", descEn: "Outdoor greenery, hardscape pathway & exterior lightings", descId: "Area hijau luar, jaluran hardscape & lampu luar", areaShare: "5.3%", budget: "Rp 80.000.000" },
+                        { catEn: "Design Fee", catId: "Biaya Desain", descEn: "Comprehensive architectural & engineering design service", descId: "Jasa desain arsitektur & rekayasa lengkap", areaShare: "6.7%", budget: "Rp 100.000.000" },
+                      ].map((row, rIdx) => (
+                        <tr key={rIdx}>
+                          <td className="py-2.5 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top">
+                            {row.catEn}
+                            <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.catId}</span>
+                          </td>
+                          <td className="py-2.5 px-2 align-top">
+                            <span className="font-semibold text-neutral-800 block leading-tight">{row.descEn}</span>
+                            <span className="font-normal italic text-neutral-400 text-[10px] block">{row.descId}</span>
+                          </td>
+                          <td className="py-2.5 px-2 font-mono text-xs text-neutral-600 text-right whitespace-nowrap align-top">
+                            {row.areaShare}
+                          </td>
+                          <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">
+                            {row.budget}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-neutral-300 font-bold text-xs">
+                        <td colSpan={2} className="py-3 px-1 text-neutral-900">
+                          Total Budget Expectation <span className="font-sans font-normal italic text-neutral-400 text-[11px]">(Total Estimasi Anggaran)</span>
+                        </td>
+                        <td className="py-3 px-2 text-right font-mono text-neutral-700">100%</td>
+                        <td className="py-3 px-2 text-right font-mono text-brand-red text-sm">Rp 1.500.000.000</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "02-05" ? (
+              /* REAL TARGET TIMELINE PREVIEW (02-05) - MULTI-PAGE SUPPORT (PAGE 1: TABLE SCHEDULE, PAGE 2: VISUAL TIMELINE CHART) */
+              pageItem.subPage === 2 ? (
+                /* PAGE 2: VISUAL TIMELINE GANTT CHART */
+                <div className="flex-1 my-auto py-2 space-y-5">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+                    <div>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                        Visual Timeline Schedule Chart <span className="font-sans font-normal italic text-neutral-400 normal-case">(Grafik Visual Timeline Proyek)</span>
+                      </span>
+                      <span className="text-base font-black font-mono text-neutral-900">
+                        12 Months Timeline Breakdown
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono font-bold text-brand-red">52 Weeks Total</span>
+                  </div>
+
+                  {/* Visual Gantt Chart Grid */}
+                  <div className="space-y-4 pt-2">
+                    {/* Months Header Bar */}
+                    <div className="grid grid-cols-12 gap-1 text-[10px] font-mono font-bold text-neutral-400 uppercase text-center border-b border-neutral-200 pb-2">
+                      {["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"].map((m, mIdx) => (
+                        <div key={mIdx} className="bg-neutral-100/70 py-1 rounded">
+                          {m}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Timeline Bars */}
+                    <div className="space-y-3 pt-1">
+                      {[
+                        { name: "01. Design Phase", sub: "Briefing, Schematic, DD, Technical", colSpan: "col-span-4", colStart: "col-start-1", bg: "bg-neutral-900 text-white" },
+                        { name: "02. Procurement & Site Prep", sub: "Tender & PBG Permit", colSpan: "col-span-2", colStart: "col-start-4", bg: "bg-brand-red text-white" },
+                        { name: "03. Structure & Core Work", sub: "Foundation, Concrete & Framework", colSpan: "col-span-5", colStart: "col-start-5", bg: "bg-neutral-800 text-white" },
+                        { name: "04. Architectural & Interior Fit-Out", sub: "Finishes, Joinery & Lighting", colSpan: "col-span-3", colStart: "col-start-9", bg: "bg-neutral-700 text-white" },
+                        { name: "05. MEP Testing & Handover", sub: "Commissioning & Key Handover", colSpan: "col-span-2", colStart: "col-start-11", bg: "bg-emerald-600 text-white" },
+                      ].map((bar, bIdx) => (
+                        <div key={bIdx} className="space-y-1">
+                          <div className="flex items-center justify-between text-xs font-semibold text-neutral-800">
+                            <span>{bar.name}</span>
+                            <span className="text-[10px] text-neutral-400 font-normal italic">{bar.sub}</span>
+                          </div>
+                          <div className="grid grid-cols-12 gap-1 h-7 bg-neutral-50 rounded-lg p-0.5 border border-neutral-100">
+                            <div className={`${bar.colStart} ${bar.colSpan} ${bar.bg} rounded flex items-center justify-center font-mono text-[10px] font-bold shadow-sm px-2 truncate`}>
+                              {bar.name.split(" ")[1]} Phase
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Chart Legend Footer */}
+                  <div className="flex items-center gap-6 pt-4 border-t border-neutral-200 text-[10px] font-medium text-neutral-600">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded bg-neutral-900"></span>
+                      <span>Design Stage</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded bg-brand-red"></span>
+                      <span>Procurement & Permits</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded bg-neutral-800"></span>
+                      <span>Structure Work</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded bg-neutral-700"></span>
+                      <span>Interior Fit-Out</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded bg-emerald-600"></span>
+                      <span>Testing & Handover</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* PAGE 1: TABLE SCHEDULE */
+                <div className="flex-1 my-auto py-2 space-y-4">
+                  {/* Timeline Overview Summary */}
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+                    <div>
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                        Target Project Duration <span className="font-sans font-normal italic text-neutral-400 normal-case">(Total Durasi Proyek)</span>
+                      </span>
+                      <span className="text-base font-black font-mono text-neutral-900">
+                        52 Weeks <span className="text-xs font-normal text-neutral-500 font-sans">(1 Year Total)</span>
+                      </span>
+                    </div>
+                    <div className="text-right font-mono text-xs">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
+                        ESTIMATED TIMELINE RANGE
+                      </span>
+                      <span className="font-bold text-brand-red">Sep 2026 – Sep 2027</span>
+                    </div>
+                  </div>
+
+                  {/* Timeline Table */}
+                  <div className="w-full">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                          <th className="py-2.5 px-1">Major Phase <span className="font-sans font-normal italic text-neutral-400 normal-case">(Fase Utama)</span></th>
+                          <th className="py-2.5 px-2">Sub-Stage <span className="font-sans font-normal italic text-neutral-400 normal-case">(Tahapan)</span></th>
+                          <th className="py-2.5 px-2 text-right">Duration <span className="font-sans font-normal italic text-neutral-400 normal-case">(Durasi)</span></th>
+                          <th className="py-2.5 px-2 text-right">Schedule <span className="font-sans font-normal italic text-neutral-400 normal-case">(Jadwal)</span></th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-xs">
+                        {[
+                          {
+                            parentPhaseEn: "01. Design Phase",
+                            parentPhaseId: "Tahap Desain (12 Wks)",
+                            parentSubtotal: "12 Weeks",
+                            subStages: [
+                              { stageEn: "Kickoff & Briefing", stageId: "Tahap Awal & Pembekalan", duration: "2 Weeks", schedule: "Sep 2026" },
+                              { stageEn: "Schematic Design", stageId: "Desain Skematik", duration: "4 Weeks", schedule: "Sep – Oct 2026" },
+                              { stageEn: "Design Development", stageId: "Pengembangan Desain", duration: "4 Weeks", schedule: "Oct – Nov 2026" },
+                              { stageEn: "Technical Drawings (FOR-CON)", stageId: "Gambar Kerja & Tender", duration: "4 Weeks", schedule: "Nov – Dec 2026" },
+                            ]
+                          },
+                          {
+                            parentPhaseEn: "02. Construction Phase",
+                            parentPhaseId: "Tahap Pelaksanaan (40 Wks)",
+                            parentSubtotal: "40 Weeks",
+                            subStages: [
+                              { stageEn: "Procurement & Site Prep", stageId: "Tender & Persiapan Lahan", duration: "4 Weeks", schedule: "Dec 2026 – Jan 2027" },
+                              { stageEn: "Structure & Core Work", stageId: "Pekerjaan Struktur Utama", duration: "20 Weeks", schedule: "Jan – Jun 2027" },
+                              { stageEn: "Architectural & Interior Fit-Out", stageId: "Arsitektur & Fit-Out Interior", duration: "12 Weeks", schedule: "Jun – Aug 2027" },
+                              { stageEn: "MEP Testing & Handover", stageId: "Pengujian & Serah Terima", duration: "4 Weeks", schedule: "Aug – Sep 2027" },
+                            ]
+                          }
+                        ].map((group, gIdx) => (
+                          <React.Fragment key={gIdx}>
+                            {group.subStages.map((row, rIdx) => (
+                              <tr key={rIdx} className="border-b border-neutral-100">
+                                {rIdx === 0 && (
+                                  <td
+                                    rowSpan={group.subStages.length}
+                                    className="py-2.5 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top border-r border-neutral-100 pr-3"
+                                  >
+                                    {group.parentPhaseEn}
+                                    <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{group.parentPhaseId}</span>
+                                  </td>
+                                )}
+                                <td className="py-2.5 px-2 align-top">
+                                  <span className="font-semibold text-neutral-800 block leading-tight">{row.stageEn}</span>
+                                  <span className="font-normal italic text-neutral-400 text-[10px] block">{row.stageId}</span>
+                                </td>
+                                <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">
+                                  {row.duration}
+                                </td>
+                                <td className="py-2.5 px-2 font-mono text-xs text-neutral-600 text-right whitespace-nowrap align-top">
+                                  {row.schedule}
+                                </td>
+                              </tr>
+                            ))}
+                            {/* Phase Subtotal Row */}
+                            <tr className="bg-neutral-50/70 border-b border-neutral-200/80 font-semibold text-[11px]">
+                              <td colSpan={2} className="py-1.5 px-2 text-neutral-500 text-right font-mono italic">
+                                Subtotal {group.parentPhaseEn}
+                              </td>
+                              <td className="py-1.5 px-2 text-right font-mono font-bold text-neutral-900">
+                                {group.parentSubtotal}
+                              </td>
+                              <td className="py-1.5 px-2"></td>
+                            </tr>
+                          </React.Fragment>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-neutral-900 font-bold text-xs">
+                          <td colSpan={2} className="py-3 px-1 text-neutral-900">
+                            Total Project Timeline <span className="font-sans font-normal italic text-neutral-400 text-[11px]">(Total Target Jadwal Proyek)</span>
+                          </td>
+                          <td className="py-3 px-2 text-right font-mono text-brand-red text-sm">52 Weeks</td>
+                          <td className="py-3 px-2 text-right font-mono text-neutral-800 text-xs">Sep 2026 – Sep 2027</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )
+            ) : pageItem.taskCode === "03-01" ? (
+              /* REAL DESIGN SCOPE PREVIEW FOR (03-01) */
+              <div className="flex-1 my-auto py-2 space-y-4">
+                {/* Scope Table */}
+                <div className="w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                        <th className="py-2.5 px-1 w-1/3">Discipline Scope <span className="font-sans font-normal italic text-neutral-400 normal-case">(Disiplin Kerja)</span></th>
+                        <th className="py-2.5 px-2 w-2/3">Design Deliverables & Specifications <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keluaran Gambar & Spesifikasi Desain)</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200/60 text-xs">
+                      {[
+                        {
+                          nameEn: "01. Architecture",
+                          nameId: "Arsitektur Utama",
+                          items: [
+                            { en: "Site Plan & Floor Layout Plan", idText: "Rencana Tapak & Denah Tata Letak", included: true },
+                            { en: "Building Elevations & Key Sections", idText: "Tampak Bangunan & Potongan Utama", included: true },
+                            { en: "3D Exterior & Interior Render Package", idText: "Paket Visual Render 3D Eksterior & Interior", included: true },
+                            { en: "Custom Kinetic Facade Construction Details", idText: "Detail Konstruksi Fasad Kinetik Khusus", included: false }
+                          ]
+                        },
+                        {
+                          nameEn: "02. Structure & Civils",
+                          nameId: "Struktur & Sipil",
+                          items: [
+                            { en: "Foundation Plan & Column/Beam Framing", idText: "Rencana Pondasi & Penulangan Kolom/Balok", included: true },
+                            { en: "Structural Calculation Report", idText: "Laporan Perhitungan Struktur", included: true },
+                            { en: "Geotechnical Deep Soil Boring Sondir Test", idText: "Uji Sondir Geoteknik Tanah Dalam", included: false }
+                          ]
+                        },
+                        {
+                          nameEn: "03. MEP Engineering",
+                          nameId: "Mekanikal, Elektrikal & Plambing",
+                          items: [
+                            { en: "Electrical Single Line & Lighting Layout", idText: "Diagram Kelistrikan & Tata Letak Lampu", included: true },
+                            { en: "Plumbing Clean/Waste Water System", idText: "Sistem Plambing Air Bersih & Kotor", included: true },
+                            { en: "Smart Home Automation System Integration", idText: "Integrasi Sistem Otomasi Smart Home", included: false }
+                          ]
+                        }
+                      ].map((row, rIdx) => (
+                        <tr key={rIdx}>
+                          <td className="py-3 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top pr-3 border-r border-neutral-100">
+                            {row.nameEn}
+                            <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.nameId}</span>
+                          </td>
+                          <td className="py-3 px-3 align-top">
+                            <ul className="space-y-2">
+                              {row.items.map((item, iIdx) => (
+                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                                    <span className={`font-bold select-none ${item.included ? "text-emerald-600" : "text-neutral-400"}`}>
+                                      {item.included ? "✓" : "✕"}
+                                    </span>
+                                    <div>
+                                      <span className={`font-medium ${item.included ? "text-neutral-800" : "text-neutral-400 line-through"}`}>{item.en}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                                    </div>
+                                  </div>
+                                  <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 ${
+                                    item.included
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-neutral-100 text-neutral-400 border border-neutral-200"
+                                  }`}>
+                                    {item.included ? "INCLUDED ✓" : "EXCLUDED ✕"}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "03-02" ? (
+              /* REAL CONSTRUCTION SCOPE PREVIEW FOR (03-02) */
+              <div className="flex-1 my-auto py-2 space-y-4">
+                {/* Scope Table */}
+                <div className="w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                        <th className="py-2.5 px-1 w-1/3">Execution Scope <span className="font-sans font-normal italic text-neutral-400 normal-case">(Cakupan Pelaksanaan)</span></th>
+                        <th className="py-2.5 px-2 w-2/3">Technical Deliverables & Supervision <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keluaran Teknis & Pengawasan)</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200/60 text-xs">
+                      {[
+                        {
+                          nameEn: "01. FOR-CON Working Drawings",
+                          nameId: "Gambar Kerja Detail Siap Bangun",
+                          items: [
+                            { en: "Detailed Construction Working Drawings (FOR-CON)", idText: "Gambar Kerja Detail Konstruksi Siap Bangun", included: true },
+                            { en: "Architectural & Interior Joinery Details", idText: "Detail Arsitektur & Joinery Fit-Out", included: true },
+                            { en: "MEP Connection & Pipe Routing Details", idText: "Detail Sambungan MEP & Jalur Pipa", included: true }
+                          ]
+                        },
+                        {
+                          nameEn: "02. BoQ & RAB Budgeting",
+                          nameId: "Anggaran Biaya & BoQ",
+                          items: [
+                            { en: "Bill of Quantities (BoQ) Breakdown", idText: "Rincian Bill of Quantities (BoQ) Volume Pekerjaan", included: true },
+                            { en: "RAB Construction Cost Budget Estimation", idText: "Estimasi Rencana Anggaran Biaya (RAB) Konstruksi", included: true }
+                          ]
+                        },
+                        {
+                          nameEn: "03. Site Supervision & Control",
+                          nameId: "Pengawasan Lapangan",
+                          items: [
+                            { en: "Weekly Periodic Site Inspection & Supervision", idText: "Inspeksi & Pengawasan Lapangan Periodik Mingguan", included: true },
+                            { en: "Full-Time Daily Resident Site Engineer", idText: "Pengawas Harian Penuh Waktu di Lokasi", included: false },
+                            { en: "Punch List Fixes & Final Handover Inspection", idText: "Daftar Perbaikan Sisa & Inspeksi Serah Terima", included: true }
+                          ]
+                        }
+                      ].map((row, rIdx) => (
+                        <tr key={rIdx}>
+                          <td className="py-3 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top pr-3 border-r border-neutral-100">
+                            {row.nameEn}
+                            <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.nameId}</span>
+                          </td>
+                          <td className="py-3 px-3 align-top">
+                            <ul className="space-y-2">
+                              {row.items.map((item, iIdx) => (
+                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                                    <span className={`font-bold select-none ${item.included ? "text-emerald-600" : "text-neutral-400"}`}>
+                                      {item.included ? "✓" : "✕"}
+                                    </span>
+                                    <div>
+                                      <span className={`font-medium ${item.included ? "text-neutral-800" : "text-neutral-400 line-through"}`}>{item.en}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                                    </div>
+                                  </div>
+                                  <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 ${
+                                    item.included
+                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                      : "bg-neutral-100 text-neutral-400 border border-neutral-200"
+                                  }`}>
+                                    {item.included ? "INCLUDED ✓" : "EXCLUDED ✕"}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "03-03" ? (
+              /* REAL SCOPE EXCLUSIONS PREVIEW FOR (03-03) */
+              <div className="flex-1 my-auto py-2 space-y-4">
+                {/* Exclusions Table */}
+                <div className="w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                        <th className="py-2.5 px-1 w-1/3">Exclusion Category <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kategori Pengecualian)</span></th>
+                        <th className="py-2.5 px-2 w-2/3">Un-scoped Deliverables & Boundary Items <span className="font-sans font-normal italic text-neutral-400 normal-case">(Detail Pengecualian Pekerjaan)</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200/60 text-xs">
+                      {[
+                        {
+                          nameEn: "01. Permitting & Legal",
+                          nameId: "Perizinan & Retribusi Resmi",
+                          items: [
+                            { en: "Building Permit (PBG/SLF) Official Government Fees", idText: "Biaya Retribusi Resmi Perizinan Bangunan Gedung (PBG/SLF)", included: false },
+                            { en: "Neighborhood & Local Community Discretionary Approvals", idText: "Persetujuan Lingkungan Warga & Komunitas Lokal", included: false }
+                          ]
+                        },
+                        {
+                          nameEn: "02. Site & Soil Investigations",
+                          nameId: "Pengujian Lahan & Tanah",
+                          items: [
+                            { en: "Deep Soil Boring Test & Geotechnical Investigation", idText: "Uji Sondir & Penyelidikan Tanah Dalam (Geoteknik)", included: false },
+                            { en: "Environmental Impact Assessment (AMDAL/UKL-UPL)", idText: "Dokumen Analisis Mengenai Dampak Lingkungan (AMDAL)", included: false }
+                          ]
+                        },
+                        {
+                          nameEn: "03. Specialist Installations",
+                          nameId: "Instalasi Spesialis Khusus",
+                          items: [
+                            { en: "PLN Transformer Substation Upgrade Connection", idText: "Penyambungan & Penambahan Daya PLN Trafo Khusus", included: false },
+                            { en: "Specialist Audio-Visual & Custom Smart Home Automation", idText: "Sistem Audio Visual Khusus & Otomasi Smart Home", included: false }
+                          ]
+                        }
+                      ].map((row, rIdx) => (
+                        <tr key={rIdx}>
+                          <td className="py-3 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top pr-3 border-r border-neutral-100">
+                            {row.nameEn}
+                            <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.nameId}</span>
+                          </td>
+                          <td className="py-3 px-3 align-top">
+                            <ul className="space-y-2">
+                              {row.items.map((item, iIdx) => (
+                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                                    <span className="font-bold select-none text-neutral-400">✕</span>
+                                    <div>
+                                      <span className="font-medium text-neutral-400 line-through">{item.en}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                                    </div>
+                                  </div>
+                                  <span className="inline-block px-2 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 bg-neutral-100 text-neutral-400 border border-neutral-200">
+                                    EXCLUDED ✕
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "03-04" ? (
+              /* REAL PROJECT ASSUMPTIONS PREVIEW FOR (03-04) */
+              <div className="flex-1 my-auto py-2 space-y-4">
+                {/* Assumptions Table */}
+                <div className="w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                        <th className="py-2.5 px-1 w-1/3">Assumption Category <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kategori Asumsi)</span></th>
+                        <th className="py-2.5 px-2 w-2/3">Project Baseline Assumptions & Prerequisites <span className="font-sans font-normal italic text-neutral-400 normal-case">(Rincian Asumsi Prasyarat Proyek)</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-200/60 text-xs">
+                      {[
+                        {
+                          nameEn: "01. Site & Ground Access",
+                          nameId: "Akses & Kondisi Tapak",
+                          items: [
+                            { en: "Site soil has standard minimum bearing capacity of 1.5 kg/cm²", idText: "Tanah tapak memiliki daya dukung standar min 1.5 kg/cm²", assumed: true },
+                            { en: "Unobstructed truck access roads available to the building perimeter", idText: "Akses jalan truk ke keliling tapak tersedia tanpa hambatan", assumed: true }
+                          ]
+                        },
+                        {
+                          nameEn: "02. Utilities & Infrastructure",
+                          nameId: "Utilitas & Infrastruktur",
+                          items: [
+                            { en: "Municipal clean water line & main drainage available at site boundary", idText: "Jaringan air bersih & drainase induk kota tersedia di batas tapak", assumed: true },
+                            { en: "Existing 3-phase temporary electricity power supply active during site work", idText: "Pasokan listrik sementara 3-fase aktif selama kerja tapak", assumed: true }
+                          ]
+                        },
+                        {
+                          nameEn: "03. Client Decision Milestones",
+                          nameId: "Keputusan & Milestone Klien",
+                          items: [
+                            { en: "Client sign-off feedback delivered within 5 business days per stage", idText: "Umpan balik persetujuan klien diberikan maks 5 hari kerja per tahap", assumed: true }
+                          ]
+                        }
+                      ].map((row, rIdx) => (
+                        <tr key={rIdx}>
+                          <td className="py-3 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top pr-3 border-r border-neutral-100">
+                            {row.nameEn}
+                            <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.nameId}</span>
+                          </td>
+                          <td className="py-3 px-3 align-top">
+                            <ul className="space-y-2">
+                              {row.items.map((item, iIdx) => (
+                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                                    <span className="font-bold select-none text-emerald-600">✓</span>
+                                    <div>
+                                      <span className="font-medium text-neutral-800">{item.en}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                                    </div>
+                                  </div>
+                                  <span className="inline-block px-2 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    ASSUMED ✓
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-13" ? (
+              /* 04-13: NEW DEDICATED TEMPLATE - SINGLE IMAGE LANDSCAPE WITH RIGHT SIDEBAR LAYOUT */
+              <div className="absolute inset-0 w-full h-full bg-white p-8 flex gap-6 overflow-hidden select-none">
+                {/* LEFT AREA: Maximize Image Viewport */}
+                <div className="flex-1 h-full relative rounded-2xl overflow-hidden border border-neutral-200 bg-neutral-100 shadow-sm flex flex-col">
+                  <img
+                    src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80"
+                    alt="Architectural Ground Floor Plan"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-3 left-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                    SCALE 1 : 100 @ A3
+                  </div>
+                </div>
+
+                {/* RIGHT SIDEBAR: Header, Document Info, Task Titles & Footer */}
+                <div className="w-72 h-full flex flex-col justify-between border-l border-neutral-200/80 pl-6 shrink-0 py-1">
+                  {/* Top: Document Header Info */}
+                  <div className="space-y-3">
+                    <div className="pb-3 border-b border-neutral-200">
+                      <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">
+                        PROJECT & STAGE
+                      </div>
+                      <div className="font-semibold text-xs text-neutral-900 truncate">
+                        #{data.projectCode}-{data.projectName}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className="px-2 py-0.5 rounded bg-brand-red/10 text-brand-red text-[10px] font-bold">
+                          {data.stageName}
+                        </span>
+                        <span className="px-2 py-0.5 rounded border border-neutral-200 text-neutral-500 text-[10px] font-mono font-bold">
+                          {data.version}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Middle: Task Title Block */}
+                    <div className="pt-2 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono font-bold text-brand-red uppercase">
+                          DRAWING TITLE
+                        </span>
+                        <span className="font-mono text-sm font-black text-brand-red">
+                          04-13
+                        </span>
+                      </div>
+                      <h2 className="text-lg font-extrabold text-neutral-900 tracking-tight leading-tight">
+                        Architectural Ground Floor Plan
+                      </h2>
+                      <p className="text-xs font-semibold text-neutral-500 italic leading-snug">
+                        Denah Arsitektur Lantai 1
+                      </p>
+                      <div className="h-0.5 bg-brand-red w-full mt-3 opacity-80" />
+                    </div>
+
+                    {/* Technical Notes / Context */}
+                    <div className="pt-3 space-y-1 text-xs">
+                      <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase block">
+                        DRAWING NO.
+                      </span>
+                      <span className="font-mono font-bold text-neutral-800 text-xs block">
+                        A-01-00
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Bottom: Studio Footer Column */}
+                  <div className="pt-4 border-t border-neutral-200 space-y-2">
+                    <div className="font-black text-brand-red tracking-tight flex items-center gap-1 text-xs">
+                      <span>adidaya</span>
+                      <span className="text-brand-red font-bold">*</span>
+                      <span className="font-normal text-neutral-800">studio</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-neutral-500 pt-1">
+                      <span>Client / <span className="italic">Klien</span></span>
+                      <span className="font-mono font-bold text-neutral-900 text-sm">{pageNumber}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-01" || pageItem.taskCode === "04-07" ? (
+              /* 04-01 / 04-07: SINGLE IMAGE STANDARD (PORTRAIT & LANDSCAPE TOP-DOWN) */
+              <div className="flex-1 py-1 flex flex-col space-y-3 min-h-0">
+                <div className="flex items-center justify-between pb-2 border-b border-neutral-200 shrink-0">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      Architectural Ground Floor Plan
+                    </h3>
+                    <p className="text-xs font-semibold text-neutral-500 italic">
+                      Denah Arsitektur Lantai 1
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
+                    A-01-00
+                  </span>
+                </div>
+
+                <div className="relative w-full flex-1 rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-md min-h-[360px]">
+                  <img
+                    src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                    alt="Architectural Ground Floor Plan"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-3 right-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                    SCALE 1 : 100 @ A3
+                  </div>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-08" ? (
+              /* 04-08: MULTIPLE IMAGE LANDSCAPE (DYNAMIC 1-3 PHOTO GRID BASED ON SELECTOR) */
+              <div className="flex-1 py-1 flex flex-col justify-start space-y-4 h-full">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200 shrink-0">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      Multi-Angle Portfolio Study
+                    </h3>
+                    <p className="text-xs font-semibold text-neutral-500 italic">
+                      Studi Visual Multi-Sudut (Landscape Multi-Photo Grid)
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
+                    FACADE-01
+                  </span>
+                </div>
+
+                {/* Dynamic Row Gallery Grid (1, 2, or 3 Photos) */}
+                <div
+                  className={clsx(
+                    "grid gap-5 py-2 items-start",
+                    customPhotoCount === 1
+                      ? "grid-cols-1 max-w-2xl mx-auto w-full"
+                      : customPhotoCount === 2
+                      ? "grid-cols-2"
+                      : "grid-cols-3"
+                  )}
+                >
+                  {[
+                    {
+                      img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80",
+                      title: "01. Main Facade Entrance",
+                      sub: "Tampak Depan Utama & Panel Kayu",
+                      descEn: "High-impact entrance featuring vertical timber louvers & cove lighting.",
+                      descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal & pencahayaan tersembunyi."
+                    },
+                    {
+                      img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80",
+                      title: "02. Outdoor Pool Terrace",
+                      sub: "Teras Luar & Dek Kolam Renang",
+                      descEn: "Expansive outdoor deck integrated with natural stone pavers.",
+                      descId: "Area teras luar luas terintegrasi penataan batu alam."
+                    },
+                    {
+                      img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80",
+                      title: "03. Living Lounge Flow",
+                      sub: "Interior Ruang Keluarga Plafon Tinggi",
+                      descEn: "Double-height living pavilion maximizing natural daylight.",
+                      descId: "Pavilion ruang keluarga dengan pencahayaan alami maksimal."
+                    }
+                  ].slice(0, Math.min(3, Math.max(1, customPhotoCount))).map((item, iIdx) => (
+                    <div key={iIdx} className="flex flex-col space-y-1.5">
+                      <div
+                        className={clsx(
+                          "relative w-full rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm",
+                          customPhotoCount === 1 ? "aspect-[16/9]" : "aspect-[4/3]"
+                        )}
+                      >
+                        <img src={item.img} alt={item.title} className="w-full h-full object-cover" />
+                        <div className="absolute top-2.5 left-2.5 bg-neutral-900/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold text-white shadow-sm border border-white/20">
+                          0{iIdx + 1}
+                        </div>
+                      </div>
+                      <div className="px-0.5 pt-0.5 space-y-1">
+                        <div>
+                          <span className="text-xs font-bold text-neutral-800 block truncate leading-tight">{item.title}</span>
+                          <span className="text-[10px] font-semibold italic text-neutral-400 block truncate leading-tight">{item.sub}</span>
+                        </div>
+                        <div className="space-y-0.5 pt-0.5 border-t border-neutral-100">
+                          <p className="text-[11px] font-medium text-neutral-700 leading-snug line-clamp-2">{item.descEn}</p>
+                          <p className="text-[10px] text-neutral-400 italic leading-snug line-clamp-2">{item.descId}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-02" ? (
+              /* 04-02: MULTIPLE IMAGE PORTRAIT (2x2 GRID) */
+              <div className="flex-1 my-auto py-2 flex flex-col justify-between space-y-4 h-full">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      Architectural Ground Floor Plan
+                    </h3>
+                    <p className="text-xs font-semibold text-neutral-500 italic">
+                      Denah Arsitektur Lantai 1
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
+                    A-01-00
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 flex-1 min-h-[460px]">
+                  {[
+                    { img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80", title: "Main Facade Entry View", sub: "Tampak Depan Utama" },
+                    { img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80", title: "Outdoor Pool Deck Zone", sub: "Area Dek Kolam Renang" },
+                    { img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80", title: "Living Lounge Interior", sub: "Interior Ruang Keluarga" },
+                    { img: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=600&q=80", title: "Side Setback & Landscape", sub: "Sempadan Samping Tapak" }
+                  ].map((item, iIdx) => (
+                    <div key={iIdx} className="flex flex-col justify-between space-y-1.5 h-full">
+                      <div className="relative w-full flex-1 rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm min-h-[190px]">
+                        <img src={item.img} alt={item.title} className="w-full h-full object-cover" />
+                        <div className="absolute top-2.5 left-2.5 bg-neutral-900/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold text-white shadow-sm border border-white/20">
+                          0{iIdx + 1}
+                        </div>
+                      </div>
+                      <div className="px-1 pt-0.5">
+                        <span className="text-xs font-bold text-neutral-800 block truncate">{item.title}</span>
+                        <span className="text-[10px] font-medium italic text-neutral-400 block truncate">{item.sub}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-09" ? (
+              /* 04-09: IMAGE AND DESC LANDSCAPE (2-COLUMN SPLIT LAYOUT - LEFT IMAGE + RIGHT DESC PANEL) */
+              <div className="flex-1 py-1 flex flex-col space-y-4 h-full">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200 shrink-0">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      Schematic Design Concept Overview
+                    </h3>
+                    <p className="text-xs font-semibold text-neutral-500 italic">
+                      Gambaran Konsep Desain Skematik (Landscape Split)
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
+                    CONCEPT-A
+                  </span>
+                </div>
+
+                {/* 2-Column Split: Left Image (16:9/4:3) & Right Narrative Box */}
+                <div className="grid grid-cols-12 gap-6 flex-1 items-stretch py-1">
+                  {/* Left Column: Image Viewport */}
+                  <div className="col-span-7 relative rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm min-h-[300px]">
+                    <img
+                      src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                      alt="Drawing Concept"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-3 left-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                      SCALE 1 : 100 @ A3
+                    </div>
+                  </div>
+
+                  {/* Right Column: Description & Concept Notes (Clean Layout without Outer Card Border/Bg) */}
+                  <div className="col-span-5 flex flex-col justify-start space-y-3 py-1">
+                    <div className="space-y-2">
+                      <span className="text-xs font-mono font-bold text-brand-red uppercase block">
+                        Main Design Issues & Concept Notes
+                      </span>
+                      <p className="text-neutral-800 text-xs leading-relaxed font-medium">
+                        This schematic layout emphasizes optimal spatial orientation, seamless indoor-outdoor transitions, and efficient structural grid alignment for maximum natural light.
+                      </p>
+                      <p className="text-neutral-500 text-xs italic leading-relaxed pt-1">
+                        Tata letak skematik ini menekankan orientasi ruang optimal, transisi ruang dalam-luar yang menyatu, dan efisiensi penataan grid struktur untuk pencahayaan alami maksimal.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-03" ? (
+              /* 04-03: IMAGE AND DESC PORTRAIT */
+              <div className="flex-1 py-2 flex flex-col space-y-4 h-full">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      Schematic Design Concept Overview
+                    </h3>
+                    <p className="text-xs font-semibold text-neutral-500 italic">
+                      Gambaran Konsep Desain Skematik
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
+                    CONCEPT-A
+                  </span>
+                </div>
+
+                <div className="relative w-full aspect-[5/4] rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-md">
+                  <img
+                    src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                    alt="Drawing Concept"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-3 right-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                    SCALE 1 : 100 @ A3
+                  </div>
+                </div>
+
+                <div className="pt-3 space-y-1.5 text-xs border-t border-neutral-200/60 flex-1">
+                  <span className="text-xs font-mono font-bold text-brand-red uppercase block">Main Design Issues & Concept Notes</span>
+                  <p className="text-neutral-800 text-xs leading-relaxed font-medium">
+                    This schematic layout emphasizes optimal spatial orientation, seamless indoor-outdoor transitions, and efficient structural grid alignment.
+                  </p>
+                  <p className="text-neutral-400 text-xs italic leading-snug">
+                    Tata letak skematik ini menekankan orientasi ruang optimal, transisi ruang dalam-luar yang menyatu, dan efisiensi penataan grid struktur.
+                  </p>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-10" ? (
+              /* 04-10: IMAGE AND POINT LANDSCAPE (2-COLUMN SPLIT LAYOUT - LEFT IMAGE + RIGHT BULLET POINTS SINGLE COLUMN) */
+              <div className="flex-1 py-1 flex flex-col space-y-4 h-full">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200 shrink-0">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      Technical Layout & Key Highlights
+                    </h3>
+                    <p className="text-xs font-semibold text-neutral-500 italic">
+                      Tata Letak Teknis & Poin-Poin Utama (Landscape Split)
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
+                    A-02-01
+                  </span>
+                </div>
+
+                {/* 2-Column Split: Left Image & Right Bullet Points (1 Column Vertical Stack) */}
+                <div className="grid grid-cols-12 gap-6 flex-1 items-stretch py-1">
+                  {/* Left Column: Image Viewport */}
+                  <div className="col-span-7 relative rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm min-h-[300px]">
+                    <img
+                      src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                      alt="Drawing Layout"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-3 left-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                      SCALE 1 : 100 @ A3
+                    </div>
+                  </div>
+
+                  {/* Right Column: Bullet Points List in Single Column (Clean Layout without Outer Card Border/Bg) */}
+                  <div className="col-span-5 flex flex-col justify-start space-y-3 py-1">
+                    <div className="space-y-3">
+                      <span className="text-xs font-mono font-bold text-brand-red uppercase block">
+                        Key Technical Highlights
+                      </span>
+
+                      {/* Single Column Vertical Bullet List */}
+                      <ul className="space-y-2.5">
+                        {[
+                          { num: "01", en: "Cantilevered Living Pavilion (4.5m Projection)", id: "Pavilion Utama Cantilever 4.5 Meter" },
+                          { num: "02", en: "North-South Passive Solar Orientation", id: "Orientasi Pasif Utara-Selatan" },
+                          { num: "03", en: "Integrated Cross-Ventilation Sky Louvers", id: "Ventilasi Silang Terintegrasi Atap" },
+                          { num: "04", en: "High-Performance Double Glazed Facade", id: "Fasad Kaca Ganda Efisiensi Tinggi" }
+                        ].map((pt, pIdx) => (
+                          <li key={pIdx} className="flex items-start gap-2.5 text-xs pb-1.5 border-b border-neutral-200/50 last:border-0 last:pb-0">
+                            <span className="font-mono text-xs font-bold text-brand-red shrink-0">{pt.num}</span>
+                            <div>
+                              <span className="font-semibold text-neutral-800 leading-tight block">{pt.en}</span>
+                              <span className="text-neutral-500 italic text-[10px] block leading-tight">{pt.id}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-04" ? (
+              /* 04-04: IMAGE AND POINT PORTRAIT */
+              <div className="flex-1 py-2 flex flex-col space-y-4 h-full">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      Technical Layout & Key Highlights
+                    </h3>
+                    <p className="text-xs font-semibold text-neutral-500 italic">
+                      Tata Letak Teknis & Poin-Poin Utama
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
+                    A-02-01
+                  </span>
+                </div>
+
+                <div className="relative w-full aspect-[5/4] rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-md">
+                  <img
+                    src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+                    alt="Drawing Layout"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-3 right-3 bg-neutral-900/80 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono font-bold text-white tracking-wider">
+                    SCALE 1 : 100 @ A3
+                  </div>
+                </div>
+
+                <div className="pt-3 space-y-2 text-xs border-t border-neutral-200/60 flex-1">
+                  <span className="text-xs font-mono font-bold text-brand-red uppercase block">Key Technical Highlights</span>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 pl-1">
+                    <ul className="space-y-2">
+                      {[
+                        { num: "01", en: "Cantilevered Living Pavilion (4.5m Projection)", id: "Pavilion Utama Cantilever 4.5 Meter" },
+                        { num: "02", en: "North-South Passive Solar Orientation", id: "Orientasi Pasif Utara-Selatan" },
+                        { num: "03", en: "Integrated Cross-Ventilation Sky Louvers", id: "Ventilasi Silang Terintegrasi Atap" }
+                      ].map((pt, pIdx) => (
+                        <li key={pIdx} className="flex items-start gap-2 text-xs">
+                          <span className="font-mono text-xs font-bold text-brand-red shrink-0">{pt.num}</span>
+                          <div>
+                            <span className="font-semibold text-neutral-800 leading-tight block">{pt.en}</span>
+                            <span className="text-neutral-400 italic text-[10px] block leading-tight">{pt.id}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <ul className="space-y-2">
+                      {[
+                        { num: "04", en: "Rainwater Harvesting & Filtration System", id: "Sistem Pemanenan Air Hujan" },
+                        { num: "05", en: "High-Performance Double Glazed Facade", id: "Fasad Kaca Ganda Efisiensi Tinggi" },
+                        { num: "06", en: "Recessed Ambient LED Cove Lighting", id: "Pencahayaan LED Cove Tersembunyi" }
+                      ].map((pt, pIdx) => (
+                        <li key={pIdx} className="flex items-start gap-2 text-xs">
+                          <span className="font-mono text-xs font-bold text-brand-red shrink-0">{pt.num}</span>
+                          <div>
+                            <span className="font-semibold text-neutral-800 leading-tight block">{pt.en}</span>
+                            <span className="text-neutral-400 italic text-[10px] block leading-tight">{pt.id}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-11" ? (
+              /* 04-11: DOUBLE IMAGE LANDSCAPE (1x2 ROW GRID - 2 IMAGES SIDE BY SIDE WITH CAPTIONS) */
+              <div className="flex-1 py-1 flex flex-col justify-start space-y-4 h-full">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200 shrink-0">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      Multi-Angle Portfolio Study
+                    </h3>
+                    <p className="text-xs font-semibold text-neutral-500 italic">
+                      Studi Visual Multi-Sudut (Double Image Landscape 2 Kolom)
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
+                    FACADE-01
+                  </span>
+                </div>
+
+                {/* 1x2 Row Gallery Grid (Double Image Landscape 16:9 / 4:3 Ratio) */}
+                <div className="grid grid-cols-2 gap-5 py-2">
+                  {[
+                    { img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80", title: "01. Main Facade Entrance", sub: "Tampak Depan Utama & Panel Kayu" },
+                    { img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80", title: "02. Outdoor Pool Terrace", sub: "Teras Luar & Dek Kolam Renang" }
+                  ].map((item, iIdx) => (
+                    <div key={iIdx} className="flex flex-col space-y-2">
+                      <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm">
+                        <img src={item.img} alt={item.title} className="w-full h-full object-cover" />
+                        <div className="absolute top-2.5 left-2.5 bg-neutral-900/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold text-white shadow-sm border border-white/20">
+                          0{iIdx + 1}
+                        </div>
+                      </div>
+                      <div className="px-0.5 pt-0.5 space-y-0.5">
+                        <span className="text-xs font-bold text-neutral-800 block truncate leading-tight">{item.title}</span>
+                        <span className="text-[11px] font-medium italic text-neutral-400 block truncate leading-tight">{item.sub}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-05" ? (
+              /* 04-05: MULTIPLE IMAGE AND DESC PORTRAIT */
+              <div className="flex-1 py-2 flex flex-col justify-start space-y-4 h-full">
+                <div className="flex items-center justify-between pb-3 border-b border-neutral-200">
+                  <div>
+                    <h3 className="text-base font-black text-neutral-900">
+                      Multi-Angle Portfolio Study
+                    </h3>
+                    <p className="text-xs font-semibold text-neutral-500 italic">
+                      Studi Visual Multi-Sudut & Ringkasan Narasi
+                    </p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-xs font-bold font-mono bg-neutral-900 text-white">
+                    FACADE-01
+                  </span>
+                </div>
+
+                {/* 1-3 PHOTOS: Stack Rapat ke Atas (NO LDR GAP), Aspect Ratio 16:9 Proporsional Sempurna (NO GEPENG) */}
+                <div className="py-1 space-y-4 overflow-hidden">
+                  {[
+                    {
+                      img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=500&q=80",
+                      titleEn: "01. Main Facade Entrance & Wood Cladding",
+                      titleId: "Akses Fasad Utama & Panel Kayu",
+                      descEn: "High-impact entrance featuring vertical timber louvers & cove lighting.",
+                      descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal."
+                    },
+                    {
+                      img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=500&q=80",
+                      titleEn: "02. Outdoor Terrace & Infinity Pool Deck",
+                      titleId: "Teras Luar & Dek Kolam Renang",
+                      descEn: "Expansive outdoor deck integrated with natural stone pavers.",
+                      descId: "Area teras luar luas terintegrasi batu alam."
+                    },
+                    {
+                      img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=500&q=80",
+                      titleEn: "03. Living Lounge Spatial Flow & High Ceiling",
+                      titleId: "Ruang Keluarga Plafon Tinggi",
+                      descEn: "Double-height living pavilion maximizing natural daylight.",
+                      descId: "Pavilion ruang keluarga memaksimalkan pencahayaan alami."
+                    }
+                  ].slice(0, Math.min(3, Math.max(1, customPhotoCount))).map((row, rIdx) => (
+                    <div key={rIdx} className="grid grid-cols-12 gap-5 items-start py-2 border-b border-neutral-200/60 last:border-0">
+                      {/* Left Photo - Fixed Proportional Aspect Ratio 16:9 (Span 6 of 12 - TIDAK PERNAH GEPENG) */}
+                      <div className="col-span-6 relative w-full aspect-[16/9] rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-2xs shrink-0">
+                        <img src={row.img} alt={row.titleEn} className="w-full h-full object-cover" />
+                        <div className="absolute top-2.5 left-2.5 bg-neutral-900/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold text-white shadow-xs border border-white/20">
+                          0{rIdx + 1}
+                        </div>
+                      </div>
+
+                      {/* Right Title & Bilingual Description - TOP ALIGNED (Span 6 of 12) */}
+                      <div className="col-span-6 space-y-1.5 min-w-0 pt-0.5">
+                        <div>
+                          <h4 className="text-xs font-black text-neutral-900 leading-tight">{row.titleEn}</h4>
+                          <p className="text-[10px] font-semibold italic text-neutral-400 leading-tight">{row.titleId}</p>
+                        </div>
+                        <p className="text-[10px] font-normal italic text-neutral-400 leading-tight line-clamp-2">{row.descId}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : pageItem.taskCode === "04-06" || pageItem.taskCode === "04-12" ? (
+              /* 04-06 / 04-12: TRUE FULL BLEED OVERLAY (IDENTICAL CONTAINER STRUCTURE & EXACT COPY OF HEADER, TITLE & FOOTER) */
+              <div className="absolute inset-0 w-full h-full overflow-hidden bg-neutral-900 flex flex-col justify-between p-12 select-none">
+                {/* 100% Full Bleed Background Photo */}
+                <img
+                  src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80"
+                  alt="Full Bleed Architectural Visualization"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                {/* Dark Gradient Overlay for High Contrast */}
+                <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/85 via-neutral-950/40 to-neutral-950/90 pointer-events-none" />
+
+                {/* 1. Standard Header Overlay */}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between pb-2 text-[10px] text-neutral-300 border-b border-white/20 select-none">
+                    <div className="font-medium tracking-tight truncate">
+                      #{data.projectCode}-{data.projectName}
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="font-bold text-white">{data.stageName}</span>
+                      <span className="px-2 py-0.5 border border-white/30 rounded-full text-[9px] font-bold text-white bg-white/10">
+                        {data.version}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Standard Title Block Overlay (Exact mb-6 space-y-1 structure as standard pages) */}
+                <div className="relative z-10 space-y-1 mb-6 pt-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col">
+                      <h2 className="text-2xl font-extrabold text-white tracking-tight">
+                        {displayTaskName}
+                      </h2>
+                      <p className="text-sm font-semibold text-neutral-300 italic">
+                        {displayTaskNameId}
+                      </p>
+                    </div>
+                    <span className="font-mono text-sm font-black text-brand-red shrink-0">
+                      {pageItem.taskCode.replace(/^[A-Z]{2}-/, "")}
+                    </span>
+                  </div>
+                  <div className="h-0.5 bg-brand-red w-full mt-3 opacity-90" />
+                </div>
+
+                {/* 3. Overlay Bottom EN & ID Caption Box */}
+                <div className="relative z-10 mt-auto pb-4">
+                  <div className="bg-neutral-950/80 backdrop-blur-md p-4 rounded-xl border border-white/15 shadow-xl space-y-1">
+                    <span className="text-[10px] font-mono font-bold text-brand-red uppercase block">VISUAL CONTEXT & DESCRIPTION</span>
+                    <p className="text-white text-xs font-semibold leading-relaxed">
+                      High-impact full bleed rendering illustrating kinetic facade materiality and ambient night illumination.
+                    </p>
+                    <p className="text-neutral-300 text-[11px] italic leading-tight">
+                      Visualisasi penuh halaman yang memperlihatkan tekstur fasad kinetik dan efek pencahayaan malam hari.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 4. Standard Footer Overlay */}
+                <div className="relative z-10 pt-4 select-none w-full border-t border-white/20">
+                  <div className="flex items-end justify-between gap-10">
+                    <div className="w-48">
+                      <div className="font-black text-brand-red tracking-tight flex items-center gap-1 text-xs">
+                        <span className="text-white">adidaya</span>
+                        <span className="text-brand-red font-bold">*</span>
+                        <span className="font-normal text-white/70">studio</span>
+                      </div>
+                    </div>
+                    <div className="flex items-end gap-6 ml-auto">
+                      <div className="text-right text-xs font-semibold text-white/70">
+                        Client / <span className="italic">Klien</span>
+                      </div>
+                      <div className="font-mono font-bold text-sm text-white min-w-[20px] text-right">
+                        {pageNumber}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               /* PLACEHOLDER CONTENT FOR OTHER STANDARD TASK PAGES */
               <div className="mb-auto p-8 rounded-2xl bg-neutral-50/80 border border-dashed border-neutral-300 flex flex-col items-center justify-center text-center space-y-2 my-auto min-h-[400px]">
@@ -502,32 +1888,40 @@ export default function StageDocumentPreview({
     }
   };
 
-  // Dynamic scale wrapper for fixed 794px x 1123px A4 sheets
+  // Dynamic scale wrapper for fixed A4 sheets (Portrait: 794x1123, Landscape: 1123x794)
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number>(1);
+  const [drawingOrientation, setDrawingOrientation] = useState<"portrait" | "landscape">("landscape");
+
+  const currentTaskCode = pagesList[activePage - 1]?.type === "TASK_PAGE" ? (pagesList[activePage - 1] as any)?.taskCode : "";
+  const isCurrentTaskDrawing = typeof currentTaskCode === "string" && currentTaskCode.startsWith("04-");
+  const isLandscapeCode = typeof currentTaskCode === "string" && ["04-07", "04-08", "04-09", "04-10", "04-11", "04-12"].includes(currentTaskCode);
+  const isLandscape = isCurrentTaskDrawing && (customOrientation ? customOrientation === "landscape" : (isLandscapeCode || drawingOrientation === "landscape"));
+  const sheetWidth = isLandscape ? 1123 : 794;
+  const sheetHeight = isLandscape ? 794 : 1123;
 
   React.useEffect(() => {
     const updateScale = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.clientWidth;
-        const newScale = containerWidth / 794;
+        const newScale = containerWidth / sheetWidth;
         setScale(Math.min(1, newScale));
       }
     };
     updateScale();
     window.addEventListener("resize", updateScale);
     return () => window.removeEventListener("resize", updateScale);
-  }, []);
+  }, [sheetWidth]);
 
   const renderA4Sheet = (content: React.ReactNode, pageNum: number) => (
     <div
       key={pageNum}
-      className="relative bg-white shadow-2xl rounded-sm overflow-hidden select-none origin-top transition-transform flex flex-col shrink-0"
+      className="relative bg-white shadow-2xl rounded-sm overflow-hidden select-none origin-top transition-all duration-300 flex flex-col shrink-0"
       style={{
-        width: "794px",
-        height: "1123px",
+        width: `${sheetWidth}px`,
+        height: `${sheetHeight}px`,
         transform: `scale(${scale})`,
-        marginBottom: `${(scale - 1) * 1123}px`,
+        marginBottom: `${(scale - 1) * sheetHeight}px`,
       }}
     >
       {content}
