@@ -865,6 +865,28 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     category: "Approval",
     description: "Landscape 2-column split layout: left declaration text, right signature verification blocks.",
     previewTaskCode: "08-01-L"
+  },
+
+  // --- SECTION 08 V2 KOP PORTRAIT TEMPLATES (08-01-V2P) ---
+  {
+    id: "tpl-v2-approval-p",
+    code: "08-01-V2P",
+    name: "Signoff & Approval Kop v2 (Portrait)",
+    nameId: "Persetujuan Dokumen Kop v2 (Portrait)",
+    category: "Approval",
+    description: "Portrait format approval document with declaration text and signature blocks with bottom Kop v2 title block.",
+    previewTaskCode: "08-01-V2P"
+  },
+
+  // --- SECTION 08 V2 KOP LANDSCAPE TEMPLATES (08-01-V2L) ---
+  {
+    id: "tpl-v2-approval-l",
+    code: "08-01-V2L",
+    name: "Signoff & Approval Kop v2 (Landscape)",
+    nameId: "Persetujuan Dokumen Kop v2 (Landscape)",
+    category: "Approval",
+    description: "Landscape 2-column split approval layout with right Kop v2 sidebar.",
+    previewTaskCode: "08-01-V2L"
   }
 ];
 

@@ -1846,6 +1846,83 @@ export default function StageDocumentPreview({
                         </div>
                       </div>
                     </div>
+                  ) : (pageItem.taskCode.includes("08-01")) ? (
+                    /* 08-01-V2L: SIGNOFF & APPROVAL LANDSCAPE KOP V2 */
+                    <div className="flex-1 py-1 flex flex-col h-full overflow-hidden justify-center">
+                      <div className="grid grid-cols-12 gap-6 items-start">
+                        {/* LEFT COLUMN: Declaration Text */}
+                        <div className="col-span-6 space-y-3">
+                          <div className="space-y-2 text-[11px] leading-relaxed text-neutral-800">
+                            <p>
+                              As of today, the Client hereby confirms that <strong className="font-bold text-neutral-900">this document has been reviewed and approved</strong> as the final output of the corresponding project stage.
+                            </p>
+                            <p>
+                              Should any changes, adjustments, or additional requests arise in the future, such changes will be discussed and mutually agreed upon by both parties. These adjustments <strong className="font-bold text-neutral-900">may impact the project timeline, scope, and subsequent costs</strong>, and will be formalized through a revised document or official addendum.
+                            </p>
+                            <p>
+                              By signing below, both parties acknowledge their agreement and shared understanding of the contents of this document.
+                            </p>
+                          </div>
+
+                          <div className="space-y-1.5 text-[10px] leading-relaxed text-neutral-500 italic pt-2 border-t border-neutral-100">
+                            <p>
+                              Pada hari ini, pihak Klien menyatakan bahwa <strong className="font-semibold text-neutral-700">dokumen ini telah ditinjau dan disetujui</strong> sebagai hasil akhir dari tahap yang bersangkutan.
+                            </p>
+                            <p>
+                              Apabila di kemudian hari terdapat perubahan, penyesuaian, atau permintaan tambahan dari pihak Klien, maka perubahan tersebut akan dibahas bersama dan disepakati oleh kedua belah pihak. Perubahan tersebut <strong className="font-semibold text-neutral-700">dapat mempengaruhi lini waktu, ruang lingkup, serta pembiayaan</strong> pada tahap berikutnya, dan akan dituangkan dalam revisi dokumen atau adendum resmi.
+                            </p>
+                            <p>
+                              Dengan ini, kedua belah pihak menyatakan kesepakatan dan pemahaman yang sama terhadap isi dokumen ini.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: Signature Blocks */}
+                        <div className="col-span-6 space-y-5 pl-4 border-l border-neutral-200/80">
+                          {/* ADIDAYA STUDIO SIGNATURE BLOCK */}
+                          <div className="space-y-4">
+                            <span className="inline-block px-3 py-1 rounded-full bg-brand-red text-white text-[10px] font-bold tracking-wide shadow-xs">
+                              ADIDAYA STUDIO
+                            </span>
+                            <div className="grid grid-cols-3 gap-2 pt-6">
+                              <div className="border-t border-brand-red/60 pt-1">
+                                <span className="text-[11px] font-bold text-neutral-900 block">Good name</span>
+                                <span className="text-[9px] font-normal italic text-neutral-400 block">Nama terang</span>
+                              </div>
+                              <div className="border-t border-brand-red/60 pt-1">
+                                <span className="text-[11px] font-bold text-neutral-900 block">Sign</span>
+                                <span className="text-[9px] font-normal italic text-neutral-400 block">Tanda tangan</span>
+                              </div>
+                              <div className="border-t border-brand-red/60 pt-1">
+                                <span className="text-[11px] font-bold text-neutral-900 block">Date</span>
+                                <span className="text-[9px] font-normal italic text-neutral-400 block">Tanggal</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* CLIENT SIGNATURE BLOCK */}
+                          <div className="space-y-4 pt-1">
+                            <span className="inline-block px-3 py-1 rounded-full bg-brand-red text-white text-[10px] font-bold tracking-wide shadow-xs">
+                              CLIENT
+                            </span>
+                            <div className="grid grid-cols-3 gap-2 pt-6">
+                              <div className="border-t border-brand-red/60 pt-1">
+                                <span className="text-[11px] font-bold text-neutral-900 block">Good name</span>
+                                <span className="text-[9px] font-normal italic text-neutral-400 block">Nama terang</span>
+                              </div>
+                              <div className="border-t border-brand-red/60 pt-1">
+                                <span className="text-[11px] font-bold text-neutral-900 block">Sign</span>
+                                <span className="text-[9px] font-normal italic text-neutral-400 block">Tanda tangan</span>
+                              </div>
+                              <div className="border-t border-brand-red/60 pt-1">
+                                <span className="text-[11px] font-bold text-neutral-900 block">Date</span>
+                                <span className="text-[9px] font-normal italic text-neutral-400 block">Tanggal</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex-1 my-auto p-6 rounded-xl bg-neutral-50/80 border border-dashed border-neutral-300 flex flex-col items-center justify-center text-center space-y-1">
                       <span className="font-mono text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
@@ -3097,6 +3174,81 @@ export default function StageDocumentPreview({
                         <div className="flex items-center gap-1.5">
                           <span className="w-3 h-3 rounded bg-emerald-600"></span>
                           <span>Handover</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode.includes("08-01")) ? (
+                    /* 08-01-V2P: SIGNOFF & APPROVAL PORTRAIT KOP V2 */
+                    <div className="flex-1 py-2 flex flex-col justify-around h-full space-y-6">
+                      {/* Declaration Paragraphs */}
+                      <div className="space-y-4">
+                        <div className="space-y-2.5 text-xs leading-relaxed text-neutral-900">
+                          <p>
+                            As of today, the Client hereby confirms that <strong className="font-extrabold">this document has been reviewed and approved</strong> as the final output of the corresponding project stage.
+                          </p>
+                          <p>
+                            Should any changes, adjustments, or additional requests arise in the future, such changes will be discussed and mutually agreed upon by both parties. These adjustments <strong className="font-extrabold">may impact the project timeline, scope, and subsequent costs</strong>, and will be formalized through a revised document or official addendum.
+                          </p>
+                          <p>
+                            By signing below, both parties acknowledge their agreement and shared understanding of the contents of this document.
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 text-[11px] leading-relaxed text-neutral-500 italic pt-2.5 border-t border-neutral-100">
+                          <p>
+                            Pada hari ini, pihak Klien menyatakan bahwa <strong className="font-semibold text-neutral-700">dokumen ini telah ditinjau dan disetujui</strong> sebagai hasil akhir dari tahap yang bersangkutan.
+                          </p>
+                          <p>
+                            Apabila di kemudian hari terdapat perubahan, penyesuaian, atau permintaan tambahan dari pihak Klien, maka perubahan tersebut akan dibahas bersama dan disepakati oleh kedua belah pihak. Perubahan tersebut <strong className="font-semibold text-neutral-700">dapat mempengaruhi lini waktu, ruang lingkup, serta pembiayaan</strong> pada tahap berikutnya, dan akan dituangkan dalam revisi dokumen atau adendum resmi.
+                          </p>
+                          <p>
+                            Dengan ini, kedua belah pihak menyatakan kesepakatan dan pemahaman yang sama terhadap isi dokumen ini.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Studio & Client Signature Blocks */}
+                      <div className="grid grid-cols-2 gap-8 pt-4 border-t border-neutral-200">
+                        {/* ADIDAYA STUDIO */}
+                        <div className="space-y-4">
+                          <span className="inline-block px-3 py-1 rounded-full bg-brand-red text-white text-[10px] font-bold tracking-wide shadow-xs">
+                            ADIDAYA STUDIO
+                          </span>
+                          <div className="grid grid-cols-3 gap-2 pt-8">
+                            <div className="border-t border-brand-red/60 pt-1">
+                              <span className="text-[11px] font-bold text-neutral-900 block">Good name</span>
+                              <span className="text-[9px] font-normal italic text-neutral-400 block">Nama terang</span>
+                            </div>
+                            <div className="border-t border-brand-red/60 pt-1">
+                              <span className="text-[11px] font-bold text-neutral-900 block">Sign</span>
+                              <span className="text-[9px] font-normal italic text-neutral-400 block">Tanda tangan</span>
+                            </div>
+                            <div className="border-t border-brand-red/60 pt-1">
+                              <span className="text-[11px] font-bold text-neutral-900 block">Date</span>
+                              <span className="text-[9px] font-normal italic text-neutral-400 block">Tanggal</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* CLIENT */}
+                        <div className="space-y-4">
+                          <span className="inline-block px-3 py-1 rounded-full bg-brand-red text-white text-[10px] font-bold tracking-wide shadow-xs">
+                            CLIENT
+                          </span>
+                          <div className="grid grid-cols-3 gap-2 pt-8">
+                            <div className="border-t border-brand-red/60 pt-1">
+                              <span className="text-[11px] font-bold text-neutral-900 block">Good name</span>
+                              <span className="text-[9px] font-normal italic text-neutral-400 block">Nama terang</span>
+                            </div>
+                            <div className="border-t border-brand-red/60 pt-1">
+                              <span className="text-[11px] font-bold text-neutral-900 block">Sign</span>
+                              <span className="text-[9px] font-normal italic text-neutral-400 block">Tanda tangan</span>
+                            </div>
+                            <div className="border-t border-brand-red/60 pt-1">
+                              <span className="text-[11px] font-bold text-neutral-900 block">Date</span>
+                              <span className="text-[9px] font-normal italic text-neutral-400 block">Tanggal</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
