@@ -16,6 +16,7 @@ type Props = {
   hideToolbar?: boolean;
   customOrientation?: "portrait" | "landscape";
   customPhotoCount?: number;
+  customMatrixColCount?: number;
 };
 
 export type DocumentPageItem =
@@ -32,6 +33,7 @@ export default function StageDocumentPreview({
   hideToolbar = false,
   customOrientation,
   customPhotoCount = 3,
+  customMatrixColCount = 3,
 }: Props) {
   const [activePage, setActivePage] = useState<number>(1);
   const [viewMode, setViewMode] = useState<"single" | "all">("single");
@@ -524,41 +526,82 @@ export default function StageDocumentPreview({
                 </div>
               </div>
             ) : pageItem.taskCode === "02-01" ? (
-              /* REAL CLEAN DOCUMENT TEXT PARAGRAPHS FOR PROJECT UNDERSTANDING (02-01) */
-              <div className="flex-1 my-auto py-2 space-y-5">
-                {/* 1. Main Project Summary Paragraph (EN & ID) */}
-                <div className="space-y-1.5 pb-4 border-b border-neutral-100">
-                  <p className="text-xs font-semibold text-neutral-900 leading-relaxed">
-                    {data.understandingIntroEn || defaultKickoffData.understandingIntroEn}
-                  </p>
-                  <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed">
-                    {data.understandingIntroId || defaultKickoffData.understandingIntroId}
-                  </p>
-                </div>
-
-                {/* 2. Key Issues Narrative Paragraphs (No Cards) */}
-                <div className="space-y-4">
-                  {(data.understandingCards || defaultKickoffData.understandingCards).map((card, idx) => (
-                    <div key={card.id || idx} className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-brand-red">0{idx + 1}</span>
-                        <h4 className="text-xs font-bold text-neutral-900">{card.titleEn}</h4>
-                        <span className="text-xs font-normal italic text-neutral-400">({card.titleId})</span>
-                      </div>
-                      <p className="text-xs font-medium text-neutral-700 leading-relaxed pl-6">
-                        {card.descEn}
+              /* REAL CLEAN DOCUMENT TEXT PARAGRAPHS FOR PROJECT UNDERSTANDING (02-01) - 2 COLUMNS IN LANDSCAPE (LEFT PARAGRAPH, RIGHT POINTS) */
+              <div className="flex-1 my-auto py-2">
+                {isLandscape ? (
+                  /* LANDSCAPE 2-COLUMN SPLIT: LEFT SUMMARY PARAGRAPH (5/12) + RIGHT KEY ISSUES POINTS (7/12) */
+                  <div className="grid grid-cols-12 gap-8 items-start">
+                    {/* Left Column (5/12): Main Summary Paragraph (EN & ID) */}
+                    <div className="col-span-5 space-y-2 pr-4 border-r border-neutral-100">
+                      <span className="text-[10px] font-mono font-bold text-brand-red uppercase block">
+                        EXECUTIVE SUMMARY
+                      </span>
+                      <p className="text-xs font-semibold text-neutral-900 leading-relaxed">
+                        {data.understandingIntroEn || defaultKickoffData.understandingIntroEn}
                       </p>
-                      <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed pl-6">
-                        {card.descId}
+                      <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed">
+                        {data.understandingIntroId || defaultKickoffData.understandingIntroId}
                       </p>
                     </div>
-                  ))}
-                </div>
+
+                    {/* Right Column (7/12): Key Issues Narrative Points */}
+                    <div className="col-span-7 space-y-4">
+                      <span className="text-[10px] font-mono font-bold text-neutral-400 uppercase block">
+                        KEY CONCEPT DRIVERS & PARAMETERS
+                      </span>
+                      {(data.understandingCards || defaultKickoffData.understandingCards).map((card, idx) => (
+                        <div key={card.id || idx} className="space-y-1 pb-3 border-b border-neutral-100 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-brand-red">0{idx + 1}</span>
+                            <h4 className="text-xs font-bold text-neutral-900">{card.titleEn}</h4>
+                            <span className="text-xs font-normal italic text-neutral-400">({card.titleId})</span>
+                          </div>
+                          <p className="text-xs font-medium text-neutral-700 leading-relaxed pl-6">
+                            {card.descEn}
+                          </p>
+                          <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed pl-6">
+                            {card.descId}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  /* PORTRAIT STACKED LAYOUT */
+                  <div className="space-y-4">
+                    <div className="space-y-1.5 pb-4 border-b border-neutral-100">
+                      <p className="text-xs font-semibold text-neutral-900 leading-relaxed">
+                        {data.understandingIntroEn || defaultKickoffData.understandingIntroEn}
+                      </p>
+                      <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed">
+                        {data.understandingIntroId || defaultKickoffData.understandingIntroId}
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {(data.understandingCards || defaultKickoffData.understandingCards).map((card, idx) => (
+                        <div key={card.id || idx} className="space-y-1 pb-3 border-b border-neutral-100 last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-brand-red">0{idx + 1}</span>
+                            <h4 className="text-xs font-bold text-neutral-900">{card.titleEn}</h4>
+                            <span className="text-xs font-normal italic text-neutral-400">({card.titleId})</span>
+                          </div>
+                          <p className="text-xs font-medium text-neutral-700 leading-relaxed pl-6">
+                            {card.descEn}
+                          </p>
+                          <p className="text-[11px] font-normal italic text-neutral-400 leading-relaxed pl-6">
+                            {card.descId}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : pageItem.taskCode === "02-02" ? (
-              /* REAL CLEAN DOCUMENT PREVIEW FOR CLIENT'S NEEDS & VISION (02-02) (NO CARDS) */
-              <div className="flex-1 my-auto py-2 space-y-5">
-                <div className="space-y-4">
+              /* REAL CLEAN DOCUMENT PREVIEW FOR CLIENT'S NEEDS & VISION (02-02) - 2 COLUMNS (TOP-TO-BOTTOM THEN RIGHT) */
+              <div className="flex-1 my-auto py-2">
+                <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4 max-w-3xl")}>
                   {[
                     {
                       num: "01",
@@ -580,9 +623,16 @@ export default function StageDocumentPreview({
                       titleId: "Alur Pengalaman Anggota yang Lancar",
                       descEn: "Intuitive transition from reception, locker areas, main workout floor, to recovery zones.",
                       descId: "Transisi intuitif dari resepsionis, loker, area latihan utama, hingga zona pemulihan."
+                    },
+                    {
+                      num: "04",
+                      titleEn: "Integrated Technology & Smart Control",
+                      titleId: "Teknologi Terintegrasi & Kontrol Pintar",
+                      descEn: "Smart access control, automated lighting scenes, and integrated sound zones.",
+                      descId: "Akses kontrol pintar, skenario pencahayaan otomatis, dan zona tata suara terintegrasi."
                     }
                   ].map((item) => (
-                    <div key={item.num} className="space-y-1 pb-3 border-b border-neutral-100 last:border-0">
+                    <div key={item.num} className="space-y-1 pb-3 border-b border-neutral-100 break-inside-avoid">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-brand-red">{item.num}</span>
                         <h4 className="text-xs font-bold text-neutral-900">{item.titleEn}</h4>
@@ -599,7 +649,7 @@ export default function StageDocumentPreview({
                 </div>
               </div>
             ) : pageItem.taskCode === "02-03" ? (
-              /* REAL DOCUMENT PREVIEW FOR FUNCTIONAL REQUIREMENTS (02-03) - MERGED FLOORS, ENGLISH HEADERS FIRST, FLOOR SUBTOTALS */
+              /* REAL DOCUMENT PREVIEW FOR FUNCTIONAL REQUIREMENTS (02-03) - TABLE VIEW */
               <div className="flex-1 my-auto py-2 space-y-4">
                 <div className="w-full">
                   <table className="w-full text-left border-collapse">
@@ -646,7 +696,7 @@ export default function StageDocumentPreview({
                             <tr key={rIdx} className="border-b border-neutral-100">
                               {rIdx === 0 && (
                                 <td
-                                  rowSpan={group.rooms.length}
+                                  rowSpan={group.rooms.length + 1}
                                   className="py-2.5 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top border-r border-neutral-100 pr-3"
                                 >
                                   {group.floorLabel}
@@ -659,18 +709,18 @@ export default function StageDocumentPreview({
                               <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">
                                 {row.area}
                               </td>
-                              <td className="py-2.5 px-2 font-mono text-xs font-semibold text-neutral-500 text-right whitespace-nowrap align-top">
+                              <td className="py-2.5 px-2 font-mono text-xs font-bold text-neutral-800 text-right whitespace-nowrap align-top">
                                 {row.cap}
                               </td>
                               <td className="py-2.5 px-2 align-top">
-                                <span className="text-[11px] font-medium text-neutral-600 block leading-tight">{row.noteEn}</span>
-                                <span className="text-[10px] font-normal italic text-neutral-400 block">{row.noteId}</span>
+                                <span className="font-medium text-neutral-700 block leading-tight text-[11px]">{row.noteEn}</span>
+                                <span className="font-normal italic text-neutral-400 text-[10px] block">{row.noteId}</span>
                               </td>
                             </tr>
                           ))}
                           {/* Floor Subtotal Row */}
                           <tr className="bg-neutral-50/70 border-b border-neutral-200/80 font-semibold text-[11px]">
-                            <td colSpan={2} className="py-1.5 px-2 text-neutral-500 text-right font-mono italic">
+                            <td className="py-1.5 px-2 text-neutral-500 text-right font-mono italic">
                               Subtotal {group.floorLabel}
                             </td>
                             <td className="py-1.5 px-2 text-right font-mono font-bold text-neutral-800">
@@ -697,8 +747,124 @@ export default function StageDocumentPreview({
                   </table>
                 </div>
               </div>
-            ) : pageItem.taskCode === "02-04" ? (
-              /* REAL BUDGET EXPECTATION PREVIEW (02-04) - NO CARDS, AREA X PRICE FORMULA BREAKDOWN */
+            ) : pageItem.taskCode === "02-04" ? (() => {
+              const cols = customMatrixColCount || 3;
+              const dataGroups = [
+                {
+                  floorLabel: "01. Ground Floor Zone",
+                  rooms: [
+                    { roomEn: "Lobby & Reception Area", area: "45 m²", cap: "15 Pax" },
+                    { roomEn: "Locker & Shower Room", area: "60 m²", cap: "20 Pax" }
+                  ]
+                },
+                {
+                  floorLabel: "02. Main Workout Floor",
+                  rooms: [
+                    { roomEn: "Main Workout & Free Weight", area: "180 m²", cap: "50 Pax" },
+                    { roomEn: "Cardio & Endurance Area", area: "95 m²", cap: "30 Pax" }
+                  ]
+                },
+                {
+                  floorLabel: "03. Recovery & Wellness",
+                  rooms: [
+                    { roomEn: "Recovery & Ice Bath Lounge", area: "70 m²", cap: "12 Pax" },
+                    { roomEn: "Sauna & Infrared Cabin", area: "40 m²", cap: "8 Pax" }
+                  ]
+                },
+                {
+                  floorLabel: "04. Utility & Back of House",
+                  rooms: [
+                    { roomEn: "MEP & Electrical Room", area: "35 m²", cap: "4 Pax" },
+                    { roomEn: "Staff Rest & Storage", area: "25 m²", cap: "6 Pax" }
+                  ]
+                },
+                {
+                  floorLabel: "05. Outdoor & Parking",
+                  rooms: [
+                    { roomEn: "Valet & Drop-off Zone", area: "120 m²", cap: "30 Pax" },
+                    { roomEn: "Outdoor Terrace Lounge", area: "80 m²", cap: "25 Pax" }
+                  ]
+                },
+                {
+                  floorLabel: "06. Admin & Management",
+                  rooms: [
+                    { roomEn: "Manager Office & Meeting", area: "40 m²", cap: "8 Pax" }
+                  ]
+                }
+              ];
+
+              // Calculate Totals & Subtotals for 02-04
+              const totalAreaSum = dataGroups.reduce((acc, g) => acc + g.rooms.reduce((rAcc, r) => rAcc + parseInt(r.area), 0), 0);
+              const totalCapSum = dataGroups.reduce((acc, g) => acc + g.rooms.reduce((rAcc, r) => rAcc + parseInt(r.cap), 0), 0);
+
+              return (
+                /* 02-04 FUNCTIONAL REQUIREMENTS MATRIX - PURE CLEAN TYPOGRAPHY TABLE FORMAT */
+                <div className="flex-1 my-auto py-2 space-y-4">
+                  {/* Clean Top Total Summary Line (No Box/Card) */}
+                  <div className="flex items-center justify-between pb-2 border-b border-neutral-200 text-xs font-mono select-none">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-neutral-400 uppercase">TOTAL PROGRAMMED AREA:</span>
+                      <span className="font-black text-brand-red text-sm">{totalAreaSum} m²</span>
+                    </div>
+                    {cols === 2 && (
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-neutral-400 uppercase">TOTAL CAPACITY:</span>
+                        <span className="font-bold text-neutral-800">{totalCapSum} Pax</span>
+                      </div>
+                    )}
+                    <span className="text-[10px] text-neutral-400 font-sans italic">6 Zones Total</span>
+                  </div>
+
+                  {/* Multi-Column Flow Grid */}
+                  <div className={clsx(cols === 2 ? "columns-2 gap-8 space-y-5" : "columns-3 gap-6 space-y-5")}>
+                    {dataGroups.map((group, gIdx) => {
+                      const zoneSubtotalArea = group.rooms.reduce((sum, r) => sum + parseInt(r.area), 0);
+                      const zoneSubtotalCap = group.rooms.reduce((sum, r) => sum + parseInt(r.cap), 0);
+
+                      return (
+                        <div key={gIdx} className="space-y-2 break-inside-avoid pb-3 border-b border-neutral-200">
+                          {/* Zone Header with Clean Plain Text Subtotal (No Badge) */}
+                          <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                            <span className="font-mono text-xs font-bold text-brand-red uppercase truncate">{group.floorLabel}</span>
+                            <span className="font-mono text-xs font-bold text-brand-red">
+                              {zoneSubtotalArea} m²
+                            </span>
+                          </div>
+
+                          {/* Room Table Items */}
+                          <table className="w-full text-left border-collapse">
+                            <tbody>
+                              {group.rooms.map((rm, rIdx) => (
+                                <tr key={rIdx} className="border-b border-neutral-100 last:border-0 text-xs">
+                                  <td className="py-1.5 pr-2 font-semibold text-neutral-800 align-top">
+                                    {rm.roomEn}
+                                  </td>
+                                  <td className="py-1.5 px-1 font-mono font-bold text-neutral-900 text-right whitespace-nowrap align-top">
+                                    {rm.area}
+                                  </td>
+                                  {cols === 2 && (
+                                    <td className="py-1.5 pl-2 font-mono font-bold text-neutral-500 text-right whitespace-nowrap align-top">
+                                      {rm.cap}
+                                    </td>
+                                  )}
+                                </tr>
+                              ))}
+                              {/* Subtotal Row per Zone (Clean Plain Text) */}
+                              <tr className="font-mono font-bold text-[11px] border-t border-neutral-200">
+                                <td className="py-1.5 pr-2 text-right uppercase text-neutral-400">Subtotal</td>
+                                <td className="py-1.5 px-1 text-right text-brand-red">{zoneSubtotalArea} m²</td>
+                                {cols === 2 && <td className="py-1.5 pl-2 text-right text-neutral-600">{zoneSubtotalCap} Pax</td>}
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })() : pageItem.taskCode === "05-01" ? (
+              /* REAL BUDGET EXPECTATION PREVIEW (05-01 / 02-04) - NO CARDS, AREA X PRICE FORMULA BREAKDOWN */
               <div className="flex-1 my-auto py-2 space-y-5">
                 {/* 1. Top Section (No Cards): Client Ceiling & Area x Construction Price Formula */}
                 <div className="space-y-3 pb-3 border-b border-neutral-200">
@@ -789,8 +955,8 @@ export default function StageDocumentPreview({
                   </table>
                 </div>
               </div>
-            ) : pageItem.taskCode === "02-05" ? (
-              /* REAL TARGET TIMELINE PREVIEW (02-05) - MULTI-PAGE SUPPORT (PAGE 1: TABLE SCHEDULE, PAGE 2: VISUAL TIMELINE CHART) */
+            ) : pageItem.taskCode === "06-01" || pageItem.taskCode === "02-05" ? (
+              /* REAL TARGET TIMELINE PREVIEW (06-01 / 02-05) - MULTI-PAGE SUPPORT (PAGE 1: TABLE SCHEDULE, PAGE 2: VISUAL TIMELINE CHART) */
               pageItem.subPage === 2 ? (
                 /* PAGE 2: VISUAL TIMELINE GANTT CHART */
                 <div className="flex-1 my-auto py-2 space-y-5">
@@ -973,292 +1139,240 @@ export default function StageDocumentPreview({
                 </div>
               )
             ) : pageItem.taskCode === "03-01" ? (
-              /* REAL DESIGN SCOPE PREVIEW FOR (03-01) */
-              <div className="flex-1 my-auto py-2 space-y-4">
-                {/* Scope Table */}
-                <div className="w-full">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
-                        <th className="py-2.5 px-1 w-1/3">Discipline Scope <span className="font-sans font-normal italic text-neutral-400 normal-case">(Disiplin Kerja)</span></th>
-                        <th className="py-2.5 px-2 w-2/3">Design Deliverables & Specifications <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keluaran Gambar & Spesifikasi Desain)</span></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200/60 text-xs">
-                      {[
-                        {
-                          nameEn: "01. Architecture",
-                          nameId: "Arsitektur Utama",
-                          items: [
-                            { en: "Site Plan & Floor Layout Plan", idText: "Rencana Tapak & Denah Tata Letak", included: true },
-                            { en: "Building Elevations & Key Sections", idText: "Tampak Bangunan & Potongan Utama", included: true },
-                            { en: "3D Exterior & Interior Render Package", idText: "Paket Visual Render 3D Eksterior & Interior", included: true },
-                            { en: "Custom Kinetic Facade Construction Details", idText: "Detail Konstruksi Fasad Kinetik Khusus", included: false }
-                          ]
-                        },
-                        {
-                          nameEn: "02. Structure & Civils",
-                          nameId: "Struktur & Sipil",
-                          items: [
-                            { en: "Foundation Plan & Column/Beam Framing", idText: "Rencana Pondasi & Penulangan Kolom/Balok", included: true },
-                            { en: "Structural Calculation Report", idText: "Laporan Perhitungan Struktur", included: true },
-                            { en: "Geotechnical Deep Soil Boring Sondir Test", idText: "Uji Sondir Geoteknik Tanah Dalam", included: false }
-                          ]
-                        },
-                        {
-                          nameEn: "03. MEP Engineering",
-                          nameId: "Mekanikal, Elektrikal & Plambing",
-                          items: [
-                            { en: "Electrical Single Line & Lighting Layout", idText: "Diagram Kelistrikan & Tata Letak Lampu", included: true },
-                            { en: "Plumbing Clean/Waste Water System", idText: "Sistem Plambing Air Bersih & Kotor", included: true },
-                            { en: "Smart Home Automation System Integration", idText: "Integrasi Sistem Otomasi Smart Home", included: false }
-                          ]
-                        }
-                      ].map((row, rIdx) => (
-                        <tr key={rIdx}>
-                          <td className="py-3 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top pr-3 border-r border-neutral-100">
-                            {row.nameEn}
-                            <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.nameId}</span>
-                          </td>
-                          <td className="py-3 px-3 align-top">
-                            <ul className="space-y-2">
-                              {row.items.map((item, iIdx) => (
-                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
-                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
-                                    <span className={`font-bold select-none ${item.included ? "text-emerald-600" : "text-neutral-400"}`}>
-                                      {item.included ? "✓" : "✕"}
-                                    </span>
-                                    <div>
-                                      <span className={`font-medium ${item.included ? "text-neutral-800" : "text-neutral-400 line-through"}`}>{item.en}</span>
-                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
-                                    </div>
-                                  </div>
-                                  <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 ${
-                                    item.included
-                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                      : "bg-neutral-100 text-neutral-400 border border-neutral-200"
-                                  }`}>
-                                    {item.included ? "INCLUDED ✓" : "EXCLUDED ✕"}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              /* REAL DESIGN SCOPE PREVIEW FOR (03-01) - 2 COLUMNS IN LANDSCAPE */
+              <div className="flex-1 my-auto py-2">
+                <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4")}>
+                  {[
+                    {
+                      nameEn: "01. Architecture",
+                      nameId: "Arsitektur Utama",
+                      items: [
+                        { en: "Site Plan & Floor Layout Plan", idText: "Rencana Tapak & Denah Tata Letak", included: true },
+                        { en: "Building Elevations & Key Sections", idText: "Tampak Bangunan & Potongan Utama", included: true },
+                        { en: "3D Exterior & Interior Render Package", idText: "Paket Visual Render 3D Eksterior & Interior", included: true },
+                        { en: "Custom Kinetic Facade Construction Details", idText: "Detail Konstruksi Fasad Kinetik Khusus", included: false }
+                      ]
+                    },
+                    {
+                      nameEn: "02. Structure & Civils",
+                      nameId: "Struktur & Sipil",
+                      items: [
+                        { en: "Foundation Plan & Column/Beam Framing", idText: "Rencana Pondasi & Penulangan Kolom/Balok", included: true },
+                        { en: "Structural Calculation Report", idText: "Laporan Perhitungan Struktur", included: true },
+                        { en: "Geotechnical Deep Soil Boring Sondir Test", idText: "Uji Sondir Geoteknik Tanah Dalam", included: false }
+                      ]
+                    },
+                    {
+                      nameEn: "03. MEP Engineering",
+                      nameId: "Mekanikal, Elektrikal & Plambing",
+                      items: [
+                        { en: "Electrical Single Line & Lighting Layout", idText: "Diagram Kelistrikan & Tata Letak Lampu", included: true },
+                        { en: "Plumbing Clean/Waste Water System", idText: "Sistem Plambing Air Bersih & Kotor", included: true },
+                        { en: "Smart Home Automation System Integration", idText: "Integrasi Sistem Otomasi Smart Home", included: false }
+                      ]
+                    }
+                  ].map((row, rIdx) => (
+                    <div key={rIdx} className="space-y-2 pb-3 border-b border-neutral-200 break-inside-avoid">
+                      <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                        <span className="font-mono text-xs font-bold text-brand-red uppercase">{row.nameEn}</span>
+                        <span className="text-[10px] font-mono font-normal italic text-neutral-400">({row.nameId})</span>
+                      </div>
+                      <ul className="space-y-2 pt-1">
+                        {row.items.map((item, iIdx) => (
+                          <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                            <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                              <span className={`font-bold select-none ${item.included ? "text-emerald-600" : "text-neutral-400"}`}>
+                                {item.included ? "✓" : "✕"}
+                              </span>
+                              <div>
+                                <span className={`font-medium ${item.included ? "text-neutral-800" : "text-neutral-400 line-through"}`}>{item.en}</span>
+                                <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                              </div>
+                            </div>
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shrink-0 ${
+                              item.included
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-neutral-100 text-neutral-400 border border-neutral-200"
+                            }`}>
+                              {item.included ? "INCLUDED ✓" : "EXCLUDED ✕"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : pageItem.taskCode === "03-02" ? (
-              /* REAL CONSTRUCTION SCOPE PREVIEW FOR (03-02) */
-              <div className="flex-1 my-auto py-2 space-y-4">
-                {/* Scope Table */}
-                <div className="w-full">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
-                        <th className="py-2.5 px-1 w-1/3">Execution Scope <span className="font-sans font-normal italic text-neutral-400 normal-case">(Cakupan Pelaksanaan)</span></th>
-                        <th className="py-2.5 px-2 w-2/3">Technical Deliverables & Supervision <span className="font-sans font-normal italic text-neutral-400 normal-case">(Keluaran Teknis & Pengawasan)</span></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200/60 text-xs">
-                      {[
-                        {
-                          nameEn: "01. FOR-CON Working Drawings",
-                          nameId: "Gambar Kerja Detail Siap Bangun",
-                          items: [
-                            { en: "Detailed Construction Working Drawings (FOR-CON)", idText: "Gambar Kerja Detail Konstruksi Siap Bangun", included: true },
-                            { en: "Architectural & Interior Joinery Details", idText: "Detail Arsitektur & Joinery Fit-Out", included: true },
-                            { en: "MEP Connection & Pipe Routing Details", idText: "Detail Sambungan MEP & Jalur Pipa", included: true }
-                          ]
-                        },
-                        {
-                          nameEn: "02. BoQ & RAB Budgeting",
-                          nameId: "Anggaran Biaya & BoQ",
-                          items: [
-                            { en: "Bill of Quantities (BoQ) Breakdown", idText: "Rincian Bill of Quantities (BoQ) Volume Pekerjaan", included: true },
-                            { en: "RAB Construction Cost Budget Estimation", idText: "Estimasi Rencana Anggaran Biaya (RAB) Konstruksi", included: true }
-                          ]
-                        },
-                        {
-                          nameEn: "03. Site Supervision & Control",
-                          nameId: "Pengawasan Lapangan",
-                          items: [
-                            { en: "Weekly Periodic Site Inspection & Supervision", idText: "Inspeksi & Pengawasan Lapangan Periodik Mingguan", included: true },
-                            { en: "Full-Time Daily Resident Site Engineer", idText: "Pengawas Harian Penuh Waktu di Lokasi", included: false },
-                            { en: "Punch List Fixes & Final Handover Inspection", idText: "Daftar Perbaikan Sisa & Inspeksi Serah Terima", included: true }
-                          ]
-                        }
-                      ].map((row, rIdx) => (
-                        <tr key={rIdx}>
-                          <td className="py-3 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top pr-3 border-r border-neutral-100">
-                            {row.nameEn}
-                            <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.nameId}</span>
-                          </td>
-                          <td className="py-3 px-3 align-top">
-                            <ul className="space-y-2">
-                              {row.items.map((item, iIdx) => (
-                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
-                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
-                                    <span className={`font-bold select-none ${item.included ? "text-emerald-600" : "text-neutral-400"}`}>
-                                      {item.included ? "✓" : "✕"}
-                                    </span>
-                                    <div>
-                                      <span className={`font-medium ${item.included ? "text-neutral-800" : "text-neutral-400 line-through"}`}>{item.en}</span>
-                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
-                                    </div>
-                                  </div>
-                                  <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 ${
-                                    item.included
-                                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                      : "bg-neutral-100 text-neutral-400 border border-neutral-200"
-                                  }`}>
-                                    {item.included ? "INCLUDED ✓" : "EXCLUDED ✕"}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              /* REAL CONSTRUCTION SCOPE PREVIEW FOR (03-02) - 2 COLUMNS IN LANDSCAPE */
+              <div className="flex-1 my-auto py-2">
+                <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4")}>
+                  {[
+                    {
+                      nameEn: "01. FOR-CON Working Drawings",
+                      nameId: "Gambar Kerja Detail Siap Bangun",
+                      items: [
+                        { en: "Detailed Construction Working Drawings (FOR-CON)", idText: "Gambar Kerja Detail Konstruksi Siap Bangun", included: true },
+                        { en: "Architectural & Interior Joinery Details", idText: "Detail Arsitektur & Joinery Fit-Out", included: true },
+                        { en: "MEP Connection & Pipe Routing Details", idText: "Detail Sambungan MEP & Jalur Pipa", included: true }
+                      ]
+                    },
+                    {
+                      nameEn: "02. BoQ & RAB Budgeting",
+                      nameId: "Anggaran Biaya & BoQ",
+                      items: [
+                        { en: "Bill of Quantities (BoQ) Breakdown", idText: "Rincian Bill of Quantities (BoQ) Volume Pekerjaan", included: true },
+                        { en: "RAB Construction Cost Budget Estimation", idText: "Estimasi Rencana Anggaran Biaya (RAB) Konstruksi", included: true }
+                      ]
+                    },
+                    {
+                      nameEn: "03. Site Supervision & Control",
+                      nameId: "Pengawasan Lapangan",
+                      items: [
+                        { en: "Weekly Periodic Site Inspection & Supervision", idText: "Inspeksi & Pengawasan Lapangan Periodik Mingguan", included: true },
+                        { en: "Full-Time Daily Resident Site Engineer", idText: "Pengawas Harian Penuh Waktu di Lokasi", included: false },
+                        { en: "Punch List Fixes & Final Handover Inspection", idText: "Daftar Perbaikan Sisa & Inspeksi Serah Terima", included: true }
+                      ]
+                    }
+                  ].map((row, rIdx) => (
+                    <div key={rIdx} className="space-y-2 pb-3 border-b border-neutral-200 break-inside-avoid">
+                      <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                        <span className="font-mono text-xs font-bold text-brand-red uppercase">{row.nameEn}</span>
+                        <span className="text-[10px] font-mono font-normal italic text-neutral-400">({row.nameId})</span>
+                      </div>
+                      <ul className="space-y-2 pt-1">
+                        {row.items.map((item, iIdx) => (
+                          <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                            <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                              <span className={`font-bold select-none ${item.included ? "text-emerald-600" : "text-neutral-400"}`}>
+                                {item.included ? "✓" : "✕"}
+                              </span>
+                              <div>
+                                <span className={`font-medium ${item.included ? "text-neutral-800" : "text-neutral-400 line-through"}`}>{item.en}</span>
+                                <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                              </div>
+                            </div>
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shrink-0 ${
+                              item.included
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-neutral-100 text-neutral-400 border border-neutral-200"
+                            }`}>
+                              {item.included ? "INCLUDED ✓" : "EXCLUDED ✕"}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : pageItem.taskCode === "03-03" ? (
-              /* REAL SCOPE EXCLUSIONS PREVIEW FOR (03-03) */
-              <div className="flex-1 my-auto py-2 space-y-4">
-                {/* Exclusions Table */}
-                <div className="w-full">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
-                        <th className="py-2.5 px-1 w-1/3">Exclusion Category <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kategori Pengecualian)</span></th>
-                        <th className="py-2.5 px-2 w-2/3">Un-scoped Deliverables & Boundary Items <span className="font-sans font-normal italic text-neutral-400 normal-case">(Detail Pengecualian Pekerjaan)</span></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200/60 text-xs">
-                      {[
-                        {
-                          nameEn: "01. Permitting & Legal",
-                          nameId: "Perizinan & Retribusi Resmi",
-                          items: [
-                            { en: "Building Permit (PBG/SLF) Official Government Fees", idText: "Biaya Retribusi Resmi Perizinan Bangunan Gedung (PBG/SLF)", included: false },
-                            { en: "Neighborhood & Local Community Discretionary Approvals", idText: "Persetujuan Lingkungan Warga & Komunitas Lokal", included: false }
-                          ]
-                        },
-                        {
-                          nameEn: "02. Site & Soil Investigations",
-                          nameId: "Pengujian Lahan & Tanah",
-                          items: [
-                            { en: "Deep Soil Boring Test & Geotechnical Investigation", idText: "Uji Sondir & Penyelidikan Tanah Dalam (Geoteknik)", included: false },
-                            { en: "Environmental Impact Assessment (AMDAL/UKL-UPL)", idText: "Dokumen Analisis Mengenai Dampak Lingkungan (AMDAL)", included: false }
-                          ]
-                        },
-                        {
-                          nameEn: "03. Specialist Installations",
-                          nameId: "Instalasi Spesialis Khusus",
-                          items: [
-                            { en: "PLN Transformer Substation Upgrade Connection", idText: "Penyambungan & Penambahan Daya PLN Trafo Khusus", included: false },
-                            { en: "Specialist Audio-Visual & Custom Smart Home Automation", idText: "Sistem Audio Visual Khusus & Otomasi Smart Home", included: false }
-                          ]
-                        }
-                      ].map((row, rIdx) => (
-                        <tr key={rIdx}>
-                          <td className="py-3 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top pr-3 border-r border-neutral-100">
-                            {row.nameEn}
-                            <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.nameId}</span>
-                          </td>
-                          <td className="py-3 px-3 align-top">
-                            <ul className="space-y-2">
-                              {row.items.map((item, iIdx) => (
-                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
-                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
-                                    <span className="font-bold select-none text-neutral-400">✕</span>
-                                    <div>
-                                      <span className="font-medium text-neutral-400 line-through">{item.en}</span>
-                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
-                                    </div>
-                                  </div>
-                                  <span className="inline-block px-2 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 bg-neutral-100 text-neutral-400 border border-neutral-200">
-                                    EXCLUDED ✕
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              /* REAL SCOPE EXCLUSIONS PREVIEW FOR (03-03) - 2 COLUMNS IN LANDSCAPE */
+              <div className="flex-1 my-auto py-2">
+                <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4")}>
+                  {[
+                    {
+                      nameEn: "01. Permitting & Legal",
+                      nameId: "Perizinan & Retribusi Resmi",
+                      items: [
+                        { en: "Building Permit (PBG/SLF) Official Government Fees", idText: "Biaya Retribusi Resmi Perizinan Bangunan Gedung (PBG/SLF)", included: false },
+                        { en: "Neighborhood & Local Community Discretionary Approvals", idText: "Persetujuan Lingkungan Warga & Komunitas Lokal", included: false }
+                      ]
+                    },
+                    {
+                      nameEn: "02. Site & Soil Investigations",
+                      nameId: "Pengujian Lahan & Tanah",
+                      items: [
+                        { en: "Deep Soil Boring Test & Geotechnical Investigation", idText: "Uji Sondir & Penyelidikan Tanah Dalam (Geoteknik)", included: false },
+                        { en: "Environmental Impact Assessment (AMDAL/UKL-UPL)", idText: "Dokumen Analisis Mengenai Dampak Lingkungan (AMDAL)", included: false }
+                      ]
+                    },
+                    {
+                      nameEn: "03. Specialist Installations",
+                      nameId: "Instalasi Spesialis Khusus",
+                      items: [
+                        { en: "PLN Transformer Substation Upgrade Connection", idText: "Penyambungan & Penambahan Daya PLN Trafo Khusus", included: false },
+                        { en: "Specialist Audio-Visual & Custom Smart Home Automation", idText: "Sistem Audio Visual Khusus & Otomasi Smart Home", included: false }
+                      ]
+                    }
+                  ].map((row, rIdx) => (
+                    <div key={rIdx} className="space-y-2 pb-3 border-b border-neutral-200 break-inside-avoid">
+                      <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                        <span className="font-mono text-xs font-bold text-brand-red uppercase">{row.nameEn}</span>
+                        <span className="text-[10px] font-mono font-normal italic text-neutral-400">({row.nameId})</span>
+                      </div>
+                      <ul className="space-y-2 pt-1">
+                        {row.items.map((item, iIdx) => (
+                          <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                            <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                              <span className="font-bold select-none text-neutral-400">✕</span>
+                              <div>
+                                <span className="font-medium text-neutral-400 line-through">{item.en}</span>
+                                <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                              </div>
+                            </div>
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shrink-0 bg-neutral-100 text-neutral-400 border border-neutral-200">
+                              EXCLUDED ✕
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : pageItem.taskCode === "03-04" ? (
-              /* REAL PROJECT ASSUMPTIONS PREVIEW FOR (03-04) */
-              <div className="flex-1 my-auto py-2 space-y-4">
-                {/* Assumptions Table */}
-                <div className="w-full">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-neutral-300 text-[10px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
-                        <th className="py-2.5 px-1 w-1/3">Assumption Category <span className="font-sans font-normal italic text-neutral-400 normal-case">(Kategori Asumsi)</span></th>
-                        <th className="py-2.5 px-2 w-2/3">Project Baseline Assumptions & Prerequisites <span className="font-sans font-normal italic text-neutral-400 normal-case">(Rincian Asumsi Prasyarat Proyek)</span></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-neutral-200/60 text-xs">
-                      {[
-                        {
-                          nameEn: "01. Site & Ground Access",
-                          nameId: "Akses & Kondisi Tapak",
-                          items: [
-                            { en: "Site soil has standard minimum bearing capacity of 1.5 kg/cm²", idText: "Tanah tapak memiliki daya dukung standar min 1.5 kg/cm²", assumed: true },
-                            { en: "Unobstructed truck access roads available to the building perimeter", idText: "Akses jalan truk ke keliling tapak tersedia tanpa hambatan", assumed: true }
-                          ]
-                        },
-                        {
-                          nameEn: "02. Utilities & Infrastructure",
-                          nameId: "Utilitas & Infrastruktur",
-                          items: [
-                            { en: "Municipal clean water line & main drainage available at site boundary", idText: "Jaringan air bersih & drainase induk kota tersedia di batas tapak", assumed: true },
-                            { en: "Existing 3-phase temporary electricity power supply active during site work", idText: "Pasokan listrik sementara 3-fase aktif selama kerja tapak", assumed: true }
-                          ]
-                        },
-                        {
-                          nameEn: "03. Client Decision Milestones",
-                          nameId: "Keputusan & Milestone Klien",
-                          items: [
-                            { en: "Client sign-off feedback delivered within 5 business days per stage", idText: "Umpan balik persetujuan klien diberikan maks 5 hari kerja per tahap", assumed: true }
-                          ]
-                        }
-                      ].map((row, rIdx) => (
-                        <tr key={rIdx}>
-                          <td className="py-3 px-1 font-mono text-[11px] font-bold text-brand-red whitespace-nowrap align-top pr-3 border-r border-neutral-100">
-                            {row.nameEn}
-                            <span className="font-sans font-normal italic text-neutral-400 text-[10px] block">{row.nameId}</span>
-                          </td>
-                          <td className="py-3 px-3 align-top">
-                            <ul className="space-y-2">
-                              {row.items.map((item, iIdx) => (
-                                <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
-                                  <div className="flex items-start gap-1.5 min-w-0 pr-2">
-                                    <span className="font-bold select-none text-emerald-600">✓</span>
-                                    <div>
-                                      <span className="font-medium text-neutral-800">{item.en}</span>
-                                      <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
-                                    </div>
-                                  </div>
-                                  <span className="inline-block px-2 py-0.5 rounded text-[9px] font-mono font-bold shrink-0 bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                    ASSUMED ✓
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              /* REAL PROJECT ASSUMPTIONS PREVIEW FOR (03-04) - 2 COLUMNS IN LANDSCAPE */
+              <div className="flex-1 my-auto py-2">
+                <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4")}>
+                  {[
+                    {
+                      nameEn: "01. Site & Ground Access",
+                      nameId: "Akses & Kondisi Tapak",
+                      items: [
+                        { en: "Site soil has standard minimum bearing capacity of 1.5 kg/cm²", idText: "Tanah tapak memiliki daya dukung standar min 1.5 kg/cm²", assumed: true },
+                        { en: "Unobstructed truck access roads available to the building perimeter", idText: "Akses jalan truk ke keliling tapak tersedia tanpa hambatan", assumed: true }
+                      ]
+                    },
+                    {
+                      nameEn: "02. Utilities & Infrastructure",
+                      nameId: "Utilitas & Infrastruktur",
+                      items: [
+                        { en: "Municipal clean water line & main drainage available at site boundary", idText: "Jaringan air bersih & drainase induk kota tersedia di batas tapak", assumed: true },
+                        { en: "Existing 3-phase temporary electricity power supply active during site work", idText: "Pasokan listrik sementara 3-fase aktif selama kerja tapak", assumed: true }
+                      ]
+                    },
+                    {
+                      nameEn: "03. Client Decision Milestones",
+                      nameId: "Keputusan & Milestone Klien",
+                      items: [
+                        { en: "Client sign-off feedback delivered within 5 business days per stage", idText: "Umpan balik persetujuan klien diberikan maks 5 hari kerja per tahap", assumed: true }
+                      ]
+                    }
+                  ].map((row, rIdx) => (
+                    <div key={rIdx} className="space-y-2 pb-3 border-b border-neutral-200 break-inside-avoid">
+                      <div className="flex items-center justify-between pb-1 border-b border-neutral-300">
+                        <span className="font-mono text-xs font-bold text-brand-red uppercase">{row.nameEn}</span>
+                        <span className="text-[10px] font-mono font-normal italic text-neutral-400">({row.nameId})</span>
+                      </div>
+                      <ul className="space-y-2 pt-1">
+                        {row.items.map((item, iIdx) => (
+                          <li key={iIdx} className="flex items-start justify-between gap-3 text-[11px] pb-1 border-b border-neutral-100/70 last:border-0">
+                            <div className="flex items-start gap-1.5 min-w-0 pr-2">
+                              <span className="font-bold select-none text-emerald-600">✓</span>
+                              <div>
+                                <span className="font-medium text-neutral-800">{item.en}</span>
+                                <span className="font-normal italic text-neutral-400 text-[10px] block">{item.idText}</span>
+                              </div>
+                            </div>
+                            <span className="inline-block px-1.5 py-0.5 rounded text-[8px] font-mono font-bold shrink-0 bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              ASSUMED ✓
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : pageItem.taskCode === "04-13" ? (

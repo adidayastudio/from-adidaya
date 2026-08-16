@@ -124,67 +124,154 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     description: "Landscape horizontal step-by-step stage progress breakdown.",
     previewTaskCode: "01-04"
   },
+  // --- SECTION 02 CLIENT BRIEF PORTRAIT TEMPLATES (02-01-P to 02-05-P) ---
   {
-    id: "tpl-project-understanding",
-    code: "02-01",
-    name: "Project Understanding",
-    nameId: "Pemahaman Proyek",
+    id: "tpl-project-understanding-p",
+    code: "02-01-P",
+    name: "Project Understanding (Portrait)",
+    nameId: "Pemahaman Proyek (Portrait)",
     category: "Client Brief and Objectives",
     description: "Key architectural concept, site parameters & design direction breakdown.",
     previewTaskCode: "02-01"
   },
   {
-    id: "tpl-client-needs",
-    code: "02-02",
-    name: "Client Needs & Vision",
-    nameId: "Visi & Kebutuhan Klien",
+    id: "tpl-client-needs-p",
+    code: "02-02-P",
+    name: "Client Needs & Vision (Portrait)",
+    nameId: "Visi & Kebutuhan Klien (Portrait)",
     category: "Client Brief and Objectives",
     description: "Structured questionnaire summary of client spatial & stylistic requirements.",
     previewTaskCode: "02-02"
   },
   {
-    id: "tpl-functional-req",
-    code: "02-03",
-    name: "Functional Requirements",
-    nameId: "Kebutuhan Fungsional Space",
+    id: "tpl-functional-req-p",
+    code: "02-03-P",
+    name: "Functional Requirements (Portrait)",
+    nameId: "Kebutuhan Fungsional Space (Portrait)",
     category: "Client Brief and Objectives",
     description: "Matrix of space requirements, occupancy count & functional relationships.",
     previewTaskCode: "02-03"
   },
   {
-    id: "tpl-design-scope",
-    code: "03-01",
-    name: "Design Scope & Deliverables",
-    nameId: "Lingkup Kerja & Keluaran Desain",
+    id: "tpl-functional-req-matrix-p",
+    code: "02-04-P",
+    name: "Functional Requirements Matrix (Portrait)",
+    nameId: "Matriks Kebutuhan Fungsional (Portrait)",
+    category: "Client Brief and Objectives",
+    description: "Detailed multi-column matrix table for space requirements, occupancy count & functional relationships.",
+    previewTaskCode: "02-04"
+  },
+
+  // --- SECTION 02 CLIENT BRIEF LANDSCAPE TEMPLATES (02-01-L to 02-04-L) ---
+  {
+    id: "tpl-project-understanding-l",
+    code: "02-01-L",
+    name: "Project Understanding (Landscape)",
+    nameId: "Pemahaman Proyek (Landscape)",
+    category: "Client Brief and Objectives",
+    description: "Landscape 2-column split: left executive summary paragraph, right key concept drivers.",
+    previewTaskCode: "02-01"
+  },
+  {
+    id: "tpl-client-needs-l",
+    code: "02-02-L",
+    name: "Client Needs & Vision (Landscape)",
+    nameId: "Visi & Kebutuhan Klien (Landscape)",
+    category: "Client Brief and Objectives",
+    description: "Landscape wide 2-column flow summary of client vision & requirements.",
+    previewTaskCode: "02-02"
+  },
+  {
+    id: "tpl-functional-req-l",
+    code: "02-03-L",
+    name: "Functional Requirements (Landscape)",
+    nameId: "Kebutuhan Fungsional Space (Landscape)",
+    category: "Client Brief and Objectives",
+    description: "Landscape wide matrix table for space requirements & occupancy count.",
+    previewTaskCode: "02-03"
+  },
+  {
+    id: "tpl-functional-req-matrix-l",
+    code: "02-04-L",
+    name: "Functional Requirements Matrix (Landscape)",
+    nameId: "Matriks Kebutuhan Fungsional (Landscape)",
+    category: "Client Brief and Objectives",
+    description: "Landscape wide 2-3 column matrix grid for space requirements with column count toggle.",
+    previewTaskCode: "02-04"
+  },
+  // --- SECTION 03 SCOPE OF WORK PORTRAIT TEMPLATES (03-01-P to 03-04-P) ---
+  {
+    id: "tpl-design-scope-p",
+    code: "03-01-P",
+    name: "Design Scope & Deliverables (Portrait)",
+    nameId: "Lingkup Kerja & Keluaran Desain (Portrait)",
     category: "Scope of Work",
     description: "Architectural, structural, and MEP design package checklist & inclusions.",
     previewTaskCode: "03-01"
   },
   {
-    id: "tpl-construction-scope",
-    code: "03-02",
-    name: "Construction Scope & Deliverables",
-    nameId: "Lingkup Kerja & Pelaksanaan Konstruksi",
+    id: "tpl-construction-scope-p",
+    code: "03-02-P",
+    name: "Construction Scope & Deliverables (Portrait)",
+    nameId: "Lingkup Kerja & Pelaksanaan Konstruksi (Portrait)",
     category: "Scope of Work",
     description: "Technical working drawings FOR-CON, BoQ, and site supervision scope.",
     previewTaskCode: "03-02"
   },
   {
-    id: "tpl-exclusions",
-    code: "03-03",
-    name: "Scope Exclusions",
-    nameId: "Pengecualian Lingkup Kerja",
+    id: "tpl-exclusions-p",
+    code: "03-03-P",
+    name: "Scope Exclusions (Portrait)",
+    nameId: "Pengecualian Lingkup Kerja (Portrait)",
     category: "Scope of Work",
     description: "Detailed table of project boundary exclusions and un-scoped services.",
     previewTaskCode: "03-03"
   },
   {
-    id: "tpl-assumptions",
-    code: "03-04",
-    name: "Project Assumptions",
-    nameId: "Asumsi Pekerjaan Proyek",
+    id: "tpl-assumptions-p",
+    code: "03-04-P",
+    name: "Project Assumptions (Portrait)",
+    nameId: "Asumsi Pekerjaan Proyek (Portrait)",
     category: "Scope of Work",
     description: "Detailed table of site conditions, client responsibilities, and structural assumptions.",
+    previewTaskCode: "03-04"
+  },
+
+  // --- SECTION 03 SCOPE OF WORK LANDSCAPE TEMPLATES (03-01-L to 03-04-L) ---
+  {
+    id: "tpl-design-scope-l",
+    code: "03-01-L",
+    name: "Design Scope & Deliverables (Landscape)",
+    nameId: "Lingkup Kerja & Keluaran Desain (Landscape)",
+    category: "Scope of Work",
+    description: "Landscape wide multi-column layout for design scope & discipline deliverables.",
+    previewTaskCode: "03-01"
+  },
+  {
+    id: "tpl-construction-scope-l",
+    code: "03-02-L",
+    name: "Construction Scope & Deliverables (Landscape)",
+    nameId: "Lingkup Kerja & Pelaksanaan Konstruksi (Landscape)",
+    category: "Scope of Work",
+    description: "Landscape wide multi-column layout for construction deliverables & supervision.",
+    previewTaskCode: "03-02"
+  },
+  {
+    id: "tpl-exclusions-l",
+    code: "03-03-L",
+    name: "Scope Exclusions (Landscape)",
+    nameId: "Pengecualian Lingkup Kerja (Landscape)",
+    category: "Scope of Work",
+    description: "Landscape wide multi-column table for project scope exclusions.",
+    previewTaskCode: "03-03"
+  },
+  {
+    id: "tpl-assumptions-l",
+    code: "03-04-L",
+    name: "Project Assumptions (Landscape)",
+    nameId: "Asumsi Pekerjaan Proyek (Landscape)",
+    category: "Scope of Work",
+    description: "Landscape wide 2-column table for project assumptions & site conditions.",
     previewTaskCode: "03-04"
   },
   // --- SECTION 04 PORTRAIT TEMPLATES (04-01 to 04-06) ---
@@ -365,6 +452,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
   const [activeSubPage, setActiveSubPage] = useState<number>(1);
   const [drawingOrientation, setDrawingOrientation] = useState<"portrait" | "landscape">("portrait");
   const [photoCount, setPhotoCount] = useState<number>(3);
+  const [matrixColCount, setMatrixColCount] = useState<number>(3);
   const [selectedFormat, setSelectedFormat] = useState<string>("ALL");
 
   const [dbProjects, setDbProjects] = useState<{ code: string; name: string; location: string; label: string }[]>([DEFAULT_PROJECT]);
@@ -1075,31 +1163,37 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                         </div>
                       )}
 
-                      {/* Sample Input Content ONLY for Project Assumptions (03-04) */}
-                      {tpl.code === "03-04" && (
+                      {/* Sample Input Content ONLY for Functional Requirements Matrix (02-04) */}
+                      {(tpl.code === "02-04-P" || tpl.code === "02-04-L") && (
                         <div className="space-y-2.5 pt-1">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 block">
-                            Sample Input Content
+                            Sample Input Content & Column Controls
                           </span>
 
                           <div className="space-y-2 text-xs">
                             <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
-                              <span className="text-[10px] font-bold text-brand-red uppercase block">Project Assumption Row</span>
-                              <div className="space-y-1 pt-0.5">
-                                <div className="flex items-center justify-between gap-1.5">
-                                  <div className="flex items-center gap-1.5 min-w-0">
-                                    <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">CATEGORY</span>
-                                    <span className="text-xs font-bold text-brand-red">01. Site & Ground Conditions</span>
-                                  </div>
-                                  <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-200 shrink-0">ASSUMED ✓</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 border-t border-neutral-100 dark:border-neutral-800 pt-1">
-                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · EN</span>
-                                  <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200">Site Soil Bearing Capacity & Firm Land Access</span>
-                                </div>
+                              <span className="text-[10px] font-bold text-brand-red uppercase block">Matrix Column Selector (2 - 3 Columns)</span>
+                              <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-neutral-100 dark:border-neutral-800">
+                                <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">GRID COLUMNS</span>
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[9px] font-bold text-neutral-400 uppercase shrink-0">ITEM · ID</span>
-                                  <span className="text-[11px] font-normal italic text-neutral-500">Daya Dukung Tanah Keras & Akses Jalan</span>
+                                  {[2, 3].map((num) => (
+                                    <button
+                                      key={num}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setMatrixColCount(num);
+                                      }}
+                                      className={clsx(
+                                        "text-xs font-mono font-bold w-8 h-8 rounded-full border transition-all cursor-pointer flex items-center justify-center",
+                                        matrixColCount === num
+                                          ? "bg-brand-red text-white border-brand-red shadow-xs scale-105"
+                                          : "text-neutral-600 dark:text-neutral-300 bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-200"
+                                      )}
+                                    >
+                                      {num}
+                                    </button>
+                                  ))}
                                 </div>
                               </div>
                             </div>
@@ -1342,6 +1436,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
               }
               customOrientation={drawingOrientation}
               customPhotoCount={photoCount}
+              customMatrixColCount={matrixColCount}
               hideToolbar={true}
             />
           </div>

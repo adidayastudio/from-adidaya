@@ -30,7 +30,7 @@ export const koTasks: Task[] = [
   { id: "ko-02-01", code: "02-01", name: "Project Understanding", nameId: "Pemahaman Proyek", stage: "KO", sectionCode: "KO-02", weight: 24, priority: "high" },
   { id: "ko-02-02", code: "02-02", name: "Client Needs & Vision", nameId: "Visi & Kebutuhan Klien", stage: "KO", sectionCode: "KO-02", weight: 42, priority: "high" },
   { id: "ko-02-03", code: "02-03", name: "Functional Requirements", nameId: "Kebutuhan Fungsional", stage: "KO", sectionCode: "KO-02", weight: 24, priority: "high" },
-  { id: "ko-02-04", code: "02-04", name: "Budget Expectation", nameId: "Ekspektasi Anggaran", stage: "KO", sectionCode: "KO-02", weight: 15, priority: "medium", schemaType: "CURRENCY_RANGE", inputConfig: { currency: "IDR" } },
+  { id: "ko-02-04", code: "02-04", name: "Functional Requirements Matrix", nameId: "Matriks Kebutuhan Fungsional", stage: "KO", sectionCode: "KO-02", weight: 24, priority: "high" },
   { id: "ko-02-05", code: "02-05", name: "Timeline Expectation", nameId: "Ekspektasi Lini Waktu", stage: "KO", sectionCode: "KO-02", weight: 15, priority: "medium", schemaType: "DATE_RANGE_WITH_DURATION" },
   // Section Total: 120
 
