@@ -97,50 +97,79 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     previewTaskCode: "01-04"
   },
 
-  // --- SECTION 01 GENERAL INFORMATION LANDSCAPE TEMPLATES (01-00-L to 01-04-L) ---
+  // --- SECTION 01 KOP V2 PORTRAIT TEMPLATES (01-01-V2P to 01-04-V2P) ---
   {
-    id: "tpl-main-cover-l",
-    code: "01-00-L",
-    name: "Main Project Cover (Landscape)",
-    nameId: "Sampul Utama Proyek (Landscape)",
+    id: "tpl-section-cover-v2p",
+    code: "01-01-V2P",
+    name: "Section Cover Page Kop v2 (Portrait)",
+    nameId: "Sampul Seksi Kop v2 (Portrait)",
     category: "General Information",
-    description: "Landscape wide Adidaya red main document cover with project title & code.",
-    previewTaskCode: "01-00"
-  },
-  {
-    id: "tpl-section-cover-l",
-    code: "01-01-L",
-    name: "Section Cover Page (Landscape)",
-    nameId: "Sampul Seksi (Landscape)",
-    category: "General Information",
-    description: "Landscape dark minimalist section cover divider page.",
+    description: "Section cover page with Kop v2 bottom title block framework in portrait.",
     previewTaskCode: "01-01"
   },
   {
-    id: "tpl-toc-l",
-    code: "01-02-L",
-    name: "Table of Contents (Landscape)",
-    nameId: "Daftar Isi Halaman (Landscape)",
+    id: "tpl-toc-v2p",
+    code: "01-02-V2P",
+    name: "Table of Contents Kop v2 (Portrait)",
+    nameId: "Daftar Isi Halaman Kop v2 (Portrait)",
     category: "General Information",
-    description: "Landscape multi-column index table of contents.",
+    description: "Auto-synchronizing index table of contents in Kop v2 portrait framework.",
     previewTaskCode: "01-02"
   },
   {
-    id: "tpl-purpose-l",
-    code: "01-03-L",
-    name: "Purpose of Stage (Landscape)",
-    nameId: "Tujuan Tahapan Pekerjaan (Landscape)",
+    id: "tpl-purpose-v2p",
+    code: "01-03-V2P",
+    name: "Purpose of Stage Kop v2 (Portrait)",
+    nameId: "Tujuan Tahapan Pekerjaan Kop v2 (Portrait)",
     category: "General Information",
-    description: "Landscape executive summary grid outlining primary objectives.",
+    description: "Executive summary list of objectives in Kop v2 portrait framework.",
     previewTaskCode: "01-03"
   },
   {
-    id: "tpl-workflow-l",
-    code: "01-04-L",
-    name: "Workflow Overview (Landscape)",
-    nameId: "Tinjauan Alur Kerja (Landscape)",
+    id: "tpl-workflow-v2p",
+    code: "01-04-V2P",
+    name: "Workflow Overview Kop v2 (Portrait)",
+    nameId: "Tinjauan Alur Kerja Kop v2 (Portrait)",
     category: "General Information",
-    description: "Landscape horizontal step-by-step stage progress breakdown.",
+    description: "Step-by-step stage progress breakdown in Kop v2 portrait framework.",
+    previewTaskCode: "01-04"
+  },
+
+  // --- SECTION 01 KOP V2 LANDSCAPE TEMPLATES (01-01-V2L to 01-04-V2L) ---
+  {
+    id: "tpl-section-cover-v2l",
+    code: "01-01-V2L",
+    name: "Section Cover Page Kop v2 (Landscape)",
+    nameId: "Sampul Seksi Kop v2 (Landscape)",
+    category: "General Information",
+    description: "Section cover page with right-side Kop v2 sidebar frame in landscape.",
+    previewTaskCode: "01-01"
+  },
+  {
+    id: "tpl-toc-v2l",
+    code: "01-02-V2L",
+    name: "Table of Contents Kop v2 (Landscape)",
+    nameId: "Daftar Isi Halaman Kop v2 (Landscape)",
+    category: "General Information",
+    description: "Multi-column index table of contents in Kop v2 landscape framework.",
+    previewTaskCode: "01-02"
+  },
+  {
+    id: "tpl-purpose-v2l",
+    code: "01-03-V2L",
+    name: "Purpose of Stage Kop v2 (Landscape)",
+    nameId: "Tujuan Tahapan Pekerjaan Kop v2 (Landscape)",
+    category: "General Information",
+    description: "Executive summary grid of objectives in Kop v2 landscape framework.",
+    previewTaskCode: "01-03"
+  },
+  {
+    id: "tpl-workflow-v2l",
+    code: "01-04-V2L",
+    name: "Workflow Overview Kop v2 (Landscape)",
+    nameId: "Tinjauan Alur Kerja Kop v2 (Landscape)",
+    category: "General Information",
+    description: "Horizontal step-by-step stage progress in Kop v2 landscape framework.",
     previewTaskCode: "01-04"
   },
   // --- SECTION 02 CLIENT BRIEF PORTRAIT TEMPLATES (02-01-P to 02-05-P) ---
