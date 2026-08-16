@@ -118,16 +118,15 @@ export default function StageDocumentPreview({
       const taskNameId = t.taskNameId || t.nameId || taskName;
 
       const cleanTaskCode = taskCodeNum.replace(/^[A-Z]{2}-/, "");
-      const isCoverTask = idx === 0 && tIdx === 0 && (taskName || "").toLowerCase().includes("cover");
-
-      const pageNo = isCoverTask ? 1 : pagesList.length + 1;
+      const isMainCoverTask = idx === 0 && tIdx === 0 && (cleanTaskCode === "01-00");
+      const pageNo = isMainCoverTask ? 1 : pagesList.length + 1;
       
       taskPageIndex[taskCodeNum] = pageNo;
       taskPageIndex[cleanTaskCode] = pageNo;
       taskPageIndex[`${secCode}_${taskCodeNum}`] = pageNo;
       taskPageIndex[`${secCode}_${cleanTaskCode}`] = pageNo;
 
-      if (isCoverTask) {
+      if (isMainCoverTask) {
         // Skip — MAIN_COVER is already page 1
         return;
       }
@@ -388,7 +387,7 @@ export default function StageDocumentPreview({
 
             {/* DYNAMIC TABLE OF CONTENTS INDEX PREVIEW */}
             {isTOC ? (() => {
-              const ITEMS_PER_PAGE = 26;
+              const ITEMS_PER_PAGE = isLandscape ? 36 : 26;
               const pageIdxOffset = (pageItem as any).tocPageIndex ?? 0;
               const allTocEntries = pagesList.filter(item => item.type !== "MAIN_COVER");
               const startIndex = pageIdxOffset * ITEMS_PER_PAGE;
@@ -396,7 +395,7 @@ export default function StageDocumentPreview({
 
               return (
                 <div className="flex-1 my-auto py-2 space-y-1 overflow-hidden">
-                  <div className="space-y-1">
+                  <div className={clsx("gap-x-8 gap-y-1.5", isLandscape ? "grid grid-cols-2" : "space-y-1")}>
                     {visibleEntries.map((item, idx) => {
                       const globalIdx = startIndex + idx;
                       const pageNum = globalIdx + 2; // +2 for Cover Page offset
@@ -421,7 +420,7 @@ export default function StageDocumentPreview({
                                 {titleEn}
                               </span>
                               {titleId && (
-                                <span className="text-[10px] font-normal italic text-neutral-400 shrink-0">
+                                <span className="text-[10px] font-normal italic text-neutral-400 shrink-0 truncate max-w-[140px]">
                                   {titleId}
                                 </span>
                               )}
@@ -437,13 +436,13 @@ export default function StageDocumentPreview({
                 </div>
               );
             })() : pageItem.taskCode === "01-03" ? (
-              /* REAL CLEAN TYPOGRAPHY LIST FOR PURPOSE OF STAGE (01-03) */
-              <div className="flex-1 my-auto py-2 space-y-4">
-                <div className="space-y-4">
+              /* REAL CLEAN TYPOGRAPHY LIST FOR PURPOSE OF STAGE (01-03) - 2 COLUMNS (TOP-TO-BOTTOM THEN RIGHT) */
+              <div className="flex-1 my-auto py-2">
+                <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4 max-w-3xl")}>
                   {(data.purposeList || defaultKickoffData.purposeList).map((item, idx) => (
                     <div
                       key={item.id || idx}
-                      className="flex items-baseline gap-3.5 pb-3 border-b border-neutral-100 last:border-0"
+                      className="flex items-baseline gap-3.5 pb-3 border-b border-neutral-100 break-inside-avoid"
                     >
                       <span className="font-mono text-xs font-bold text-brand-red shrink-0">
                         0{idx + 1}
@@ -461,22 +460,30 @@ export default function StageDocumentPreview({
                 </div>
               </div>
             ) : pageItem.taskCode === "01-04" ? (
-              /* CLEAN VERTICAL TIMELINE WITH ACTIVE RED STAGE & STACKED CHILDREN LIST */
-              <div className="flex-1 my-auto py-2 space-y-4">
-                <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2.5 before:bottom-2.5 before:w-0.5 before:bg-neutral-200">
+              /* CLEAN WORKFLOW TIMELINE (01-04) - RESPONSIVE 2 COLUMNS IN LANDSCAPE (TOP-TO-BOTTOM THEN RIGHT) */
+              <div className="flex-1 my-auto py-2">
+                <div className={clsx(isLandscape ? "columns-2 gap-8 space-y-4" : "space-y-4 max-w-3xl")}>
                   {(data.workflowSteps || defaultKickoffData.workflowSteps).map((step, idx) => {
-                    const isCurrentStage = step.stageName.toLowerCase().includes((data.stageName || "").toLowerCase()) ||
-                                          (data.stageName || "").toLowerCase().includes(step.stageName.toLowerCase());
+                    const currentStageStr = (data.stageName || "Kickoff").toLowerCase();
+                    const stepNameStr = step.stageName.toLowerCase();
+                    const stepCodeStr = step.stageCode.toLowerCase();
+
+                    // Flexible match mapping for acronyms & stage names (e.g. Kickoff <-> KO, Engineering Design <-> ED)
+                    const isCurrentStage =
+                      stepNameStr.includes(currentStageStr) ||
+                      currentStageStr.includes(stepNameStr) ||
+                      (currentStageStr.includes("kickoff") && (stepCodeStr.includes("ko") || stepNameStr.includes("kick"))) ||
+                      (currentStageStr.includes("engineering") && (stepCodeStr.includes("ed") || stepNameStr.includes("engineer")));
 
                     return (
-                      <div key={step.id || idx} className="relative flex items-start gap-3.5">
+                      <div key={step.id || idx} className="relative flex items-start gap-3.5 pl-6 pb-3 border-b border-neutral-100 break-inside-avoid before:absolute before:left-2 before:top-2.5 before:bottom-0 before:w-0.5 before:bg-neutral-200">
                         {/* Timeline Circle Node */}
                         <span className={clsx(
-                          "absolute -left-6 top-1 w-4 h-4 rounded-full border-2 bg-white flex items-center justify-center font-mono text-[9px] font-bold shrink-0 z-10",
+                          "absolute left-0 top-1 w-4 h-4 rounded-full border-2 bg-white flex items-center justify-center font-mono text-[9px] font-bold shrink-0 z-10",
                           isCurrentStage ? "border-brand-red bg-brand-red text-white" : "border-neutral-300 text-neutral-400"
                         )} />
 
-                        <div className="flex-1 min-w-0 pb-3 border-b border-neutral-100 last:border-0 space-y-1.5">
+                        <div className="flex-1 min-w-0 space-y-1.5">
                           {/* Stage Header Row */}
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
@@ -498,14 +505,14 @@ export default function StageDocumentPreview({
                             </span>
                           </div>
 
-                          {/* Stacked Vertical Children Items (No Columns) */}
+                          {/* Stacked Vertical Children Items */}
                           <div className="space-y-1 pl-1 pt-0.5">
                             {step.items?.map((sub, sIdx) => (
                               <div key={sub.id || sIdx} className="flex items-baseline gap-2 text-[11px] leading-snug">
                                 <span className={clsx("font-bold text-[10px] shrink-0", isCurrentStage ? "text-brand-red" : "text-neutral-400")}>•</span>
                                 <div className="flex items-baseline gap-2 truncate">
                                   <span className="font-semibold text-neutral-800 shrink-0">{sub.titleEn}</span>
-                                  <span className="font-normal italic text-neutral-400 truncate">({sub.titleId})</span>
+                                  <span className="font-normal italic text-neutral-400 truncate text-[10px]">({sub.titleId})</span>
                                 </div>
                               </div>
                             ))}
@@ -1894,9 +1901,7 @@ export default function StageDocumentPreview({
   const [drawingOrientation, setDrawingOrientation] = useState<"portrait" | "landscape">("landscape");
 
   const currentTaskCode = pagesList[activePage - 1]?.type === "TASK_PAGE" ? (pagesList[activePage - 1] as any)?.taskCode : "";
-  const isCurrentTaskDrawing = typeof currentTaskCode === "string" && currentTaskCode.startsWith("04-");
-  const isLandscapeCode = typeof currentTaskCode === "string" && ["04-07", "04-08", "04-09", "04-10", "04-11", "04-12"].includes(currentTaskCode);
-  const isLandscape = isCurrentTaskDrawing && (customOrientation ? customOrientation === "landscape" : (isLandscapeCode || drawingOrientation === "landscape"));
+  const isLandscape = customOrientation === "landscape" || (typeof currentTaskCode === "string" && (currentTaskCode.endsWith("-L") || ["04-07", "04-08", "04-09", "04-10", "04-11", "04-12", "04-13"].includes(currentTaskCode)));
   const sheetWidth = isLandscape ? 1123 : 794;
   const sheetHeight = isLandscape ? 794 : 1123;
 

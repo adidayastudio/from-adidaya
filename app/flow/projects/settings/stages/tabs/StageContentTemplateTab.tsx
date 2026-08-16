@@ -31,49 +31,97 @@ const CATEGORIES = [
 ] as const;
 
 const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] = [
+  // --- SECTION 01 GENERAL INFORMATION PORTRAIT TEMPLATES (01-00-P to 01-04-P) ---
   {
-    id: "tpl-main-cover",
-    code: "01-00",
-    name: "Main Project Cover",
-    nameId: "Sampul Utama Proyek",
+    id: "tpl-main-cover-p",
+    code: "01-00-P",
+    name: "Main Project Cover (Portrait)",
+    nameId: "Sampul Utama Proyek (Portrait)",
     category: "General Information",
     description: "Standard Studio Adidaya red main document cover with project title & code.",
     previewTaskCode: "01-00"
   },
   {
-    id: "tpl-section-cover",
-    code: "01-01",
-    name: "Section Cover Page",
-    nameId: "Sampul Seksi",
+    id: "tpl-section-cover-p",
+    code: "01-01-P",
+    name: "Section Cover Page (Portrait)",
+    nameId: "Sampul Seksi (Portrait)",
     category: "General Information",
     description: "Dark minimalist section cover divider page with Indonesian section subtitle.",
     previewTaskCode: "01-01"
   },
   {
-    id: "tpl-toc",
-    code: "01-02",
-    name: "Table of Contents",
-    nameId: "Daftar Isi Halaman",
+    id: "tpl-toc-p",
+    code: "01-02-P",
+    name: "Table of Contents (Portrait)",
+    nameId: "Daftar Isi Halaman (Portrait)",
     category: "General Information",
     description: "Auto-synchronizing index table of contents for dynamic document sections.",
     previewTaskCode: "01-02"
   },
   {
-    id: "tpl-purpose",
-    code: "01-03",
-    name: "Purpose of Stage",
-    nameId: "Tujuan Tahapan Pekerjaan",
+    id: "tpl-purpose-p",
+    code: "01-03-P",
+    name: "Purpose of Stage (Portrait)",
+    nameId: "Tujuan Tahapan Pekerjaan (Portrait)",
     category: "General Information",
     description: "Executive summary list outlining primary objectives and deliverables.",
     previewTaskCode: "01-03"
   },
   {
-    id: "tpl-workflow",
-    code: "01-04",
-    name: "Workflow Overview",
-    nameId: "Tinjauan Alur Kerja",
+    id: "tpl-workflow-p",
+    code: "01-04-P",
+    name: "Workflow Overview (Portrait)",
+    nameId: "Tinjauan Alur Kerja (Portrait)",
     category: "General Information",
     description: "Step-by-step stage progress breakdown with timeline badges.",
+    previewTaskCode: "01-04"
+  },
+
+  // --- SECTION 01 GENERAL INFORMATION LANDSCAPE TEMPLATES (01-00-L to 01-04-L) ---
+  {
+    id: "tpl-main-cover-l",
+    code: "01-00-L",
+    name: "Main Project Cover (Landscape)",
+    nameId: "Sampul Utama Proyek (Landscape)",
+    category: "General Information",
+    description: "Landscape wide Adidaya red main document cover with project title & code.",
+    previewTaskCode: "01-00"
+  },
+  {
+    id: "tpl-section-cover-l",
+    code: "01-01-L",
+    name: "Section Cover Page (Landscape)",
+    nameId: "Sampul Seksi (Landscape)",
+    category: "General Information",
+    description: "Landscape dark minimalist section cover divider page.",
+    previewTaskCode: "01-01"
+  },
+  {
+    id: "tpl-toc-l",
+    code: "01-02-L",
+    name: "Table of Contents (Landscape)",
+    nameId: "Daftar Isi Halaman (Landscape)",
+    category: "General Information",
+    description: "Landscape multi-column index table of contents.",
+    previewTaskCode: "01-02"
+  },
+  {
+    id: "tpl-purpose-l",
+    code: "01-03-L",
+    name: "Purpose of Stage (Landscape)",
+    nameId: "Tujuan Tahapan Pekerjaan (Landscape)",
+    category: "General Information",
+    description: "Landscape executive summary grid outlining primary objectives.",
+    previewTaskCode: "01-03"
+  },
+  {
+    id: "tpl-workflow-l",
+    code: "01-04-L",
+    name: "Workflow Overview (Landscape)",
+    nameId: "Tinjauan Alur Kerja (Landscape)",
+    category: "General Information",
+    description: "Landscape horizontal step-by-step stage progress breakdown.",
     previewTaskCode: "01-04"
   },
   {
@@ -406,9 +454,9 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
 
     let matchesFormat = true;
     if (selectedFormat === "V1-P") {
-      matchesFormat = ["04-01", "04-02", "04-03", "04-04", "04-05", "04-06"].includes(tpl.code) || !tpl.code.startsWith("04-");
+      matchesFormat = tpl.code.endsWith("-P") || ["04-01", "04-02", "04-03", "04-04", "04-05", "04-06"].includes(tpl.code) || (!tpl.code.endsWith("-L") && !tpl.code.endsWith("-V2P") && !tpl.code.endsWith("-V2L"));
     } else if (selectedFormat === "V1-L") {
-      matchesFormat = ["04-07", "04-08", "04-09", "04-10", "04-12", "04-13"].includes(tpl.code) || !tpl.code.startsWith("04-");
+      matchesFormat = tpl.code.endsWith("-L") || ["04-07", "04-08", "04-09", "04-10", "04-12", "04-13"].includes(tpl.code);
     } else if (selectedFormat === "V2-P") {
       matchesFormat = tpl.code.endsWith("-V2P");
     } else if (selectedFormat === "V2-L") {
@@ -529,9 +577,9 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                   <div
                     onClick={() => {
                       setSelectedTemplate(tpl);
-                      if (["04-07", "04-08", "04-09", "04-10", "04-11", "04-12", "04-13"].includes(tpl.code)) {
+                      if (tpl.code.endsWith("-L") || ["04-07", "04-08", "04-09", "04-10", "04-12", "04-13"].includes(tpl.code)) {
                         setDrawingOrientation("landscape");
-                      } else if (["04-01", "04-02", "04-03", "04-04", "04-05", "04-06"].includes(tpl.code)) {
+                      } else {
                         setDrawingOrientation("portrait");
                       }
                     }}
@@ -1290,16 +1338,8 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
               activeSubTask={
                 selectedTemplate.code === "02-05"
                   ? activeSubPage === 2 ? "02-05_p2" : "02-05"
-                  : selectedTemplate.code
+                  : selectedTemplate.previewTaskCode || selectedTemplate.code.replace(/-(P|L|V2P|V2L)$/, "")
               }
-              customTasks={PRESET_TEMPLATES.map((t) => ({
-                id: `ko-${t.code}`,
-                code: t.code,
-                name: t.name,
-                nameId: t.nameId,
-                stage: "KO",
-                sectionCode: `KO-${t.code.split("-")[0]}`
-              }))}
               customOrientation={drawingOrientation}
               customPhotoCount={photoCount}
               hideToolbar={true}
