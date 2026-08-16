@@ -641,7 +641,7 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     nameId: "Multi Gambar Grid Kop v2 (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait grid gallery layout for displaying 4 drawing images in Kop v2 framework.",
-    previewTaskCode: "04-02"
+    previewTaskCode: "04-02-V2P"
   },
   {
     id: "tpl-v2-image-desc-p",
@@ -668,7 +668,7 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     nameId: "Multi Gambar & Deskripsi Kop v2 (Portrait)",
     category: "Drawings, Diagram, and Image",
     description: "Portrait multi-image grid combined with summary description text in Kop v2 framework.",
-    previewTaskCode: "04-05"
+    previewTaskCode: "04-05-V2P"
   },
   {
     id: "tpl-v2-full-image-overlay-p",
@@ -1618,6 +1618,26 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                               </div>
                             </div>
 
+                            {/* Block 3 FOR 04-02 MULTIPLE IMAGE (GRID CAPTIONS) */}
+                            {(tpl.code === "04-02" || tpl.code === "04-02-V2P" || tpl.code === "04-02-P") && (
+                              <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
+                                <span className="text-[10px] font-bold text-brand-red uppercase block">3. Image Captions & Labels (4 Grid Items)</span>
+                                <div className="space-y-1.5 pt-0.5">
+                                  {[
+                                    { num: "01", label: "NORTH FACADE VIEW" },
+                                    { num: "02", label: "MAIN ACCESS ROAD" },
+                                    { num: "03", label: "EXISTING BOUNDARY WALL" },
+                                    { num: "04", label: "NEIGHBORING SETBACK" }
+                                  ].map((item, idx) => (
+                                    <div key={idx} className="flex items-center justify-between gap-1.5 text-xs pb-1 border-b border-neutral-100 dark:border-neutral-800 last:border-0 last:pb-0">
+                                      <span className="text-[9px] font-mono font-bold text-neutral-400 uppercase shrink-0">IMG #{item.num}</span>
+                                      <span className="text-[10px] font-mono font-bold text-neutral-800 dark:text-neutral-200 truncate">{item.label}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                             {/* Block 3 FOR IMAGE AND DESC TEMPLATES (04-03 & 04-09): Concept Notes / Narrative Text */}
                             {(tpl.code === "04-03" || tpl.code === "04-09") && (
                               <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
@@ -1702,8 +1722,8 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
                               </div>
                             )}
 
-                            {/* Block 3 FOR 04-05-P (PORTRAIT MULTIPLE IMAGE & DESC): DYNAMIC SELECTOR (1 - 5 PHOTOS) */}
-                            {(tpl.code === "04-05" || tpl.code === "04-05-P") && (
+                            {/* Block 3 FOR 04-05 PORTRAIT MULTIPLE IMAGE & DESC: DYNAMIC SELECTOR (1 - 5 PHOTOS) */}
+                            {(tpl.code === "04-05" || tpl.code === "04-05-P" || tpl.code === "04-05-V2P") && (
                               <div className="space-y-1.5 p-2.5 rounded-2xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-700/80">
                                 <span className="text-[10px] font-bold text-brand-red uppercase block">3. Multi Image & Desc Selector (1 - 5 Photos)</span>
                                 <div className="space-y-1.5 pt-0.5">
@@ -1897,6 +1917,7 @@ export default function StageContentTemplateTab({ workspaceId, projectTypeId, se
             <StageDocumentPreview
               data={{
                 ...livePreviewData,
+                photoCount: photoCount,
                 frameworkVersion: selectedTemplate.code.includes("V2") || selectedTemplate.code.includes("-v2") || selectedFormat.startsWith("V2") ? "v2" : "v1"
               }}
               activeSection={`KO-${selectedTemplate.code.split("-")[0]}`}

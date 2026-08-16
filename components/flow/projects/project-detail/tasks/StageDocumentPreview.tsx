@@ -1444,7 +1444,7 @@ export default function StageDocumentPreview({
           }
 
           return (
-            <div className="absolute inset-0 w-full h-full bg-white p-4 flex flex-col gap-4 overflow-hidden select-none">
+            <div className="absolute inset-0 w-full h-full bg-white p-4 flex flex-col justify-between overflow-hidden select-none">
               {/* CANVAS WORKSPACE: REAL TASK CONTENT */}
               <div className={clsx("flex-1 w-full relative bg-white flex flex-col justify-between overflow-hidden", !isImagePage && "pt-[0.5cm] px-[0.5cm]")}>
                 {!pageItem.taskCode.includes("04-06") && !pageItem.taskCode.includes("04-05-L") && (
@@ -2166,19 +2166,25 @@ export default function StageDocumentPreview({
                       </div>
                     </div>
                   ) : (pageItem.taskCode === "04-02" || pageItem.taskCode.endsWith("04-02") || pageItem.taskCode.endsWith("04-02-V2P")) ? (
-                    /* 04-02-V2P: MULTIPLE IMAGE PORTRAIT */
+                    /* 04-02-V2P: MULTIPLE IMAGE PORTRAIT (MATCHES V1 100%) */
                     <div className="flex-1 py-2 flex flex-col justify-between space-y-4 h-full">
-                      <div className="grid grid-cols-2 gap-4 flex-1">
+                      <div className="grid grid-cols-2 gap-4 flex-1 min-h-[460px]">
                         {[
-                          { img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80", tag: "NORTH FACADE VIEW" },
-                          { img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80", tag: "MAIN ACCESS ROAD" },
-                          { img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80", tag: "EXISTING BOUNDARY WALL" },
-                          { img: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=600&q=80", tag: "NEIGHBORING SETBACK" }
-                        ].map((item, idx) => (
-                          <div key={idx} className="relative w-full h-full rounded-xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm">
-                            <img src={item.img} alt={item.tag} className="w-full h-full object-cover" />
-                            <div className="absolute bottom-2 left-2 bg-neutral-900/80 backdrop-blur-xs px-2 py-1 rounded text-[9px] font-mono font-bold text-white tracking-wider">
-                              {item.tag}
+                          { img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80", title: "Main Facade Entry View", sub: "Tampak Depan Utama" },
+                          { img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=600&q=80", title: "Outdoor Pool Deck Zone", sub: "Area Dek Kolam Renang" },
+                          { img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=600&q=80", title: "Living Lounge Interior", sub: "Interior Ruang Keluarga" },
+                          { img: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=600&q=80", title: "Side Setback & Landscape", sub: "Sempadan Samping Tapak" }
+                        ].map((item, iIdx) => (
+                          <div key={iIdx} className="flex flex-col justify-between space-y-1.5 h-full">
+                            <div className="relative w-full flex-1 rounded-2xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-sm min-h-[190px]">
+                              <img src={item.img} alt={item.title} className="w-full h-full object-cover" />
+                              <div className="absolute top-2.5 left-2.5 bg-neutral-900/85 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold text-white shadow-sm border border-white/20">
+                                0{iIdx + 1}
+                              </div>
+                            </div>
+                            <div className="px-1 pt-0.5">
+                              <h4 className="font-extrabold text-neutral-900 text-xs leading-snug">{item.title}</h4>
+                              <p className="text-[10px] font-semibold italic text-neutral-400 leading-tight">{item.sub}</p>
                             </div>
                           </div>
                         ))}
@@ -2260,75 +2266,86 @@ export default function StageDocumentPreview({
                       </div>
                     </div>
                   ) : (pageItem.taskCode === "04-05" || pageItem.taskCode.endsWith("04-05") || pageItem.taskCode.endsWith("04-05-V2P")) ? (
-                    /* 04-05-V2P: MULTIPLE IMAGE AND DESC PORTRAIT */
-                    <div className="flex-1 py-2 flex flex-col justify-start space-y-4 h-full">
-                      <div className="py-0.5 overflow-hidden flex-1 flex flex-col justify-evenly">
-                        {[
-                          {
-                            img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=500&q=80",
-                            titleEn: "01. Main Facade Entrance & Wood Cladding",
-                            titleId: "Akses Fasad Utama & Panel Kayu",
-                            descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal."
-                          },
-                          {
-                            img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=500&q=80",
-                            titleEn: "02. Outdoor Terrace & Infinity Pool Deck",
-                            titleId: "Teras Luar & Dek Kolam Renang",
-                            descId: "Area teras luar luas terintegrasi batu alam."
-                          },
-                          {
-                            img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=500&q=80",
-                            titleEn: "03. Living Lounge Spatial Flow & High Ceiling",
-                            titleId: "Ruang Keluarga Plafon Tinggi",
-                            descId: "Pavilion ruang keluarga memaksimalkan pencahayaan alami."
-                          }
-                        ].map((row, rIdx) => (
-                          <div key={rIdx} className="grid grid-cols-12 items-start border-b border-neutral-200/60 last:border-0 min-w-0 gap-3 py-1.5">
-                            <div className="col-span-5 relative w-full rounded-xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-2xs shrink-0 aspect-[16/9]">
-                              <img src={row.img} alt={row.titleEn} className="w-full h-full object-cover" />
-                              <div className="absolute top-1.5 left-1.5 bg-neutral-900/85 backdrop-blur-md px-1.5 py-0.5 rounded-full text-[8px] font-mono font-bold text-white shadow-xs border border-white/20">
-                                0{rIdx + 1}
+                    /* 04-05-V2P: MULTIPLE IMAGE AND DESC PORTRAIT (1:1 WIDTH SPLIT + PROPORTIONAL HEIGHTS) */
+                    <div className="flex-1 py-1 flex flex-col justify-start h-full overflow-hidden">
+                      {(() => {
+                        const count = Math.min(Math.max((data as any)?.photoCount || 3, 1), 5);
+                        return (
+                          <div className={clsx("flex-1 flex flex-col h-full overflow-hidden", count <= 2 ? "justify-start space-y-4" : "justify-between")}>
+                            {[
+                              {
+                                img: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=500&q=80",
+                                titleEn: "01. Main Facade Entrance & Wood Cladding",
+                                titleId: "Akses Fasad Utama & Panel Kayu",
+                                descId: "Tampilan pintu masuk utama dengan kisi kayu vertikal."
+                              },
+                              {
+                                img: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=500&q=80",
+                                titleEn: "02. Outdoor Terrace & Infinity Pool Deck",
+                                titleId: "Teras Luar & Dek Kolam Renang",
+                                descId: "Area teras luar luas terintegrasi batu alam."
+                              },
+                              {
+                                img: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=500&q=80",
+                                titleEn: "03. Living Lounge Spatial Flow & High Ceiling",
+                                titleId: "Ruang Keluarga Plafon Tinggi",
+                                descId: "Pavilion ruang keluarga memaksimalkan pencahayaan alami."
+                              },
+                              {
+                                img: "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=500&q=80",
+                                titleEn: "04. Side Setback & Perimeter Landscape",
+                                titleId: "Sempadan Samping & Lanskap Perimeter",
+                                descId: "Penataan batas sempadan dengan peneduh alami."
+                              },
+                              {
+                                img: "https://images.unsplash.com/photo-1600585152220-90363fe7e115?auto=format&fit=crop&w=500&q=80",
+                                titleEn: "05. Upper Level Cantilever Balcony Detail",
+                                titleId: "Balkon Kantilever Tingkat Atas",
+                                descId: "Detail balkon lantai atas dengan railing kaca transparan."
+                              }
+                            ].slice(0, count).map((row, rIdx) => (
+                              <div
+                                key={rIdx}
+                                className={clsx(
+                                  "grid grid-cols-2 items-start min-w-0 gap-4 overflow-hidden",
+                                  count <= 2 ? "shrink-0" : "flex-1 py-1"
+                                )}
+                              >
+                                <div
+                                  className={clsx(
+                                    "col-span-1 relative w-full rounded-xl overflow-hidden border border-neutral-200/80 bg-neutral-100 shadow-2xs shrink-0",
+                                    count === 1 ? "aspect-[4/3]" : count === 2 ? "aspect-[16/10]" : "h-full"
+                                  )}
+                                >
+                                  <img src={row.img} alt={row.titleEn} className="w-full h-full object-cover" />
+                                  <div className="absolute top-1.5 left-1.5 bg-neutral-900/85 backdrop-blur-md px-1.5 py-0.5 rounded-full text-[8px] font-mono font-bold text-white shadow-xs border border-white/20">
+                                    0{rIdx + 1}
+                                  </div>
+                                </div>
+                                <div className="col-span-1 space-y-1 min-w-0 pt-0.5">
+                                  <h4 className={clsx("font-black text-neutral-900 leading-tight truncate", count >= 4 ? "text-[10px]" : "text-xs")}>{row.titleEn}</h4>
+                                  <p className={clsx("font-semibold italic text-neutral-400 leading-tight truncate", count >= 4 ? "text-[9px]" : "text-[11px]")}>{row.titleId}</p>
+                                  <p className={clsx("font-normal italic text-neutral-500 leading-tight", count >= 4 ? "line-clamp-1 text-[8px]" : "line-clamp-3 text-xs")}>{row.descId}</p>
+                                </div>
                               </div>
-                            </div>
-                            <div className="col-span-7 space-y-0.5 min-w-0">
-                              <h4 className="font-black text-neutral-900 leading-tight truncate text-[11px]">{row.titleEn}</h4>
-                              <p className="font-semibold italic text-neutral-400 leading-tight truncate text-[10px]">{row.titleId}</p>
-                              <p className="text-[9px] font-normal italic text-neutral-500 leading-tight line-clamp-2">{row.descId}</p>
-                            </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })()}
                     </div>
                   ) : (pageItem.taskCode === "04-06" || pageItem.taskCode.endsWith("04-06") || pageItem.taskCode.endsWith("04-06-V2P")) ? (
-                    /* 04-06-V2P: FULL BLEED IMAGE OVERLAY PORTRAIT */
-                    <div className="absolute inset-0 w-full h-full overflow-hidden bg-neutral-900 flex flex-col justify-between p-12 select-none">
+                    /* 04-06-V2P: TRUE FULL BLEED IMAGE OVERLAY PORTRAIT (BEHIND KOP DOWN TO BOTTOM EDGE) */
+                    <div className="-mt-4 -mx-4 -mb-[136px] flex-1 relative overflow-hidden bg-neutral-900 flex flex-col justify-end p-8 pb-[152px] select-none z-0">
                       <img
                         src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80"
                         alt="Full Bleed Architectural Visualization"
                         className="absolute inset-0 w-full h-full object-cover"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/85 via-neutral-950/40 to-neutral-950/90 pointer-events-none" />
-
-                      <div className="relative z-10 flex items-start justify-between border-b border-white/20 pb-4">
-                        <div>
-                          <span className="font-mono text-xs font-bold text-brand-red uppercase tracking-widest block">
-                            ARCHITECTURAL VISUALIZATION
-                          </span>
-                          <h2 className="text-2xl font-black text-white tracking-tight mt-0.5">
-                            {displayTaskName}
-                          </h2>
-                          <p className="text-xs font-semibold text-neutral-300 italic">
-                            {displayTaskNameId}
-                          </p>
-                        </div>
-                        <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/10 text-white backdrop-blur-md border border-white/20">
-                          FULL-BLEED
-                        </span>
-                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/90 via-neutral-950/20 to-transparent pointer-events-none" />
 
                       <div className="relative z-10 space-y-1 max-w-xl">
-                        <h4 className="text-sm font-bold text-white">Main Entrance & Facade Lighting Ambience</h4>
-                        <p className="text-xs text-neutral-300 leading-relaxed italic">
+                        <h4 className="text-base font-black text-white tracking-tight">Main Entrance & Facade Lighting Ambience</h4>
+                        <p className="text-xs font-medium text-neutral-300 leading-relaxed italic">
                           Tampilan suasana pencahayaan fasad dan pintu masuk utama pada malam hari.
                         </p>
                       </div>
@@ -2346,7 +2363,7 @@ export default function StageDocumentPreview({
               </div>
 
               {/* BOTTOM HORIZONTAL KOP TITLE BLOCK (STRICT EQUAL 4-ROW HEIGHT GRID ~120PX / 3CM) */}
-              <div className="h-[120px] max-h-[3cm] w-full border-t-2 border-neutral-900 pt-1 grid grid-cols-12 gap-x-2 text-[8px] shrink-0 items-stretch">
+              <div className="h-[120px] max-h-[3cm] w-full border-t-2 border-neutral-900 pt-1 grid grid-cols-12 gap-x-2 text-[8px] shrink-0 items-stretch bg-white relative z-10">
                 {/* COL 1: PROJECTS (2 ROWS), LOCATION (1 ROW), STAGE (1 ROW) */}
                 <div className="col-span-3 border-r border-neutral-200 pr-2 grid grid-rows-4 gap-y-0.5">
                   <div className="row-span-2 border-b border-neutral-100 flex flex-col justify-start pt-0.5">
