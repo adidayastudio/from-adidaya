@@ -463,8 +463,8 @@ export function CrewAttendanceReportPreview({
                     onClick={() => onSelectNode?.(item.nodeId)}
                     className="hover:bg-neutral-50/70 dark:hover:bg-neutral-800/40 transition-colors cursor-pointer group"
                   >
-                    <td className="py-3.5 pr-4 align-top">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80 text-xs font-mono font-bold tracking-tight group-hover:border-blue-300 group-hover:text-blue-600 transition-colors">
+                    <td className="py-3.5 pr-4 align-top whitespace-nowrap">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700/80 text-xs font-mono font-bold tracking-tight whitespace-nowrap shrink-0 group-hover:border-blue-300 group-hover:text-blue-600 transition-colors">
                         {item.code}
                       </span>
                     </td>
