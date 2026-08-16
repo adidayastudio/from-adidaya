@@ -400,7 +400,7 @@ export default function CrewDailyLogReportPreview({
         {/* LEFT: Code -> Title */}
         <div className="space-y-1">
           <div className="text-xs font-mono font-bold text-neutral-400">
-            95 03 00
+            95 20 00
           </div>
           <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight leading-snug">
             Crew Daily Log
@@ -630,7 +630,7 @@ export default function CrewDailyLogReportPreview({
                                 <div className="text-[5.5px] font-black text-neutral-900 tracking-wider leading-tight pt-1">Daily Crew Log</div>
                                 <div className="text-[5px] font-semibold text-neutral-500 tracking-tight leading-tight">Crew Timesheet</div>
                                 <div className="w-full border-t border-neutral-300 my-1" />
-                                <div className="font-black text-[13px] text-neutral-900 tracking-tight leading-none">95 03 00</div>
+                                <div className="font-black text-[13px] text-neutral-900 tracking-tight leading-none">95 20 00</div>
                                 <div className="w-full border-t border-neutral-200 my-1" />
                                 <div className="w-full grid grid-cols-2 gap-x-1 text-[5px] text-neutral-500">
                                   <span className="text-left font-bold">Log Date</span>
@@ -772,7 +772,7 @@ export default function CrewDailyLogReportPreview({
                       {/* PAGE FOOTER FOR EVERY PAGE */}
                       <div className="pt-2 border-t border-neutral-200 flex items-center justify-between text-[7.5px] font-bold text-neutral-400 tracking-wider">
                         <span>Adidaya Studio | Crew Daily Log</span>
-                        <span>CRW 95 03 00 | {pageIdx + 1}/{totalPages}</span>
+                        <span>CRW 95 20 00 | {pageIdx + 1}/{totalPages}</span>
                       </div>
                     </div>
                   );

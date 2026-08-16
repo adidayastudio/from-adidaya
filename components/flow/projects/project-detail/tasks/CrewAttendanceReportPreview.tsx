@@ -392,7 +392,7 @@ export function CrewAttendanceReportPreview({
         {/* LEFT: Code -> Title */}
         <div className="space-y-1">
           <div className="text-xs font-mono font-bold text-neutral-400">
-            95 03 01
+            95 21 00
           </div>
           <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight leading-snug">
             Attendance
@@ -454,9 +454,9 @@ export function CrewAttendanceReportPreview({
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60 font-medium">
                 {[
                   { code: "95 01 00", name: "Crew Directory", description: "Daftar induk profil personil, keahlian, sertifikasi K3, dan data kontak.", nodeId: "95-01-00" },
-                  { code: "95 02 00", name: "Crew Assignment", description: "Penyusunan alokasi tim personil ke dalam zona dan sub-pekerjaan WBS.", nodeId: "95-02-00" },
-                  { code: "95 03 00", name: "Crew Daily Log", description: "Laporan harian log jam kerja regular dan lembur (OT) personil.", nodeId: "95-03-00" },
-                  { code: "95 04 00", name: "Crew Payroll", description: "Kalkulasi rekapitulasi upah harian, mingguan, dan honor lembur personil.", nodeId: "95-04-00" }
+                  { code: "95 10 00", name: "Crew Assignment", description: "Penyusunan alokasi tim personil ke dalam zona dan sub-pekerjaan WBS.", nodeId: "95-10-00" },
+                  { code: "95 20 00", name: "Crew Daily Log", description: "Laporan harian log jam kerja regular dan lembur (OT) personil.", nodeId: "95-20-00" },
+                  { code: "95 30 00", name: "Crew Payroll", description: "Kalkulasi rekapitulasi upah harian, mingguan, dan honor lembur personil.", nodeId: "95-30-00" }
                 ].map((item) => (
                   <tr
                     key={item.code}
@@ -621,7 +621,7 @@ export function CrewAttendanceReportPreview({
                                 <div className="text-[5.5px] font-black text-neutral-900 tracking-wider leading-tight pt-1">Attendance Report</div>
                                 <div className="text-[5px] font-semibold text-neutral-500 tracking-tight leading-tight">Rekapitulasi Kehadiran</div>
                                 <div className="w-full border-t border-neutral-300 my-1" />
-                                <div className="font-black text-[13px] text-neutral-900 tracking-tight leading-none">95 03 01</div>
+                                <div className="font-black text-[13px] text-neutral-900 tracking-tight leading-none">95 21 00</div>
                                 <div className="w-full border-t border-neutral-200 my-1" />
                                 <div className="w-full grid grid-cols-2 gap-x-1 text-[5px] text-neutral-500">
                                   <span className="text-left font-bold">Log Date</span>
@@ -742,7 +742,7 @@ export function CrewAttendanceReportPreview({
                       {/* PAGE FOOTER FOR EVERY PAGE */}
                       <div className="pt-2 border-t border-neutral-200 flex items-center justify-between text-[7.5px] font-bold text-neutral-400 tracking-wider">
                         <span>Adidaya Studio | Attendance</span>
-                        <span>CRW 95 03 01 | {pageIdx + 1}/{totalPages}</span>
+                        <span>CRW 95 21 00 | {pageIdx + 1}/{totalPages}</span>
                       </div>
                     </div>
                   );

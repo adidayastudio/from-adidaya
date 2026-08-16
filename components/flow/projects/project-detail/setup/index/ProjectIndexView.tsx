@@ -27,6 +27,7 @@ import KickoffDocumentPreview from "@/components/flow/projects/project-detail/ta
 import DCRDailyConstructionReportPreview from "@/components/flow/projects/project-detail/tasks/DCRDailyConstructionReportPreview";
 import CrewDailyLogReportPreview from "@/components/flow/projects/project-detail/tasks/CrewDailyLogReportPreview";
 import { CrewAttendanceReportPreview } from "@/components/flow/projects/project-detail/tasks/CrewAttendanceReportPreview";
+import { CrewWorkingHoursReportPreview } from "@/components/flow/projects/project-detail/tasks/CrewWorkingHoursReportPreview";
 import { defaultKickoffData } from "@/components/flow/projects/project-detail/tasks/defaultKickoffData";
 import { KO_SECTIONS } from "@/components/flow/projects/project-detail/setup/stages/data/ko";
 import { SD_SECTIONS } from "@/components/flow/projects/project-detail/setup/stages/data/sd";
@@ -628,47 +629,42 @@ const TREE_DATA: TreeNode[] = [
         title: "CRW — Crew",
         children: [
           { id: "95-01-00", code: "95 01 00", title: "Crew Directory" },
-          { id: "95-02-00", code: "95 02 00", title: "Crew Assignment" },
+          { id: "95-10-00", code: "95 10 00", title: "Crew Assignment" },
           {
-            id: "95-03-00",
-            code: "95 03 00",
+            id: "95-20-00",
+            code: "95 20 00",
             title: "Crew Daily Log",
             children: [
-              { id: "95-03-01", code: "95 03 01", title: "Attendance" },
-              { id: "95-03-02", code: "95 03 02", title: "Working Hours" },
-              { id: "95-03-03", code: "95 03 03", title: "Overtime" },
-              { id: "95-03-04", code: "95 03 04", title: "Work / WBS Assignment" },
-              { id: "95-03-05", code: "95 03 05", title: "Daily Output" },
+              { id: "95-21-00", code: "95 21 00", title: "Attendance" },
+              { id: "95-25-00", code: "95 25 00", title: "Working Hours" },
             ],
           },
           {
-            id: "95-04-00",
-            code: "95 04 00",
+            id: "95-30-00",
+            code: "95 30 00",
             title: "Crew Payroll",
             children: [
-              { id: "95-04-01", code: "95 04 01", title: "Daily Payroll" },
-              { id: "95-04-02", code: "95 04 02", title: "Weekly Payroll" },
-              { id: "95-04-03", code: "95 04 03", title: "Monthly Payroll" },
+              { id: "95-31-00", code: "95 31 00", title: "Weekly Payroll" },
+              { id: "95-35-00", code: "95 35 00", title: "Monthly Payroll" },
             ],
           },
           {
-            id: "95-05-00",
-            code: "95 05 00",
+            id: "95-40-00",
+            code: "95 40 00",
             title: "Crew Performance",
             children: [
-              { id: "95-05-01", code: "95 05 01", title: "Performance Index" },
-              { id: "95-05-02", code: "95 05 02", title: "Quality Rating" },
-              { id: "95-05-03", code: "95 05 03", title: "Productivity" },
+              { id: "95-41-00", code: "95 41 00", title: "Performance Index" },
+              { id: "95-45-00", code: "95 45 00", title: "Productivity" },
             ],
           },
           {
-            id: "95-06-00",
-            code: "95 06 00",
+            id: "95-50-00",
+            code: "95 50 00",
             title: "Crew Request",
             children: [
-              { id: "95-06-01", code: "95 06 01", title: "Request" },
-              { id: "95-06-02", code: "95 06 02", title: "Fulfillment" },
-              { id: "95-06-03", code: "95 06 03", title: "Shortage" },
+              { id: "95-51-00", code: "95 51 00", title: "Cash In Advance" },
+              { id: "95-55-00", code: "95 55 00", title: "Crew Reimbursement" },
+              { id: "95-59-00", code: "95 59 00", title: "Leave Request" },
             ],
           },
         ],
@@ -1565,11 +1561,11 @@ export default function ProjectIndexView({
                     setSelectedDocId(nodeId);
                   }}
                 />
-              ) : selectedDocId === "95-03-00" ||
+              ) : selectedDocId === "95-20-00" ||
                 selectedDocId === "95-00-00" ||
-                selectedNodeObj?.code === "95 03 00" ||
+                selectedNodeObj?.code === "95 20 00" ||
                 selectedNodeObj?.title?.toLowerCase().includes("crew daily log") ? (
-                /* 95 03 00 CREW DAILY LOG & TIMESHEET FORMAT */
+                /* 95 20 00 CREW DAILY LOG & TIMESHEET FORMAT */
                 <CrewDailyLogReportPreview
                   isProjectDetail={!!projectTag}
                   projectName={projectName}
@@ -1577,11 +1573,22 @@ export default function ProjectIndexView({
                     setSelectedDocId(nodeId);
                   }}
                 />
-              ) : selectedDocId === "95-03-01" ||
-                selectedNodeObj?.code === "95 03 01" ||
-                (selectedNodeObj?.code?.startsWith("95 03") && selectedNodeObj?.title?.toLowerCase().includes("attendance")) ? (
-                /* 95 03 01 ATTENDANCE SUMMARY FORMAT */
+              ) : selectedDocId === "95-21-00" ||
+                selectedNodeObj?.code === "95 21 00" ||
+                (selectedNodeObj?.code?.startsWith("95 2") && selectedNodeObj?.title?.toLowerCase().includes("attendance")) ? (
+                /* 95 21 00 ATTENDANCE SUMMARY FORMAT */
                 <CrewAttendanceReportPreview
+                  isProjectDetail={!!projectTag}
+                  projectName={projectName}
+                  onSelectNode={(nodeId) => {
+                    setSelectedDocId(nodeId);
+                  }}
+                />
+              ) : selectedDocId === "95-25-00" ||
+                selectedNodeObj?.code === "95 25 00" ||
+                (selectedNodeObj?.code?.startsWith("95 2") && selectedNodeObj?.title?.toLowerCase().includes("working hours")) ? (
+                /* 95 25 00 WORKING HOURS SUMMARY FORMAT */
+                <CrewWorkingHoursReportPreview
                   isProjectDetail={!!projectTag}
                   projectName={projectName}
                   onSelectNode={(nodeId) => {
