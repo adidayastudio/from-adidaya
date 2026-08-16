@@ -1681,6 +1681,171 @@ export default function StageDocumentPreview({
                         </table>
                       </div>
                     </div>
+                  ) : (pageItem.taskCode.includes("06-01")) ? (
+                    /* 06-01-V2L: TIMELINE EXPECTATION TABLE LANDSCAPE KOP V2 */
+                    <div className="flex-1 py-1 flex flex-col h-full overflow-hidden space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 shrink-0">
+                        <div>
+                          <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                            Target Project Duration <span className="font-sans font-normal italic text-neutral-400 normal-case">(Total Durasi Proyek)</span>
+                          </span>
+                          <span className="text-sm font-black font-mono text-neutral-900">
+                            52 Weeks <span className="text-[11px] font-normal text-neutral-500 font-sans">(1 Year Total)</span>
+                          </span>
+                        </div>
+                        <div className="text-right font-mono text-xs">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 block">ESTIMATED TIMELINE RANGE</span>
+                          <span className="font-bold text-brand-red text-xs">Sep 2026 – Sep 2027</span>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 overflow-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-neutral-300 text-[9px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                              <th className="py-1.5 px-1">Major Phase <span className="font-sans font-normal italic text-neutral-400 normal-case">(Fase Utama)</span></th>
+                              <th className="py-1.5 px-2">Sub-Stage <span className="font-sans font-normal italic text-neutral-400 normal-case">(Tahapan)</span></th>
+                              <th className="py-1.5 px-2 text-right">Duration <span className="font-sans font-normal italic text-neutral-400 normal-case">(Durasi)</span></th>
+                              <th className="py-1.5 px-2 text-right">Schedule <span className="font-sans font-normal italic text-neutral-400 normal-case">(Jadwal)</span></th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-xs">
+                            {[
+                              {
+                                parentPhaseEn: "01. Design Phase",
+                                parentPhaseId: "Tahap Desain (12 Wks)",
+                                parentSubtotal: "12 Weeks",
+                                subStages: [
+                                  { stageEn: "Kickoff & Briefing", stageId: "Tahap Awal & Pembekalan", duration: "2 Weeks", schedule: "Sep 2026" },
+                                  { stageEn: "Schematic Design", stageId: "Desain Skematik", duration: "4 Weeks", schedule: "Sep – Oct 2026" },
+                                  { stageEn: "Design Development", stageId: "Pengembangan Desain", duration: "4 Weeks", schedule: "Oct – Nov 2026" },
+                                  { stageEn: "Technical Drawings (FOR-CON)", stageId: "Gambar Kerja & Tender", duration: "4 Weeks", schedule: "Nov – Dec 2026" },
+                                ]
+                              },
+                              {
+                                parentPhaseEn: "02. Construction Phase",
+                                parentPhaseId: "Tahap Pelaksanaan (40 Wks)",
+                                parentSubtotal: "40 Weeks",
+                                subStages: [
+                                  { stageEn: "Procurement & Site Prep", stageId: "Tender & Persiapan Lahan", duration: "4 Weeks", schedule: "Dec 2026 – Jan 2027" },
+                                  { stageEn: "Structure & Core Work", stageId: "Pekerjaan Struktur Utama", duration: "20 Weeks", schedule: "Jan – Jun 2027" },
+                                  { stageEn: "Architectural & Interior Fit-Out", stageId: "Arsitektur & Fit-Out Interior", duration: "12 Weeks", schedule: "Jun – Aug 2027" },
+                                  { stageEn: "MEP Testing & Handover", stageId: "Pengujian & Serah Terima", duration: "4 Weeks", schedule: "Aug – Sep 2027" },
+                                ]
+                              }
+                            ].map((group, gIdx) => (
+                              <React.Fragment key={gIdx}>
+                                {group.subStages.map((row, rIdx) => (
+                                  <tr key={rIdx} className="border-b border-neutral-100">
+                                    {rIdx === 0 && (
+                                      <td
+                                        rowSpan={group.subStages.length}
+                                        className="py-1.5 px-1 font-mono text-[10px] font-bold text-brand-red whitespace-nowrap align-top border-r border-neutral-100 pr-2"
+                                      >
+                                        {group.parentPhaseEn}
+                                        <span className="font-sans font-normal italic text-neutral-400 text-[9px] block">{group.parentPhaseId}</span>
+                                      </td>
+                                    )}
+                                    <td className="py-1.5 px-2 align-top">
+                                      <span className="font-semibold text-neutral-800 block leading-tight text-[11px]">{row.stageEn}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[9px] block">{row.stageId}</span>
+                                    </td>
+                                    <td className="py-1.5 px-2 font-mono text-[11px] font-bold text-neutral-800 text-right whitespace-nowrap align-top">{row.duration}</td>
+                                    <td className="py-1.5 px-2 font-mono text-[11px] text-neutral-600 text-right whitespace-nowrap align-top">{row.schedule}</td>
+                                  </tr>
+                                ))}
+                                <tr className="bg-neutral-50/70 border-b border-neutral-200/80 font-semibold text-[10px]">
+                                  <td colSpan={2} className="py-1 px-2 text-neutral-500 text-right font-mono italic">Subtotal {group.parentPhaseEn}</td>
+                                  <td className="py-1 px-2 text-right font-mono font-bold text-neutral-900">{group.parentSubtotal}</td>
+                                  <td className="py-1 px-2"></td>
+                                </tr>
+                              </React.Fragment>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t-2 border-neutral-900 font-bold text-xs">
+                              <td colSpan={2} className="py-2 px-1 text-neutral-900 text-[11px]">Total Project Timeline</td>
+                              <td className="py-2 px-2 text-right font-mono text-brand-red text-xs">52 Weeks</td>
+                              <td className="py-2 px-2 text-right font-mono text-neutral-800 text-xs">Sep 2026 – Sep 2027</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode.includes("06-02")) ? (
+                    /* 06-02-V2L: VISUAL GANTT CHART LANDSCAPE KOP V2 (EXACT MATCH TO V1 06-02) */
+                    <div className="flex-1 py-1 flex flex-col h-full overflow-hidden space-y-4">
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 shrink-0">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                            Visual Timeline Schedule Chart <span className="font-sans font-normal italic text-neutral-400 normal-case">(Grafik Visual Timeline Proyek)</span>
+                          </span>
+                          <span className="text-base font-black font-mono text-neutral-900">
+                            12 Months Timeline Breakdown
+                          </span>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-brand-red">52 Weeks Total</span>
+                      </div>
+
+                      {/* Visual Gantt Chart Grid */}
+                      <div className="space-y-4 pt-1 flex-1 overflow-auto">
+                        {/* Months Header Bar */}
+                        <div className="grid grid-cols-12 gap-1 text-[10px] font-mono font-bold text-neutral-400 uppercase text-center border-b border-neutral-200 pb-2">
+                          {["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"].map((m, mIdx) => (
+                            <div key={mIdx} className="bg-neutral-100/70 py-1 rounded">
+                              {m}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Timeline Bars */}
+                        <div className="space-y-2.5 pt-1">
+                          {[
+                            { name: "01. Design Phase", sub: "Briefing, Schematic, DD, Technical", colSpan: "col-span-4", colStart: "col-start-1", bg: "bg-neutral-900 text-white" },
+                            { name: "02. Procurement & Site Prep", sub: "Tender & PBG Permit", colSpan: "col-span-2", colStart: "col-start-4", bg: "bg-brand-red text-white" },
+                            { name: "03. Structure & Core Work", sub: "Foundation, Concrete & Framework", colSpan: "col-span-5", colStart: "col-start-5", bg: "bg-neutral-800 text-white" },
+                            { name: "04. Architectural & Interior Fit-Out", sub: "Finishes, Joinery & Lighting", colSpan: "col-span-3", colStart: "col-start-9", bg: "bg-neutral-700 text-white" },
+                            { name: "05. MEP Testing & Handover", sub: "Commissioning & Key Handover", colSpan: "col-span-2", colStart: "col-start-11", bg: "bg-emerald-600 text-white" },
+                          ].map((bar, bIdx) => (
+                            <div key={bIdx} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs font-semibold text-neutral-800">
+                                <span>{bar.name}</span>
+                                <span className="text-[10px] text-neutral-400 font-normal italic">{bar.sub}</span>
+                              </div>
+                              <div className="grid grid-cols-12 gap-1 h-6 bg-neutral-50 rounded-lg p-0.5 border border-neutral-100">
+                                <div className={`${bar.colStart} ${bar.colSpan} ${bar.bg} rounded flex items-center justify-center font-mono text-[9px] font-bold shadow-xs px-2 truncate`}>
+                                  {bar.name.split(" ")[1]} Phase
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Chart Legend Footer */}
+                      <div className="flex items-center gap-6 pt-2 border-t border-neutral-200 text-[10px] font-medium text-neutral-600 shrink-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-neutral-900"></span>
+                          <span>Design</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-brand-red"></span>
+                          <span>Tender</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-neutral-800"></span>
+                          <span>Structure</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-neutral-700"></span>
+                          <span>Architectural</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-emerald-600"></span>
+                          <span>Handover</span>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex-1 my-auto p-6 rounded-xl bg-neutral-50/80 border border-dashed border-neutral-300 flex flex-col items-center justify-center text-center space-y-1">
                       <span className="font-mono text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
@@ -2768,6 +2933,171 @@ export default function StageDocumentPreview({
                             </tr>
                           </tfoot>
                         </table>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode.includes("06-01")) ? (
+                    /* 06-01-V2P: TIMELINE EXPECTATION TABLE PORTRAIT KOP V2 */
+                    <div className="flex-1 py-2 flex flex-col h-full overflow-hidden space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 shrink-0">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                            Target Project Duration <span className="font-sans font-normal italic text-neutral-400 normal-case">(Total Durasi Proyek)</span>
+                          </span>
+                          <span className="text-sm font-black font-mono text-neutral-900">
+                            52 Weeks <span className="text-[11px] font-normal text-neutral-500 font-sans">(1 Year Total)</span>
+                          </span>
+                        </div>
+                        <div className="text-right font-mono text-xs">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 block">ESTIMATED TIMELINE RANGE</span>
+                          <span className="font-bold text-brand-red text-xs">Sep 2026 – Sep 2027</span>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 overflow-auto">
+                        <table className="w-full text-left border-collapse">
+                          <thead>
+                            <tr className="border-b border-neutral-300 text-[9px] font-mono font-bold text-neutral-900 uppercase tracking-wider">
+                              <th className="py-1.5 px-1">Major Phase <span className="font-sans font-normal italic text-neutral-400 normal-case">(Fase Utama)</span></th>
+                              <th className="py-1.5 px-2">Sub-Stage <span className="font-sans font-normal italic text-neutral-400 normal-case">(Tahapan)</span></th>
+                              <th className="py-1.5 px-2 text-right">Duration <span className="font-sans font-normal italic text-neutral-400 normal-case">(Durasi)</span></th>
+                              <th className="py-1.5 px-2 text-right">Schedule <span className="font-sans font-normal italic text-neutral-400 normal-case">(Jadwal)</span></th>
+                            </tr>
+                          </thead>
+                          <tbody className="text-xs">
+                            {[
+                              {
+                                parentPhaseEn: "01. Design Phase",
+                                parentPhaseId: "Tahap Desain (12 Wks)",
+                                parentSubtotal: "12 Weeks",
+                                subStages: [
+                                  { stageEn: "Kickoff & Briefing", stageId: "Tahap Awal & Pembekalan", duration: "2 Weeks", schedule: "Sep 2026" },
+                                  { stageEn: "Schematic Design", stageId: "Desain Skematik", duration: "4 Weeks", schedule: "Sep – Oct 2026" },
+                                  { stageEn: "Design Development", stageId: "Pengembangan Desain", duration: "4 Weeks", schedule: "Oct – Nov 2026" },
+                                  { stageEn: "Technical Drawings (FOR-CON)", stageId: "Gambar Kerja & Tender", duration: "4 Weeks", schedule: "Nov – Dec 2026" },
+                                ]
+                              },
+                              {
+                                parentPhaseEn: "02. Construction Phase",
+                                parentPhaseId: "Tahap Pelaksanaan (40 Wks)",
+                                parentSubtotal: "40 Weeks",
+                                subStages: [
+                                  { stageEn: "Procurement & Site Prep", stageId: "Tender & Persiapan Lahan", duration: "4 Weeks", schedule: "Dec 2026 – Jan 2027" },
+                                  { stageEn: "Structure & Core Work", stageId: "Pekerjaan Struktur Utama", duration: "20 Weeks", schedule: "Jan – Jun 2027" },
+                                  { stageEn: "Architectural & Interior Fit-Out", stageId: "Arsitektur & Fit-Out Interior", duration: "12 Weeks", schedule: "Jun – Aug 2027" },
+                                  { stageEn: "MEP Testing & Handover", stageId: "Pengujian & Serah Terima", duration: "4 Weeks", schedule: "Aug – Sep 2027" },
+                                ]
+                              }
+                            ].map((group, gIdx) => (
+                              <React.Fragment key={gIdx}>
+                                {group.subStages.map((row, rIdx) => (
+                                  <tr key={rIdx} className="border-b border-neutral-100">
+                                    {rIdx === 0 && (
+                                      <td
+                                        rowSpan={group.subStages.length}
+                                        className="py-1.5 px-1 font-mono text-[10px] font-bold text-brand-red whitespace-nowrap align-top border-r border-neutral-100 pr-2"
+                                      >
+                                        {group.parentPhaseEn}
+                                        <span className="font-sans font-normal italic text-neutral-400 text-[9px] block">{group.parentPhaseId}</span>
+                                      </td>
+                                    )}
+                                    <td className="py-1.5 px-2 align-top">
+                                      <span className="font-semibold text-neutral-800 block leading-tight text-[11px]">{row.stageEn}</span>
+                                      <span className="font-normal italic text-neutral-400 text-[9px] block">{row.stageId}</span>
+                                    </td>
+                                    <td className="py-1.5 px-2 font-mono text-[11px] font-bold text-neutral-800 text-right whitespace-nowrap align-top">{row.duration}</td>
+                                    <td className="py-1.5 px-2 font-mono text-[11px] text-neutral-600 text-right whitespace-nowrap align-top">{row.schedule}</td>
+                                  </tr>
+                                ))}
+                                <tr className="bg-neutral-50/70 border-b border-neutral-200/80 font-semibold text-[10px]">
+                                  <td colSpan={2} className="py-1 px-2 text-neutral-500 text-right font-mono italic">Subtotal {group.parentPhaseEn}</td>
+                                  <td className="py-1 px-2 text-right font-mono font-bold text-neutral-900">{group.parentSubtotal}</td>
+                                  <td className="py-1 px-2"></td>
+                                </tr>
+                              </React.Fragment>
+                            ))}
+                          </tbody>
+                          <tfoot>
+                            <tr className="border-t-2 border-neutral-900 font-bold text-xs">
+                              <td colSpan={2} className="py-2 px-1 text-neutral-900 text-[11px]">Total Project Timeline</td>
+                              <td className="py-2 px-2 text-right font-mono text-brand-red text-xs">52 Weeks</td>
+                              <td className="py-2 px-2 text-right font-mono text-neutral-800 text-xs">Sep 2026 – Sep 2027</td>
+                            </tr>
+                          </tfoot>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (pageItem.taskCode.includes("06-02")) ? (
+                    /* 06-02-V2P: VISUAL GANTT CHART PORTRAIT KOP V2 (EXACT MATCH TO V1 06-02) */
+                    <div className="flex-1 py-2 flex flex-col h-full overflow-hidden space-y-4">
+                      <div className="flex items-center justify-between pb-2 border-b border-neutral-200 shrink-0">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-neutral-400 block">
+                            Visual Timeline Schedule Chart <span className="font-sans font-normal italic text-neutral-400 normal-case">(Grafik Visual Timeline Proyek)</span>
+                          </span>
+                          <span className="text-base font-black font-mono text-neutral-900">
+                            12 Months Timeline Breakdown
+                          </span>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-brand-red">52 Weeks Total</span>
+                      </div>
+
+                      {/* Visual Gantt Chart Grid */}
+                      <div className="space-y-4 pt-1 flex-1 overflow-auto">
+                        {/* Months Header Bar */}
+                        <div className="grid grid-cols-12 gap-1 text-[10px] font-mono font-bold text-neutral-400 uppercase text-center border-b border-neutral-200 pb-2">
+                          {["Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"].map((m, mIdx) => (
+                            <div key={mIdx} className="bg-neutral-100/70 py-1 rounded">
+                              {m}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Timeline Bars */}
+                        <div className="space-y-3 pt-1">
+                          {[
+                            { name: "01. Design Phase", sub: "Briefing, Schematic, DD, Technical", colSpan: "col-span-4", colStart: "col-start-1", bg: "bg-neutral-900 text-white" },
+                            { name: "02. Procurement & Site Prep", sub: "Tender & PBG Permit", colSpan: "col-span-2", colStart: "col-start-4", bg: "bg-brand-red text-white" },
+                            { name: "03. Structure & Core Work", sub: "Foundation, Concrete & Framework", colSpan: "col-span-5", colStart: "col-start-5", bg: "bg-neutral-800 text-white" },
+                            { name: "04. Architectural & Interior Fit-Out", sub: "Finishes, Joinery & Lighting", colSpan: "col-span-3", colStart: "col-start-9", bg: "bg-neutral-700 text-white" },
+                            { name: "05. MEP Testing & Handover", sub: "Commissioning & Key Handover", colSpan: "col-span-2", colStart: "col-start-11", bg: "bg-emerald-600 text-white" },
+                          ].map((bar, bIdx) => (
+                            <div key={bIdx} className="space-y-1">
+                              <div className="flex items-center justify-between text-xs font-semibold text-neutral-800">
+                                <span>{bar.name}</span>
+                                <span className="text-[10px] text-neutral-400 font-normal italic">{bar.sub}</span>
+                              </div>
+                              <div className="grid grid-cols-12 gap-1 h-7 bg-neutral-50 rounded-lg p-0.5 border border-neutral-100">
+                                <div className={`${bar.colStart} ${bar.colSpan} ${bar.bg} rounded flex items-center justify-center font-mono text-[10px] font-bold shadow-xs px-2 truncate`}>
+                                  {bar.name.split(" ")[1]} Phase
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Chart Legend Footer */}
+                      <div className="flex items-center gap-6 pt-3 border-t border-neutral-200 text-[10px] font-medium text-neutral-600 shrink-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-neutral-900"></span>
+                          <span>Design</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-brand-red"></span>
+                          <span>Tender</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-neutral-800"></span>
+                          <span>Structure</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-neutral-700"></span>
+                          <span>Architectural</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded bg-emerald-600"></span>
+                          <span>Handover</span>
+                        </div>
                       </div>
                     </div>
                   ) : (

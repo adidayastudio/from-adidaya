@@ -806,6 +806,47 @@ const PRESET_TEMPLATES: (ReusableContentTemplate & { defaultCode?: string })[] =
     description: "Landscape wide format 12-month visual timeline Gantt schedule chart.",
     previewTaskCode: "06-02-L"
   },
+
+  // --- SECTION 06 V2 KOP PORTRAIT TEMPLATES (06-01-V2P & 06-02-V2P) ---
+  {
+    id: "tpl-v2-timeline-p",
+    code: "06-01-V2P",
+    name: "Timeline Expectation Kop v2 (Portrait)",
+    nameId: "Ekspektasi Lini Waktu Kop v2 (Portrait)",
+    category: "Timeline",
+    description: "Portrait timeline schedule table with bottom Kop v2 title block.",
+    previewTaskCode: "06-01-V2P"
+  },
+  {
+    id: "tpl-v2-timeline-chart-p",
+    code: "06-02-V2P",
+    name: "Visual Timeline Chart Kop v2 (Portrait)",
+    nameId: "Grafik Visual Timeline Kop v2 (Portrait)",
+    category: "Timeline",
+    description: "Portrait 12-month visual timeline Gantt chart with bottom Kop v2 title block.",
+    previewTaskCode: "06-02-V2P"
+  },
+
+  // --- SECTION 06 V2 KOP LANDSCAPE TEMPLATES (06-01-V2L & 06-02-V2L) ---
+  {
+    id: "tpl-v2-timeline-l",
+    code: "06-01-V2L",
+    name: "Timeline Expectation Kop v2 (Landscape)",
+    nameId: "Ekspektasi Lini Waktu Kop v2 (Landscape)",
+    category: "Timeline",
+    description: "Landscape timeline schedule table with right Kop v2 sidebar.",
+    previewTaskCode: "06-01-V2L"
+  },
+  {
+    id: "tpl-v2-timeline-chart-l",
+    code: "06-02-V2L",
+    name: "Visual Timeline Chart Kop v2 (Landscape)",
+    nameId: "Grafik Visual Timeline Kop v2 (Landscape)",
+    category: "Timeline",
+    description: "Landscape 12-month visual timeline Gantt chart with right Kop v2 sidebar.",
+    previewTaskCode: "06-02-V2L"
+  },
+
   // --- SECTION 08 APPROVAL TEMPLATES (08-01-P & 08-01-L) ---
   {
     id: "tpl-approval-p",
