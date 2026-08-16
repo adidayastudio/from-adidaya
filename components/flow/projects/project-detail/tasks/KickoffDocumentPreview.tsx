@@ -459,17 +459,16 @@ export default function KickoffDocumentPreview({
     <div ref={containerRef} className="w-full space-y-4">
       {/* TOOLBAR CONTROLS */}
       {!hideToolbar && (
-        <div className="flex items-center justify-between p-3 bg-white/80 dark:bg-neutral-800/80 backdrop-blur-md rounded-2xl border border-neutral-200/80 dark:border-neutral-700/80 shadow-2xs">
-        <div className="flex items-center gap-2">
-          {/* VIEW MODE TOGGLE */}
-          <div className="flex items-center gap-1 p-0.5 bg-neutral-100 dark:bg-neutral-900 rounded-lg">
+        <div className="flex items-center justify-between py-1 px-1">
+          {/* VIEW MODE TOGGLE PILL */}
+          <div className="flex items-center gap-1 p-1 bg-neutral-100 dark:bg-neutral-800/80 rounded-full border border-neutral-200/60 dark:border-neutral-700/60">
             <button
               onClick={() => setViewMode("single")}
               className={clsx(
-                "px-2.5 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1.5",
+                "px-3.5 py-1 text-xs font-bold rounded-full transition-all flex items-center gap-1.5",
                 viewMode === "single"
-                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-2xs"
-                  : "text-neutral-500 hover:text-neutral-800"
+                  ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
               )}
             >
               <Eye className="w-3.5 h-3.5" />
@@ -478,40 +477,39 @@ export default function KickoffDocumentPreview({
             <button
               onClick={() => setViewMode("all")}
               className={clsx(
-                "px-2.5 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-1.5",
+                "px-3.5 py-1 text-xs font-bold rounded-full transition-all flex items-center gap-1.5",
                 viewMode === "all"
-                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-2xs"
-                  : "text-neutral-500 hover:text-neutral-800"
+                  ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-xs"
+                  : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
               )}
             >
               <span>All Pages ({totalPages})</span>
             </button>
           </div>
-        </div>
 
-        {/* PAGE NAVIGATION CONTROLS (IF SINGLE PAGE MODE) */}
-        {viewMode === "single" && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setActivePage((p) => Math.max(1, p - 1))}
-              disabled={activePage === 1}
-              className="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-40 text-neutral-700 dark:text-neutral-300 transition-all"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-mono font-extrabold text-neutral-800 dark:text-white px-1">
-              {activePage} / {totalPages}
-            </span>
-            <button
-              onClick={() => setActivePage((p) => Math.min(totalPages, p + 1))}
-              disabled={activePage === totalPages}
-              className="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-40 text-neutral-700 dark:text-neutral-300 transition-all"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-      </div>
+          {/* PAGE NAVIGATION CONTROLS PILL */}
+          {viewMode === "single" && (
+            <div className="flex items-center gap-1 px-2.5 py-1 bg-neutral-100 dark:bg-neutral-800/80 rounded-full border border-neutral-200/60 dark:border-neutral-700/60">
+              <button
+                onClick={() => setActivePage((p) => Math.max(1, p - 1))}
+                disabled={activePage === 1}
+                className="p-1 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30 text-neutral-700 dark:text-neutral-300 transition-all"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-xs font-mono font-bold text-neutral-800 dark:text-white px-2">
+                {activePage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setActivePage((p) => Math.min(totalPages, p + 1))}
+                disabled={activePage === totalPages}
+                className="p-1 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-700 disabled:opacity-30 text-neutral-700 dark:text-neutral-300 transition-all"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* DOCUMENT CANVAS CONTAINER */}

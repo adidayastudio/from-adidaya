@@ -8,6 +8,7 @@ import { defaultKickoffData } from "@/components/flow/projects/project-detail/ta
 import { KickoffDocumentData } from "@/components/flow/projects/project-detail/tasks/types";
 import { fetchStageTemplates } from "@/lib/api/templates";
 import { fetchStageSectionTemplates, fetchStageTaskTemplates } from "@/lib/api/templates-extended";
+import { useSearchParams } from "next/navigation";
 import clsx from "clsx";
 
 import { KO_SECTIONS } from "@/components/flow/projects/project-detail/setup/stages/data/ko";
@@ -49,9 +50,18 @@ interface Props {
 }
 
 export default function StageDocumentTab({ workspaceId, projectTypeId, setHeaderActions }: Props) {
+    const searchParams = useSearchParams();
     const [activeStage, setActiveStage] = useState<StageKey>("KO");
     const [activeSection, setActiveSection] = useState<string>("KO-01");
     const [activeSubTask, setActiveSubTask] = useState<string>("01-01");
+
+    useEffect(() => {
+        const stageParam = searchParams.get("stage")?.toUpperCase() as StageKey | null;
+        if (stageParam && ["KO", "SD", "DD", "ED", "PC", "CN", "HO"].includes(stageParam)) {
+            setActiveStage(stageParam);
+            setActiveSection(`${stageParam}-01`);
+        }
+    }, [searchParams]);
 
     const [dynamicSections, setDynamicSections] = useState<{ code: string; title: string }[]>([]);
     const [dynamicTasks, setDynamicTasks] = useState<any[]>([]);

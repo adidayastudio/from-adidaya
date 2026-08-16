@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, GitBranch, ListOrdered, Target, CheckSquare, FileText } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { fetchProjectTypes, ProjectTypeTemplate, fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import clsx from "clsx";
@@ -33,11 +33,19 @@ const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: 
 
 export default function StagesPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [activeTab, setActiveTab] = useState<TabId>("list");
     const [headerActions, setHeaderActions] = useState<React.ReactNode>(null);
     const [selectedTypeId, setSelectedTypeId] = useState<string>("");
     const [projectTypes, setProjectTypes] = useState<ProjectTypeTemplate[]>([]);
     const [workspaceId, setWorkspaceId] = useState("");
+
+    useEffect(() => {
+        const tabParam = searchParams.get("tab") as TabId | null;
+        if (tabParam && ["list", "scope", "tasks", "document", "content"].includes(tabParam)) {
+            setActiveTab(tabParam);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         const init = async () => {

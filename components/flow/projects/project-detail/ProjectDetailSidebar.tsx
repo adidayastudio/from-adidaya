@@ -25,6 +25,7 @@ import {
   FileSpreadsheet,
   UserCheck,
   CheckSquare,
+  Hash,
 } from "lucide-react";
 
 export default function ProjectDetailSidebar() {
@@ -123,6 +124,7 @@ export default function ProjectDetailSidebar() {
     { label: "Volume Calc", href: `${basePath}/setup/volume-calc`, icon: Calculator },
     { label: "RAB", href: `${basePath}/setup/rab`, icon: DollarSign },
     { label: "Schedule", href: `${basePath}/setup/schedule`, icon: Calendar },
+    { label: "Index", href: `${basePath}/setup/index`, icon: Hash },
   ];
 
   const WORK_ITEMS = [
@@ -318,6 +320,20 @@ export default function ProjectDetailSidebar() {
             >
               <FileSpreadsheet className={clsx("w-4 h-4 shrink-0 transition-colors", isRouteActive(`${basePath}/reports`) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
               <span className="truncate font-semibold">Reports</span>
+            </Link>
+
+            {/* Index (At the very bottom) */}
+            <Link
+              href={`${basePath}/index`}
+              className={clsx(
+                "w-full text-left rounded-lg text-[12px] transition-all flex items-center gap-2.5 px-3 py-2",
+                isRouteActive(`${basePath}/index`) || isRouteActive(`${basePath}/setup/index`)
+                  ? "text-neutral-900 dark:text-white bg-neutral-900/10 dark:bg-white/15 font-extrabold shadow-sm border border-neutral-300/60 dark:border-white/10"
+                  : "text-neutral-600 dark:text-neutral-400 hover:bg-black/5 dark:hover:bg-neutral-800/40 hover:text-neutral-900 font-medium"
+              )}
+            >
+              <Hash className={clsx("w-4 h-4 shrink-0 transition-colors", (isRouteActive(`${basePath}/index`) || isRouteActive(`${basePath}/setup/index`)) ? "text-neutral-900 dark:text-white" : "text-neutral-500")} />
+              <span className="truncate font-semibold">Index</span>
             </Link>
           </div>
         </div>

@@ -88,6 +88,7 @@ export default function ProjectDetailHeader({ project }: { project: ProjectHeade
       p.includes('/rab') ||
       p.includes('/volume-calc') ||
       p.includes('/schedule') ||
+      p.includes('/index') ||
       p.includes('/tasks/editor')
     );
   }, [pathname]);

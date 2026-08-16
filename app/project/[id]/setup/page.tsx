@@ -11,7 +11,8 @@ import {
     Grid3X3,
     DollarSign,
     Calendar,
-    ShieldCheck
+    ShieldCheck,
+    Hash
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
@@ -23,6 +24,7 @@ const SETUP_ITEMS = [
     { id: "rab", label: "RAB", icon: DollarSign, href: "/rab" },
     { id: "schedule", label: "Schedule", icon: Calendar, href: "/schedule" },
     { id: "rules", label: "Rules", icon: ShieldCheck, href: "/rules" },
+    { id: "index", label: "Index", icon: Hash, href: "/index" },
 ];
 
 export default function ProjectSetupPage({ params }: { params: Promise<{ id: string }> }) {

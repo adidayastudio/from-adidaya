@@ -13,7 +13,8 @@ import {
   Shield,
   FileText,
   ChevronLeft,
-  MoreHorizontal
+  MoreHorizontal,
+  Hash
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -29,6 +30,7 @@ const SETTINGS_NAV_ITEMS = [
   { label: "Time System", path: "/project/settings/time-system", icon: Clock },
   { label: "Control", path: "/project/settings/control", icon: Shield },
   { label: "Reports", path: "/project/settings/reports", icon: FileText },
+  { label: "Index", path: "/project/settings/index", icon: Hash },
 ];
 
 export default function ProjectsSidebar() {

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProjectsSidebar from "@/components/flow/projects/ProjectsSidebar";
 import PageWrapper from "@/components/layout/PageWrapper";
-import { Settings, GitBranch, FolderTree, Calculator, Coins, Clock, Shield, FileText, ChevronLeft } from "lucide-react";
+import { Settings, GitBranch, FolderTree, Calculator, Coins, Clock, Shield, FileText, ChevronLeft, Hash } from "lucide-react";
 import Link from "next/link";
 
 import { Breadcrumb } from "@/shared/ui/headers/PageHeader";
@@ -18,6 +18,7 @@ const SETTINGS_SECTIONS = [
   { label: "Time System", desc: "Calendar templates, progress formulas, and schedule rules", path: "/project/settings/time-system", icon: Clock },
   { label: "Control", desc: "Change workflow, approval thresholds, and audit trails", path: "/project/settings/control", icon: Shield },
   { label: "Reports", desc: "Standard templates, export formats, and custom metrics", path: "/project/settings/reports", icon: FileText },
+  { label: "Index", desc: "Project documentation codes, task indices, and document catalog", path: "/project/settings/index", icon: Hash },
 ];
 
 export default function SettingsOverviewPage() {
