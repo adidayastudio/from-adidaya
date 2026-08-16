@@ -64,7 +64,7 @@ const defaultDCRData: DCRData = {
   dayNo: "11",
   totalDays: "180",
   remainingDays: "169",
-  projectName: "JPF - Masterplan & Architecture",
+  projectName: "",
   contractorName: "PT. ADIDAYA KREASI NUSA",
   weatherPagi: "Cerah (Sunny)",
   weatherSiang: "Berawan (Cloudy)",

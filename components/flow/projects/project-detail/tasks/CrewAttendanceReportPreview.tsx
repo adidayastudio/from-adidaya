@@ -8,18 +8,11 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Download,
   Share2,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
   ExternalLink,
-  Plus,
-  Search,
-  Filter,
-  UserCheck,
-  Briefcase,
-  Edit2,
   ArrowUpRight
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -32,8 +25,8 @@ interface CrewEntry {
   id: string;
   name: string;
   role: string;
-  category: "SUPERVISOR" | "FOREMAN" | "CRAFTSMAN" | "WORKER" | "OPERATOR";
-  status: "PRESENT" | "ABSENT" | "HALF_DAY" | "CUTI";
+  category: "CRAFTSMAN" | "WORKER" | "FOREMAN" | "OPERATOR" | "SUPERVISOR" | "LEADER";
+  status: "PRESENT" | "HALF_DAY" | "ABSENT" | "CUTI" | "UNINPUT";
   regularHours: number;
   ot1Hours: number;
   ot2Hours: number;
@@ -41,36 +34,32 @@ interface CrewEntry {
   wbsLocation: string;
 }
 
-export default function CrewDailyLogReportPreview({
-  projectName = "",
-  projectCode = "",
-  isProjectDetail = false,
-  onSelectNode
-}: {
-  projectName?: string;
-  projectCode?: string;
+interface CrewAttendanceReportPreviewProps {
   isProjectDetail?: boolean;
-  onSelectNode?: (nodeId: string, stage?: string) => void;
-}) {
+  projectName?: string;
+  onSelectNode?: (nodeId: string) => void;
+}
+
+export function CrewAttendanceReportPreview({
+  isProjectDetail = true,
+  projectName,
+  onSelectNode
+}: CrewAttendanceReportPreviewProps) {
   const router = useRouter();
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
   const [activeTab, setActiveTab] = useState<"preview" | "related">("preview");
   const [projectList, setProjectList] = useState<any[]>([]);
   const [activeProject, setActiveProject] = useState<string>(projectName || "");
   const [selectedDate, setSelectedDate] = useState(new Date("2026-08-17"));
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [crewData, setCrewData] = useState<CrewEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [scale, setScale] = useState<number>(1);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   // Dynamic A4 Scale Calculation Engine (Responsive to any panel/screen width while locking 210:297 ratio)
   useEffect(() => {
     const updateScale = () => {
       if (containerRef.current) {
-        // Measure real-time bounding rect width of the right panel
         const rect = containerRef.current.getBoundingClientRect();
-        // 80px buffer guarantees 100% of A4 paper (including rightmost text & borders) is fully visible with clean breathing room
         const availableWidth = rect.width - 80;
         if (availableWidth > 0) {
           const newScale = Math.min(availableWidth / 794, 1);
@@ -96,6 +85,28 @@ export default function CrewDailyLogReportPreview({
       setActiveProject(projectName);
     }
   }, [projectName]);
+
+  // Helper to format person names from ALL CAPS to Title Case (e.g. AMIR -> Amir)
+  const formatPersonName = (nameStr: string) => {
+    if (!nameStr) return "";
+    return nameStr
+      .toLowerCase()
+      .split(" ")
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+  };
+
+  // Helper to format role label to clean English job title matching database standard
+  const getRoleLabel = (roleStr: string) => {
+    const upper = (roleStr || "").toUpperCase();
+    if (upper === "HELPER" || upper.includes("KENEK") || upper.includes("HELPER")) return "Helper";
+    if (upper === "SKILLED" || upper.includes("TUKANG") || upper.includes("CRAFTSMAN") || upper.includes("SKILLED")) return "Skilled Worker";
+    if (upper === "FOREMAN" || upper.includes("MANDOR")) return "Foreman";
+    if (upper === "LEADER" || upper.includes("LEADER") || upper.includes("SENIOR")) return "Leader";
+    if (upper === "OPERATOR") return "Operator";
+    if (upper === "SUPERVISOR" || upper.includes("ENGINEER")) return "Supervisor";
+    return roleStr || "Crew Member";
+  };
 
   // Load real workspace projects from DB
   useEffect(() => {
@@ -141,17 +152,18 @@ export default function CrewDailyLogReportPreview({
     loadProjects();
   }, [projectName]);
 
-  const formatLocationStr = (loc: any): string => {
-    if (!loc) return "—";
-    if (typeof loc === "string") return loc.trim() || "—";
-    if (typeof loc === "object") {
-      const parts = [loc.address, loc.city || loc.district, loc.province].filter(Boolean);
-      if (parts.length > 0) return parts.join(", ");
-      if (loc.city) return `${loc.city}${loc.province ? ", " + loc.province : ""}`;
+  // Format location string safely
+  const formatLocationStr = (locStr: any) => {
+    if (!locStr) return "—";
+    if (typeof locStr === "string") return locStr;
+    if (typeof locStr === "object") {
+      const parts = [locStr.address || locStr.street, locStr.city || locStr.district, locStr.province || locStr.state].filter(Boolean);
+      return parts.length > 0 ? parts.join(", ") : "—";
     }
-    return "—";
+    return String(locStr);
   };
 
+  // Resolve current active project metadata
   const projInfo = useMemo(() => {
     let matched = projectList.find(p =>
       p.fullName === activeProject ||
@@ -180,28 +192,6 @@ export default function CrewDailyLogReportPreview({
     return { code, cleanName, location, stage };
   }, [activeProject, projectList]);
 
-  // Helper to format person names from ALL CAPS to Title Case (e.g. AMIR -> Amir)
-  const formatPersonName = (nameStr: string) => {
-    if (!nameStr) return "";
-    return nameStr
-      .toLowerCase()
-      .split(" ")
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-  };
-
-  // Helper to format role label to clean English job title matching database standard
-  const getRoleLabel = (roleStr: string) => {
-    const upper = (roleStr || "").toUpperCase();
-    if (upper === "HELPER" || upper.includes("KENEK") || upper.includes("HELPER")) return "Helper";
-    if (upper === "SKILLED" || upper.includes("TUKANG") || upper.includes("CRAFTSMAN") || upper.includes("SKILLED")) return "Skilled Worker";
-    if (upper === "FOREMAN" || upper.includes("MANDOR")) return "Foreman";
-    if (upper === "LEADER" || upper.includes("LEADER") || upper.includes("SENIOR")) return "Leader";
-    if (upper === "OPERATOR") return "Operator";
-    if (upper === "SUPERVISOR" || upper.includes("ENGINEER")) return "Supervisor";
-    return roleStr || "Crew Member";
-  };
-
   // Load real crew data from API strictly filtered by selected Project & Date
   useEffect(() => {
     async function loadRealCrew() {
@@ -213,7 +203,6 @@ export default function CrewDailyLogReportPreview({
         const day = String(selectedDate.getDate()).padStart(2, "0");
         const dateStr = `${year}-${month}-${day}`;
 
-        // Extract clean project code (e.g. "RWM", "PRG", "JPF", "LAX", "TPC")
         let projCode = activeProject;
         if (activeProject.includes("[")) {
           projCode = activeProject.split("]")[0].replace("[", "").trim().toUpperCase();
@@ -224,17 +213,13 @@ export default function CrewDailyLogReportPreview({
           projCode = matchedProj.code.replace("[", "").replace("]", "").trim().toUpperCase();
         }
 
-        // Fetch all crew members for workspace
         const allMembers = await fetchCrewMembers(wsId || undefined);
-        
-        // Filter crew members strictly assigned to this project code
         const filteredMembers = (allMembers || []).filter(m => {
           if (!m.currentProjectCode) return false;
           const code = m.currentProjectCode.trim().toUpperCase();
           return code === projCode || code.includes(projCode) || projCode.includes(code);
         });
 
-        // Fetch saved daily logs for this project & date
         const dailyLogs = wsId ? await fetchDailyLogs(wsId, projCode, dateStr) : [];
         const logsMap = new Map((dailyLogs || []).map((l: any) => [l.crewId, l]));
 
@@ -243,7 +228,6 @@ export default function CrewDailyLogReportPreview({
             const log = logsMap.get(m.id);
             const roleUpper = m.role?.toUpperCase() || "";
 
-            // Strictly check if real daily log exists in database for this date
             const hasLog = Boolean(log);
             const status = hasLog ? (log.status as any) : "UNINPUT";
             const regularHours = hasLog ? log.regularHours : 0;
@@ -258,7 +242,9 @@ export default function CrewDailyLogReportPreview({
                 ? "FOREMAN"
                 : roleUpper === "OPERATOR"
                 ? "OPERATOR"
-                : roleUpper === "HELPER" || roleUpper.includes("KENEK") || roleUpper === "GENERAL"
+                : roleUpper === "LEADER" || roleUpper.includes("LEADER")
+                ? "LEADER"
+                : roleUpper === "HELPER" || roleUpper.includes("KENEK")
                 ? "WORKER"
                 : "CRAFTSMAN";
 
@@ -280,14 +266,14 @@ export default function CrewDailyLogReportPreview({
           setCrewData([]);
         }
       } catch (err) {
-        console.error("Error loading crew data:", err);
+        console.error("Error loading crew attendance data:", err);
         setCrewData([]);
       } finally {
         setIsLoading(false);
       }
     }
     loadRealCrew();
-  }, [activeProject, selectedDate]);
+  }, [activeProject, selectedDate, projectList]);
 
   const handleDateChange = (days: number) => {
     const nextDate = new Date(selectedDate);
@@ -313,39 +299,32 @@ export default function CrewDailyLogReportPreview({
     router.push(`/feel/crew?tab=daily-input&project=${encodeURIComponent(projCode)}&date=${dateStr}`);
   };
 
-  const filteredCrew = crewData.filter((item) => {
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.wbsLocation.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === "ALL" || item.category === roleFilter;
-    return matchesSearch && matchesRole;
-  });
-
   const totalPresent = crewData.filter((c) => c.status === "PRESENT").length;
   const totalHalfDay = crewData.filter((c) => c.status === "HALF_DAY").length;
   const totalAbsent = crewData.filter((c) => c.status === "ABSENT").length;
   const totalCuti = crewData.filter((c) => c.status === "CUTI").length;
+  const totalPending = crewData.filter((c) => c.status === "UNINPUT").length;
 
-  const totalRegHours = crewData.reduce((acc, c) => acc + c.regularHours, 0);
-  const totalOtHours = crewData.reduce((acc, c) => acc + c.ot1Hours + c.ot2Hours + c.ot3Hours, 0);
+  // Role Breakdown Count
+  const roleBreakdown = useMemo(() => {
+    const categories = [
+      { key: "Skilled Worker", label: "Skilled Workers" },
+      { key: "Helper", label: "Helpers" },
+      { key: "Foreman", label: "Foremen" },
+      { key: "Leader", label: "Leaders" },
+      { key: "Operator", label: "Operators" },
+      { key: "Supervisor", label: "Supervisors" },
+    ];
 
-  const getCategoryBadge = (cat: string) => {
-    switch (cat) {
-      case "SUPERVISOR":
-        return "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border-purple-200 dark:border-purple-800";
-      case "FOREMAN":
-        return "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border-blue-200 dark:border-blue-800";
-      case "CRAFTSMAN":
-        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800";
-      case "WORKER":
-        return "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700";
-      case "OPERATOR":
-        return "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200 dark:border-amber-800";
-      default:
-        return "bg-neutral-100 text-neutral-700";
-    }
-  };
+    return categories.map((cat) => {
+      const items = crewData.filter((c) => c.role === cat.key);
+      const total = items.length;
+      const present = items.filter((c) => c.status === "PRESENT" || c.status === "HALF_DAY").length;
+      const absent = items.filter((c) => c.status === "ABSENT").length;
+      const pending = items.filter((c) => c.status === "UNINPUT").length;
+      return { label: cat.label, total, present, absent, pending };
+    }).filter(cat => cat.total > 0);
+  }, [crewData]);
 
   const getStatusText = (status: string) => {
     switch (status) {
@@ -362,9 +341,24 @@ export default function CrewDailyLogReportPreview({
     }
   };
 
-  // Dynamic Multi-Page A4 Chunking Engine (26 rows fits Page 1 with exact ~2cm bottom margin)
-  const FIRST_PAGE_MAX_ROWS = 26;
-  const SUBSEQUENT_PAGE_MAX_ROWS = 30;
+  const getStatusNoteText = (status: string) => {
+    switch (status) {
+      case "PRESENT":
+        return "Present on Site";
+      case "HALF_DAY":
+        return "Half Day Shift (4h)";
+      case "ABSENT":
+        return "Unexcused Absence";
+      case "CUTI":
+        return "Official Leave";
+      default:
+        return "Log Pending";
+    }
+  };
+
+  // Dynamic Multi-Page A4 Chunking Engine
+  const FIRST_PAGE_MAX_ROWS = 22;
+  const SUBSEQUENT_PAGE_MAX_ROWS = 28;
 
   const pageChunks = useMemo(() => {
     if (crewData.length === 0) return [[]];
@@ -372,11 +366,9 @@ export default function CrewDailyLogReportPreview({
     const chunks: CrewEntry[][] = [];
     let currentIdx = 0;
 
-    // First Page
     chunks.push(crewData.slice(0, FIRST_PAGE_MAX_ROWS));
     currentIdx = FIRST_PAGE_MAX_ROWS;
 
-    // Subsequent Pages
     while (currentIdx < crewData.length) {
       chunks.push(crewData.slice(currentIdx, currentIdx + SUBSEQUENT_PAGE_MAX_ROWS));
       currentIdx += SUBSEQUENT_PAGE_MAX_ROWS;
@@ -400,10 +392,10 @@ export default function CrewDailyLogReportPreview({
         {/* LEFT: Code -> Title */}
         <div className="space-y-1">
           <div className="text-xs font-mono font-bold text-neutral-400">
-            95 03 00
+            95 03 01
           </div>
           <h2 className="text-xl font-bold text-neutral-900 dark:text-white tracking-tight leading-snug">
-            Crew Daily Log
+            Attendance
           </h2>
         </div>
 
@@ -445,7 +437,7 @@ export default function CrewDailyLogReportPreview({
               <span>Related Links & Connected Data Sources</span>
             </h3>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Daftar modul pendukung yang terhubung secara langsung dengan pencatatan presensi personil proyek:
+              Daftar modul pendukung yang terhubung secara langsung dengan pencatatan kehadiran personil proyek:
             </p>
           </div>
 
@@ -463,9 +455,8 @@ export default function CrewDailyLogReportPreview({
                 {[
                   { code: "95 01 00", name: "Crew Directory", description: "Daftar induk profil personil, keahlian, sertifikasi K3, dan data kontak.", nodeId: "95-01-00" },
                   { code: "95 02 00", name: "Crew Assignment", description: "Penyusunan alokasi tim personil ke dalam zona dan sub-pekerjaan WBS.", nodeId: "95-02-00" },
-                  { code: "95 04 00", name: "Crew Payroll", description: "Kalkulasi rekapitulasi upah harian, mingguan, dan honor lembur personil.", nodeId: "95-04-00" },
-                  { code: "41 02 00", name: "WBS Work Activities", description: "Target uraian aktivitas harian proyek tempat personil ditugaskan.", nodeId: "41-02-00" },
-                  { code: "71 01 00", name: "DCR — Daily Construction Report", description: "Laporan harian utama yang merangkum total kehadiran personil per shift.", nodeId: "71-01-00" }
+                  { code: "95 03 00", name: "Crew Daily Log", description: "Laporan harian log jam kerja regular dan lembur (OT) personil.", nodeId: "95-03-00" },
+                  { code: "95 04 00", name: "Crew Payroll", description: "Kalkulasi rekapitulasi upah harian, mingguan, dan honor lembur personil.", nodeId: "95-04-00" }
                 ].map((item) => (
                   <tr
                     key={item.code}
@@ -563,7 +554,7 @@ export default function CrewDailyLogReportPreview({
             ref={containerRef}
             className="w-full flex justify-center py-2"
           >
-            {/* 2. SCALE WRAPPER (CONTAINER SIZED ACCORDING TO ALL PAGES COMBINED) */}
+            {/* 2. SCALE WRAPPER */}
             <div
               className="mx-auto relative transition-all duration-150 ease-out shrink-0"
               style={{
@@ -627,10 +618,10 @@ export default function CrewDailyLogReportPreview({
                               </div>
                               <div className="w-[140px] shrink-0 border border-neutral-300 rounded-sm flex flex-col items-center justify-between p-2 text-center bg-neutral-50/50">
                                 <div className="font-black text-[26px] text-neutral-900 leading-none tracking-tighter">CRW</div>
-                                <div className="text-[5.5px] font-black text-neutral-900 tracking-wider leading-tight pt-1">Daily Crew Log</div>
-                                <div className="text-[5px] font-semibold text-neutral-500 tracking-tight leading-tight">Crew Timesheet</div>
+                                <div className="text-[5.5px] font-black text-neutral-900 tracking-wider leading-tight pt-1">Attendance Report</div>
+                                <div className="text-[5px] font-semibold text-neutral-500 tracking-tight leading-tight">Rekapitulasi Kehadiran</div>
                                 <div className="w-full border-t border-neutral-300 my-1" />
-                                <div className="font-black text-[13px] text-neutral-900 tracking-tight leading-none">95 03 00</div>
+                                <div className="font-black text-[13px] text-neutral-900 tracking-tight leading-none">95 03 01</div>
                                 <div className="w-full border-t border-neutral-200 my-1" />
                                 <div className="w-full grid grid-cols-2 gap-x-1 text-[5px] text-neutral-500">
                                   <span className="text-left font-bold">Log Date</span>
@@ -640,14 +631,16 @@ export default function CrewDailyLogReportPreview({
                                 </div>
                               </div>
                             </div>
+
+                            {/* Date Meta Bar */}
                             <div className="w-full border-y border-neutral-900 py-1.5 my-2">
                               <div className="grid grid-cols-5 text-center">
                                 {[
                                   { label: "Day", value: selectedDate.toLocaleDateString("en-US", { weekday: "long" }) },
                                   { label: "Date", value: selectedDate.toLocaleDateString("en-GB") },
                                   { label: "Total Crew", value: `${crewData.length} Personnel` },
-                                  { label: "Present Crew", value: `${totalPresent} Present` },
-                                  { label: "Total Hours", value: `${totalRegHours + totalOtHours} Hours` },
+                                  { label: "Present Crew", value: `${totalPresent + totalHalfDay} Present` },
+                                  { label: "Absent Crew", value: `${totalAbsent} Absent` },
                                 ].map((cell, i) => (
                                   <div key={i} className="flex flex-col items-center justify-center">
                                     <span className="text-[5.5px] font-bold text-neutral-500 tracking-wider">{cell.label}</span>
@@ -656,12 +649,13 @@ export default function CrewDailyLogReportPreview({
                                 ))}
                               </div>
                             </div>
+
                           </>
                         ) : (
                           /* Compact Header Bar for Continuation Pages */
                           <div className="border-b border-neutral-300 pb-2 flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2">
-                              <span className="font-bold text-neutral-900 text-[10px]">Daily Crew Log</span>
+                              <span className="font-bold text-neutral-900 text-[10px]">Attendance Report</span>
                               <span className="text-neutral-400 text-[9px]">•</span>
                               <span className="font-mono text-neutral-500 text-[9px]">{projInfo.code} {projInfo.cleanName}</span>
                             </div>
@@ -671,108 +665,84 @@ export default function CrewDailyLogReportPreview({
                           </div>
                         )}
 
-                        {/* TIMESHEET TABLE FOR THIS PAGE */}
-                        <div className="w-full border-y-2 border-neutral-900 bg-white overflow-hidden my-1">
+                        {/* MAIN ATTENDANCE ROLE SUMMARY TABLE */}
+                        <div className="w-full border-y-2 border-neutral-900 bg-white overflow-hidden my-2">
                           <table className="w-full text-left text-xs border-collapse table-fixed">
                             <colgroup>
-                              <col style={{ width: "4%" }} />
-                              <col style={{ width: "28%" }} />
+                              <col style={{ width: "8%" }} />
+                              <col style={{ width: "37%" }} />
+                              <col style={{ width: "20%" }} />
                               <col style={{ width: "18%" }} />
-                              <col style={{ width: "16%" }} />
-                              <col style={{ width: "8%" }} />
-                              <col style={{ width: "6%" }} />
-                              <col style={{ width: "6%" }} />
-                              <col style={{ width: "6%" }} />
-                              <col style={{ width: "8%" }} />
+                              <col style={{ width: "17%" }} />
                             </colgroup>
                             <thead>
-                              <tr className="bg-neutral-50 text-neutral-500 font-bold text-[8.5px] border-b border-neutral-300">
-                                <th className="py-2 px-0.5 text-center">No</th>
-                                <th className="py-2 px-1.5">Crew Member</th>
-                                <th className="py-2 px-1.5">Role</th>
-                                <th className="py-2 px-1 text-center">Attendance</th>
-                                <th className="py-2 px-0.5 text-center">Regular (8h)</th>
-                                <th className="py-2 px-0.5 text-center">OT 1</th>
-                                <th className="py-2 px-0.5 text-center">OT 2</th>
-                                <th className="py-2 px-0.5 text-center">OT 3</th>
-                                <th className="py-2 px-0.5 text-center font-extrabold">Total Hours</th>
+                              <tr className="bg-neutral-50 text-neutral-600 font-bold text-[9.5px] border-b border-neutral-300">
+                                <th className="py-2.5 px-2 text-center">No</th>
+                                <th className="py-2.5 px-3">Role</th>
+                                <th className="py-2.5 px-3 text-center">Number of Crew</th>
+                                <th className="py-2.5 px-3 text-center">Present</th>
+                                <th className="py-2.5 px-3 text-center">Absent</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-neutral-200 font-medium">
-                              {pageRows.length === 0 ? (
-                                <tr>
-                                  <td colSpan={9} className="py-12 text-center text-neutral-400 text-xs font-semibold">
-                                    No crew attendance data recorded for this date.
-                                  </td>
-                                </tr>
-                              ) : (
-                                pageRows.map((item, idx) => {
-                                  const totalHours = item.regularHours + item.ot1Hours + item.ot2Hours + item.ot3Hours;
-                                  const globalIndex = startIndex + idx + 1;
+                              {[
+                                { role: "Foreman", label: "Foreman" },
+                                { role: "Leader", label: "Leader" },
+                                { role: "Skilled Worker", label: "Skilled Worker" },
+                                { role: "Helper", label: "Helper" },
+                                { role: "Operator", label: "Operator" },
+                                { role: "Supervisor", label: "Supervisor" },
+                              ].map((roleDef, idx) => {
+                                const matching = crewData.filter((c) => c.role === roleDef.role);
+                                const total = matching.length;
+                                const present = matching.filter((c) => c.status === "PRESENT" || c.status === "HALF_DAY").length;
+                                const absent = matching.filter((c) => c.status === "ABSENT").length;
 
-                                  return (
-                                    <tr key={item.id} className="border-b border-neutral-200 hover:bg-neutral-50/60 transition-colors">
-                                      <td className="py-1.5 px-1.5 text-center font-mono font-bold text-neutral-400 text-[9.5px]">
-                                        {globalIndex}
-                                      </td>
-                                      <td className="py-1.5 px-2.5 font-bold text-neutral-900 text-[10.5px]">
-                                        <span className="truncate block">{formatPersonName(item.name)}</span>
-                                      </td>
-                                      <td className="py-1.5 px-2.5">
-                                        <span className="text-[10.5px] font-semibold text-neutral-800 tracking-tight truncate block max-w-full">
-                                          {item.role}
-                                        </span>
-                                      </td>
-                                      <td className="py-1.5 px-2 text-center">
-                                        {getStatusText(item.status)}
-                                      </td>
-                                      <td className="py-1.5 px-1 text-center font-bold text-neutral-800 text-[10.5px]">
-                                        {item.regularHours}h
-                                      </td>
-                                      <td className="py-1.5 px-1 text-center font-semibold text-neutral-600 text-[10.5px]">
-                                        {item.ot1Hours > 0 ? `${item.ot1Hours}h` : "—"}
-                                      </td>
-                                      <td className="py-1.5 px-1 text-center font-semibold text-neutral-600 text-[10.5px]">
-                                        {item.ot2Hours > 0 ? `${item.ot2Hours}h` : "—"}
-                                      </td>
-                                      <td className="py-1.5 px-1 text-center font-semibold text-neutral-600 text-[10.5px]">
-                                        {item.ot3Hours > 0 ? `${item.ot3Hours}h` : "—"}
-                                      </td>
-                                      <td className="py-1.5 px-1 text-center font-black text-neutral-900 text-[10.5px]">
-                                        {totalHours > 0 ? `${totalHours}h` : "0h"}
-                                      </td>
-                                    </tr>
-                                  );
-                                })
-                              )}
+                                return (
+                                  <tr key={roleDef.role} className="border-b border-neutral-200 hover:bg-neutral-50/60 transition-colors">
+                                    <td className="py-2.5 px-2 text-center font-mono font-bold text-neutral-400 text-[10px]">
+                                      {idx + 1}
+                                    </td>
+                                    <td className="py-2.5 px-3 font-bold text-neutral-900 text-[11px]">
+                                      {roleDef.label}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-center font-mono font-bold text-neutral-800 text-[11px]">
+                                      {total}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-center font-mono font-bold text-emerald-700 text-[11px]">
+                                      {present}
+                                    </td>
+                                    <td className="py-2.5 px-3 text-center font-mono font-bold text-rose-700 text-[11px]">
+                                      {absent}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
-                            {isLastPage && (
-                              <tfoot>
-                                <tr className="bg-neutral-100 font-bold text-neutral-900 border-t-2 border-neutral-900 border-b border-neutral-300">
-                                  <td colSpan={3} className="py-2 px-2.5 text-[9.5px] font-extrabold">
-                                    Total Timesheet Summary ({crewData.length} Crew)
-                                  </td>
-                                  <td className="py-2 px-2 text-center text-[9.5px] font-bold">
-                                    {totalPresent} Present · {totalAbsent} Absent
-                                  </td>
-                                  <td className="py-2 px-1 text-center text-[11px]">{totalRegHours}h</td>
-                                  <td className="py-2 px-1 text-center text-[11px]">{crewData.reduce((a, b) => a + b.ot1Hours, 0)}h</td>
-                                  <td className="py-2 px-1 text-center text-[11px]">{crewData.reduce((a, b) => a + b.ot2Hours, 0)}h</td>
-                                  <td className="py-2 px-1 text-center text-[11px]">{crewData.reduce((a, b) => a + b.ot3Hours, 0)}h</td>
-                                  <td className="py-2 px-1 text-center text-[11px] font-black text-blue-600">
-                                    {totalRegHours + totalOtHours}h
-                                  </td>
-                                </tr>
-                              </tfoot>
-                            )}
+                            <tfoot>
+                              <tr className="bg-neutral-100 font-bold text-neutral-900 border-t-2 border-neutral-900 border-b border-neutral-300">
+                                <td colSpan={2} className="py-3 px-3 text-[10px] font-extrabold uppercase tracking-tight">
+                                  Total Attendance Summary
+                                </td>
+                                <td className="py-3 px-3 text-center font-mono font-black text-[11.5px] text-neutral-900">
+                                  {crewData.length}
+                                </td>
+                                <td className="py-3 px-3 text-center font-mono font-black text-[11.5px] text-emerald-700">
+                                  {totalPresent + totalHalfDay}
+                                </td>
+                                <td className="py-3 px-3 text-center font-mono font-black text-[11.5px] text-rose-700">
+                                  {totalAbsent}
+                                </td>
+                              </tr>
+                            </tfoot>
                           </table>
                         </div>
                       </div>
 
                       {/* PAGE FOOTER FOR EVERY PAGE */}
                       <div className="pt-2 border-t border-neutral-200 flex items-center justify-between text-[7.5px] font-bold text-neutral-400 tracking-wider">
-                        <span>Adidaya Studio | Crew Daily Log</span>
-                        <span>CRW 95 03 00 | {pageIdx + 1}/{totalPages}</span>
+                        <span>Adidaya Studio | Attendance</span>
+                        <span>CRW 95 03 01 | {pageIdx + 1}/{totalPages}</span>
                       </div>
                     </div>
                   );
