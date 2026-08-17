@@ -398,7 +398,7 @@ export default function DailyWeatherReportPreview({
           {/* FUTURE DATE RESTRICTION BANNER */}
           {isSelectedDateFuture ? (
             <div className="p-6 rounded-3xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-amber-900 dark:text-amber-200 space-y-3 shadow-xs">
-              <div className="flex items-center gap-2.5 text-sm font-extrabold text-amber-700 dark:text-amber-400">
+              <div className="flex items-center gap-2.5 text-sm font-bold text-amber-700 dark:text-amber-400">
                 <AlertCircle className="w-5 h-5 shrink-0 text-amber-600" />
                 <span>Weather Log Entry Restricted for Future Dates</span>
               </div>
@@ -417,8 +417,8 @@ export default function DailyWeatherReportPreview({
             <>
               {/* SITE WEATHER CONDITIONS CARD */}
               <div className="bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 rounded-3xl p-6 shadow-xs space-y-5">
-                <div className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
-                  SITE WEATHER CONDITIONS
+                <div className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 tracking-wider">
+                  Site Weather Conditions
                 </div>
 
                 <div className="space-y-3">
@@ -482,8 +482,8 @@ export default function DailyWeatherReportPreview({
 
               {/* SITE WEATHER OBSERVATIONS & NOTES */}
               <div className="bg-white dark:bg-neutral-900 border border-neutral-200/90 dark:border-neutral-800 rounded-3xl p-6 shadow-xs space-y-2">
-                <label className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider block">
-                  SITE WEATHER OBSERVATIONS & NOTES
+                <label className="text-[11px] font-bold text-neutral-500 dark:text-neutral-400 tracking-wider block">
+                  Site Weather Observations & Notes
                 </label>
                 <textarea
                   rows={3}
@@ -511,11 +511,11 @@ export default function DailyWeatherReportPreview({
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-neutral-200 dark:border-neutral-800 text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                  <th className="py-2 pr-4">CODE</th>
-                  <th className="py-2 px-4">MODULE NAME</th>
-                  <th className="py-2 px-4">DESCRIPTION</th>
-                  <th className="py-2 pl-4 text-right">ACTION</th>
+                <tr className="border-b border-neutral-200 dark:border-neutral-800 text-[10px] font-bold text-neutral-400 tracking-wider">
+                  <th className="py-2 pr-4">Code</th>
+                  <th className="py-2 px-4">Module Name</th>
+                  <th className="py-2 px-4">Description</th>
+                  <th className="py-2 pl-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
@@ -689,7 +689,7 @@ export default function DailyWeatherReportPreview({
                         <div className="font-black text-[26px] text-neutral-900 leading-none tracking-tighter">
                           RIK
                         </div>
-                        <div className="text-[5.5px] font-black text-neutral-900 tracking-wider leading-tight pt-1">
+                        <div className="text-[5.5px] font-bold text-neutral-900 tracking-wider leading-tight pt-1">
                           Daily Weather Report
                         </div>
                         <div className="text-[5px] font-semibold text-neutral-500 tracking-tight leading-tight">
@@ -703,10 +703,10 @@ export default function DailyWeatherReportPreview({
                         <div className="w-full grid grid-cols-2 gap-x-1 text-[5px] text-neutral-500">
                           <span className="text-left font-bold">Log Date</span>
                           <span className="text-right font-bold">Rev</span>
-                          <span className="text-left font-black text-neutral-800">
+                          <span className="text-left font-bold text-neutral-800">
                             {selectedDate.toLocaleDateString("en-GB")}
                           </span>
-                          <span className="text-right font-black text-neutral-800">00</span>
+                          <span className="text-right font-bold text-neutral-800">00</span>
                         </div>
                       </div>
                     </div>
@@ -721,7 +721,7 @@ export default function DailyWeatherReportPreview({
                           { label: "Primary Condition", value: hourlyRows[0]?.condition ? hourlyRows[0].condition : "Sunny / Clear" },
                         ].map((cell, i) => (
                           <div key={i} className="flex flex-col items-center justify-center">
-                            <span className="text-[5.5px] font-bold text-neutral-500 tracking-wider uppercase">
+                            <span className="text-[5.5px] font-bold text-neutral-500 tracking-wider">
                               {cell.label}
                             </span>
                             <span className="text-[8.5px] font-bold text-neutral-900 leading-tight pt-0.5 truncate max-w-[150px]">
@@ -734,8 +734,8 @@ export default function DailyWeatherReportPreview({
 
                     {/* TABLE BANNER & BILINGUAL HIGHLIGHTED 3-COLUMN WEATHER MATRIX TABLE */}
                     <div className="w-full border-y border-neutral-900 bg-white overflow-hidden my-2">
-                      <div className="bg-neutral-900 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider flex items-center justify-between">
-                        <span>DAILY SHIFT WEATHER MATRIX LOG</span>
+                      <div className="bg-neutral-900 text-white font-bold text-[7.5px] py-1 px-2 tracking-wider flex items-center justify-between">
+                        <span>Daily Shift Weather Matrix Log</span>
                         <span className="text-[6.5px] font-mono text-neutral-300 font-bold bg-neutral-800 px-1.5 py-0.5 rounded">
                           98 31 00
                         </span>
@@ -749,26 +749,26 @@ export default function DailyWeatherReportPreview({
                           <col style={{ width: "37%" }} />
                         </colgroup>
                         <thead>
-                          <tr className="bg-neutral-50 border-b border-neutral-300 text-[6px] font-extrabold text-neutral-500 uppercase">
+                          <tr className="bg-neutral-50 border-b border-neutral-300 text-[6px] font-bold text-neutral-500">
                             <th rowSpan={2} className="p-1 pl-2 align-middle border-r border-neutral-200">
-                              TIME SLOT / RANGE
+                              Time Slot / Range
                             </th>
                             <th colSpan={3} className="p-0.5 text-center border-r border-neutral-200 tracking-wider">
-                              WEATHER CONDITION MATRIX
+                              Weather Condition Matrix
                             </th>
                             <th rowSpan={2} className="p-1 pr-2 align-middle">
-                              REMARKS / NOTES
+                              Remarks / Notes
                             </th>
                           </tr>
-                          <tr className="bg-neutral-100 border-b border-neutral-300 text-[5.5px] font-extrabold uppercase text-center">
-                            <th className="p-0.5 border-r border-neutral-200 text-amber-900 bg-amber-100/90 font-extrabold">
-                              SUNNY / CERAH (C)
+                          <tr className="bg-neutral-100 border-b border-neutral-300 text-[5.5px] font-bold text-center">
+                            <th className="p-0.5 border-r border-neutral-200 text-amber-900 bg-amber-100/90 font-bold">
+                              Sunny / Cerah (C)
                             </th>
-                            <th className="p-0.5 border-r border-neutral-200 text-slate-900 bg-slate-200 font-extrabold">
-                              CLOUDY / BERAWAN (B)
+                            <th className="p-0.5 border-r border-neutral-200 text-slate-900 bg-slate-200 font-bold">
+                              Cloudy / Berawan (B)
                             </th>
-                            <th className="p-0.5 border-r border-neutral-200 text-blue-950 bg-blue-100/90 font-extrabold">
-                              RAIN / HUJAN (H)
+                            <th className="p-0.5 border-r border-neutral-200 text-blue-950 bg-blue-100/90 font-bold">
+                              Rain / Hujan (H)
                             </th>
                           </tr>
                         </thead>
@@ -787,7 +787,7 @@ export default function DailyWeatherReportPreview({
                                 {/* SUNNY (C) - Full Cell Highlight */}
                                 <td
                                   className={clsx(
-                                    "p-1 text-center font-extrabold text-[8px] border-r border-neutral-200 transition-colors",
+                                    "p-1 text-center font-bold text-[8px] border-r border-neutral-200 transition-colors",
                                     isSunny ? "bg-amber-100/90 text-amber-950" : "bg-white text-neutral-300 font-normal"
                                   )}
                                 >
@@ -797,7 +797,7 @@ export default function DailyWeatherReportPreview({
                                 {/* CLOUDY (B) - Full Cell Highlight */}
                                 <td
                                   className={clsx(
-                                    "p-1 text-center font-extrabold text-[8px] border-r border-neutral-200 transition-colors",
+                                    "p-1 text-center font-bold text-[8px] border-r border-neutral-200 transition-colors",
                                     isCloudy ? "bg-slate-200 text-slate-950" : "bg-white text-neutral-300 font-normal"
                                   )}
                                 >
@@ -807,7 +807,7 @@ export default function DailyWeatherReportPreview({
                                 {/* RAINY (H) - Full Cell Highlight */}
                                 <td
                                   className={clsx(
-                                    "p-1 text-center font-extrabold text-[8px] border-r border-neutral-200 transition-colors",
+                                    "p-1 text-center font-bold text-[8px] border-r border-neutral-200 transition-colors",
                                     isRainy ? "bg-blue-100/90 text-blue-950" : "bg-white text-neutral-300 font-normal"
                                   )}
                                 >
@@ -822,17 +822,17 @@ export default function DailyWeatherReportPreview({
                           })}
 
                           {/* TOTAL HOURLY SUMMARY ROW */}
-                          <tr className="bg-neutral-100 font-extrabold border-t-2 border-neutral-900 text-[6.5px]">
-                            <td className="p-1 pl-2 text-neutral-900 uppercase border-r border-neutral-200 font-black">
-                              TOTAL HOURS
+                          <tr className="bg-neutral-100 font-bold border-t-2 border-neutral-900 text-[6.5px]">
+                            <td className="p-1 pl-2 text-neutral-900 border-r border-neutral-200 font-bold">
+                              Total Hours
                             </td>
-                            <td className="p-1 text-center font-black bg-amber-100/90 text-amber-950 border-r border-neutral-200">
+                            <td className="p-1 text-center font-bold bg-amber-100/90 text-amber-950 border-r border-neutral-200">
                               {weatherTotals.sunny.toFixed(1)} hrs
                             </td>
-                            <td className="p-1 text-center font-black bg-slate-200 text-slate-950 border-r border-neutral-200">
+                            <td className="p-1 text-center font-bold bg-slate-200 text-slate-950 border-r border-neutral-200">
                               {weatherTotals.cloudy.toFixed(1)} hrs
                             </td>
-                            <td className="p-1 text-center font-black bg-blue-100/90 text-blue-950 border-r border-neutral-200">
+                            <td className="p-1 text-center font-bold bg-blue-100/90 text-blue-950 border-r border-neutral-200">
                               {weatherTotals.rainy.toFixed(1)} hrs
                             </td>
                             <td className="p-1 pr-2 text-neutral-900 font-bold">
@@ -843,10 +843,10 @@ export default function DailyWeatherReportPreview({
                       </table>
                     </div>
 
-                    {/* NOTES & SITE OBSERVATIONS BOX (CLEAN BANNER WITHOUT LEGEND) */}
+                    {/* NOTES & SITE OBSERVATIONS BOX */}
                     <div className="w-full border-y border-neutral-900 bg-white overflow-hidden my-2">
-                      <div className="bg-neutral-900 text-white font-extrabold text-[7.5px] py-1 px-2 uppercase tracking-wider">
-                        DAILY WEATHER OBSERVATIONS & SITE IMPACT
+                      <div className="bg-neutral-900 text-white font-bold text-[7.5px] py-1 px-2 tracking-wider">
+                        Daily Weather Observations & Site Impact
                       </div>
                       <div className="p-2 text-[7px] text-neutral-800 min-h-[40px] font-medium leading-relaxed">
                         {siteNotes}
