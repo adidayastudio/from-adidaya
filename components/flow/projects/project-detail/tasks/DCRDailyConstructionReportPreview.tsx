@@ -512,10 +512,10 @@ export default function DCRDailyConstructionReportPreview({
                     nodeId: "95-25-00",
                   },
                   {
-                    code: "98 03 00",
+                    code: "98 30 00",
                     name: "Weather & Climate Log",
                     description: "Source logging of daily weather conditions (sunny, cloudy, rain) and effective working hours.",
-                    nodeId: "98-03-00",
+                    nodeId: "98-30-00",
                   },
                   {
                     code: "50 00 00",
@@ -792,12 +792,12 @@ export default function DCRDailyConstructionReportPreview({
                         </table>
                       </div>
 
-                      {/* WEATHER (98 03 00) */}
+                      {/* WEATHER (98 30 00) */}
                       <div className="w-full border-y border-neutral-900 bg-white overflow-hidden">
                         <div className="bg-neutral-900 text-white font-extrabold text-[7px] py-1 px-2 uppercase tracking-wider flex items-center justify-between gap-2">
                           <span className="truncate">WEATHER</span>
                           <span className="text-[6.5px] font-mono text-neutral-300 font-bold bg-neutral-800 px-1.5 py-0.5 rounded cursor-pointer hover:bg-neutral-700 transition-colors shrink-0 whitespace-nowrap ml-auto text-right">
-                            98 03 00
+                            98 30 00
                           </span>
                         </div>
                         <table className="w-full text-left text-xs border-collapse table-fixed">

@@ -28,6 +28,10 @@ import DCRDailyConstructionReportPreview from "@/components/flow/projects/projec
 import CrewDailyLogReportPreview from "@/components/flow/projects/project-detail/tasks/CrewDailyLogReportPreview";
 import { CrewAttendanceReportPreview } from "@/components/flow/projects/project-detail/tasks/CrewAttendanceReportPreview";
 import { CrewWorkingHoursReportPreview } from "@/components/flow/projects/project-detail/tasks/CrewWorkingHoursReportPreview";
+import WeatherReportPreview from "@/components/flow/projects/project-detail/tasks/WeatherReportPreview";
+import DailyWeatherReportPreview from "@/components/flow/projects/project-detail/tasks/DailyWeatherReportPreview";
+import WeeklyWeatherReportPreview from "@/components/flow/projects/project-detail/tasks/WeeklyWeatherReportPreview";
+import MonthlyWeatherReportPreview from "@/components/flow/projects/project-detail/tasks/MonthlyWeatherReportPreview";
 import { defaultKickoffData } from "@/components/flow/projects/project-detail/tasks/defaultKickoffData";
 import { KO_SECTIONS } from "@/components/flow/projects/project-detail/setup/stages/data/ko";
 import { SD_SECTIONS } from "@/components/flow/projects/project-detail/setup/stages/data/sd";
@@ -759,38 +763,37 @@ const TREE_DATA: TreeNode[] = [
         title: "RIK — Risk, Issue & Site Condition",
         children: [
           {
-            id: "98-01-00",
-            code: "98 01 00",
+            id: "98-10-00",
+            code: "98 10 00",
             title: "Risk",
             children: [
-              { id: "98-01-01", code: "98 01 01", title: "Identified Risk" },
-              { id: "98-01-02", code: "98 01 02", title: "Impact" },
-              { id: "98-01-03", code: "98 01 03", title: "Mitigation" },
-              { id: "98-01-04", code: "98 01 04", title: "Risk Status" },
+              { id: "98-11-00", code: "98 11 00", title: "Identified Risk" },
+              { id: "98-12-00", code: "98 12 00", title: "Impact" },
+              { id: "98-13-00", code: "98 13 00", title: "Mitigation" },
+              { id: "98-14-00", code: "98 14 00", title: "Risk Status" },
             ],
           },
           {
-            id: "98-02-00",
-            code: "98 02 00",
+            id: "98-20-00",
+            code: "98 20 00",
             title: "Issue",
             children: [
-              { id: "98-02-01", code: "98 02 01", title: "Site Issue" },
-              { id: "98-02-02", code: "98 02 02", title: "Design Issue" },
-              { id: "98-02-03", code: "98 02 03", title: "Procurement Issue" },
-              { id: "98-02-04", code: "98 02 04", title: "Cost Issue" },
-              { id: "98-02-05", code: "98 02 05", title: "Schedule Issue" },
-              { id: "98-02-06", code: "98 02 06", title: "Resolution" },
+              { id: "98-21-00", code: "98 21 00", title: "Site Issue" },
+              { id: "98-22-00", code: "98 22 00", title: "Design Issue" },
+              { id: "98-23-00", code: "98 23 00", title: "Procurement Issue" },
+              { id: "98-24-00", code: "98 24 00", title: "Cost Issue" },
+              { id: "98-25-00", code: "98 25 00", title: "Schedule Issue" },
+              { id: "98-26-00", code: "98 26 00", title: "Resolution" },
             ],
           },
           {
-            id: "98-03-00",
-            code: "98 03 00",
+            id: "98-30-00",
+            code: "98 30 00",
             title: "Weather",
             children: [
-              { id: "98-03-01", code: "98 03 01", title: "Weather Condition" },
-              { id: "98-03-02", code: "98 03 02", title: "Rainfall" },
-              { id: "98-03-03", code: "98 03 03", title: "Work Interruption" },
-              { id: "98-03-04", code: "98 03 04", title: "Weather Impact" },
+              { id: "98-31-00", code: "98 31 00", title: "Daily Weather" },
+              { id: "98-35-00", code: "98 35 00", title: "Weekly Weather" },
+              { id: "98-38-00", code: "98 38 00", title: "Monthly Weather" },
             ],
           },
         ],
@@ -1589,6 +1592,51 @@ export default function ProjectIndexView({
                 (selectedNodeObj?.code?.startsWith("95 2") && selectedNodeObj?.title?.toLowerCase().includes("working hours")) ? (
                 /* 95 25 00 WORKING HOURS SUMMARY FORMAT */
                 <CrewWorkingHoursReportPreview
+                  isProjectDetail={!!projectTag}
+                  projectName={projectName}
+                  onSelectNode={(nodeId) => {
+                    setSelectedDocId(nodeId);
+                  }}
+                />
+              ) : selectedDocId === "98-31-00" ||
+                selectedNodeObj?.code === "98 31 00" ||
+                (selectedNodeObj?.code?.startsWith("98 3") && selectedNodeObj?.title?.toLowerCase().includes("daily")) ? (
+                /* 98 31 00 DAILY WEATHER FORMAT */
+                <DailyWeatherReportPreview
+                  isProjectDetail={!!projectTag}
+                  projectName={projectName}
+                  onSelectNode={(nodeId) => {
+                    setSelectedDocId(nodeId);
+                  }}
+                />
+              ) : selectedDocId === "98-35-00" ||
+                selectedNodeObj?.code === "98 35 00" ||
+                (selectedNodeObj?.code?.startsWith("98 3") && selectedNodeObj?.title?.toLowerCase().includes("weekly")) ? (
+                /* 98 35 00 WEEKLY WEATHER FORMAT */
+                <WeeklyWeatherReportPreview
+                  isProjectDetail={!!projectTag}
+                  projectName={projectName}
+                  onSelectNode={(nodeId) => {
+                    setSelectedDocId(nodeId);
+                  }}
+                />
+              ) : selectedDocId === "98-38-00" ||
+                selectedNodeObj?.code === "98 38 00" ||
+                (selectedNodeObj?.code?.startsWith("98 3") && selectedNodeObj?.title?.toLowerCase().includes("monthly")) ? (
+                /* 98 38 00 MONTHLY WEATHER FORMAT */
+                <MonthlyWeatherReportPreview
+                  isProjectDetail={!!projectTag}
+                  projectName={projectName}
+                  onSelectNode={(nodeId) => {
+                    setSelectedDocId(nodeId);
+                  }}
+                />
+              ) : selectedDocId === "98-30-00" ||
+                selectedDocId === "98-00-00" ||
+                selectedNodeObj?.code === "98 30 00" ||
+                selectedNodeObj?.title?.toLowerCase().includes("weather") ? (
+                /* 98 30 00 WEATHER DEFAULT FORMAT */
+                <DailyWeatherReportPreview
                   isProjectDetail={!!projectTag}
                   projectName={projectName}
                   onSelectNode={(nodeId) => {
