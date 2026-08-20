@@ -14,7 +14,11 @@ interface WorkspaceModuleViewProps {
 
 export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleViewProps) {
     return (
-        <div className="flex-1 h-full overflow-y-auto scrollbar-hide p-4 sm:p-6 [&_aside]:!hidden [&_.lg\\:hidden]:!block">
+        <div className="flex-1 h-full overflow-y-auto scrollbar-hide p-4 sm:p-6 stream-workspace-ipad">
+            <style>{`
+                .stream-workspace-ipad aside { display: none !important; }
+                .stream-workspace-ipad .lg\\:hidden { display: block !important; }
+            `}</style>
             <Suspense fallback={<GlobalLoading />}>
                 {selectedModule === "finance" && (
                     <FinanceProvider>
