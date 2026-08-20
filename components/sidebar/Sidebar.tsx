@@ -38,7 +38,8 @@ import {
   Menu,
   X,
   LogOut,
-  PanelLeft
+  PanelLeft,
+  Zap
 } from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
@@ -51,6 +52,7 @@ const menuItems: MenuSection[] = [
     section: "MAIN",
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Stream", href: "/stream", icon: Zap },
       { label: "Tasks", href: "/task", icon: CheckSquare },
       { label: "Actions", href: "/action", icon: Target },
       { label: "Projects", href: "/project", icon: FolderKanban },

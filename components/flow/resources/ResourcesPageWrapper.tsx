@@ -27,7 +27,7 @@ const RESOURCES_TABS = [
     { id: "tools", label: "Tools", href: "/flow/resources/tools", icon: Wrench },
     { id: "assets", label: "Assets", href: "/flow/resources/assets", icon: Truck },
     { id: "services", label: "Services", href: "/flow/resources/services", icon: Handshake },
-    { id: "reports", label: "Reports", href: "/flow/resources/reports", icon: FileBarChart },
+    { id: "setup", label: "Setup", href: "/flow/resources/setup", icon: LayoutDashboard },
 ];
 
 interface ResourcesPageWrapperProps {

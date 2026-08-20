@@ -32,6 +32,7 @@ import WeatherReportPreview from "@/components/flow/projects/project-detail/task
 import DailyWeatherReportPreview from "@/components/flow/projects/project-detail/tasks/DailyWeatherReportPreview";
 import WeeklyWeatherReportPreview from "@/components/flow/projects/project-detail/tasks/WeeklyWeatherReportPreview";
 import MonthlyWeatherReportPreview from "@/components/flow/projects/project-detail/tasks/MonthlyWeatherReportPreview";
+import FieldMaterialPreview from "@/components/flow/projects/project-detail/tasks/FieldMaterialPreview";
 import { defaultKickoffData } from "@/components/flow/projects/project-detail/tasks/defaultKickoffData";
 import { KO_SECTIONS } from "@/components/flow/projects/project-detail/setup/stages/data/ko";
 import { SD_SECTIONS } from "@/components/flow/projects/project-detail/setup/stages/data/sd";
@@ -1637,6 +1638,22 @@ export default function ProjectIndexView({
                 selectedNodeObj?.title?.toLowerCase().includes("weather") ? (
                 /* 98 30 00 WEATHER DEFAULT FORMAT */
                 <DailyWeatherReportPreview
+                  isProjectDetail={!!projectTag}
+                  projectName={projectName}
+                  onSelectNode={(nodeId) => {
+                    setSelectedDocId(nodeId);
+                  }}
+                />
+              ) : selectedDocId === "94-00-00" ||
+                selectedDocId === "94-01-00" ||
+                selectedDocId?.startsWith("94-") ||
+                selectedNodeObj?.code === "94 00 00" ||
+                selectedNodeObj?.code === "94 01 00" ||
+                selectedNodeObj?.code?.startsWith("94 0") ||
+                selectedNodeObj?.title?.toLowerCase().includes("resource") ||
+                selectedNodeObj?.title?.toLowerCase().includes("material") ? (
+                /* 94 01 00 RSC — RESOURCES & MATERIAL */
+                <FieldMaterialPreview
                   isProjectDetail={!!projectTag}
                   projectName={projectName}
                   onSelectNode={(nodeId) => {

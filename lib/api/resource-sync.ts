@@ -19,7 +19,8 @@ export async function syncFinanceToResources(startDate?: string) {
     // Fetch Purchasing
     let pQuery = supabase
         .from('purchasing_requests')
-        .select(`*, items:purchasing_items(*)`);
+        .select(`*, items:purchasing_items(*)`)
+        .eq('financial_status', 'PAID');
 
     if (startDate) {
         pQuery = pQuery.gte('created_at', startDate);
@@ -59,7 +60,8 @@ export async function syncFinanceToResources(startDate?: string) {
     // Fetch Reimbursement
     let rQuery = supabase
         .from('reimbursement_requests')
-        .select(`*, items:reimbursement_items(*)`);
+        .select(`*, items:reimbursement_items(*)`)
+        .eq('status', 'PAID');
 
     if (startDate) {
         rQuery = rQuery.gte('created_at', startDate);

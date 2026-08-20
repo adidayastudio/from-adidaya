@@ -111,8 +111,30 @@ const LEVEL3_MAP: Record<string, string> = {
 
 export function generateResourceCode(item: CatalogResource) {
     const cat = CATEGORY_CODES[item.category] || 'MT';
-    const sub = (item.subcategory || 'umum').toLowerCase();
-    const l2 = LEVEL2_MAP[sub] || '99';
+    const sub = (item.subcategory || 'umum').toLowerCase().trim();
+    
+    let badge = 'MSC';
+    if (item.category === 'tool' || item.category === 'equipment') badge = 'TLS';
+    else if (item.category === 'asset') badge = 'AST';
+    else if (item.category === 'service') badge = 'SRV';
+    else {
+        if (sub.includes("general") || sub.includes("uncategorized") || sub.includes("umum") || sub === "gen") badge = "GEN";
+        else if (sub.includes("structure") || sub.includes("struktur") || sub === "str") badge = "STR";
+        else if (sub.includes("architecture") || sub.includes("arsitektur") || sub === "ars" || sub === "wall" || sub === "dinding") badge = "ARS";
+        else if (sub.includes("mep") || sub.includes("mekanikal") || sub.includes("elektrikal")) badge = "MEP";
+        else if (sub.includes("interior") || sub === "int") badge = "INT";
+        else if (sub.includes("landscape") || sub.includes("lanskap") || sub.includes("infra") || sub === "lan") badge = "LAN";
+        else if (sub.includes("miscellaneous") || sub.includes("msc") || sub.includes("lain")) badge = "MSC";
+    }
+
+    const l2 = 
+      badge === "GEN" ? "00" :
+      badge === "STR" ? "01" :
+      badge === "ARS" ? "02" :
+      badge === "MEP" ? "03" :
+      badge === "INT" ? "04" :
+      badge === "LAN" ? "05" : "99";
+
     const grp = (item.group_name || 'umum').toLowerCase();
     const l3 = LEVEL3_MAP[grp] || '99';
 
@@ -121,7 +143,7 @@ export function generateResourceCode(item: CatalogResource) {
         for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
         return Math.abs(hash % 999).toString().padStart(3, '0');
     };
-    const l4 = getL4Code(item.name.split(' - ')[0].trim().toLowerCase());
+    const l4 = getL4Code((item.name || "").split(' - ')[0].trim().toLowerCase());
     const variant = ((item as any).metadata?.variant_index || 1).toString().padStart(3, '0');
 
     return `${cat}${l2}${l3}${l4}-${variant}`;

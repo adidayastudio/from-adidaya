@@ -27,6 +27,7 @@ import clsx from "clsx";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { fetchCrewMembers, fetchDailyLogs } from "@/lib/api/crew";
+import { fetchOrCreateDCR, fetchDCRMaterials, DCRReport, DCRMaterial } from "@/lib/api/dcr";
 
 interface WorkItem {
   id: string;
@@ -147,6 +148,11 @@ export default function DCRDailyConstructionReportPreview({
   const [hseLogs, setHseLogs] = useState<HSEItem[]>([
     { id: "1", item: "PPE & Safety Equipment Inspection", status: "SAFE", action: "All workers compliant with helmets & boots" }
   ]);
+
+  // DCR Master Report state (loaded from DB)
+  const [dcrReport, setDcrReport] = useState<DCRReport | null>(null);
+  const [dcrNotes, setDcrNotes] = useState<string>("");
+  const [dcrNextPlan, setDcrNextPlan] = useState<string>("");
 
   // Dynamic Scale State for Canvas Preview Viewport
   const [scale, setScale] = useState<number>(1);
@@ -279,6 +285,61 @@ export default function DCRDailyConstructionReportPreview({
       }
     }
     loadRealCrew();
+  }, [activeProject, selectedDate, projectList]);
+
+  // Load DCR master report + materials from DB
+  useEffect(() => {
+    async function loadDCRData() {
+      try {
+        const wsId = await fetchDefaultWorkspaceId();
+        if (!wsId) return;
+
+        let projCode = activeProject;
+        if (activeProject.includes("[")) {
+          projCode = activeProject.split("]")[0].replace("[", "").trim().toUpperCase();
+        }
+        const matchedProj = projectList.find(p => p.name === activeProject || p.id === activeProject);
+        if (matchedProj && matchedProj.code) {
+          projCode = matchedProj.code.replace("[", "").replace("]", "").trim().toUpperCase();
+        }
+
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+        const day = String(selectedDate.getDate()).padStart(2, "0");
+        const dateStr = `${year}-${month}-${day}`;
+
+        // Fetch or create DCR master report
+        const dcr = await fetchOrCreateDCR(wsId, projCode, dateStr);
+        setDcrReport(dcr);
+
+        if (dcr) {
+          // Load notes & next plan from DB
+          setDcrNotes(dcr.notes || "");
+          setDcrNextPlan(dcr.nextPlan || "");
+
+          // Load materials from DB
+          const dbMaterials = await fetchDCRMaterials(dcr.id);
+          if (dbMaterials.length > 0) {
+            setMaterials(dbMaterials.map((m, idx) => ({
+              id: m.id,
+              category: m.category,
+              name: m.name,
+              unit: m.unit,
+              incoming: m.incoming,
+              used: m.used,
+              stock: m.stock,
+            })));
+          } else {
+            setMaterials([]);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading DCR data:", err);
+      }
+    }
+    if (activeProject && projectList.length > 0) {
+      loadDCRData();
+    }
   }, [activeProject, selectedDate, projectList]);
 
   // Format location string safely
@@ -965,7 +1026,7 @@ export default function DCRDailyConstructionReportPreview({
                       NOTES & ISSUES
                     </div>
                     <div className="p-2 text-[7px] text-neutral-800 min-h-[35px] font-medium leading-relaxed">
-                      {data.notes || "No recorded notes or issues for this date."}
+                      {dcrNotes || data.notes || "No recorded notes or issues for this date."}
                     </div>
                   </div>
 
@@ -975,7 +1036,7 @@ export default function DCRDailyConstructionReportPreview({
                       NEXT PLANNED ACTIVITIES
                     </div>
                     <div className="p-2 text-[7px] text-neutral-800 min-h-[35px] font-medium leading-relaxed">
-                      {data.nextPlan || "Additional 4 workers for Zone B waterproofing acceleration and Level 2 column formwork preparation."}
+                      {dcrNextPlan || data.nextPlan || "Additional 4 workers for Zone B waterproofing acceleration and Level 2 column formwork preparation."}
                     </div>
                   </div>
                 </div>

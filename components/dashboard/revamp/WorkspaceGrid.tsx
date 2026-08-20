@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { CreditCard, Package, User, Clock, Users, Compass, MessageCircle, BookOpen, FileText } from "lucide-react";
+import { CreditCard, Package, User, Clock, Users, Compass, MessageCircle, BookOpen, FileText, Zap } from "lucide-react";
 import clsx from "clsx";
 
 const APPS = [
+    { label: "Stream", href: "/stream", icon: Zap, color: "from-blue-600/40 to-blue-600/20 dark:from-blue-600/30 dark:to-neutral-900", iconColor: "text-blue-500", border: "border-blue-500/30 dark:border-blue-500/40" },
     { label: "Finance", href: "/flow/finance", icon: CreditCard, color: "from-red-500/40 to-red-500/20 dark:from-red-500/30 dark:to-neutral-900", iconColor: "text-red-500", border: "border-red-500/20 dark:border-red-500/30" },
     { label: "Resources", href: "/flow/resources", icon: Package, color: "from-orange-500/40 to-orange-500/20 dark:from-orange-500/30 dark:to-neutral-900", iconColor: "text-orange-500", border: "border-orange-500/20 dark:border-orange-500/30" },
     { label: "Reports", href: "/flow/reports", icon: FileText, color: "from-blue-500/40 to-blue-500/20 dark:from-blue-500/30 dark:to-neutral-900", iconColor: "text-blue-500", border: "border-blue-500/20 dark:border-blue-500/30" },

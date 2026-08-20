@@ -10,11 +10,12 @@ import { LayoutGrid, Package, Wrench, Building2, Handshake, History } from "luci
 
 const INLINE_TABS = [
     { label: "Overview", path: "/flow/resources/overview", icon: LayoutGrid },
+    { label: "Activity", path: "/flow/resources/activity-log", icon: History },
     { label: "Materials", path: "/flow/resources/materials", icon: Package },
     { label: "Tools", path: "/flow/resources/tools", icon: Wrench },
     { label: "Assets", path: "/flow/resources/assets", icon: Building2 },
     { label: "Services", path: "/flow/resources/services", icon: Handshake },
-    { label: "Activity", path: "/flow/resources/activity-log", icon: History },
+    { label: "Setup", path: "/flow/resources/setup", icon: LayoutGrid },
 ];
 
 function ResourcesInlineTabs() {
@@ -61,7 +62,7 @@ export default function ResourcesLayout({
                 <ResourcesMobileHeader backUrl="/dashboard" />
 
                 {/* Content with top padding */}
-                <div className="pb-32 px-5 space-y-4 mt-2">
+                <div className="pb-32 px-5 space-y-4 mt-2 max-w-4xl mx-auto">
                     {children}
                 </div>
             </div>
@@ -70,11 +71,11 @@ export default function ResourcesLayout({
             <div className="hidden md:block bg-transparent p-0 transition-colors">
                 <PageWrapper sidebar={<ResourcesSidebar />} isTransparent>
                     {/* iPad inline tabs - visible on md, hidden on lg where sidebar shows */}
-                    <div className="lg:hidden mb-4">
+                    <div className="lg:hidden mb-4 max-w-4xl mx-auto">
                         <h1 className="text-[28px] font-bold text-neutral-900 dark:text-white tracking-tight mb-3">Resources</h1>
                         <ResourcesInlineTabs />
                     </div>
-                    <div className="space-y-8 w-full animate-in fade-in duration-500">
+                    <div className="space-y-8 w-full max-w-4xl mx-auto animate-in fade-in duration-500">
                         {children}
                     </div>
                 </PageWrapper>

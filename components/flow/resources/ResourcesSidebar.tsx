@@ -9,7 +9,8 @@ import {
     Building2,
     History,
     MoreHorizontal,
-    LayoutGrid
+    LayoutGrid,
+    Handshake
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -19,10 +20,12 @@ import { useState, useRef, useEffect } from "react";
 ====================== */
 const NAV_ITEMS = [
     { label: "Overview", path: "/flow/resources/overview", icon: LayoutGrid },
+    { label: "Activity Log", path: "/flow/resources/activity-log", icon: History },
     { label: "Materials", path: "/flow/resources/materials", icon: Package },
     { label: "Tools", path: "/flow/resources/tools", icon: Wrench },
     { label: "Assets", path: "/flow/resources/assets", icon: Building2 },
-    { label: "Activity Log", path: "/flow/resources/activity-log", icon: History },
+    { label: "Services", path: "/flow/resources/services", icon: Handshake },
+    { label: "Setup", path: "/flow/resources/setup", icon: LayoutGrid },
 ];
 
 export default function ResourcesSidebar() {
