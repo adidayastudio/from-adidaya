@@ -671,6 +671,7 @@ export default function StreamPage() {
                     setSelectedItem={setSelectedItem}
                     currentChannel={currentChannel}
                     navMode={navMode}
+                    selectedModule={selectedModule}
                     feedItems={feedItems}
                     currentChannelFeed={currentChannelFeed}
                     selectedChannelCode={selectedChannelCode}
