@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useTheme } from "next-themes";
 import {
@@ -54,7 +55,7 @@ import type {
     StreamIntentType,
 } from "@/lib/stream/types";
 
-export default function StreamPage() {
+export default function StreamPage({ params }: { params?: { slug?: string[] } }) {
     const { theme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
@@ -66,10 +67,30 @@ export default function StreamPage() {
     // Projects list from DB
     const [projects, setProjects] = useState<Project[]>([]);
 
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
+    const slug = params?.slug || [];
+    
+    // Parse slug on initial render
+    const initialNavMode = (() => {
+        if (slug.length === 0) return "ask_adidaya";
+        if (slug[0] === "ask-adidaya") return "ask_adidaya";
+        if (slug[0] === "inbox") return "inbox";
+        if (slug[0] === "tasks") return "tasks";
+        if (slug[0] === "channels") return "project_channels";
+        if (["finance", "crew", "resources", "reports", "people", "clock"].includes(slug[0])) return "workspace_module";
+        return "ask_adidaya";
+    })();
+
+    const initialChannelCode = slug[0] === "channels" ? slug[1] || "023-rwm" : "023-rwm";
+    const initialModule = ["finance", "crew", "resources", "reports", "people", "clock"].includes(slug[0]) ? slug[0] : "finance";
+
     // Navigation state
-    const [navMode, setNavMode] = useState<SidebarNavMode>("ask_adidaya");
-    const [selectedChannelCode, setSelectedChannelCode] = useState<string>("023-rwm");
-    const [selectedModule, setSelectedModule] = useState<string>("finance");
+    const [navMode, setNavMode] = useState<SidebarNavMode>(initialNavMode);
+    const [selectedChannelCode, setSelectedChannelCode] = useState<string>(initialChannelCode);
+    const [selectedModule, setSelectedModule] = useState<string>(initialModule);
 
     // Accordion Collapse States (Workspace default expanded as requested)
     const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
@@ -99,6 +120,39 @@ export default function StreamPage() {
         setMounted(true);
     }, []);
 
+    // Sync navigation state to URL query params
+    useEffect(() => {
+        if (!mounted) return;
+        
+        let path = "/stream";
+        if (navMode === "ask_adidaya") {
+            path = "/stream/ask-adidaya";
+        } else if (navMode === "inbox") {
+            path = "/stream/inbox";
+        } else if (navMode === "tasks") {
+            path = "/stream/tasks";
+        } else if (navMode === "project_channels" && selectedChannelCode) {
+            path = `/stream/channels/${selectedChannelCode}`;
+        } else if (navMode === "workspace_module" && selectedModule) {
+            const parts = window.location.pathname.split("/");
+            const currentSubtab = (parts.length >= 4 && parts[1] === "stream" && parts[2] === selectedModule) ? parts[3] : "overview";
+            path = `/stream/${selectedModule}/${currentSubtab}`;
+        }
+        
+        const params = new URLSearchParams(window.location.search);
+        params.delete("nav");
+        params.delete("module");
+        params.delete("channel");
+        params.delete("subtab");
+        
+        const search = params.toString();
+        const finalUrl = search ? `${path}?${search}` : path;
+        
+        if (window.location.pathname + window.location.search !== finalUrl) {
+            router.replace(finalUrl, { scroll: false });
+        }
+    }, [navMode, selectedModule, selectedChannelCode, pathname, mounted]);
+
     // Handle channel content scroll for iOS/macOS dynamic header
     const handleChannelScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const scrollTop = e.currentTarget.scrollTop;
@@ -124,7 +178,9 @@ export default function StreamPage() {
             setProjects(data);
             if (data.length > 0) {
                 const firstSlug = `${data[0].projectNumber || "000"}-${(data[0].projectCode || "PRJ").toLowerCase()}`;
-                setSelectedChannelCode(firstSlug);
+                const parts = window.location.pathname.split("/");
+                const pathChannel = (parts.length >= 4 && parts[1] === "stream" && parts[2] === "channels") ? parts[3] : null;
+                setSelectedChannelCode(pathChannel || firstSlug);
             }
         } catch (err) {
             console.error("Failed to load projects:", err);

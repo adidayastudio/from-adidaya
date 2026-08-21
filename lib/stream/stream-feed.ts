@@ -16,8 +16,9 @@ export async function fetchFeedItems(limit = 50): Promise<FeedItem[]> {
     const supabase = createClient();
     const items: FeedItem[] = [];
 
-    // Get current user context for permission checks
+    // Get current user context for permission check
     const { data: { user } } = await supabase.auth.getUser();
+    const userIdsToFetch = new Set<string>();
 
     // 1. Fetch stream activities from stream_activities table
     const { data: activities, error } = await supabase
@@ -27,21 +28,52 @@ export async function fetchFeedItems(limit = 50): Promise<FeedItem[]> {
         .limit(limit);
 
     if (!error && activities) {
+        activities.forEach(act => {
+            if (act.user_id) userIdsToFetch.add(act.user_id);
+        });
+    }
+
+    // 2. Fetch real purchasing_requests from database (100% REAL DATA)
+    const { data: realPurchases } = await supabase
+        .from("purchasing_requests")
+        .select("*, projects(id, project_code, project_name, project_number), purchasing_items(id, name, qty, unit, unit_price, total), purchasing_invoices(id, invoice_url, invoice_name, invoice_type, notes, created_at)")
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+    if (realPurchases) {
+        realPurchases.forEach(pr => {
+            if (pr.created_by) userIdsToFetch.add(pr.created_by);
+        });
+    }
+
+    // Fetch corresponding submitter profiles in parallel
+    const profileMap = new Map<string, string>();
+    if (userIdsToFetch.size > 0) {
+        const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, username, full_name")
+            .in("id", Array.from(userIdsToFetch));
+        if (profiles) {
+            profiles.forEach(p => {
+                profileMap.set(p.id, p.full_name || p.username || "");
+            });
+        }
+    }
+
+    // Process stream activities
+    if (!error && activities) {
         for (const act of activities) {
             const item = streamActivityToFeedItem(act);
+            if (act.user_id && profileMap.has(act.user_id)) {
+                item.userName = profileMap.get(act.user_id);
+            }
             if (shouldShowItem(item, user?.id)) {
                 items.push(item);
             }
         }
     }
 
-    // 2. Fetch real purchasing_requests from database (100% REAL DATA)
-    const { data: realPurchases } = await supabase
-        .from("purchasing_requests")
-        .select("*, projects(project_code, project_name)")
-        .order("created_at", { ascending: false })
-        .limit(30);
-
+    // Process real purchasing requests
     if (realPurchases) {
         for (const pr of realPurchases) {
             const isDuplicate = items.some(
@@ -60,7 +92,8 @@ export async function fetchFeedItems(limit = 50): Promise<FeedItem[]> {
 
                 const submodLabel = pr.type === "REIMBURSEMENT" ? "Reimburse" : "Purchasing";
 
-                const submitter = pr.submitted_by_name || pr.created_by_name || (pr as any).beneficiary_name || "";
+                const submitterNameVal = pr.created_by ? profileMap.get(pr.created_by) : "";
+                const submitter = submitterNameVal || pr.submitted_by_name || pr.created_by_name || (pr as any).beneficiary_name || "";
                 const formattedAmount = pr.amount ? `Rp ${Number(pr.amount).toLocaleString("id-ID")}` : "";
                 const subtitleText = [formattedAmount, submitter].filter(Boolean).join(" · ");
 
@@ -75,7 +108,7 @@ export async function fetchFeedItems(limit = 50): Promise<FeedItem[]> {
                     description: pr.notes || pr.vendor,
                     timestamp: pr.created_at || pr.date,
                     userId: pr.created_by || undefined,
-                    userName: pr.submitted_by_name || pr.created_by_name,
+                    userName: submitter,
                     entityType: "expense",
                     entityId: pr.id,
                     entityHref: `/flow/finance`,
@@ -83,6 +116,10 @@ export async function fetchFeedItems(limit = 50): Promise<FeedItem[]> {
                     status: pr.approval_status === "APPROVED" ? "confirmed" : "pending",
                     metadata: {
                         ...pr,
+                        submitted_by_name: submitter,
+                        created_by_name: submitter,
+                        items: (pr as any).purchasing_items || (pr as any).items || [],
+                        invoices: (pr as any).purchasing_invoices || (pr as any).invoices || [],
                         project_code: projCode,
                         project_name: projName,
                         projectCode: projCode,

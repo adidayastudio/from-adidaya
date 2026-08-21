@@ -26,6 +26,15 @@ import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { generateSmartInitials } from "@/lib/initials";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
+const toTitleCase = (str: string): string => {
+    if (!str) return "";
+    return str
+        .toLowerCase()
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+};
+
 interface CrewDirectoryProps {
     role?: string;
     onViewDetail?: (crewId: string) => void;
@@ -106,7 +115,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     }, [forceProjectSuffix]);
 
     const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
-    const [viewMode, setViewMode] = useState<ViewMode>((searchParams.get("view") as ViewMode) || "list");
+    const [viewMode, setViewMode] = useState<ViewMode>("list");
     const [sortBy, setSortBy] = useState<"name" | "role" | "status" | "project">("name");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
     const [showFilterPopup, setShowFilterPopup] = useState(false);
@@ -567,41 +576,37 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                     icon={<Users className="w-5 h-5 text-blue-600" />}
                     iconBg="bg-blue-50"
                     label="Total Crew"
-                    value={`${derivedStats.total} Members`}
-                    subtext="All stored"
+                    value={derivedStats.total}
                     onClick={() => setActiveCard("ALL")}
                     isActive={activeCard === "ALL"}
-                    activeColor="ring-blue-500 border-blue-200"
+                    activeBg="bg-blue-600 dark:bg-blue-500"
                 />
                 <SummaryCard
                     icon={<UserCheck className="w-5 h-5 text-emerald-600" />}
                     iconBg="bg-emerald-50"
                     label="Active"
-                    value={`${derivedStats.active} Members`}
-                    subtext="Currently active"
+                    value={derivedStats.active}
                     onClick={() => setActiveCard("ACTIVE")}
                     isActive={activeCard === "ACTIVE"}
-                    activeColor="ring-emerald-500 border-emerald-200"
+                    activeBg="bg-emerald-600 dark:bg-emerald-500"
                 />
                 <SummaryCard
                     icon={<Star className="w-5 h-5 text-purple-600" />}
                     iconBg="bg-purple-50"
                     label="Skilled"
-                    value={`${derivedStats.skilled} Members`}
-                    subtext="Specialized roles"
+                    value={derivedStats.skilled}
                     onClick={() => setActiveCard("SKILLED")}
                     isActive={activeCard === "SKILLED"}
-                    activeColor="ring-purple-500 border-purple-200"
+                    activeBg="bg-purple-600 dark:bg-purple-500"
                 />
                 <SummaryCard
                     icon={<Hammer className="w-5 h-5 text-orange-600" />}
                     iconBg="bg-orange-50"
                     label="Unskilled"
-                    value={`${derivedStats.unskilled} Members`}
-                    subtext="Helpers & General"
+                    value={derivedStats.unskilled}
                     onClick={() => setActiveCard("UNSKILLED")}
                     isActive={activeCard === "UNSKILLED"}
-                    activeColor="ring-orange-500 border-orange-200"
+                    activeBg="bg-orange-600 dark:bg-orange-500"
                 />
             </SummaryCardsRow>
 
@@ -657,7 +662,7 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                 <div className="bg-white rounded-xl border border-neutral-200 shadow-lg p-4 space-y-4">
                     <div className="flex items-center justify-between"><h3 className="font-semibold text-neutral-900">Filters</h3><button onClick={() => setShowFilterPopup(false)} className="p-1 rounded-full hover:bg-neutral-100"><X className="w-4 h-4 text-neutral-500" /></button></div>
                     <div><div className="text-xs font-medium text-neutral-500 mb-2">Roles</div><div className="flex flex-wrap gap-2">{CREW_ROLE_OPTIONS.map(opt => <button key={opt.value} onClick={() => toggleRole(opt.value)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedRoles.includes(opt.value) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{CREW_ROLE_LABELS[opt.value].en}</button>)}</div></div>
-                    <div><div className="text-xs font-medium text-neutral-500 mb-2">Status</div><div className="flex flex-wrap gap-2">{(["ACTIVE", "INACTIVE"] as CrewStatus[]).map(s => <button key={s} onClick={() => toggleStatus(s)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedStatuses.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{s}</button>)}</div></div>
+                    <div><div className="text-xs font-medium text-neutral-500 mb-2">Status</div><div className="flex flex-wrap gap-2">{(["ACTIVE", "INACTIVE"] as CrewStatus[]).map(s => <button key={s} onClick={() => toggleStatus(s)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedStatuses.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{s === "ACTIVE" ? "Active" : "Inactive"}</button>)}</div></div>
                     {!forceProjectSuffix && uniqueProjectSuffixes.length > 0 && (
                         <div><div className="text-xs font-medium text-neutral-500 mb-2">Projects</div><div className="flex flex-wrap gap-2">{uniqueProjectSuffixes.map(p => <button key={p} onClick={() => toggleProject(p)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(p) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{p}</button>)}</div></div>
                     )}
@@ -677,132 +682,134 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                     <h3 className="font-medium text-neutral-600 mb-2">{crewList.length === 0 ? "No crew members yet" : "No results found"}</h3>
                     <p className="text-sm text-neutral-400 mb-4">{crewList.length === 0 ? "Start by adding your first crew member." : "Try adjusting your filters."}</p>
                     {crewList.length === 0 && (
-                        <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => { resetForm(); setShowAddDrawer(true); }}>Add First Crew</Button>
+                        <Button variant="primary" className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white" icon={<Plus className="w-4 h-4" />} onClick={() => { resetForm(); setShowAddDrawer(true); }}>Add First Crew</Button>
                     )}
                 </div>
             )}
 
             {/* CONTENT (TABLE & CARDS) */}
-            <div className="space-y-4">
-                {/* MOBILE CARDS (Replaces both List/Board mobile logic) */}
-                <div className="lg:hidden space-y-3">
-                    {filteredCrew.map((crew) => (
-                        <div
-                            key={crew.id}
-                            className="bg-white/50 backdrop-blur-md rounded-2xl border border-white/40 p-4 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
-                            onClick={() => onViewDetail?.(crew.id)}
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
-                                        {crew.initials}
-                                    </div>
-                                    <div>
-                                        <div className="font-bold text-neutral-900">{crew.name}</div>
-                                        <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
-                                            {CREW_ROLE_LABELS[crew.role].en}
+            {!isLoading && filteredCrew.length > 0 && (
+                <div className="space-y-4">
+                    {/* MOBILE CARDS (Replaces both List/Board mobile logic) */}
+                    <div className="lg:hidden space-y-3">
+                        {filteredCrew.map((crew) => (
+                            <div
+                                key={crew.id}
+                                className="bg-white/50 backdrop-blur-md rounded-2xl border border-white/40 p-4 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
+                                onClick={() => onViewDetail?.(crew.id)}
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
+                                            {crew.initials}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-neutral-900">{toTitleCase(crew.name)}</div>
+                                            <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                                                {CREW_ROLE_LABELS[crew.role].en}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="text-right">
-                                    <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
-                                        {crew.status}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-4 border-t border-black/[0.03]">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Project</span>
-                                    {crew.projectCode ? (
-                                        <span className="px-2 py-1 text-[10px] font-mono bg-neutral-100 text-neutral-600 rounded font-bold">
-                                            {formatProjectCode(crew.projectCode)}
+                                    <div className="text-right">
+                                        <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
+                                            {crew.status}
                                         </span>
-                                    ) : (
-                                        <span className="text-[10px] font-bold text-neutral-300">UNASSIGNED</span>
-                                    )}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                    <button onClick={() => openEditDrawer(crew)} className="p-2.5 rounded-xl bg-blue-50 text-blue-600 active:scale-90 transition-all">
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button onClick={() => openDeleteConfirm(crew)} className="p-2.5 rounded-xl bg-red-50 text-red-600 active:scale-90 transition-all">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
 
-                {/* DESKTOP VIEWS */}
-                <div className="hidden lg:block">
-                    {/* List View */}
-                    {viewMode === "list" ? (
-                        <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-neutral-50 border-b border-neutral-200">
-                                        <tr>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon col="name" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("role")}><div className="flex items-center gap-1">Role <SortIcon col="role" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon col="project" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-                                            <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon col="status" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
-                                            <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-neutral-100">
-                                        {filteredCrew.map((crew) => (
-                                            <tr key={crew.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{crew.initials}</div>
-                                                        <span className="font-medium text-neutral-900">{crew.name}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span></td>
-                                                <td className="px-4 py-3">{crew.projectCode ? <span className="px-2 py-1 text-xs font-mono bg-neutral-100 text-neutral-600 rounded">{formatProjectCode(crew.projectCode)}</span> : <span className="text-neutral-400 text-xs">-</span>}</td>
-                                                <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span></td>
-                                                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-4 h-4" /></button>
-                                                        <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    ) : (
-                        /* Board View */
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                            {filteredCrew.map((crew) => (
-                                <div key={crew.id} className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold flex-shrink-0">{crew.initials}</div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="font-semibold text-neutral-900 truncate">{crew.name}</div>
-                                            <span className={clsx("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span>
-                                        </div>
+                                <div className="flex items-center justify-between pt-4 border-t border-black/[0.03]">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Project</span>
+                                        {crew.projectCode ? (
+                                            <span className="px-2 py-1 text-[10px] font-mono bg-neutral-100 text-neutral-600 rounded font-bold">
+                                                {formatProjectCode(crew.projectCode)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] font-bold text-neutral-300">UNASSIGNED</span>
+                                        )}
                                     </div>
-                                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
-                                        <div className="flex items-center gap-2">
-                                            {crew.projectCode && <span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(crew.projectCode)}</span>}
-                                            <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span>
-                                        </div>
-                                        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                                            <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-3.5 h-3.5" /></button>
-                                            <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
-                                        </div>
+                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                        <button onClick={() => openEditDrawer(crew)} className="p-2.5 rounded-xl bg-blue-50 text-blue-600 active:scale-90 transition-all">
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button onClick={() => openDeleteConfirm(crew)} className="p-2.5 rounded-xl bg-red-50 text-red-600 active:scale-90 transition-all">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* DESKTOP VIEWS */}
+                    <div className="hidden lg:block">
+                        {/* List View */}
+                        {viewMode === "list" ? (
+                            <div className="bg-white rounded-[22px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="border-b border-neutral-100">
+                                            <tr>
+                                                <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon col="name" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                                <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("role")}><div className="flex items-center gap-1">Role <SortIcon col="role" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                                <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon col="project" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                                <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon col="status" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                                <th className="text-right px-4 py-3.5 text-xs font-semibold text-neutral-400">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-100">
+                                            {filteredCrew.map((crew) => (
+                                                <tr key={crew.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{crew.initials}</div>
+                                                            <span className="font-medium text-neutral-900">{toTitleCase(crew.name)}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span></td>
+                                                    <td className="px-4 py-3">{crew.projectCode ? <span className="px-2 py-1 text-xs font-mono bg-neutral-100 text-neutral-600 rounded">{formatProjectCode(crew.projectCode)}</span> : <span className="text-neutral-400 text-xs">-</span>}</td>
+                                                    <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span></td>
+                                                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-4 h-4" /></button>
+                                                            <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : (
+                            /* Board View */
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                {filteredCrew.map((crew) => (
+                                    <div key={crew.id} className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold flex-shrink-0">{crew.initials}</div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-semibold text-neutral-900 truncate">{toTitleCase(crew.name)}</div>
+                                                <span className={clsx("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+                                            <div className="flex items-center gap-2">
+                                                {crew.projectCode && <span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(crew.projectCode)}</span>}
+                                                <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                                                <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-3.5 h-3.5" /></button>
+                                                <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Add Drawer */}
             {showAddDrawer && (
@@ -975,5 +982,5 @@ const FormInput = ({ label, value, onChange, placeholder, type = "text" }: { lab
 );
 
 const SortIcon = ({ col, sortBy, sortOrder }: { col: "name" | "role" | "status" | "project", sortBy: string, sortOrder: string }) =>
-    sortBy !== col ? <ArrowUpDown className="w-3 h-3 text-neutral-400" /> :
+    sortBy !== col ? null :
         sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense, useMemo } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useTheme } from "next-themes";
 import {
@@ -139,15 +140,19 @@ const MODULE_CONFIGS: Record<string, ModuleConfig> = {
             { id: "directory", label: "Crew Directory" },
             { id: "assignments", label: "Assignments" },
             { id: "daily-input", label: "Daily Log" },
+            { id: "payroll", label: "Payroll" },
+            { id: "performance", label: "KPI" },
+            { id: "requests", label: "Requests" },
         ],
-        moreTabs: [
-            { id: "payroll", label: "Payroll", shortLabel: "Payroll", icon: <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> },
-            { id: "requests", label: "Requests", shortLabel: "Requests", icon: <FilePlus className="w-3.5 h-3.5 text-blue-500" /> },
-        ]
+        moreTabs: []
     }
 };
 
 export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleViewProps) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
     const { theme } = useTheme();
     const [isHeaderScrolled, setIsHeaderScrolled] = useState(false);
     const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
@@ -161,20 +166,98 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
         moreTabs: []
     };
 
-    const [activeSubTab, setActiveSubTab] = useState(config.mainTabs[0]?.id || "overview");
+    const [activeSubTab, setActiveSubTab] = useState(() => {
+        if (typeof window !== "undefined") {
+            const parts = window.location.pathname.split("/");
+            if (parts.length >= 4 && parts[1] === "stream" && parts[2] === selectedModule) {
+                const pathSubtab = parts[3];
+                const currentConfig = MODULE_CONFIGS[selectedModule] || config;
+                const isValid = [...(currentConfig.mainTabs || []), ...(currentConfig.moreTabs || [])].some(t => t.id === pathSubtab);
+                if (isValid) return pathSubtab;
+            }
+        }
+        const currentConfig = MODULE_CONFIGS[selectedModule] || config;
+        return currentConfig.mainTabs[0]?.id || "overview";
+    });
 
-    // Reset sub-tab when module changes or viewMode changes to personal
+    // Reset or update sub-tab when module changes
     useEffect(() => {
         const currentConfig = MODULE_CONFIGS[selectedModule] || config;
-        setActiveSubTab(currentConfig.mainTabs[0]?.id || "overview");
+        const parts = window.location.pathname.split("/");
+        
+        let subtab = currentConfig.mainTabs[0]?.id || "overview";
+        if (parts.length >= 4 && parts[1] === "stream" && parts[2] === selectedModule) {
+            const pathSubtab = parts[3];
+            const isValid = [...(currentConfig.mainTabs || []), ...(currentConfig.moreTabs || [])].some(t => t.id === pathSubtab);
+            if (isValid) subtab = pathSubtab;
+        }
+        
+        setActiveSubTab(subtab);
         setShowMoreDropdown(false);
     }, [selectedModule]);
+
+    // Sync subtab state to URL path
+    useEffect(() => {
+        const parts = window.location.pathname.split("/");
+        if (parts.length >= 3 && parts[1] === "stream" && parts[2] === selectedModule) {
+            const currentSubtab = parts[3] || "";
+            if (currentSubtab !== activeSubTab) {
+                const params = new URLSearchParams(window.location.search);
+                params.delete("subtab"); // Clean up old query param if present
+                const finalPath = `/stream/${selectedModule}/${activeSubTab}`;
+                const search = params.toString();
+                router.replace(search ? `${finalPath}?${search}` : finalPath, { scroll: false });
+            }
+        }
+    }, [activeSubTab, selectedModule, router]);
 
     useEffect(() => {
         if (viewMode === "personal" && config.moreTabs.some(t => t.id === activeSubTab)) {
             setActiveSubTab(config.mainTabs[0]?.id || "overview");
         }
     }, [viewMode, activeSubTab, config]);
+
+    const showPlusButton = useMemo(() => {
+        if (selectedModule === "crew") {
+            return ["directory", "assignments", "requests"].includes(activeSubTab);
+        }
+        if (selectedModule === "reports") return false;
+        return true;
+    }, [selectedModule, activeSubTab]);
+
+    const plusButtonTitle = useMemo(() => {
+        if (selectedModule === "crew") {
+            if (activeSubTab === "directory") return "Add Crew";
+            if (activeSubTab === "assignments") return "New Assignment";
+            if (activeSubTab === "requests") return "Add Request";
+        }
+        if (selectedModule === "finance") return "New Request";
+        if (selectedModule === "resources") return "Add Resource";
+        return "Add";
+    }, [selectedModule, activeSubTab]);
+
+    const handlePlusClick = () => {
+        if (selectedModule === "finance") {
+            setIsNewRequestOpen(true);
+        } else if (selectedModule === "crew") {
+            let fabId = "CREW_ADD";
+            if (activeSubTab === "assignments") fabId = "CREW_ASSIGNMENT_NEW";
+            else if (activeSubTab === "requests") fabId = "CREW_REQUEST_NEW";
+            
+            window.dispatchEvent(new CustomEvent("fab-action", { detail: { id: fabId } }));
+        } else if (selectedModule === "resources") {
+            window.dispatchEvent(new CustomEvent("fab-action", { detail: { id: "RESOURCE_ADD" } }));
+        } else if (selectedModule === "clock") {
+            let fabId = "CLOCK";
+            if (activeSubTab === "leaves") fabId = "CLOCK_NEW_LEAVE";
+            else if (activeSubTab === "overtime") fabId = "CLOCK_LOG_OVERTIME";
+            else if (activeSubTab === "business-trip") fabId = "CLOCK_NEW_TRIP";
+            
+            window.dispatchEvent(new CustomEvent("fab-action", { detail: { id: fabId } }));
+        } else {
+            window.dispatchEvent(new CustomEvent("fab-action"));
+        }
+    };
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const scrollTop = e.currentTarget.scrollTop;
@@ -311,43 +394,47 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
                         {/* Top Right Toolbar Controls (ONLY Personal/Team Toggle + Blue + Button) */}
                         <div className="flex items-center gap-2 shrink-0">
                             {/* Personal / Team Slider Toggle */}
-                            <div className="h-9 p-0.5 flex items-center rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 backdrop-blur-xl text-[12px] font-bold border border-neutral-300/40 dark:border-neutral-700/40">
-                                <button
-                                    onClick={() => setViewMode("personal")}
-                                    title="Personal View"
-                                    className={clsx(
-                                        "flex items-center justify-center gap-1.5 transition-all duration-200 rounded-full h-8",
-                                        viewMode === "personal"
-                                            ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white px-3 shadow-xs font-bold"
-                                            : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white w-8"
-                                    )}
-                                >
-                                    <PersonalIcon className="w-3.5 h-3.5" />
-                                    {viewMode === "personal" && <span>Personal</span>}
-                                </button>
-                                <button
-                                    onClick={() => setViewMode("team")}
-                                    title="Team View"
-                                    className={clsx(
-                                        "flex items-center justify-center gap-1.5 transition-all duration-200 rounded-full h-8",
-                                        viewMode === "team"
-                                            ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white px-3 shadow-xs font-bold"
-                                            : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white w-8"
-                                    )}
-                                >
-                                    <TeamIcon className="w-3.5 h-3.5" />
-                                    {viewMode === "team" && <span>Team</span>}
-                                </button>
-                            </div>
+                            {selectedModule !== "crew" && (
+                                <div className="h-9 p-0.5 flex items-center rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 backdrop-blur-xl text-[12px] font-bold border border-neutral-300/40 dark:border-neutral-700/40">
+                                    <button
+                                        onClick={() => setViewMode("personal")}
+                                        title="Personal View"
+                                        className={clsx(
+                                            "flex items-center justify-center gap-1.5 transition-all duration-200 rounded-full h-8",
+                                            viewMode === "personal"
+                                                ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white px-3 shadow-xs font-bold"
+                                                : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white w-8"
+                                        )}
+                                    >
+                                        <PersonalIcon className="w-3.5 h-3.5" />
+                                        {viewMode === "personal" && <span>Personal</span>}
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode("team")}
+                                        title="Team View"
+                                        className={clsx(
+                                            "flex items-center justify-center gap-1.5 transition-all duration-200 rounded-full h-8",
+                                            viewMode === "team"
+                                                ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white px-3 shadow-xs font-bold"
+                                                : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white w-8"
+                                        )}
+                                    >
+                                        <TeamIcon className="w-3.5 h-3.5" />
+                                        {viewMode === "team" && <span>Team</span>}
+                                    </button>
+                                </div>
+                            )}
 
                             {/* Primary Blue Plus Action Button */}
-                            <button
-                                onClick={() => setIsNewRequestOpen(true)}
-                                className="h-9 w-9 rounded-full bg-[#0A84FF] hover:bg-blue-600 active:scale-90 text-white flex items-center justify-center shadow-md transition-all shrink-0"
-                                title="New Request"
-                            >
-                                <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
-                            </button>
+                            {showPlusButton && (
+                                <button
+                                    onClick={handlePlusClick}
+                                    className="h-9 w-9 rounded-full bg-[#0A84FF] hover:bg-blue-600 active:scale-90 text-white flex items-center justify-center shadow-md transition-all shrink-0"
+                                    title={plusButtonTitle}
+                                >
+                                    <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -361,11 +448,11 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
                     {/* Hide duplicate internal sidebars, headers, and sub-tab rows */}
                     <style>{`
                         .stream-workspace-ipad aside { display: none !important; }
-                        .stream-workspace-ipad .lg\\:hidden { display: block !important; }
                         .stream-workspace-ipad .flex-col.px-5.md\\:px-0 { display: none !important; }
                         .stream-workspace-ipad .hidden.md\\:block.lg\\:hidden.md\\:px-0.pb-2 { display: none !important; }
                         .stream-workspace-ipad h1 { display: none !important; }
                         .stream-workspace-ipad header { display: none !important; }
+                        .stream-workspace-ipad .flex-col.gap-1.w-full.mb-4 { display: none !important; }
                     `}</style>
 
                     <Suspense fallback={<GlobalLoading />}>
@@ -411,7 +498,7 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
 
                         {/* CREW MODULE VIEWS */}
                         {selectedModule === "crew" && (
-                            <CrewPage />
+                            <CrewPage forcedSection={activeSubTab as any} />
                         )}
 
                         {!["finance", "resources", "reports", "people", "clock", "crew"].includes(selectedModule) && (

@@ -18,7 +18,7 @@ import { Button } from "@/shared/ui/primitives/button/button";
 import { Plus } from "lucide-react";
 import { useUserContext } from "@/components/providers/UserProvider";
 
-export default function CrewPage() {
+export default function CrewPage({ forcedSection }: { forcedSection?: CrewSection }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -31,13 +31,13 @@ export default function CrewPage() {
       : null;
 
   const tabParam = searchParams.get("tab");
-  const activeSection: CrewSection = (tabParam as CrewSection) || "directory";
+  const activeSection: CrewSection = forcedSection || (tabParam as CrewSection) || "directory";
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [selectedRole, setSelectedRole] = useState(searchParams.get("role") || "all");
   const [selectedStatus, setSelectedStatus] = useState(searchParams.get("status") || "all");
-  const [view, setView] = useState(searchParams.get("view") || "list");
+  const [view, setView] = useState("list");
 
   // 1. Sync Filters to URL (Stable dependencies)
   useEffect(() => {

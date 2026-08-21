@@ -2171,7 +2171,7 @@ export function ViewModal({
     );
 }
 
-function DocumentDrawer({
+export function DocumentDrawer({
     item,
     initialTab,
     onClose

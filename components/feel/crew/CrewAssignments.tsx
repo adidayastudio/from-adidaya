@@ -4,8 +4,9 @@ import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
-import { Plus, Search, ChevronDown, ChevronUp, X, Download, ArrowUpDown, Filter, Edit2, FileText, Trash2, Users, Loader2 } from "lucide-react";
+import { Plus, Search, ChevronDown, ChevronUp, X, Download, ArrowUpDown, Filter, Edit2, FileText, Trash2, Users, Loader2, ClipboardList, CheckCircle2 } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { Select } from "@/shared/ui/primitives/select/select";
 import {
     CREW_ROLE_LABELS,
@@ -45,6 +46,15 @@ interface Assignment {
 
 type FilterCard = "ALL" | "ACTIVE" | "COMPLETED";
 
+const toTitleCase = (str: string): string => {
+    if (!str) return "";
+    return str
+        .toLowerCase()
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+};
+
 const getInitials = (name: string): string => {
     const words = name.trim().split(/\s+/);
     if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
@@ -72,6 +82,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
 
     // Data state - empty, will be populated from database later
     const [assignments, setAssignments] = useState<Assignment[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
     const [crewOptions, setCrewOptions] = useState<CrewOption[]>([]);
 
@@ -121,6 +132,14 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
     const [selectedProjects, setSelectedProjects] = useState<string[]>(
         forceProjectSuffix ? [forceProjectSuffix] : getArrayParam("projects")
     );
+    const [selectedRoles, setSelectedRoles] = useState<CrewRole[]>(getArrayParam("roles") as CrewRole[]);
+    const [selectedStatuses, setSelectedStatuses] = useState<("ACTIVE" | "COMPLETED" | "INACTIVE")[]>(
+        getArrayParam("statuses") as ("ACTIVE" | "COMPLETED" | "INACTIVE")[]
+    );
+
+    const toggleRole = (r: CrewRole) => setSelectedRoles(prev => prev.includes(r) ? prev.filter(item => item !== r) : [...prev, r]);
+    const toggleStatus = (s: "ACTIVE" | "COMPLETED" | "INACTIVE") => setSelectedStatuses(prev => prev.includes(s) ? prev.filter(item => item !== s) : [...prev, s]);
+    const activeFiltersCount = selectedProjects.length + selectedRoles.length + selectedStatuses.length;
 
     useEffect(() => {
         if (forceProjectSuffix) {
@@ -149,6 +168,22 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
         } else if (selectedProjects.length > 0) {
             setSelectedProjects([]);
         }
+
+        const rolesParam = searchParams.get("roles") || searchParams.get("role");
+        if (rolesParam) {
+            const rolesArray = rolesParam.split(",") as CrewRole[];
+            if (JSON.stringify(rolesArray) !== JSON.stringify(selectedRoles)) setSelectedRoles(rolesArray);
+        } else if (selectedRoles.length > 0) {
+            setSelectedRoles([]);
+        }
+
+        const statusesParam = searchParams.get("statuses") || searchParams.get("status");
+        if (statusesParam) {
+            const statusesArray = statusesParam.split(",") as ("ACTIVE" | "COMPLETED" | "INACTIVE")[];
+            if (JSON.stringify(statusesArray) !== JSON.stringify(selectedStatuses)) setSelectedStatuses(statusesArray);
+        } else if (selectedStatuses.length > 0) {
+            setSelectedStatuses([]);
+        }
     }, [searchParams]);
 
     // Sync state to URL
@@ -169,8 +204,20 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
             params.delete("project");
         }
 
+        if (selectedRoles.length > 0) {
+            params.set("roles", selectedRoles.join(","));
+        } else {
+            params.delete("roles");
+        }
+
+        if (selectedStatuses.length > 0) {
+            params.set("statuses", selectedStatuses.join(","));
+        } else {
+            params.delete("statuses");
+        }
+
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    }, [searchQuery, activeCard, sortBy, sortOrder, selectedProjects, forceProjectSuffix]);
+    }, [searchQuery, activeCard, sortBy, sortOrder, selectedProjects, selectedRoles, selectedStatuses, forceProjectSuffix]);
     const [showDrawer, setShowDrawer] = useState(false);
 
     const [formRole, setFormRole] = useState<CrewRole | "">("");
@@ -187,20 +234,42 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
 
     // Load Assignments
     const loadAssignments = async () => {
+        setIsLoading(true);
         try {
             const history = await fetchCrewAssignments();
-            const mappedAssignments: Assignment[] = history.map(h => ({
-                id: h.id,
-                crewId: h.crewMemberId,
-                crewName: h.crewName,
-                crewRole: h.crewRole,
-                projectCode: h.projectCode,
-                startDate: h.startDate,
-                endDate: h.endDate || undefined,
-                status: h.crewStatus === "INACTIVE" ? "INACTIVE" : (h.status === "ongoing" ? "ACTIVE" : "COMPLETED")
-            }));
+            const mappedAssignments: Assignment[] = history.map(h => {
+                let determinedStatus: "ACTIVE" | "COMPLETED" | "INACTIVE" = "ACTIVE";
+                if (h.crewStatus === "INACTIVE") {
+                    determinedStatus = "INACTIVE";
+                } else if (h.endDate) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const end = new Date(h.endDate);
+                    end.setHours(0, 0, 0, 0);
+                    if (today > end) {
+                        determinedStatus = "COMPLETED";
+                    } else {
+                        determinedStatus = "ACTIVE";
+                    }
+                } else if (h.status === "completed") {
+                    determinedStatus = "COMPLETED";
+                } else {
+                    determinedStatus = "ACTIVE";
+                }
+
+                return {
+                    id: h.id,
+                    crewId: h.crewMemberId,
+                    crewName: h.crewName,
+                    crewRole: h.crewRole,
+                    projectCode: h.projectCode,
+                    startDate: h.startDate,
+                    endDate: h.endDate || undefined,
+                    status: determinedStatus
+                };
+            });
             setAssignments(mappedAssignments);
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error(e); } finally { setIsLoading(false); }
     };
 
     useEffect(() => { loadAssignments(); }, []);
@@ -283,8 +352,13 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
         if (activeCard === "ACTIVE") data = data.filter(a => a.status === "ACTIVE");
         else if (activeCard === "COMPLETED") data = data.filter(a => a.status === "COMPLETED");
         if (selectedProjects.length > 0) {
-            // Normalize both assignment code and selected filter code to match "LAX" == "009-LAX"
             data = data.filter(a => selectedProjects.some(sp => formatProjectCode(a.projectCode) === formatProjectCode(sp)));
+        }
+        if (selectedRoles.length > 0) {
+            data = data.filter(a => selectedRoles.includes(a.crewRole));
+        }
+        if (selectedStatuses.length > 0) {
+            data = data.filter(a => selectedStatuses.includes(a.status));
         }
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
@@ -297,7 +371,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
             else if (sortBy === "date") cmp = a.startDate.localeCompare(b.startDate);
             return sortOrder === "asc" ? cmp : -cmp;
         });
-    }, [assignments, searchQuery, activeCard, selectedProjects, sortBy, sortOrder]);
+    }, [assignments, searchQuery, activeCard, selectedProjects, selectedRoles, selectedStatuses, sortBy, sortOrder]);
 
     const handleSort = (column: "name" | "project" | "date") => {
         if (sortBy === column) setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -305,7 +379,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
     };
 
     const SortIcon = ({ column }: { column: "name" | "project" | "date" }) => {
-        if (sortBy !== column) return <ArrowUpDown className="w-3 h-3 text-neutral-400" />;
+        if (sortBy !== column) return null;
         return sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
     };
 
@@ -409,79 +483,148 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
             {/* HEADER REMOVED - Using Global PageHeader */}
 
             {/* STATS */}
-            <div className="grid grid-cols-3 gap-3">
-                <button onClick={() => setActiveCard("ALL")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ALL" ? "bg-blue-600 border-blue-600" : "bg-white border-neutral-200")}>
-                    <div className={clsx("text-sm mb-1", activeCard === "ALL" ? "text-blue-100" : "text-neutral-500")}>Total</div>
-                    <div className={clsx("text-2xl font-bold", activeCard === "ALL" ? "text-white" : "text-blue-600")}>{stats.total}</div>
-                </button>
-                <button onClick={() => setActiveCard("ACTIVE")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ACTIVE" ? "bg-emerald-600 border-emerald-600" : "bg-white border-neutral-200")}>
-                    <div className={clsx("text-sm mb-1", activeCard === "ACTIVE" ? "text-emerald-100" : "text-neutral-500")}>Active</div>
-                    <div className={clsx("text-2xl font-bold", activeCard === "ACTIVE" ? "text-white" : "text-emerald-600")}>{stats.active}</div>
-                </button>
-                <button onClick={() => setActiveCard("COMPLETED")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "COMPLETED" ? "bg-neutral-600 border-neutral-600" : "bg-white border-neutral-200")}>
-                    <div className={clsx("text-sm mb-1", activeCard === "COMPLETED" ? "text-neutral-300" : "text-neutral-500")}>Done</div>
-                    <div className={clsx("text-2xl font-bold", activeCard === "COMPLETED" ? "text-white" : "text-neutral-600")}>{stats.completed}</div>
-                </button>
-            </div>
+            <SummaryCardsRow className="lg:grid-cols-3">
+                <SummaryCard
+                    icon={<ClipboardList className="w-5 h-5 text-blue-600" />}
+                    iconBg="bg-blue-50"
+                    label="Total Assignments"
+                    value={stats.total}
+                    onClick={() => setActiveCard("ALL")}
+                    isActive={activeCard === "ALL"}
+                    activeBg="bg-blue-600 dark:bg-blue-500"
+                />
+                <SummaryCard
+                    icon={<Users className="w-5 h-5 text-emerald-600" />}
+                    iconBg="bg-emerald-50"
+                    label="Active"
+                    value={stats.active}
+                    onClick={() => setActiveCard("ACTIVE")}
+                    isActive={activeCard === "ACTIVE"}
+                    activeBg="bg-emerald-600 dark:bg-emerald-500"
+                />
+                <SummaryCard
+                    icon={<CheckCircle2 className="w-5 h-5 text-neutral-600" />}
+                    iconBg="bg-neutral-50"
+                    label="Done"
+                    value={stats.completed}
+                    onClick={() => setActiveCard("COMPLETED")}
+                    isActive={activeCard === "COMPLETED"}
+                    activeBg="bg-neutral-600 dark:bg-neutral-500"
+                />
+            </SummaryCardsRow>
 
-            {/* TOOLBAR */}
-            <div className="flex items-center justify-between gap-2 w-full bg-neutral-50/50 p-2 rounded-2xl border border-neutral-100">
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className="relative flex-shrink-0">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                        <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-28 sm:w-40 transition-all" />
-                    </div>
-                    {!forceProjectSuffix && (
-                        <button onClick={() => setShowFilterPopup(!showFilterPopup)} className={clsx("p-2 rounded-full border transition-colors flex items-center gap-1.5", selectedProjects.length > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500")}>
-                            <Filter className="w-4 h-4" />
-                            {selectedProjects.length > 0 && <span className="text-xs font-medium">{selectedProjects.length}</span>}
-                        </button>
-                    )}
+            {/* Search & Filters Bar */}
+            <div className="flex items-center justify-between gap-2 w-full">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Search..." 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                        className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-full transition-all" 
+                    />
                 </div>
-                <div className="flex items-center gap-1.5">
-                    <Button
-                        variant="secondary"
-                        className="!rounded-full !py-1.5 !px-3 shadow-sm active:scale-95 transition-all"
-                        icon={exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-none">
+                    {/* Filter Button */}
+                    <button 
+                        onClick={() => setShowFilterPopup(!showFilterPopup)} 
+                        className={clsx(
+                            "p-2.5 rounded-full border transition-colors flex items-center gap-1.5", 
+                            activeFiltersCount > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500"
+                        )}
+                    >
+                        <Filter className="w-4 h-4" />
+                        {activeFiltersCount > 0 && <span className="text-xs font-medium">{activeFiltersCount}</span>}
+                    </button>
+
+                    {/* Export Button */}
+                    <button
                         onClick={handleExport}
                         disabled={exporting || filteredAssignments.length === 0}
+                        className={clsx(
+                            "p-2.5 rounded-full border transition-colors flex items-center gap-1.5",
+                            exporting ? "bg-neutral-50 text-neutral-400" : "bg-white text-neutral-500 border-neutral-200 hover:bg-neutral-50"
+                        )}
                     >
-                        {exporting ? "..." : "Export"}
-                    </Button>
-                    <Button
-                        variant="primary"
-                        className="!rounded-full !py-1.5 !px-3.5 shadow-sm active:scale-95 transition-all lg:hidden"
-                        icon={<Plus className="w-4 h-4" />}
-                        onClick={() => { resetForm(); setShowDrawer(true); }}
-                    >
-                        Add
-                    </Button>
+                        {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        <span className="hidden sm:inline text-xs font-medium">{exporting ? "Exporting..." : "Export"}</span>
+                    </button>
                 </div>
             </div>
 
             {/* FILTER */}
-            {!forceProjectSuffix && showFilterPopup && projects.length > 0 && (
+            {/* FILTER POPUP */}
+            {showFilterPopup && (
                 <div className="bg-white rounded-xl border border-neutral-200 shadow-lg p-4 space-y-4">
-                    <div className="flex items-center justify-between"><h3 className="font-semibold text-neutral-900">Filter by Project</h3><button onClick={() => setShowFilterPopup(false)} className="p-1 rounded-full hover:bg-neutral-100"><X className="w-4 h-4 text-neutral-500" /></button></div>
-                    <div className="flex flex-wrap gap-2">{projects.map(p => <button key={p.code} onClick={() => toggleProject(formatProjectCode(p.code))} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(formatProjectCode(p.code)) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{formatProjectCode(p.code)}</button>)}</div>
-                    {selectedProjects.length > 0 && <button onClick={() => setSelectedProjects([])} className="text-sm text-red-600 hover:underline">Clear</button>}
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-neutral-900">Filters</h3>
+                        <button onClick={() => setShowFilterPopup(false)} className="p-1 rounded-full hover:bg-neutral-100">
+                            <X className="w-4 h-4 text-neutral-500" />
+                        </button>
+                    </div>
+                    
+                    {!forceProjectSuffix && projects.length > 0 && (
+                        <div>
+                            <div className="text-xs font-medium text-neutral-500 mb-2">Projects</div>
+                            <div className="flex flex-wrap gap-2">
+                                {projects.map(p => (
+                                    <button key={p.code} onClick={() => toggleProject(formatProjectCode(p.code))} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(formatProjectCode(p.code)) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>
+                                        {formatProjectCode(p.code)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div>
+                        <div className="text-xs font-medium text-neutral-500 mb-2">Roles</div>
+                        <div className="flex flex-wrap gap-2">
+                            {CREW_ROLE_OPTIONS.map(opt => (
+                                <button key={opt.value} onClick={() => toggleRole(opt.value)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedRoles.includes(opt.value) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>
+                                    {CREW_ROLE_LABELS[opt.value].en}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="text-xs font-medium text-neutral-500 mb-2">Assignment Status</div>
+                        <div className="flex flex-wrap gap-2">
+                            {(["ACTIVE", "COMPLETED", "INACTIVE"] as const).map(s => (
+                                <button key={s} onClick={() => toggleStatus(s)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedStatuses.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>
+                                    {s === "ACTIVE" ? "Active" : s === "COMPLETED" ? "Completed" : "Inactive"}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {activeFiltersCount > 0 && (
+                        <button onClick={() => { setSelectedProjects([]); setSelectedRoles([]); setSelectedStatuses([]); }} className="text-sm text-red-600 hover:underline">
+                            Clear all
+                        </button>
+                    )}
                 </div>
             )}
 
-            {/* EMPTY STATE */}
-            {assignments.length === 0 && (
+            {/* EMPTY STATE OR LOADING */}
+            {isLoading ? (
+                <div className="py-24 flex flex-col justify-center items-center gap-3">
+                    <Loader2 className="w-8 h-8 text-neutral-300 animate-spin" />
+                    <p className="text-sm text-neutral-400">Loading assignments...</p>
+                </div>
+            ) : assignments.length === 0 && (
                 <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center">
                     <Users className="w-12 h-12 mx-auto text-neutral-300 mb-4" />
                     <h3 className="font-medium text-neutral-600 mb-2">No assignments yet</h3>
                     <p className="text-sm text-neutral-400 mb-4">Create your first crew assignment to a project.</p>
-                    <Button variant="primary" icon={<Plus className="w-4 h-4" />} onClick={() => { resetForm(); setShowDrawer(true); }}>New Assignment</Button>
+                    <Button variant="primary" className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white" icon={<Plus className="w-4 h-4" />} onClick={() => { resetForm(); setShowDrawer(true); }}>New Assignment</Button>
                 </div>
             )}
 
-
-
             {/* CONTENT (TABLE & CARDS) */}
-            {filteredAssignments.length > 0 && (
+            {!isLoading && filteredAssignments.length > 0 && (
                 <div className="space-y-4">
                     {/* MOBILE CARDS */}
                     <div className="lg:hidden space-y-3">
@@ -496,7 +639,7 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                                             {getInitials(a.crewName)}
                                         </div>
                                         <div>
-                                            <div className="font-bold text-neutral-900">{a.crewName}</div>
+                                            <div className="font-bold text-neutral-900">{toTitleCase(a.crewName)}</div>
                                             <div className="text-xs text-neutral-500 font-medium tracking-wide uppercase">
                                                 {CREW_ROLE_LABELS[a.crewRole]?.en || a.crewRole}
                                             </div>
@@ -546,22 +689,22 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
                     </div>
 
                     {/* DESKTOP TABLE */}
-                    <div className="hidden lg:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                    <div className="hidden lg:block bg-white rounded-[22px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                <thead className="border-b border-neutral-100">
                                     <tr>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon column="project" /></div></th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("date")}><div className="flex items-center gap-1">Period <SortIcon column="date" /></div></th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Status</th>
-                                        <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-20">Actions</th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon column="project" /></div></th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("date")}><div className="flex items-center gap-1">Period <SortIcon column="date" /></div></th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400">Status</th>
+                                        <th className="text-right px-4 py-3.5 text-xs font-semibold text-neutral-400 w-20">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-100">
                                     {filteredAssignments.map((a) => (
                                         <tr key={a.id} className="hover:bg-neutral-50 transition-colors">
-                                            <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(a.crewName)}</div><div><div className="font-medium text-neutral-900">{a.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[a.crewRole]?.en || a.crewRole}</div></div></div></td>
+                                            <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(a.crewName)}</div><div><div className="font-medium text-neutral-900">{toTitleCase(a.crewName)}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[a.crewRole]?.en || a.crewRole}</div></div></div></td>
                                             <td className="px-4 py-3"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(a.projectCode)}</span></td>
                                             <td className="px-4 py-3 text-neutral-600 text-xs">{formatDate(a.startDate)} → {a.endDate ? formatDate(a.endDate) : "Present"}</td>
                                             <td className="px-4 py-3"><span className={clsx(

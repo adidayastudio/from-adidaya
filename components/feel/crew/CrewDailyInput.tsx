@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, Check, X, Download, ArrowUpDown, Edit2, Users, Loader2, AlertTriangle } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, Check, X, Download, ArrowUpDown, Edit2, Users, Loader2, AlertTriangle, Search } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, upsertDailyLog, deleteDailyLogEntry, DailyLog, fetchCrewByAssignment, fetchFutureUnlock, unlockFutureDate, lockFutureDate } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
@@ -40,6 +40,10 @@ const formatProjectCode = (code?: string) => {
     const parts = code.split("-");
     const suffix = parts.length > 1 ? parts[1] : code;
     return suffix.toUpperCase();
+};
+
+const toTitleCase = (str: string) => {
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
 
 export function CrewDailyInput({ role }: CrewDailyInputProps) {
@@ -123,6 +127,22 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
     const [editingEntry, setEditingEntry] = useState<string | null>(null);
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [exporting, setExporting] = useState(false);
+    const [showSearch, setShowSearch] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    // Bulk action advanced hours states
+    const [showBulkHours, setShowBulkHours] = useState(false);
+    const [bulkReg, setBulkReg] = useState(8);
+    const [bulkOT1, setBulkOT1] = useState(0);
+    const [bulkOT2, setBulkOT2] = useState(0);
+    const [bulkOT3, setBulkOT3] = useState(0);
+
+    // Auto-close bulk hours view when selections are empty
+    useEffect(() => {
+        if (selectedRows.size === 0) {
+            setShowBulkHours(false);
+        }
+    }, [selectedRows.size]);
 
     // Urgent Advance Submission States
     const [urgentUnlocked, setUrgentUnlocked] = useState(false);
@@ -231,14 +251,23 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
 
     const saveEntry = async (id: string) => {
         const entry = entries.find(e => e.id === id);
-        if (!entry || !entry.status) return; // Must have status to save
+        if (!entry) return;
+
+        let status = entry.status;
+        if (!status) {
+            if (entry.regularHrs > 0 || getTotalOT(entry) > 0) {
+                status = (entry.regularHrs <= 4 && entry.regularHrs > 0) ? "HALF_DAY" : "PRESENT";
+            } else {
+                alert("Please select attendance status (Present, Half Day, Absent, or Cuti) first.");
+                return;
+            }
+        }
 
         try {
             const wsId = await fetchDefaultWorkspaceId();
             if (!wsId) return;
 
             const projectSuffix = formatProjectCode(selectedProject);
-            // Fix: Use local date string
             const year = selectedDate.getFullYear();
             const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
             const day = String(selectedDate.getDate()).padStart(2, '0');
@@ -249,14 +278,14 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                 crewId: entry.id,
                 projectCode: projectSuffix, // Using suffix for consistency
                 date: dateStr,
-                status: entry.status,
+                status: status,
                 regularHours: entry.regularHrs,
                 ot1Hours: entry.ot1Hrs,
                 ot2Hours: entry.ot2Hrs,
                 ot3Hours: entry.ot3Hrs
             });
 
-            setEntries(prev => prev.map(e => e.id === id ? { ...e, saved: true } : e));
+            setEntries(prev => prev.map(e => e.id === id ? { ...e, status, saved: true } : e));
             setEditingEntry(null);
             setShowSuccessPopup(true);
             setTimeout(() => setShowSuccessPopup(false), 3000);
@@ -372,15 +401,42 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
         return updated;
     }));
 
+    const bulkSetHours = () => {
+        setEntries(prev => prev.map(e => {
+            if (!selectedRows.has(e.id)) return e;
+            let status = e.status;
+            if (status === "ABSENT" || status === "CUTI" || status === "") {
+                status = bulkReg <= 4 && bulkReg > 0 ? "HALF_DAY" : "PRESENT";
+            }
+            return {
+                ...e,
+                status,
+                regularHrs: bulkReg,
+                ot1Hrs: bulkOT1,
+                ot2Hrs: bulkOT2,
+                ot3Hrs: bulkOT3,
+                saved: false
+            };
+        }));
+        setShowBulkHours(false);
+    };
+
     const handleSort = (column: "name" | "status") => {
         if (sortBy === column) setSortOrder(sortOrder === "asc" ? "desc" : "asc");
         else { setSortBy(column); setSortOrder("asc"); }
     };
 
-    const sortedEntries = useMemo(() => [...entries].sort((a, b) => {
-        const cmp = sortBy === "name" ? a.crewName.localeCompare(b.crewName) : a.status.localeCompare(b.status);
-        return sortOrder === "asc" ? cmp : -cmp;
-    }), [entries, sortBy, sortOrder]);
+    const filteredEntries = useMemo(() => {
+        let list = [...entries];
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            list = list.filter(e => e.crewName.toLowerCase().includes(q));
+        }
+        return list.sort((a, b) => {
+            const cmp = sortBy === "name" ? a.crewName.localeCompare(b.crewName) : a.status.localeCompare(b.status);
+            return sortOrder === "asc" ? cmp : -cmp;
+        });
+    }, [entries, sortBy, sortOrder, searchQuery]);
 
     const handleExport = async () => {
         if (!selectedProject || entries.length === 0) return;
@@ -422,7 +478,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
             ];
 
             // 4. Prepare Data
-            const rows = sortedEntries.map(e => ({
+            const rows = filteredEntries.map(e => ({
                 crewName: e.crewName,
                 crewRole: CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole,
                 status: e.status || "-",
@@ -470,8 +526,8 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
     };
 
     const SortIcon = ({ column }: { column: "name" | "status" }) => {
-        if (sortBy !== column) return <ArrowUpDown className="w-3 h-3 text-neutral-400" />;
-        return sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+        if (sortBy !== column) return null;
+        return sortOrder === "asc" ? <ChevronUp className="w-3.5 h-3.5 text-neutral-600" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-600" />;
     };
 
     const unsavedCount = entries.filter(e => !e.saved).length;
@@ -546,6 +602,40 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
 
     const getTotalOT = (e: DailyEntry) => e.ot1Hrs + e.ot2Hrs + e.ot3Hrs;
 
+    const getRegHourBadge = (entry: DailyEntry, isMobile?: boolean) => {
+        const h = entry.regularHrs;
+        const s = entry.status;
+        const classes = isMobile 
+            ? "px-2 py-0.5 text-[10px] rounded font-semibold border"
+            : "px-2.5 py-1 text-xs rounded-lg font-semibold border";
+            
+        if (s === "ABSENT") {
+            return <span className={clsx(classes, "bg-red-50 text-red-600 border-red-100")}>{h}h</span>;
+        }
+        if (s === "CUTI") {
+            return <span className={clsx(classes, "bg-purple-50 text-purple-600 border-purple-100")}>{h}h</span>;
+        }
+        if (s === "HALF_DAY") {
+            return <span className={clsx(classes, "bg-amber-50 text-amber-700 border-amber-100")}>{h}h</span>;
+        }
+        if (s === "PRESENT") {
+            return <span className={clsx(classes, "bg-emerald-50 text-emerald-700 border-emerald-100")}>{h}h</span>;
+        }
+        return <span className={clsx(isMobile ? "px-2 py-0.5 text-[10px] rounded" : "px-2.5 py-1 text-xs rounded-lg", "bg-neutral-100 text-neutral-700 font-semibold")}>{h}h</span>;
+    };
+
+    const getOTHourBadge = (entry: DailyEntry, isMobile?: boolean) => {
+        const ot = getTotalOT(entry);
+        const classes = isMobile 
+            ? "px-2 py-0.5 text-[10px] rounded font-bold border"
+            : "px-2.5 py-1 text-xs rounded-lg font-bold border";
+            
+        if (ot > 0) {
+            return <span className={clsx(classes, "bg-blue-50 text-blue-600 border-blue-100")}>+{ot}h OT</span>;
+        }
+        return <span className={clsx(isMobile ? "px-2 py-0.5 text-[10px] rounded" : "px-2.5 py-1 text-xs rounded-lg", "bg-neutral-50 text-neutral-400 font-medium")}>0h OT</span>;
+    };
+
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
             {/* HEADER */}
@@ -580,6 +670,32 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
 
                 {/* 3. ACTIONS */}
                 <div className="flex items-center gap-2 ml-auto order-2 sm:order-none">
+                    {showSearch && (
+                        <div className="relative animate-in slide-in-from-right-2 duration-200">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                            <input
+                                type="text"
+                                placeholder="Search name..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 pr-3 py-1.5 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-blue-500 w-40 sm:w-48 transition-all"
+                            />
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setShowSearch(!showSearch);
+                            if (showSearch) setSearchQuery("");
+                        }}
+                        className={clsx(
+                            "w-8 h-8 rounded-full border border-neutral-200 hover:bg-neutral-50 transition-colors flex items-center justify-center shrink-0",
+                            showSearch ? "bg-neutral-100 text-neutral-600" : "bg-white text-neutral-500"
+                        )}
+                        title="Search"
+                    >
+                        {showSearch ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+                    </button>
                     <Button
                         variant="secondary"
                         className="!rounded-full !py-1.5 !px-3"
@@ -589,7 +705,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                     >
                         {exporting ? "..." : "Export"}
                     </Button>
-                    <Button variant="primary" className="!rounded-full !py-1.5 !px-4" icon={<Save className="w-4 h-4" />} onClick={saveAll} disabled={entries.length === 0}>Save {unsavedCount > 0 && `(${unsavedCount})`}</Button>
+                    <Button variant="primary" className="!rounded-full !py-1.5 !px-4 !bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white" icon={<Save className="w-4 h-4" />} onClick={saveAll} disabled={entries.length === 0}>Save {unsavedCount > 0 && `(${unsavedCount})`}</Button>
                 </div>
             </div>
 
@@ -646,14 +762,56 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
 
             {/* BULK */}
             {selectedRows.size > 0 && (
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex items-center gap-3 flex-wrap">
-                    <span className="text-sm font-medium text-blue-700">{selectedRows.size} selected</span>
-                    <div className="flex items-center gap-2">
-                        <button onClick={() => bulkSetStatus("PRESENT")} className="px-3 py-1.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">Present</button>
-                        <button onClick={() => bulkSetStatus("ABSENT")} className="px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-full">Absent</button>
-                        <button onClick={() => bulkSetStatus("HALF_DAY")} className="px-3 py-1.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">Half</button>
-                        <button onClick={() => bulkSetStatus("CUTI")} className="px-3 py-1.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full">Cuti</button>
-                    </div>
+                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-3 flex-wrap">
+                    {showBulkHours ? (
+                        <div className="flex items-center gap-4 flex-wrap w-full animate-in fade-in duration-300">
+                            <span className="text-sm font-bold text-blue-700">Set Hours for {selectedRows.size} selected:</span>
+                            <div className="flex flex-wrap gap-4 bg-white px-4 py-2 rounded-xl border border-neutral-100 shadow-sm">
+                                <HourInput label="REG" value={bulkReg} onChange={setBulkReg} max={8} />
+                                <HourInput label="OT1" value={bulkOT1} onChange={setBulkOT1} max={2} />
+                                <HourInput label="OT2" value={bulkOT2} onChange={setBulkOT2} max={4} />
+                                <HourInput label="OT3" value={bulkOT3} onChange={setBulkOT3} max={6} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={bulkSetHours}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-full transition-colors shadow-sm"
+                                >
+                                    Apply
+                                </button>
+                                <button
+                                    onClick={() => setShowBulkHours(false)}
+                                    className="px-4 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 text-xs font-bold rounded-full transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-between w-full flex-wrap gap-3">
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm font-medium text-blue-700">{selectedRows.size} selected</span>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => bulkSetStatus("PRESENT")} className="px-3 py-1.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full hover:bg-emerald-200 transition-colors">Present</button>
+                                    <button onClick={() => bulkSetStatus("ABSENT")} className="px-3 py-1.5 text-xs font-medium bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors">Absent</button>
+                                    <button onClick={() => bulkSetStatus("HALF_DAY")} className="px-3 py-1.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full hover:bg-amber-200 transition-colors">Half</button>
+                                    <button onClick={() => bulkSetStatus("CUTI")} className="px-3 py-1.5 text-xs font-medium bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors">Cuti</button>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setBulkReg(8);
+                                    setBulkOT1(0);
+                                    setBulkOT2(0);
+                                    setBulkOT3(0);
+                                    setShowBulkHours(true);
+                                }}
+                                className="px-3.5 py-1.5 text-xs font-bold text-blue-600 bg-blue-100/50 hover:bg-blue-100 transition-colors rounded-full flex items-center gap-1.5"
+                            >
+                                Set Hours / OT
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -667,11 +825,11 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
             )}
 
             {/* CONTENT (TABLE & CARDS) */}
-            {sortedEntries.length > 0 && (
+            {filteredEntries.length > 0 && (
                 <div className="space-y-4">
                     {/* MOBILE CARDS */}
                     <div className="lg:hidden space-y-3">
-                        {sortedEntries.map((entry) => {
+                        {filteredEntries.map((entry) => {
                             const isOff = entry.status === "ABSENT" || entry.status === "CUTI";
                             const isHalf = entry.status === "HALF_DAY";
                             const isEditing = editingEntry === entry.id;
@@ -698,7 +856,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                                                 {entry.initials}
                                             </div>
                                             <div>
-                                                <div className="font-bold text-neutral-900">{entry.crewName}</div>
+                                                <div className="font-bold text-neutral-900">{toTitleCase(entry.crewName)}</div>
                                                 <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
                                                     {CREW_ROLE_LABELS[entry.crewRole]?.en || entry.crewRole}
                                                 </div>
@@ -748,9 +906,9 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Working Hours</div>
                                                 {!isEditing && (
-                                                    <div className="text-xs font-bold text-neutral-700 bg-neutral-100 rounded-lg px-2 py-1 flex gap-3">
-                                                        <span>R: {entry.regularHrs}</span>
-                                                        <span className="text-blue-600">OT: {getTotalOT(entry)}</span>
+                                                    <div className="flex items-center gap-1.5 font-medium">
+                                                        {getRegHourBadge(entry, true)}
+                                                        {getOTHourBadge(entry, true)}
                                                     </div>
                                                 )}
                                             </div>
@@ -797,34 +955,34 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                     </div>
 
                     {/* DESKTOP TABLE */}
-                    <div className="hidden lg:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                    <div className="hidden lg:block bg-white rounded-[22px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                <thead className="border-b border-neutral-100">
                                     <tr>
-                                        <th className="px-3 py-3 w-8"><input type="checkbox" checked={selectedRows.size === entries.length} onChange={selectAll} className="rounded border-neutral-300" /></th>
-                                        <th className="text-left px-3 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
-                                        <th className="text-left px-3 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon column="status" /></div></th>
-                                        <th className="text-center px-3 py-3 text-xs font-semibold text-neutral-600 uppercase">Hours</th>
-                                        <th className="text-right px-3 py-3 text-xs font-semibold text-neutral-600 uppercase w-16"></th>
+                                        <th className="px-4 py-3.5 w-8"><input type="checkbox" checked={selectedRows.size === entries.length} onChange={selectAll} className="rounded border-neutral-300" /></th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon column="name" /></div></th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon column="status" /></div></th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400">Hours</th>
+                                        <th className="text-right px-4 py-3.5 text-xs font-semibold text-neutral-400 w-16"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-100">
-                                    {sortedEntries.map((entry) => {
+                                    {filteredEntries.map((entry) => {
                                         const isOff = entry.status === "ABSENT" || entry.status === "CUTI";
                                         const isHalf = entry.status === "HALF_DAY";
                                         const isEditing = editingEntry === entry.id;
                                         const maxReg = isHalf ? 4 : 8;
                                         return (
                                             <tr key={entry.id} className={clsx("transition-colors", selectedRows.has(entry.id) ? "bg-blue-50" : "hover:bg-neutral-50", !entry.saved && "bg-amber-50/50")}>
-                                                <td className="px-3 py-3"><input type="checkbox" checked={selectedRows.has(entry.id)} onChange={() => toggleRowSelection(entry.id)} className="rounded border-neutral-300" /></td>
-                                                <td className="px-3 py-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-7 h-7 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{entry.initials}</div>
-                                                        <div><div className="font-medium text-neutral-900 text-sm">{entry.crewName}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[entry.crewRole]?.en || entry.crewRole}</div></div>
+                                                <td className="px-4 py-3"><input type="checkbox" checked={selectedRows.has(entry.id)} onChange={() => toggleRowSelection(entry.id)} className="rounded border-neutral-300" /></td>
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{entry.initials}</div>
+                                                        <div><div className="font-medium text-neutral-900 text-sm">{toTitleCase(entry.crewName)}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[entry.crewRole]?.en || entry.crewRole}</div></div>
                                                     </div>
                                                 </td>
-                                                <td className="px-3 py-3">
+                                                <td className="px-4 py-3">
                                                     <div className="flex gap-1 flex-wrap">
                                                         {(["PRESENT", "HALF_DAY", "ABSENT", "CUTI"] as AttendanceStatus[]).map(s => {
                                                             const isDisabled = futureLocked && s !== "CUTI";
@@ -835,9 +993,9 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                                                                     onClick={() => !isDisabled && updateEntry(entry.id, "status", s)}
                                                                     disabled={isDisabled}
                                                                     className={clsx(
-                                                                        "px-2 py-1 rounded-full transition-colors text-[10px] font-medium",
+                                                                        "px-2.5 py-1 rounded-full transition-colors text-[10px] font-semibold",
                                                                         isSelected
-                                                                            ? (s === "PRESENT" ? "bg-emerald-100 text-emerald-700" : s === "HALF_DAY" ? "bg-amber-100 text-amber-700" : s === "ABSENT" ? "bg-red-100 text-red-700" : "bg-purple-100 text-purple-700")
+                                                                            ? (s === "PRESENT" ? "bg-emerald-50 text-emerald-700" : s === "HALF_DAY" ? "bg-amber-50 text-amber-700" : s === "ABSENT" ? "bg-red-50 text-red-700" : "bg-purple-50 text-purple-700")
                                                                             : (isDisabled ? "bg-neutral-50 text-neutral-300 cursor-not-allowed" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200")
                                                                     )}
                                                                 >
@@ -847,7 +1005,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                                                         })}
                                                     </div>
                                                 </td>
-                                                <td className="px-3 py-3">
+                                                <td className="px-4 py-3">
                                                     {isEditing ? (
                                                         <div className="space-y-2">
                                                             <HourInput label="Reg" value={entry.regularHrs} onChange={(v) => updateEntry(entry.id, "regularHrs", v)} disabled={isOff} max={maxReg} />
@@ -856,12 +1014,13 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                                                             <HourInput label="OT3" value={entry.ot3Hrs} onChange={(v) => updateEntry(entry.id, "ot3Hrs", v)} disabled={isOff} max={6} />
                                                         </div>
                                                     ) : (
-                                                        <div className="text-center">
-                                                            <div className="text-sm font-medium text-neutral-700">R:{entry.regularHrs} <span className="ml-3 text-blue-600">+{getTotalOT(entry)}OT</span></div>
+                                                        <div className="flex items-center justify-center gap-1.5 font-medium">
+                                                            {getRegHourBadge(entry)}
+                                                            {getOTHourBadge(entry)}
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-3 text-right">
+                                                <td className="px-4 py-3 text-right">
                                                     {isEditing ? (
                                                         <button onClick={() => saveEntry(entry.id)} className="p-1.5 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200"><Check className="w-3.5 h-3.5" /></button>
                                                     ) : (
