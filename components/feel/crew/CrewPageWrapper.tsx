@@ -58,9 +58,16 @@ export default function CrewPageWrapper({
 }: CrewPageWrapperProps) {
     const { profile } = useUserContext();
     const [isMounted, setIsMounted] = useState(false);
+    const [isMobile, setIsMobile] = useState<boolean | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
+        setIsMobile(!window.matchMedia("(min-width: 768px)").matches);
+        
+        const media = window.matchMedia("(min-width: 768px)");
+        const listener = (e: MediaQueryListEvent) => setIsMobile(!e.matches);
+        media.addEventListener("change", listener);
+        return () => media.removeEventListener("change", listener);
     }, []);
 
     const canManage = !!(profile?.role && ["superadmin", "admin", "administrator", "supervisor", "hr", "pm", "management", "owner", "staff"].includes(profile.role.toLowerCase()));
@@ -156,7 +163,7 @@ export default function CrewPageWrapper({
 
                 <div className="pb-32 px-4 space-y-4">
                     {header}
-                    {children}
+                    {isMobile && children}
                 </div>
 
                 <CrewSidebar
@@ -218,9 +225,8 @@ export default function CrewPageWrapper({
                             </div>
                         </div>
 
-                        {/* Main Page Content */}
                         <div className="md:px-0">
-                            {children}
+                            {isMobile !== true && children}
                         </div>
                     </div>
                 </PageWrapper>

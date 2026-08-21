@@ -422,16 +422,16 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                 {/* Left section: Filter + Project Selector */}
                 <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                     {/* View Toggle */}
-                    <div className="flex bg-neutral-200/50 p-1 rounded-full flex-shrink-0">
+                    <div className="flex bg-neutral-200/50 dark:bg-neutral-800/60 p-1 rounded-full flex-shrink-0">
                         <button
                             onClick={() => setViewPeriod("LAST_7_DAYS")}
-                            className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-all", viewPeriod === "LAST_7_DAYS" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}
+                            className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-all", viewPeriod === "LAST_7_DAYS" ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-250")}
                         >
                             This Week
                         </button>
                         <button
                             onClick={() => setViewPeriod("EVALUATION_30_DAYS")}
-                            className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-all", viewPeriod === "EVALUATION_30_DAYS" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}
+                            className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-all", viewPeriod === "EVALUATION_30_DAYS" ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-250")}
                         >
                             Evaluation
                         </button>
@@ -485,7 +485,7 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                 </div>
             </div>
 
-            <div className="bg-blue-50/50 border border-blue-100/50 rounded-xl p-3 text-xs text-blue-700 flex items-start gap-2">
+            <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100/50 dark:border-blue-900/30 rounded-xl p-3 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2">
                 <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <div>
                     <span className="font-semibold">Evaluation Rule:</span> {viewPeriod === "LAST_7_DAYS" && "This Week (Sun - Sat) — "}50% Att + 25% OT (Benchmark: 6h/day) + 25% Rating.

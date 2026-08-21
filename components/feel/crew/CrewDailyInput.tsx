@@ -974,12 +974,12 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                                         const isEditing = editingEntry === entry.id;
                                         const maxReg = isHalf ? 4 : 8;
                                         return (
-                                            <tr key={entry.id} className={clsx("transition-colors", selectedRows.has(entry.id) ? "bg-blue-50" : "hover:bg-neutral-50", !entry.saved && "bg-amber-50/50")}>
-                                                <td className="px-4 py-3"><input type="checkbox" checked={selectedRows.has(entry.id)} onChange={() => toggleRowSelection(entry.id)} className="rounded border-neutral-300" /></td>
+                                            <tr key={entry.id} className={clsx("transition-colors", selectedRows.has(entry.id) ? "bg-blue-50 dark:bg-blue-950/20" : "hover:bg-neutral-50 dark:hover:bg-neutral-800/40", !entry.saved && "bg-amber-50/40 dark:bg-amber-950/10")}>
+                                                <td className="px-4 py-3"><input type="checkbox" checked={selectedRows.has(entry.id)} onChange={() => toggleRowSelection(entry.id)} className="rounded border-neutral-300 dark:bg-neutral-800 dark:border-neutral-700" /></td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{entry.initials}</div>
-                                                        <div><div className="font-medium text-neutral-900 text-sm">{toTitleCase(entry.crewName)}</div><div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[entry.crewRole]?.en || entry.crewRole}</div></div>
+                                                        <div className="w-9 h-9 rounded-full bg-neutral-200 dark:bg-neutral-800 flex items-center justify-center text-neutral-600 dark:text-neutral-400 text-sm font-semibold flex-shrink-0">{entry.initials}</div>
+                                                        <div><div className="font-medium text-neutral-900 dark:text-neutral-100 text-sm">{toTitleCase(entry.crewName)}</div><div className="text-xs text-neutral-500 dark:text-neutral-400">{CREW_ROLE_LABELS[entry.crewRole]?.en || entry.crewRole}</div></div>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3">
@@ -995,8 +995,8 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
                                                                     className={clsx(
                                                                         "px-2.5 py-1 rounded-full transition-colors text-[10px] font-semibold",
                                                                         isSelected
-                                                                            ? (s === "PRESENT" ? "bg-emerald-50 text-emerald-700" : s === "HALF_DAY" ? "bg-amber-50 text-amber-700" : s === "ABSENT" ? "bg-red-50 text-red-700" : "bg-purple-50 text-purple-700")
-                                                                            : (isDisabled ? "bg-neutral-50 text-neutral-300 cursor-not-allowed" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200")
+                                                                            ? (s === "PRESENT" ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400" : s === "HALF_DAY" ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400" : s === "ABSENT" ? "bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400" : "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-400")
+                                                                            : (isDisabled ? "bg-neutral-50 dark:bg-neutral-800 text-neutral-300 dark:text-neutral-600 cursor-not-allowed" : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700")
                                                                     )}
                                                                 >
                                                                     {s === "PRESENT" ? "P" : s === "HALF_DAY" ? "½" : s === "ABSENT" ? "A" : "C"}

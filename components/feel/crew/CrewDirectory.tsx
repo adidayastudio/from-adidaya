@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useContext } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
@@ -191,6 +192,22 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     // Drawer state
     const [showAddDrawer, setShowAddDrawer] = useState(false);
     const [showEditDrawer, setShowEditDrawer] = useState(false);
+    
+    const [isDesktop, setIsDesktop] = useState(false);
+    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+    useEffect(() => {
+        setIsDesktop(window.matchMedia("(min-width: 768px)").matches);
+        setPortalTarget(window.matchMedia("(min-width: 768px)").matches ? document.getElementById("crew-activity-portal-target") : null);
+        
+        const media = window.matchMedia("(min-width: 768px)");
+        const listener = (e: MediaQueryListEvent) => {
+            setIsDesktop(e.matches);
+            setPortalTarget(e.matches ? document.getElementById("crew-activity-portal-target") : null);
+        };
+        media.addEventListener("change", listener);
+        return () => media.removeEventListener("change", listener);
+    }, []);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [selectedCrew, setSelectedCrew] = useState<CrewListItem | null>(null);
 
@@ -812,32 +829,33 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
             )}
 
             {/* Add Drawer */}
-            {showAddDrawer && (
-                <div className="fixed inset-0 z-[100] isolate">
-                    <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={() => setShowAddDrawer(false)} />
+            {showAddDrawer && (() => {
+                const drawerContent = (
                     <div className={clsx(
-                        "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] overflow-hidden flex flex-col",
-                        "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]",
-                        showAddDrawer ? "translate-y-0 sm:translate-x-0 opacity-100 scale-100" : "translate-y-full sm:translate-y-0 sm:translate-x-full opacity-0 sm:scale-95"
+                        "flex flex-col overflow-hidden bg-white dark:bg-neutral-900",
+                        isDesktop 
+                            ? "w-full h-full border border-neutral-200/80 dark:border-neutral-800/80 rounded-[24px] shadow-xl" 
+                            : "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
                     )}>
-                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">Add Crew</h2>
+                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent md:px-5 md:pt-4 md:pb-3 md:bg-white md:dark:bg-neutral-900">
+                            <div className="flex items-center justify-between mb-4 md:mb-0">
+                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight md:text-sm md:font-extrabold">Add Crew</h2>
                                 <button
                                     onClick={() => setShowAddDrawer(false)}
-                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform md:w-7 md:h-7 md:bg-transparent md:border-none md:hover:bg-neutral-100 md:dark:hover:bg-neutral-800 md:text-neutral-400"
                                 >
-                                    <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                                    <X size={20} className="text-neutral-500 dark:text-neutral-400 md:w-4 md:h-4" strokeWidth={1.5} />
                                 </button>
                             </div>
-                        </div>                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32">
+                        </div>
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32 md:px-5 md:py-4 md:pb-4">
                             <div className="space-y-6">
                                 <div className="flex justify-center py-4">
                                     <div className="w-24 h-24 rounded-full bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors group">
                                         <Plus className="w-8 h-8 text-neutral-400 group-hover:text-blue-500 transition-colors" />
                                     </div>
                                 </div>
-                                 <FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" />
+                                <FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" />
                                 <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" accentColor="blue" />
                                 <Select 
                                     label="Current Project" 
@@ -867,38 +885,47 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                                 </div>
                             </div>
                         </div>
-                        <div className="absolute bottom-8 left-8 right-8">
-                            <button onClick={handleAddCrew} disabled={isSaving || !formName.trim()} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <div className="absolute bottom-8 left-8 right-8 md:static md:p-5 md:bg-white md:dark:bg-neutral-900 flex-shrink-0">
+                            <button onClick={handleAddCrew} disabled={isSaving || !formName.trim()} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 md:py-2 md:h-10 md:rounded-xl md:text-[13px] md:shadow-none">
                                 {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
                                 <span>{isSaving ? "Saving..." : "Add Crew"}</span>
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                );
 
+                if (isDesktop && portalTarget) {
+                    return createPortal(drawerContent, portalTarget);
+                }
+
+                return (
+                    <div className="fixed inset-0 z-[100] isolate">
+                        <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto" onClick={() => setShowAddDrawer(false)} />
+                        {drawerContent}
+                    </div>
+                );
+            })()}
             {/* Edit Drawer */}
-            {showEditDrawer && selectedCrew && (
-                <div className="fixed inset-0 z-[100] isolate">
-                    <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={() => setShowEditDrawer(false)} />
+            {showEditDrawer && selectedCrew && (() => {
+                const drawerContent = (
                     <div className={clsx(
-                        "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] overflow-hidden flex flex-col",
-                        "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]",
-                        showEditDrawer ? "translate-y-0 sm:translate-x-0 opacity-100 scale-100" : "translate-y-full sm:translate-y-0 sm:translate-x-full opacity-0 sm:scale-95"
+                        "flex flex-col overflow-hidden bg-white dark:bg-neutral-900",
+                        isDesktop 
+                            ? "w-full h-full border border-neutral-200/80 dark:border-neutral-800/80 rounded-[24px] shadow-xl" 
+                            : "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
                     )}>
-                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">Edit Crew</h2>
+                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent md:px-5 md:pt-4 md:pb-3 md:bg-white md:dark:bg-neutral-900">
+                            <div className="flex items-center justify-between mb-4 md:mb-0">
+                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight md:text-sm md:font-extrabold">Edit Crew</h2>
                                 <button
                                     onClick={() => setShowEditDrawer(false)}
-                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
+                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform md:w-7 md:h-7 md:bg-transparent md:border-none md:hover:bg-neutral-100 md:dark:hover:bg-neutral-800 md:text-neutral-400"
                                 >
-                                    <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                                    <X size={20} className="text-neutral-500 dark:text-neutral-400 md:w-4 md:h-4" strokeWidth={1.5} />
                                 </button>
                             </div>
                         </div>
-
-                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32">
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32 md:px-5 md:py-4 md:pb-4">
                             <div className="space-y-6">
                                 <div className="flex justify-center py-4">
                                     <div className="w-24 h-24 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 text-2xl font-bold shadow-inner">
@@ -938,15 +965,26 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
                                 </div>
                             </div>
                         </div>
-                        <div className="absolute bottom-8 left-8 right-8">
-                            <button onClick={handleEditCrew} disabled={isSaving || !formName.trim()} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <div className="absolute bottom-8 left-8 right-8 md:static md:p-5 md:bg-white md:dark:bg-neutral-900 flex-shrink-0">
+                            <button onClick={handleUpdateCrew} disabled={isSaving || !formName.trim()} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 md:py-2 md:h-10 md:rounded-xl md:text-[13px] md:shadow-none">
                                 {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
                                 <span>{isSaving ? "Saving..." : "Save Changes"}</span>
                             </button>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+
+                if (isDesktop && portalTarget) {
+                    return createPortal(drawerContent, portalTarget);
+                }
+
+                return (
+                    <div className="fixed inset-0 z-[100] isolate">
+                        <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto" onClick={() => setShowEditDrawer(false)} />
+                        {drawerContent}
+                    </div>
+                );
+            })()}
 
             {/* Delete Confirm */}
             {showDeleteConfirm && selectedCrew && (

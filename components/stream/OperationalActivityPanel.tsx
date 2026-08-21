@@ -81,6 +81,7 @@ export default function OperationalActivityPanel({
         return feedItems;
     }, [isWorkspaceModule, selectedModule, navMode, targetProjectCode, feedItems, currentChannelFeed]);
 
+
     return (
         <div className={clsx(
             "w-80 md:w-96 lg:w-[420px] h-full border-l border-neutral-200/40 dark:border-neutral-800/40",
@@ -122,7 +123,11 @@ export default function OperationalActivityPanel({
                 </div>
             ) : (
                 /* VIEW C: Activity Feed Panel with SMOOTH GRADIENT MASK STICKY BLUR HEADER */
-                <div className="flex-1 overflow-y-auto scrollbar-hide relative flex flex-col">
+                <div className="flex-1 h-full relative flex flex-col overflow-hidden">
+                    {/* The Portal Target is always mounted under absolute layout when not in thread/detail mode */}
+                    <div id="crew-activity-portal-target" className="absolute inset-0 z-40 p-4 empty:hidden bg-neutral-50 dark:bg-neutral-950 overflow-y-auto scrollbar-hide" />
+                    
+                    <div className="flex-1 overflow-y-auto scrollbar-hide relative flex flex-col">
                     {/* SMOOTH GLASSMORPHISM BLUR STICKY HEADER */}
                     <div
                         style={{
@@ -170,6 +175,7 @@ export default function OperationalActivityPanel({
                         />
                     </div>
                 </div>
+            </div>
             )}
         </div>
     );

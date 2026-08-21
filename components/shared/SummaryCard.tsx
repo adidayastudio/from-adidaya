@@ -47,11 +47,11 @@ export function SummaryCard({
         <div
             onClick={onClick}
             className={clsx(
-                "rounded-[24px] p-4 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:shadow-none border transition-all duration-200 min-w-[160px] lg:w-full h-[130px] lg:h-auto flex-1 shrink-0 cursor-pointer",
+                "rounded-[24px] p-4 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.02)] dark:shadow-none transition-all duration-200 min-w-[160px] lg:w-full h-[130px] lg:h-auto flex-1 shrink-0 cursor-pointer",
                 onClick ? "hover:shadow-md dark:hover:shadow-neutral-900/50 active:scale-95" : "",
                 isActive
-                    ? clsx(activeBg || "bg-blue-50/80 dark:bg-blue-950/30 border-transparent")
-                    : "bg-white dark:bg-neutral-900 border-neutral-100 dark:border-neutral-800"
+                    ? clsx(activeBg || "bg-blue-50/80 dark:bg-blue-950/30", "border border-transparent dark:border-transparent")
+                    : "bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800"
             )}
         >
             <div className="flex items-center justify-between mb-2 lg:mb-4">

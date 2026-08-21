@@ -435,7 +435,7 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                 {/* =========================================================
                     COLUMN 2: CENTER WORKSPACE (Dynamic Content)
                 ========================================================= */}
-                <div className="flex-1 h-full flex flex-col overflow-hidden relative min-w-0 bg-transparent">
+                <div className="flex-1 h-full flex flex-col overflow-hidden relative min-w-0 bg-transparent z-40">
 
                     {/* VIEW A: AskAdidaya (ChatGPT Stream Chat) */}
                     {navMode === "ask_adidaya" && (

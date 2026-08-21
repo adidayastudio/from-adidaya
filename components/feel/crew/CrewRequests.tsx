@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef, useContext } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
@@ -191,6 +192,22 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
     const [showDrawer, setShowDrawer] = useState(false);
     const [viewingRequest, setViewingRequest] = useState<CrewRequest | null>(null);
     const [isEditing, setIsEditing] = useState(false);
+
+    const [isDesktop, setIsDesktop] = useState(false);
+    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+    useEffect(() => {
+        setIsDesktop(window.matchMedia("(min-width: 768px)").matches);
+        setPortalTarget(window.matchMedia("(min-width: 768px)").matches ? document.getElementById("crew-activity-portal-target") : null);
+        
+        const media = window.matchMedia("(min-width: 768px)");
+        const listener = (e: MediaQueryListEvent) => {
+            setIsDesktop(e.matches);
+            setPortalTarget(e.matches ? document.getElementById("crew-activity-portal-target") : null);
+        };
+        media.addEventListener("change", listener);
+        return () => media.removeEventListener("change", listener);
+    }, []);
 
     const [formType, setFormType] = useState<RequestType>("LEAVE");
     const [formCrew, setFormCrew] = useState("");
@@ -634,6 +651,344 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
         } catch (error) { console.error(error); alert("Failed to export PDF."); } finally { setExporting(false); }
     };
 
+    const renderDrawer = () => {
+        if (!showDrawer) return null;
+
+        const drawerContent = (
+            <div className="w-full h-full border border-neutral-200/80 dark:border-neutral-800/80 rounded-[24px] shadow-xl flex flex-col overflow-hidden bg-white dark:bg-neutral-900">
+                <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent md:px-5 md:pt-4 md:pb-3 md:bg-white md:dark:bg-neutral-900">
+                    <div className="flex items-center justify-between mb-4 md:mb-0">
+                        <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight md:text-sm md:font-extrabold">
+                            {(viewingRequest && !isEditing) ? "Request Details" : (editingId ? "Edit Request" : "New Request")}
+                        </h2>
+                        <button
+                            onClick={() => setShowDrawer(false)}
+                            className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform md:w-7 md:h-7 md:bg-transparent md:border-none md:hover:bg-neutral-100 md:dark:hover:bg-neutral-800 md:text-neutral-400"
+                        >
+                            <X size={20} className="text-neutral-500 dark:text-neutral-400 md:w-4 md:h-4" strokeWidth={1.5} />
+                        </button>
+                    </div>
+                </div>
+                {(viewingRequest && !isEditing) ? (
+                    <>
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 md:px-5 md:py-4">
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center font-bold text-lg shadow-inner">
+                                            {viewingRequest.crewInitials || viewingRequest.crewName?.substring(0, 2).toUpperCase() || "CR"}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-neutral-900 dark:text-white text-base leading-snug">{viewingRequest.crewName}</h3>
+                                            <p className="text-xs text-neutral-400 font-medium">{viewingRequest.crewRole ? CREW_ROLE_LABELS[viewingRequest.crewRole] : "Crew Member"}</p>
+                                        </div>
+                                    </div>
+                                    <span className={clsx(
+                                        "px-4 py-1.5 rounded-full text-xs font-bold shadow-xs",
+                                        viewingRequest.status === "APPROVED" && "bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-950/30",
+                                        viewingRequest.status === "REJECTED" && "bg-red-50 text-red-600 border border-red-200 dark:bg-red-950/30",
+                                        viewingRequest.status === "PENDING" && "bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-950/30",
+                                        viewingRequest.status === "CANCELLED" && "bg-neutral-50 text-neutral-500 border border-neutral-200 dark:bg-neutral-900/30"
+                                    )}>
+                                        {viewingRequest.status}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <DetailItem label="Request Type" value={viewingRequest.type} accent />
+                                    <DetailItem label="Project" value={viewingRequest.projectCode ? `[${formatProjectCode(viewingRequest.projectCode)}]` : "-"} />
+                                    {viewingRequest.amount && (
+                                        <DetailItem label="Amount Requested" value={`IDR ${Number(viewingRequest.amount).toLocaleString()}`} highlight />
+                                    )}
+                                    {viewingRequest.startDate && (
+                                        <DetailItem 
+                                            label="Period" 
+                                            value={viewingRequest.endDate && viewingRequest.startDate !== viewingRequest.endDate 
+                                                ? `${formatDateShort(new Date(viewingRequest.startDate))} - ${formatDateShort(new Date(viewingRequest.endDate))}`
+                                                : formatDateShort(new Date(viewingRequest.startDate))
+                                            } 
+                                        />
+                                    )}
+                                </div>
+
+                                {viewingRequest.reason && (
+                                    <div className="bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/50 rounded-2xl p-5 leading-relaxed">
+                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-2">Reason / Notes</span>
+                                        <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{viewingRequest.reason}</p>
+                                    </div>
+                                )}
+
+                                {viewingRequest.proofUrl && (
+                                    <div className="space-y-2">
+                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Attachment</span>
+                                        <a 
+                                            href={viewingRequest.proofUrl} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/50 rounded-2xl hover:border-blue-300 dark:hover:border-blue-800 hover:bg-white transition-all group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center">
+                                                    <FileText size={20} />
+                                                </div>
+                                                <span className="text-sm font-bold text-neutral-700">View Proof of Transaction</span>
+                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-neutral-300 group-hover:text-blue-500 transition-colors" />
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex-none p-8 pt-4 bg-gradient-to-t from-white via-white to-transparent md:static md:p-5 md:bg-white md:dark:bg-neutral-900 flex-shrink-0">
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-2">
+                                    <button 
+                                        onClick={() => handleDelete(viewingRequest.id)}
+                                        className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200 active:scale-95 transition-all hover:bg-neutral-200 md:w-9 md:h-9 md:rounded-xl"
+                                        title="Delete Permanently"
+                                    >
+                                        <Trash2 size={20} className="md:w-4 md:h-4" />
+                                    </button>
+                                    {viewingRequest.status === "PENDING" && (
+                                        <button 
+                                            onClick={() => handleCancel(viewingRequest.id)}
+                                            className="w-12 h-12 flex items-center justify-center rounded-full bg-amber-50 text-amber-600 border border-amber-200 active:scale-95 transition-all hover:bg-amber-100 md:w-9 md:h-9 md:rounded-xl"
+                                            title="Cancel Request"
+                                        >
+                                            <Ban size={20} className="md:w-4 md:h-4" />
+                                        </button>
+                                    )}
+                                    {viewingRequest.status === "PENDING" && (
+                                        <button 
+                                            onClick={() => handleEdit(viewingRequest)}
+                                            className="flex-1 h-12 flex items-center justify-center gap-2 rounded-full bg-blue-50 text-blue-600 border border-blue-200 font-bold text-sm active:scale-95 transition-all hover:bg-blue-100 md:h-9 md:rounded-xl md:text-[12.5px]"
+                                        >
+                                            <Edit className="w-4 h-4 md:w-3.5 md:h-3.5" /> Edit Request Details
+                                        </button>
+                                    )}
+                                </div>
+
+                                {(role && ["admin", "superadmin", "administrator", "supervisor"].includes(role)) && viewingRequest.status === "PENDING" && (
+                                    <div className="grid grid-cols-2 gap-3 mt-1">
+                                        <button 
+                                            onClick={() => handleReject(viewingRequest.id)}
+                                            className="py-4 rounded-full bg-red-500 text-white font-bold text-sm tracking-tight shadow-xl shadow-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-red-600 md:py-2 md:h-9 md:rounded-xl md:text-[12.5px] md:shadow-none"
+                                        >
+                                            <X className="w-5 h-5 md:w-4 md:h-4" /> Reject
+                                        </button>
+                                        <button 
+                                            onClick={() => handleApprove(viewingRequest)}
+                                            className="py-4 rounded-full bg-emerald-500 text-white font-bold text-sm tracking-tight shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-emerald-600 md:py-2 md:h-9 md:rounded-xl md:text-[12.5px] md:shadow-none"
+                                        >
+                                            <Check className="w-5 h-5 md:w-4 md:h-4" /> Approve
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-10 md:px-5 md:py-4 md:pb-4">
+                            <div className="space-y-6">
+                                <div>
+                                    <label className={labelClass}>Request Type *</label>
+                                    <div className="grid grid-cols-3 gap-2 mt-2">
+                                        {(["LEAVE", "REIMBURSE", "KASBON"] as RequestType[]).map(t => (
+                                            <button
+                                                key={t}
+                                                type="button"
+                                                onClick={() => {
+                                                    setFormType(t);
+                                                    if (t === "LEAVE") setFormAmount("");
+                                                }}
+                                                className={clsx(
+                                                    "py-3 rounded-2xl text-xs font-bold border transition-all active:scale-[0.98]",
+                                                    formType === t 
+                                                        ? "bg-blue-600 text-white border-blue-600" 
+                                                        : "bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50"
+                                                )}
+                                            >
+                                                {t === "LEAVE" ? "Leave" : t === "REIMBURSE" ? "Reimburse" : "Kasbon"}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <Select 
+                                    label="Crew Member *" 
+                                    value={formCrew} 
+                                    onChange={setFormCrew} 
+                                    options={crewList.map(c => ({ value: c.id, label: c.name }))} 
+                                    placeholder="Select crew member"
+                                    accentColor="blue"
+                                />
+
+                                <Select 
+                                    label="Project" 
+                                    value={formProject} 
+                                    onChange={setFormProject} 
+                                    options={[
+                                        { value: "", label: "No Project (Unassigned)" },
+                                        ...projects.map(p => ({ value: p.code, label: `[${formatProjectCode(p.code)}] ${p.name}` }))
+                                    ]} 
+                                    placeholder="Select project code"
+                                    accentColor="blue"
+                                />
+
+                                {formType !== "LEAVE" && (
+                                    <div>
+                                        <label className={labelClass}>Amount Requested (IDR) *</label>
+                                        <input
+                                            type="number"
+                                            value={formAmount}
+                                            onChange={e => setFormAmount(e.target.value)}
+                                            placeholder="e.g. 150000"
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className={labelClass}>Start Date *</label>
+                                        <input
+                                            type="date"
+                                            value={formStartDate}
+                                            onChange={e => setFormStartDate(e.target.value)}
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}>End Date *</label>
+                                        <input
+                                            type="date"
+                                            value={formEndDate}
+                                            onChange={e => setFormEndDate(e.target.value)}
+                                            className={inputClass}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className={labelClass}>Reason / Notes *</label>
+                                    <textarea
+                                        value={formReason}
+                                        onChange={e => setFormReason(e.target.value)}
+                                        placeholder="Explain details of the request..."
+                                        rows={4}
+                                        className={clsx(inputClass, "resize-none py-3")}
+                                    />
+                                </div>
+
+                                {formType !== "LEAVE" && (
+                                    <div>
+                                        <label className={labelClass}>Receipt / Proof of Payment</label>
+                                        {formProofUrl ? (
+                                            <div className="mt-2 flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/50 rounded-2xl">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <FileCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                                                    <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300 truncate">Receipt uploaded successfully</span>
+                                                </div>
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => setFormProofUrl("")}
+                                                    className="text-xs text-red-500 font-bold hover:text-red-700 transition-colors"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="mt-2">
+                                                <input 
+                                                    type="file" 
+                                                    id="proof-upload" 
+                                                    accept="image/*,application/pdf"
+                                                    className="hidden" 
+                                                    onChange={handleFileUpload}
+                                                    disabled={uploading}
+                                                />
+                                                <label 
+                                                    htmlFor="proof-upload"
+                                                    className={clsx(
+                                                        "flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-2xl cursor-pointer transition-all text-center group",
+                                                        uploading 
+                                                            ? "border-neutral-200 bg-neutral-50/50 pointer-events-none" 
+                                                            : "border-neutral-200 hover:border-blue-400 dark:border-neutral-700 hover:bg-neutral-50/30"
+                                                    )}
+                                                >
+                                                    {uploading ? (
+                                                        <div className="py-2">
+                                                            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
+                                                            <p className="text-sm font-bold text-neutral-700">Uploading...</p>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <Upload className="w-10 h-10 mx-auto text-neutral-400 group-hover:text-blue-500 mb-3 transition-colors" strokeWidth={1.5} />
+                                                            <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Click to upload receipt</p>
+                                                            <p className="text-xs text-neutral-400 mt-1 font-medium">JPG, PNG, PDF up to 5MB</p>
+                                                        </>
+                                                    )}
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex-none p-8 pt-4 bg-gradient-to-t from-white via-white to-transparent md:static md:p-5 md:bg-white md:dark:bg-neutral-900 flex-shrink-0">
+                            <div className="flex gap-3">
+                                {(viewingRequest && isEditing) ? (
+                                    <>
+                                        <button 
+                                            onClick={() => setIsEditing(false)}
+                                            className="flex-1 h-16 rounded-full border border-neutral-200 bg-white text-neutral-600 font-bold text-sm hover:bg-neutral-50 transition-all active:scale-95 md:h-10 md:rounded-xl md:text-[13px]"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <Button 
+                                            variant="primary" 
+                                            size="lg" 
+                                            className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white flex-[2] rounded-full h-16 text-sm font-bold shadow-2xl shadow-blue-600/30 active:scale-95 transition-all md:h-10 md:rounded-xl md:text-[13px] md:shadow-none"
+                                            onClick={handleSubmit}
+                                        >
+                                            Update Request
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button 
+                                        variant="primary" 
+                                        size="lg" 
+                                        fullWidth 
+                                        className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white rounded-full h-16 text-sm font-bold shadow-2xl shadow-blue-600/30 active:scale-95 transition-all md:h-10 md:rounded-xl md:text-[13px] md:shadow-none"
+                                        onClick={handleSubmit}
+                                    >
+                                        {editingId ? "Update Request" : "Submit Request"}
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+
+        if (isDesktop && portalTarget) {
+            return createPortal(drawerContent, portalTarget);
+        }
+
+        return (
+            <div className="fixed inset-0 z-[100] isolate">
+                <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto" onClick={() => setShowDrawer(false)} />
+                <div className="absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px] flex flex-col overflow-hidden">
+                    {drawerContent}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
             {/* HEADER REMOVED - Using Global PageHeader */}
@@ -764,7 +1119,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                     <div className="flex justify-center">
                         <Button 
                             variant="primary" 
-                            className="rounded-full px-8 shadow-xl shadow-blue-600/20 active:scale-95 transition-all"
+                            className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white rounded-full px-8 shadow-xl shadow-blue-600/20 active:scale-95 transition-all"
                             icon={<Plus className="w-4 h-4" />} 
                             onClick={() => { resetForm(); setShowDrawer(true); }}
                         >
@@ -948,320 +1303,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                     </div>
                 </div>
             )}
-
-            {showDrawer && (
-                <div className="fixed inset-0 z-[100] isolate">
-                    <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300" onClick={() => setShowDrawer(false)} />
-                    <div className={clsx(
-                        "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] overflow-hidden flex flex-col",
-                        "bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]",
-                        showDrawer ? "translate-y-0 sm:translate-x-0 opacity-100 scale-100" : "translate-y-full sm:translate-y-0 sm:translate-x-full opacity-0 sm:scale-95"
-                    )}>
-                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">
-                                    {(viewingRequest && !isEditing) ? "Request Details" : (editingId ? "Edit Request" : "New Request")}
-                                </h2>
-                                <button
-                                    onClick={() => setShowDrawer(false)}
-                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-                                >
-                                    <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {(viewingRequest && !isEditing) ? (
-                            <>
-                                <div className="flex-1 overflow-y-auto scrollbar-hide px-8">
-                                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-16 h-16 rounded-[24px] bg-neutral-100 flex items-center justify-center text-neutral-600 text-xl font-bold shadow-inner">
-                                                    {getInitials(viewingRequest.crewName)}
-                                                </div>
-                                                <div>
-                                                    <div className="text-xl font-black text-neutral-900 leading-tight">{viewingRequest.crewName || "Unknown"}</div>
-                                                    <div className="text-xs text-neutral-500 font-bold uppercase tracking-widest mt-1">
-                                                        {viewingRequest.crewRole ? (CREW_ROLE_LABELS[viewingRequest.crewRole]?.en || viewingRequest.crewRole) : "-"}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            {getStatusBadge(viewingRequest.status)}
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-6 py-6 border-y border-black/[0.03]">
-                                            <div>
-                                                <div className={labelClass}>Request Type</div>
-                                                {getTypeBadge(viewingRequest.type)}
-                                            </div>
-                                            <div>
-                                                <div className={labelClass}>Project</div>
-                                                <span className="font-mono text-sm bg-neutral-100 px-3 py-1 rounded-lg font-bold text-neutral-700">{viewingRequest.projectCode || "OFFICE"}</span>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <div className={labelClass}>Request Details</div>
-                                            {viewingRequest.type === "LEAVE" ? (
-                                                <div className="bg-purple-50 rounded-3xl p-5 border border-purple-100/50">
-                                                    <div className="text-2xl font-black text-purple-700 tracking-tight">
-                                                        {formatDate(viewingRequest.startDate)}
-                                                        {viewingRequest.endDate && viewingRequest.endDate !== viewingRequest.startDate && (
-                                                            <span className="text-purple-300 mx-2">→</span>
-                                                        )}
-                                                        {viewingRequest.endDate && viewingRequest.endDate !== viewingRequest.startDate && formatDate(viewingRequest.endDate)}
-                                                    </div>
-                                                    <div className="text-[10px] font-bold text-purple-400 tracking-tight mt-1">Period Range</div>
-                                                </div>
-                                            ) : (
-                                                <div className="bg-blue-50 rounded-3xl p-5 border border-blue-100/50">
-                                                    <div className="text-3xl font-black text-blue-700 tracking-tight">
-                                                        Rp {viewingRequest.amount ? formatNum(viewingRequest.amount) : "0"}
-                                                    </div>
-                                                    <div className="text-[10px] font-bold text-blue-400 tracking-tight mt-1">Total Amount Requested</div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div>
-                                            <div className={labelClass}>{viewingRequest.type === "REIMBURSE" ? "Description" : "Reason"}</div>
-                                            <div className="bg-neutral-50 rounded-3xl p-6 border border-neutral-100/50">
-                                                <p className="text-sm text-neutral-600 leading-relaxed italic font-medium">"{viewingRequest.reason || "No reason provided."}"</p>
-                                            </div>
-                                        </div>
-
-                                        {viewingRequest.proofUrl && (
-                                            <div>
-                                                <div className={labelClass}>Supporting Document</div>
-                                                <a 
-                                                    href={viewingRequest.proofUrl} 
-                                                    target="_blank" 
-                                                    rel="noreferrer"
-                                                    className="flex items-center justify-between bg-white border border-neutral-200 rounded-3xl p-4 hover:border-blue-400 transition-all group"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                                            <FileText size={20} />
-                                                        </div>
-                                                        <span className="text-sm font-bold text-neutral-700">View Proof of Transaction</span>
-                                                    </div>
-                                                    <ChevronRight className="w-5 h-5 text-neutral-300 group-hover:text-blue-500 transition-colors" />
-                                                </a>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex-none p-8 pt-4 bg-gradient-to-t from-white via-white to-transparent">
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex items-center gap-2">
-                                            <button 
-                                                onClick={() => handleDelete(viewingRequest.id)}
-                                                className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200 active:scale-95 transition-all hover:bg-neutral-200"
-                                                title="Delete Permanently"
-                                            >
-                                                <Trash2 size={20} />
-                                            </button>
-                                            {viewingRequest.status === "PENDING" && (
-                                                <button 
-                                                    onClick={() => handleCancel(viewingRequest.id)}
-                                                    className="w-12 h-12 flex items-center justify-center rounded-full bg-amber-50 text-amber-600 border border-amber-200 active:scale-95 transition-all hover:bg-amber-100"
-                                                    title="Cancel Request"
-                                                >
-                                                    <Ban size={20} />
-                                                </button>
-                                            )}
-                                            {viewingRequest.status === "PENDING" && (
-                                                <button 
-                                                    onClick={() => handleEdit(viewingRequest)}
-                                                    className="flex-1 h-12 flex items-center justify-center gap-2 rounded-full bg-blue-50 text-blue-600 border border-blue-200 font-bold text-sm active:scale-95 transition-all hover:bg-blue-100"
-                                                >
-                                                    <Edit className="w-4 h-4" /> Edit Request Details
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {(role && ["admin", "superadmin", "administrator", "supervisor"].includes(role)) && viewingRequest.status === "PENDING" && (
-                                            <div className="grid grid-cols-2 gap-3 mt-1">
-                                                <button 
-                                                    onClick={() => handleReject(viewingRequest.id)}
-                                                    className="py-4 rounded-full bg-red-500 text-white font-bold text-sm tracking-tight shadow-xl shadow-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-red-600"
-                                                >
-                                                    <X className="w-5 h-5" /> Reject
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleApprove(viewingRequest)}
-                                                    className="py-4 rounded-full bg-emerald-500 text-white font-bold text-sm tracking-tight shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-emerald-600"
-                                                >
-                                                    <Check className="w-5 h-5" /> Approve
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-10">
-                                    <div className="space-y-6">
-                                        <div>
-                                            <label className={labelClass}>Request Type *</label>
-                                            <div className="grid grid-cols-3 gap-2">
-                                                {(["LEAVE", "KASBON", "REIMBURSE"] as RequestType[]).map(t => (
-                                                    <button
-                                                        key={t}
-                                                        onClick={() => !editingId && setFormType(t)}
-                                                        disabled={!!editingId}
-                                                        className={clsx(
-                                                            "py-3 px-2 rounded-full border text-[11px] font-bold transition-all flex flex-col items-center gap-1.5",
-                                                            formType === t 
-                                                                ? (t === "LEAVE" ? "bg-purple-500 text-white border-purple-400 shadow-lg shadow-purple-500/20" : t === "KASBON" ? "bg-red-500 text-white border-red-400 shadow-lg shadow-red-500/20" : "bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/20") 
-                                                                : "bg-white/50 dark:bg-neutral-800/50 border-black/5 dark:border-white/10 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300 transition-colors",
-                                                            editingId && formType !== t && "opacity-40 cursor-not-allowed"
-                                                        )}
-                                                    >
-                                                        {t === "LEAVE" ? "Leave" : t === "KASBON" ? "Cash" : "Reimburse"}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <Select label="Project *" value={formProject} onChange={v => { if (!editingId) { setFormProject(v); setFormCrew(""); } }} disabled={!!editingId} options={projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))} placeholder="Select project" accentColor="blue" searchable={true} className="!rounded-full" labelClassName={labelClass} />
-                                        <Select 
-                                            label="Crew *" 
-                                            value={formCrew} 
-                                            onChange={setFormCrew} 
-                                            disabled={!formProject || !!editingId} 
-                                            options={[...crew]
-                                                .sort((a, b) => {
-                                                    const p = formProject ? formProject.toLowerCase() : "";
-                                                    const aMatch = p && a.projectCode && (p.includes(a.projectCode.toLowerCase()) || a.projectCode.toLowerCase().includes(p));
-                                                    const bMatch = p && b.projectCode && (p.includes(b.projectCode.toLowerCase()) || b.projectCode.toLowerCase().includes(p));
-                                                    if (aMatch && !bMatch) return -1;
-                                                    if (!aMatch && bMatch) return 1;
-                                                    return a.name.localeCompare(b.name);
-                                                })
-                                                .map(c => ({
-                                                    value: c.id,
-                                                    label: `${c.name} (${CREW_ROLE_LABELS[c.role]?.en || c.role})${c.projectCode ? ` • ${c.projectCode}` : ''}`
-                                                }))
-                                            } 
-                                            placeholder={formProject ? "Select crew member" : "Select project first"}
-                                            accentColor="blue"
-                                            searchable={true}
-                                            className="!rounded-full"
-                                            labelClassName={labelClass}
-                                        />
-                                        {formType === "LEAVE" && (
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <FormInput label="Start Date *" type="date" value={formStartDate} onChange={setFormStartDate} />
-                                                <FormInput label="End Date *" type="date" value={formEndDate} onChange={setFormEndDate} />
-                                            </div>
-                                        )}
-                                        {(formType === "KASBON" || formType === "REIMBURSE") && (
-                                            <FormInput label="Amount *" type="number" value={formAmount} onChange={setFormAmount} placeholder="e.g. 500000" />
-                                        )}
-                                        <div>
-                                            <label className={labelClass}>{formType === "REIMBURSE" ? "Description *" : "Reason *"}</label>
-                                            <textarea 
-                                                value={formReason} 
-                                                onChange={e => setFormReason(e.target.value)} 
-                                                className={clsx(inputClass, "min-h-[100px] resize-none !rounded-[32px]")} 
-                                                placeholder={formType === "REIMBURSE" ? "Describe the expense details..." : "Provide a detailed reason for the request..."} 
-                                            />
-                                        </div>
-                                        {formType === "REIMBURSE" && (
-                                            <div>
-                                                <label className={labelClass}>Proof of Transaction *</label>
-                                                {formProofUrl ? (
-                                                    <div className="relative bg-emerald-50 border border-emerald-200 rounded-full p-4 flex items-center justify-between">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
-                                                                <FileText size={20} />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-bold text-emerald-800">Document Attached</p>
-                                                                <a href={formProofUrl} target="_blank" rel="noreferrer" className="text-[10px] text-emerald-600 hover:underline font-bold uppercase italic">View Uploaded File</a>
-                                                            </div>
-                                                        </div>
-                                                        <button onClick={() => setFormProofUrl("")} className="w-8 h-8 bg-white border border-emerald-200 rounded-full flex items-center justify-center text-emerald-600 hover:bg-emerald-50 active:scale-[0.9] transition-all mr-2">
-                                                            <Trash size={14} />
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="relative">
-                                                        <input
-                                                            id="proof-upload"
-                                                            type="file"
-                                                            onChange={handleFileUpload}
-                                                            accept="image/*,.pdf"
-                                                            className="hidden"
-                                                            disabled={uploading}
-                                                        />
-                                                        <label
-                                                            htmlFor="proof-upload"
-                                                            className={clsx(
-                                                                "block border-2 border-dashed rounded-[32px] p-8 text-center transition-all group backdrop-blur-sm cursor-pointer",
-                                                                uploading ? "bg-neutral-100/50 border-neutral-200 cursor-not-allowed" : "bg-white/30 dark:bg-neutral-800/30 border-black/10 dark:border-white/10 hover:border-blue-400 active:scale-[0.99]"
-                                                            )}
-                                                        >
-                                                            {uploading ? (
-                                                                <div className="flex flex-col items-center">
-                                                                    <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
-                                                                    <p className="text-sm font-bold text-neutral-700">Uploading...</p>
-                                                                </div>
-                                                            ) : (
-                                                                <>
-                                                                    <Upload className="w-10 h-10 mx-auto text-neutral-400 group-hover:text-blue-500 mb-3 transition-colors" strokeWidth={1.5} />
-                                                                    <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Click to upload receipt</p>
-                                                                    <p className="text-xs text-neutral-400 mt-1 font-medium">JPG, PNG, PDF up to 5MB</p>
-                                                                </>
-                                                            )}
-                                                        </label>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="flex-none p-8 pt-4 bg-gradient-to-t from-white via-white to-transparent">
-                                    <div className="flex gap-3">
-                                        {(viewingRequest && isEditing) ? (
-                                            <>
-                                                <button 
-                                                    onClick={() => setIsEditing(false)}
-                                                    className="flex-1 h-16 rounded-full border border-neutral-200 bg-white text-neutral-600 font-bold text-sm hover:bg-neutral-50 transition-all active:scale-95"
-                                                >
-                                                    Cancel
-                                                </button>
-                                                <Button 
-                                                    variant="primary" 
-                                                    size="lg" 
-                                                    className="flex-[2] rounded-full h-16 text-sm font-bold shadow-2xl shadow-blue-600/30 active:scale-95 transition-all"
-                                                    onClick={handleSubmit}
-                                                >
-                                                    Update Request
-                                                </Button>
-                                            </>
-                                        ) : (
-                                            <Button 
-                                                variant="primary" 
-                                                size="lg" 
-                                                fullWidth 
-                                                className="rounded-full h-16 text-sm font-bold shadow-2xl shadow-blue-600/30 active:scale-95 transition-all"
-                                                onClick={handleSubmit}
-                                            >
-                                                {editingId ? "Update Request" : "Submit Request"}
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
-                </div>
-            )}
+            {renderDrawer()}
         </div>
     );
 }
