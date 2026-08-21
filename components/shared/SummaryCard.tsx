@@ -35,7 +35,7 @@ export function SummaryCard({
     icon: React.ReactNode;
     iconBg: string;
     label: string;
-    value: string | number;
+    value: React.ReactNode;
     subtext?: string;
     trend?: 'up' | 'down';
     onClick?: () => void;
@@ -63,7 +63,7 @@ export function SummaryCard({
                 )}>
                     {icon}
                 </div>
-                <span className={clsx("text-lg lg:text-xl font-bold tracking-tight font-numeric", isActive ? "text-white" : "text-neutral-900 dark:text-white")}>
+                <span className={clsx("text-lg lg:text-xl font-bold tracking-tight font-numeric whitespace-nowrap shrink-0 ml-auto pl-2 text-right", isActive ? "text-white" : "text-neutral-900 dark:text-white")}>
                     {value}
                 </span>
             </div>

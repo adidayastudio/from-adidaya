@@ -4,8 +4,9 @@ import { useState, useMemo, useEffect, useRef, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
-import { Plus, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Check, X, Clock, Download, ArrowUpDown, FileText, Upload, Users, Edit, Trash, Trash2, Ban, Loader2, FileCheck } from "lucide-react";
+import { Plus, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Check, X, Clock, Download, ArrowUpDown, FileText, Upload, Users, Edit, Trash, Trash2, Ban, Loader2, FileCheck, TrendingUp } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { Select } from "@/shared/ui/primitives/select/select";
 import {
     CREW_ROLE_LABELS,
@@ -637,12 +638,44 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
         <div className="space-y-6 w-full animate-in fade-in duration-500">
             {/* HEADER REMOVED - Using Global PageHeader */}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <button onClick={() => setActiveCard("ALL")} className={clsx("p-4 rounded-3xl border shadow-sm text-left transition-all", activeCard === "ALL" ? "bg-blue-600 border-blue-600 shadow-blue-200" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1 font-bold tracking-tight", activeCard === "ALL" ? "text-blue-100" : "text-neutral-500")}>Total</div><div className={clsx("text-2xl font-black", activeCard === "ALL" ? "text-white" : "text-blue-600")}>{stats.total}</div></button>
-                <button onClick={() => setActiveCard("PENDING")} className={clsx("p-4 rounded-3xl border shadow-sm text-left transition-all", activeCard === "PENDING" ? "bg-amber-500 border-amber-500 shadow-amber-200" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1 font-bold tracking-tight", activeCard === "PENDING" ? "text-amber-100" : "text-neutral-500")}>Pending</div><div className={clsx("text-2xl font-black", activeCard === "PENDING" ? "text-white" : "text-amber-600")}>{stats.pending}</div></button>
-                <button onClick={() => setActiveCard("APPROVED")} className={clsx("p-4 rounded-3xl border shadow-sm text-left transition-all", activeCard === "APPROVED" ? "bg-emerald-600 border-emerald-600 shadow-emerald-200" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1 font-bold tracking-tight", activeCard === "APPROVED" ? "text-emerald-100" : "text-neutral-500")}>Approved</div><div className={clsx("text-2xl font-black", activeCard === "APPROVED" ? "text-white" : "text-emerald-600")}>{stats.approved}</div></button>
-                <button onClick={() => setActiveCard("REJECTED")} className={clsx("p-4 rounded-3xl border shadow-sm text-left transition-all", activeCard === "REJECTED" ? "bg-red-600 border-red-600 shadow-red-200" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1 font-bold tracking-tight", activeCard === "REJECTED" ? "text-red-100" : "text-neutral-500")}>Rejected</div><div className={clsx("text-2xl font-black", activeCard === "REJECTED" ? "text-white" : "text-red-600")}>{stats.rejected}</div></button>
-            </div>
+            <SummaryCardsRow>
+                <SummaryCard
+                    icon={<TrendingUp className="w-5 h-5 text-blue-600" />}
+                    iconBg="bg-blue-50"
+                    label="Total Requests"
+                    value={stats.total}
+                    onClick={() => setActiveCard("ALL")}
+                    isActive={activeCard === "ALL"}
+                    activeBg="bg-blue-600"
+                />
+                <SummaryCard
+                    icon={<Clock className="w-5 h-5 text-amber-600" />}
+                    iconBg="bg-amber-50"
+                    label="Pending"
+                    value={stats.pending}
+                    onClick={() => setActiveCard("PENDING")}
+                    isActive={activeCard === "PENDING"}
+                    activeBg="bg-amber-500"
+                />
+                <SummaryCard
+                    icon={<Check className="w-5 h-5 text-emerald-600" />}
+                    iconBg="bg-emerald-50"
+                    label="Approved"
+                    value={stats.approved}
+                    onClick={() => setActiveCard("APPROVED")}
+                    isActive={activeCard === "APPROVED"}
+                    activeBg="bg-emerald-600"
+                />
+                <SummaryCard
+                    icon={<X className="w-5 h-5 text-red-600" />}
+                    iconBg="bg-red-50"
+                    label="Rejected"
+                    value={stats.rejected}
+                    onClick={() => setActiveCard("REJECTED")}
+                    isActive={activeCard === "REJECTED"}
+                    activeBg="bg-red-600"
+                />
+            </SummaryCardsRow>
 
             {/* TOOLBAR */}
             <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 w-full bg-neutral-100/50 p-2 rounded-full border border-neutral-200/50 backdrop-blur-sm">

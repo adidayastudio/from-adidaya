@@ -4,8 +4,9 @@ import { useState, useMemo, useEffect, useContext } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
-import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, XCircle, Download, ArrowUpDown, Users, Search, Loader2, Calendar } from "lucide-react";
+import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, XCircle, Download, ArrowUpDown, Users, Search, Loader2, Calendar, TrendingUp, X } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { Select } from "@/shared/ui/primitives/select/select";
 import {
     CREW_ROLE_LABELS,
@@ -60,6 +61,10 @@ const formatProjectCode = (code?: string) => {
     return suffix.toUpperCase();
 };
 
+const toTitleCase = (str: string) => {
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+};
+
 export function CrewPerformance({ role }: CrewPerformanceProps) {
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -81,6 +86,7 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
     const [selectedProject, setSelectedProject] = useState(forceProjectSuffix || searchParams.get("project") || "ALL");
     const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
     const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
+    const [showSearch, setShowSearch] = useState(false);
 
     // Sync FROM URL
     useEffect(() => {
@@ -119,7 +125,10 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
         else { setSortBy(c); setSortOrder(c === "score" ? "desc" : "asc"); }
     };
 
-    const SortIcon = ({ c }: { c: "name" | "score" | "status" }) => sortBy !== c ? <ArrowUpDown className="w-3 h-3 text-neutral-400" /> : sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+    const SortIcon = ({ c }: { c: "name" | "score" | "status" }) => {
+        if (sortBy !== c) return null;
+        return sortOrder === "asc" ? <ChevronUp className="w-3.5 h-3.5 text-neutral-600" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-600" />;
+    };
 
     // State for Rating Modal or inline rating
     // We'll do inline rating for "Today" or a selector?
@@ -369,32 +378,51 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
 
             {/* HEADER REMOVED - Using Global PageHeader */}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <button onClick={() => setActiveCard("ALL")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "ALL" ? "bg-blue-600 border-blue-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "ALL" ? "text-blue-100" : "text-neutral-500")}>Avg Score</div><div className={clsx("text-2xl font-bold", activeCard === "ALL" ? "text-white" : "text-blue-600")}>{stats.avg}</div></button>
-                <button onClick={() => setActiveCard("KEEP")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "KEEP" ? "bg-emerald-600 border-emerald-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "KEEP" ? "text-emerald-100" : "text-neutral-500")}>Keep</div><div className={clsx("text-2xl font-bold", activeCard === "KEEP" ? "text-white" : "text-emerald-600")}>{stats.keep}</div></button>
-                <button onClick={() => setActiveCard("MONITOR")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "MONITOR" ? "bg-amber-500 border-amber-500" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "MONITOR" ? "text-amber-100" : "text-neutral-500")}>Monitor</div><div className={clsx("text-2xl font-bold", activeCard === "MONITOR" ? "text-white" : "text-amber-600")}>{stats.monitor}</div></button>
-                <button onClick={() => setActiveCard("REPLACE")} className={clsx("p-4 rounded-xl border shadow-sm text-left transition-all", activeCard === "REPLACE" ? "bg-red-600 border-red-600" : "bg-white border-neutral-200")}><div className={clsx("text-sm mb-1", activeCard === "REPLACE" ? "text-red-100" : "text-neutral-500")}>Replace</div><div className={clsx("text-2xl font-bold", activeCard === "REPLACE" ? "text-white" : "text-red-600")}>{stats.replace}</div></button>
-            </div>
+            <SummaryCardsRow>
+                <SummaryCard
+                    icon={<TrendingUp className="w-5 h-5 text-blue-600" />}
+                    iconBg="bg-blue-50"
+                    label="Avg Score"
+                    value={stats.avg}
+                    onClick={() => setActiveCard("ALL")}
+                    isActive={activeCard === "ALL"}
+                    activeBg="bg-blue-600"
+                />
+                <SummaryCard
+                    icon={<CheckCircle className="w-5 h-5 text-emerald-600" />}
+                    iconBg="bg-emerald-50"
+                    label="Keep"
+                    value={stats.keep}
+                    onClick={() => setActiveCard("KEEP")}
+                    isActive={activeCard === "KEEP"}
+                    activeBg="bg-emerald-600"
+                />
+                <SummaryCard
+                    icon={<AlertCircle className="w-5 h-5 text-amber-600" />}
+                    iconBg="bg-amber-50"
+                    label="Monitor"
+                    value={stats.monitor}
+                    onClick={() => setActiveCard("MONITOR")}
+                    isActive={activeCard === "MONITOR"}
+                    activeBg="bg-amber-500"
+                />
+                <SummaryCard
+                    icon={<XCircle className="w-5 h-5 text-red-600" />}
+                    iconBg="bg-red-50"
+                    label="Replace"
+                    value={stats.replace}
+                    onClick={() => setActiveCard("REPLACE")}
+                    isActive={activeCard === "REPLACE"}
+                    activeBg="bg-red-600"
+                />
+            </SummaryCardsRow>
 
             {/* TOOLBAR */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full bg-neutral-50/50 p-2 rounded-2xl border border-neutral-100">
-
-                {/* Filters */}
-                <div className="flex flex-col lg:flex-row items-start lg:items-center gap-2 w-full sm:w-auto">
-                    {/* Search */}
-                    <div className="relative w-full lg:w-auto pointer-events-auto z-10">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full lg:w-64 pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all"
-                        />
-                    </div>
-
+            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 w-full">
+                {/* Left section: Filter + Project Selector */}
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                     {/* View Toggle */}
-                    <div className="flex bg-neutral-200/50 p-1 rounded-full">
+                    <div className="flex bg-neutral-200/50 p-1 rounded-full flex-shrink-0">
                         <button
                             onClick={() => setViewPeriod("LAST_7_DAYS")}
                             className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-all", viewPeriod === "LAST_7_DAYS" ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-700")}
@@ -409,30 +437,58 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                         </button>
                     </div>
 
-                    {/* Project Select */}
-                    {!forceProjectSuffix && (
-                        <div className="flex-1 sm:flex-none sm:w-48">
-                            <Select
-                                value={selectedProject}
-                                onChange={setSelectedProject}
-                                options={[{ value: "ALL", label: "All Projects" }, ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))]}
-                                placeholder="Project"
-                            />
+                    {/* Project select */}
+                    {!forceProjectSuffix && projects.length > 0 && (
+                        <div className="relative w-full sm:w-auto sm:min-w-[200px]">
+                            <select 
+                                value={selectedProject} 
+                                onChange={(e) => setSelectedProject(e.target.value)} 
+                                className="appearance-none w-full pl-3 pr-7 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all"
+                            >
+                                <option value="ALL">All Projects</option>
+                                {projects.map(p => <option key={p.code} value={p.code}>[{formatProjectCode(p.code)}] {p.name}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
                         </div>
                     )}
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                    <Button variant="secondary" className="!rounded-full !py-1.5 !px-3 shadow-sm" icon={<Download className="w-4 h-4" />}>Export</Button>
+                {/* Right section: Search + Export */}
+                <div className="flex items-center gap-2 ml-auto">
+                    {showSearch && (
+                        <div className="relative animate-in slide-in-from-right-2 duration-200">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                            <input
+                                type="text"
+                                placeholder="Search name..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 pr-3 py-1.5 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-blue-500 w-40 sm:w-48 transition-all"
+                            />
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setShowSearch(!showSearch);
+                            if (showSearch) setSearchQuery("");
+                        }}
+                        className={clsx(
+                            "w-8 h-8 rounded-full border border-neutral-200 hover:bg-neutral-50 transition-colors flex items-center justify-center shrink-0",
+                            showSearch ? "bg-neutral-100 text-neutral-600" : "bg-white text-neutral-500"
+                        )}
+                        title="Search"
+                    >
+                        {showSearch ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+                    </button>
+                    <Button variant="secondary" className="!rounded-full !py-1.5 !px-4 shadow-sm active:scale-95 transition-all" icon={<Download className="w-4 h-4" />}>Export</Button>
                 </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 flex items-start gap-2">
+            <div className="bg-blue-50/50 border border-blue-100/50 rounded-xl p-3 text-xs text-blue-700 flex items-start gap-2">
                 <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <div>
-                    <span className="font-semibold">Evaluation Rule:</span> {viewPeriod === "LAST_7_DAYS" ? "This Week (Sun - Sat)" : "30-day rolling window (from Jan 11)"}.<br />
-                    <span className="opacity-80">50% Att + 25% OT (Benchmark: 6h/day) + 25% Rating.</span>
+                    <span className="font-semibold">Evaluation Rule:</span> {viewPeriod === "LAST_7_DAYS" && "This Week (Sun - Sat) — "}50% Att + 25% OT (Benchmark: 6h/day) + 25% Rating.
                 </div>
             </div>
 
@@ -460,7 +516,7 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                                             {getInitials(e.crewName)}
                                         </div>
                                         <div>
-                                            <div className="font-bold text-neutral-900">{e.crewName}</div>
+                                            <div className="font-bold text-neutral-900">{toTitleCase(e.crewName)}</div>
                                             <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
                                                 {CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}
                                             </div>
@@ -515,18 +571,18 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                     </div>
 
                     {/* DESKTOP TABLE */}
-                    <div className="hidden lg:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                    <div className="hidden lg:block bg-white rounded-[22px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                <thead className="border-b border-neutral-100">
                                     <tr>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon c="name" /></div></th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden sm:table-cell">Project</th>
-                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell" title="Weight: 50%">Attendance</th>
-                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell" title="Weight: 25%">Overtime</th>
-                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell" title="Weight: 25%">Rating</th>
-                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("score")}><div className="flex items-center justify-center gap-1">Total <SortIcon c="score" /></div></th>
-                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center justify-center gap-1">Status <SortIcon c="status" /></div></th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon c="name" /></div></th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden sm:table-cell">Project</th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden md:table-cell" title="Weight: 50%">Attendance</th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden md:table-cell" title="Weight: 25%">Overtime</th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden md:table-cell" title="Weight: 25%">Rating</th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("score")}><div className="flex items-center justify-center gap-1">Total <SortIcon c="score" /></div></th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("status")}><div className="flex items-center justify-center gap-1">Status <SortIcon c="status" /></div></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-100">
@@ -536,7 +592,7 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(e.crewName)}</div>
                                                     <div>
-                                                        <div className="font-medium text-neutral-900">{e.crewName}</div>
+                                                        <div className="font-medium text-neutral-900">{toTitleCase(e.crewName)}</div>
                                                         <div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}</div>
                                                     </div>
                                                 </div>

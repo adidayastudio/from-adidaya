@@ -5,8 +5,9 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
 import { format } from "date-fns";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, ArrowUpDown, Plus, Minus, Edit2, FileDown, Users, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, ArrowUpDown, Plus, Minus, Edit2, FileDown, Users, Search, X, Clock, TrendingUp } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { CREW_ROLE_LABELS, CrewRole, CrewRequest, fetchCrewMembers, fetchDailyLogs, DailyLog, CrewMember, fetchRequests } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
@@ -554,28 +555,38 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
             {/* CARDS */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                <div className="bg-white p-3 rounded-xl border border-neutral-200 shadow-sm">
-                    <div className="text-xs text-neutral-500 mb-1">Base</div>
-                    <div className="text-base font-bold"><CurrencyValue value={totals.base} className={totals.base === 0 ? "text-neutral-300 font-medium" : "text-neutral-900"} /></div>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-neutral-200 shadow-sm">
-                    <div className="text-xs text-neutral-500 mb-1">OT</div>
-                    <div className="text-base font-bold"><CurrencyValue value={totals.ot} className={totals.ot === 0 ? "text-neutral-300 font-medium" : "text-blue-600"} /></div>
-                </div>
-                <div className={clsx("p-3 rounded-xl border shadow-sm", totals.kasbon === 0 ? "bg-white border-neutral-200" : "bg-red-50 border-red-100")}>
-                    <div className={clsx("flex items-center gap-1 text-xs mb-1", totals.kasbon === 0 ? "text-neutral-500" : "text-red-600")}><Minus className="w-3 h-3" /> Kasbon</div>
-                    <div className="text-base font-bold"><CurrencyValue value={totals.kasbon} className={totals.kasbon === 0 ? "text-neutral-300 font-medium" : "text-red-600"} /></div>
-                </div>
-                <div className={clsx("p-3 rounded-xl border shadow-sm", totals.reimburse === 0 ? "bg-white border-neutral-200" : "bg-blue-50 border-blue-100")}>
-                    <div className={clsx("flex items-center gap-1 text-xs mb-1", totals.reimburse === 0 ? "text-neutral-500" : "text-blue-600")}><Plus className="w-3 h-3" /> Reimburse</div>
-                    <div className="text-base font-bold"><CurrencyValue value={totals.reimburse} className={totals.reimburse === 0 ? "text-neutral-300 font-medium" : "text-blue-600"} /></div>
-                </div>
-                <div className={clsx("p-3 rounded-xl border shadow-sm col-span-2 sm:col-span-1", totals.total === 0 ? "bg-white border-neutral-200" : totals.total < 0 ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100")}>
-                    <div className={clsx("text-xs mb-1", totals.total === 0 ? "text-neutral-500" : totals.total < 0 ? "text-red-600" : "text-emerald-600")}>Total</div>
-                    <div className="text-base font-bold"><CurrencyValue value={totals.total} className={totals.total === 0 ? "text-neutral-300 font-medium" : totals.total < 0 ? "text-red-600" : "text-emerald-700"} /></div>
-                </div>
-            </div>
+            <SummaryCardsRow>
+                <SummaryCard
+                    icon={<Users className="w-5 h-5 text-neutral-600" />}
+                    iconBg="bg-neutral-50"
+                    label="Base Pay"
+                    value={<CurrencyValue value={totals.base} className={totals.base === 0 ? "text-neutral-300 font-medium" : "text-neutral-900"} />}
+                />
+                <SummaryCard
+                    icon={<Clock className="w-5 h-5 text-blue-600" />}
+                    iconBg="bg-blue-50"
+                    label="Overtime"
+                    value={<CurrencyValue value={totals.ot} className={totals.ot === 0 ? "text-neutral-300 font-medium" : "text-blue-600"} />}
+                />
+                <SummaryCard
+                    icon={<Minus className="w-5 h-5 text-red-600" />}
+                    iconBg={totals.kasbon === 0 ? "bg-neutral-50" : "bg-red-50"}
+                    label="Kasbon"
+                    value={<CurrencyValue value={totals.kasbon} className={totals.kasbon === 0 ? "text-neutral-300 font-medium" : "text-red-600"} />}
+                />
+                <SummaryCard
+                    icon={<Plus className="w-5 h-5 text-blue-600" />}
+                    iconBg={totals.reimburse === 0 ? "bg-neutral-50" : "bg-blue-50"}
+                    label="Reimburse"
+                    value={<CurrencyValue value={totals.reimburse} className={totals.reimburse === 0 ? "text-neutral-300 font-medium" : "text-blue-600"} />}
+                />
+                <SummaryCard
+                    icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
+                    iconBg={totals.total === 0 ? "bg-neutral-50" : totals.total < 0 ? "bg-red-50" : "bg-emerald-50"}
+                    label="Total"
+                    value={<CurrencyValue value={totals.total} className={totals.total === 0 ? "text-neutral-300 font-medium" : totals.total < 0 ? "text-red-600" : "text-emerald-700"} />}
+                />
+            </SummaryCardsRow>
 
             {/* TOOLBAR */}
             <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 w-full">
