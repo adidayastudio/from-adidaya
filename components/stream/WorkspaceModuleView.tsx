@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import clsx from "clsx";
 import { useTheme } from "next-themes";
 import {
@@ -10,14 +10,42 @@ import {
     User,
     Clock,
     Users,
-    FolderKanban
+    FolderKanban,
+    Plus,
+    Users as TeamIcon,
+    User as PersonalIcon,
+    ChevronDown,
+    Wallet,
+    Building2,
+    Truck,
+    Wrench,
+    Calendar,
+    ShieldCheck,
+    Heart,
+    Settings,
+    Plane,
+    CheckCircle2,
+    DollarSign,
+    FilePlus
 } from "lucide-react";
 
 import { HeaderProvider } from "@/components/providers/HeaderProvider";
 import { FinanceProvider } from "@/components/flow/finance/FinanceContext";
 import { ClockProvider } from "@/components/feel/clock/ClockContext";
 import FinanceOverviewClient from "@/components/flow/finance/FinanceOverviewClient";
+import PurchasingPage from "@/app/flow/finance/purchasing/page";
+import ReimbursementPage from "@/app/flow/finance/reimburse/page";
+import PettyCashPage from "@/app/flow/finance/petty-cash/page";
+import FundingSourcesPage from "@/app/flow/finance/funding-sources/page";
+import FinancialReportsPage from "@/app/flow/finance/reports/page";
+import { NewRequestDrawer } from "@/components/flow/finance/modules/NewRequestDrawer";
+
 import ResourcesOverviewPage from "@/app/flow/resources/overview/page";
+import MaterialsPage from "@/app/flow/resources/materials/page";
+import ToolsPage from "@/app/flow/resources/tools/page";
+import AssetsPage from "@/app/flow/resources/assets/page";
+import ServicesPage from "@/app/flow/resources/services/page";
+
 import ReportsOverviewPage from "@/app/flow/reports/overview/page";
 import FeelPeoplePage from "@/app/feel/people/page";
 import ClockPage from "@/app/feel/clock/page";
@@ -29,73 +57,92 @@ interface WorkspaceModuleViewProps {
     selectedModule: string;
 }
 
-const MODULE_CONFIGS: Record<string, { title: string; icon: React.ReactNode; subTabs: { id: string; label: string }[] }> = {
+interface ModuleConfig {
+    title: string;
+    icon: React.ReactNode;
+    mainTabs: { id: string; label: string }[];
+    moreTabs: { id: string; label: string; shortLabel: string; icon: React.ReactNode }[];
+}
+
+const MODULE_CONFIGS: Record<string, ModuleConfig> = {
     finance: {
         title: "Finance Workspace",
         icon: <CreditCard className="w-4 h-4 text-amber-500" />,
-        subTabs: [
+        mainTabs: [
             { id: "overview", label: "Overview" },
             { id: "purchasing", label: "Purchasing" },
             { id: "reimburse", label: "Reimbursements" },
-            { id: "petty-cash", label: "Petty Cash" },
-            { id: "funding-sources", label: "Funding Sources" },
-            { id: "reports", label: "Financial Reports" },
+        ],
+        moreTabs: [
+            { id: "petty-cash", label: "Petty Cash", shortLabel: "Petty", icon: <Wallet className="w-3.5 h-3.5 text-amber-500" /> },
+            { id: "funding-sources", label: "Funding Sources", shortLabel: "Funds", icon: <Building2 className="w-3.5 h-3.5 text-blue-500" /> },
+            { id: "reports", label: "Financial Reports", shortLabel: "Reports", icon: <FileText className="w-3.5 h-3.5 text-purple-500" /> },
         ]
     },
     resources: {
         title: "Resources Workspace",
         icon: <Package className="w-4 h-4 text-blue-500" />,
-        subTabs: [
+        mainTabs: [
             { id: "overview", label: "Overview" },
             { id: "materials", label: "Materials" },
             { id: "tools", label: "Tools" },
-            { id: "assets", label: "Fleet & Assets" },
-            { id: "services", label: "Subcontractors" },
+        ],
+        moreTabs: [
+            { id: "assets", label: "Fleet & Assets", shortLabel: "Assets", icon: <Truck className="w-3.5 h-3.5 text-emerald-500" /> },
+            { id: "services", label: "Subcontractors", shortLabel: "Services", icon: <Wrench className="w-3.5 h-3.5 text-amber-500" /> },
         ]
     },
     reports: {
         title: "Reports Workspace",
         icon: <FileText className="w-4 h-4 text-purple-500" />,
-        subTabs: [
-            { id: "overview", label: "Hub & Generator" },
+        mainTabs: [
+            { id: "overview", label: "Hub" },
             { id: "daily", label: "Daily Log" },
             { id: "weekly", label: "Weekly Progress" },
-            { id: "monthly", label: "Monthly Summary" },
-            { id: "quality", label: "QA/QC & HSE" },
+        ],
+        moreTabs: [
+            { id: "monthly", label: "Monthly Summary", shortLabel: "Monthly", icon: <Calendar className="w-3.5 h-3.5 text-blue-500" /> },
+            { id: "quality", label: "QA/QC & HSE", shortLabel: "HSE", icon: <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> },
         ]
     },
     people: {
         title: "People Workspace",
         icon: <User className="w-4 h-4 text-emerald-500" />,
-        subTabs: [
+        mainTabs: [
             { id: "directory", label: "Directory" },
             { id: "overview", label: "Org Overview" },
             { id: "performance", label: "Performance" },
-            { id: "team-culture", label: "Culture" },
-            { id: "setup", label: "Setup" },
+        ],
+        moreTabs: [
+            { id: "team-culture", label: "Culture", shortLabel: "Culture", icon: <Heart className="w-3.5 h-3.5 text-rose-500" /> },
+            { id: "setup", label: "Setup", shortLabel: "Setup", icon: <Settings className="w-3.5 h-3.5 text-neutral-500" /> },
         ]
     },
     clock: {
         title: "Clock & Attendance",
         icon: <Clock className="w-4 h-4 text-cyan-500" />,
-        subTabs: [
+        mainTabs: [
             { id: "overview", label: "Overview" },
             { id: "timesheets", label: "Timesheets" },
             { id: "leaves", label: "Leave Requests" },
-            { id: "overtime", label: "Overtime" },
-            { id: "business-trip", label: "Business Trip" },
-            { id: "approvals", label: "Approvals" },
+        ],
+        moreTabs: [
+            { id: "overtime", label: "Overtime", shortLabel: "Overtime", icon: <Clock className="w-3.5 h-3.5 text-amber-500" /> },
+            { id: "business-trip", label: "Business Trip", shortLabel: "Trips", icon: <Plane className="w-3.5 h-3.5 text-indigo-500" /> },
+            { id: "approvals", label: "Approvals", shortLabel: "Approvals", icon: <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> },
         ]
     },
     crew: {
         title: "Crew & Field Ops",
         icon: <Users className="w-4 h-4 text-rose-500" />,
-        subTabs: [
+        mainTabs: [
             { id: "directory", label: "Crew Directory" },
             { id: "assignments", label: "Assignments" },
             { id: "daily-input", label: "Daily Log" },
-            { id: "payroll", label: "Payroll" },
-            { id: "requests", label: "Requests" },
+        ],
+        moreTabs: [
+            { id: "payroll", label: "Payroll", shortLabel: "Payroll", icon: <DollarSign className="w-3.5 h-3.5 text-emerald-500" /> },
+            { id: "requests", label: "Requests", shortLabel: "Requests", icon: <FilePlus className="w-3.5 h-3.5 text-blue-500" /> },
         ]
     }
 };
@@ -103,24 +150,75 @@ const MODULE_CONFIGS: Record<string, { title: string; icon: React.ReactNode; sub
 export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleViewProps) {
     const { theme } = useTheme();
     const [isHeaderScrolled, setIsHeaderScrolled] = useState(false);
+    const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
+    const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
+    const [showMoreDropdown, setShowMoreDropdown] = useState(false);
 
     const config = MODULE_CONFIGS[selectedModule] || {
         title: `${selectedModule.toUpperCase()} Workspace`,
         icon: <FolderKanban className="w-4 h-4 text-blue-500" />,
-        subTabs: [{ id: "overview", label: "Overview" }]
+        mainTabs: [{ id: "overview", label: "Overview" }],
+        moreTabs: []
     };
 
-    const [activeSubTab, setActiveSubTab] = useState(config.subTabs[0]?.id || "overview");
+    const [activeSubTab, setActiveSubTab] = useState(config.mainTabs[0]?.id || "overview");
+
+    // Reset sub-tab when module changes or viewMode changes to personal
+    useEffect(() => {
+        const currentConfig = MODULE_CONFIGS[selectedModule] || config;
+        setActiveSubTab(currentConfig.mainTabs[0]?.id || "overview");
+        setShowMoreDropdown(false);
+    }, [selectedModule]);
+
+    useEffect(() => {
+        if (viewMode === "personal" && config.moreTabs.some(t => t.id === activeSubTab)) {
+            setActiveSubTab(config.mainTabs[0]?.id || "overview");
+        }
+    }, [viewMode, activeSubTab, config]);
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const scrollTop = e.currentTarget.scrollTop;
         setIsHeaderScrolled(scrollTop > 10);
     };
 
+    // Intercept internal link clicks so user stays inside Stream
+    const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        const target = e.target as HTMLElement;
+        const anchor = target.closest("a");
+        if (anchor) {
+            const href = anchor.getAttribute("href");
+            if (href && (href.startsWith("/flow/") || href.startsWith("/feel/"))) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (href.includes("purchasing")) setActiveSubTab("purchasing");
+                else if (href.includes("reimburse")) setActiveSubTab("reimburse");
+                else if (href.includes("petty-cash")) {
+                    setViewMode("team");
+                    setActiveSubTab("petty-cash");
+                }
+                else if (href.includes("funding-sources")) {
+                    setViewMode("team");
+                    setActiveSubTab("funding-sources");
+                }
+                else if (href.includes("reports")) {
+                    setViewMode("team");
+                    setActiveSubTab("reports");
+                }
+                else if (href.includes("materials")) setActiveSubTab("materials");
+                else if (href.includes("tools")) setActiveSubTab("tools");
+                else if (href.includes("assets")) setActiveSubTab("assets");
+                else if (href.includes("services")) setActiveSubTab("services");
+                else setActiveSubTab("overview");
+            }
+        }
+    };
+
+    const activeMoreTab = config.moreTabs.find(t => t.id === activeSubTab);
+
     return (
         <HeaderProvider>
             <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-                {/* Top Dynamic Floating Liquid Glass Header (Identical to Project Channel Header) */}
+                {/* Top Dynamic Floating Liquid Glass Header */}
                 <div className="absolute top-2 left-4 right-4 z-30 pointer-events-auto">
                     <div
                         style={isHeaderScrolled ? {
@@ -137,22 +235,23 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
                                 : "0 12px 40px rgba(0,0,0,0.08), inset 0 1px 0.5px rgba(255,255,255,0.9)",
                         } : undefined}
                         className={clsx(
-                            "h-13 sm:h-14 px-5 flex items-center justify-between transition-all duration-300 w-full rounded-2xl",
+                            "h-13 sm:h-14 px-3 sm:px-4 flex items-center justify-between transition-all duration-300 w-full rounded-2xl gap-2",
                             !isHeaderScrolled && "bg-transparent border border-transparent shadow-none"
                         )}
                     >
-                        <div className="flex items-center gap-2.5 min-w-0">
+                        {/* Dynamic Module Title */}
+                        <div className="flex items-center gap-2 min-w-0 shrink-0">
                             <div className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 shrink-0">
                                 {config.icon}
                             </div>
-                            <h2 className="text-[14px] font-bold text-neutral-900 dark:text-white truncate">
+                            <h2 className="hidden md:inline-block text-[13px] font-bold text-neutral-900 dark:text-white truncate">
                                 {config.title}
                             </h2>
                         </div>
 
-                        {/* Sub-tabs Header Bar */}
-                        <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-1 shrink-0">
-                            {config.subTabs.map(tab => (
+                        {/* Primary Main Sub-tabs for the Selected Workspace */}
+                        <div className="flex items-center gap-1 shrink-0">
+                            {config.mainTabs.map(tab => (
                                 <SubTabButton
                                     key={tab.id}
                                     active={activeSubTab === tab.id}
@@ -161,6 +260,94 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
                                     label={tab.label}
                                 />
                             ))}
+
+                            {/* More Dropdown (Only visible in Team View Mode when workspace has moreTabs) */}
+                            {viewMode === "team" && config.moreTabs.length > 0 && (
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowMoreDropdown(!showMoreDropdown)}
+                                        className={clsx(
+                                            "h-9 flex items-center justify-center gap-1 px-3 rounded-full text-[12px] font-bold transition-all border",
+                                            activeMoreTab
+                                                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 shadow-xs"
+                                                : "bg-transparent text-neutral-600 dark:text-neutral-300 border-transparent hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                        )}
+                                    >
+                                        <span>
+                                            {activeMoreTab?.shortLabel || "More"}
+                                        </span>
+                                        <ChevronDown className="w-3.5 h-3.5" />
+                                    </button>
+
+                                    {showMoreDropdown && (
+                                        <div className="absolute left-0 top-full mt-1.5 w-48 p-1 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-2xl border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl shadow-xl z-50 space-y-0.5 animate-in fade-in zoom-in-95 duration-150">
+                                            <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2 py-1">
+                                                Team Views
+                                            </div>
+                                            {config.moreTabs.map(tab => (
+                                                <button
+                                                    key={tab.id}
+                                                    onClick={() => {
+                                                        setActiveSubTab(tab.id);
+                                                        setShowMoreDropdown(false);
+                                                    }}
+                                                    className={clsx(
+                                                        "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[12px] font-bold text-left transition-colors",
+                                                        activeSubTab === tab.id
+                                                            ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                                            : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                                    )}
+                                                >
+                                                    {tab.icon}
+                                                    <span>{tab.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Top Right Toolbar Controls (ONLY Personal/Team Toggle + Blue + Button) */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            {/* Personal / Team Slider Toggle */}
+                            <div className="h-9 p-0.5 flex items-center rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 backdrop-blur-xl text-[12px] font-bold border border-neutral-300/40 dark:border-neutral-700/40">
+                                <button
+                                    onClick={() => setViewMode("personal")}
+                                    title="Personal View"
+                                    className={clsx(
+                                        "flex items-center justify-center gap-1.5 transition-all duration-200 rounded-full h-8",
+                                        viewMode === "personal"
+                                            ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white px-3 shadow-xs font-bold"
+                                            : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white w-8"
+                                    )}
+                                >
+                                    <PersonalIcon className="w-3.5 h-3.5" />
+                                    {viewMode === "personal" && <span>Personal</span>}
+                                </button>
+                                <button
+                                    onClick={() => setViewMode("team")}
+                                    title="Team View"
+                                    className={clsx(
+                                        "flex items-center justify-center gap-1.5 transition-all duration-200 rounded-full h-8",
+                                        viewMode === "team"
+                                            ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white px-3 shadow-xs font-bold"
+                                            : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white w-8"
+                                    )}
+                                >
+                                    <TeamIcon className="w-3.5 h-3.5" />
+                                    {viewMode === "team" && <span>Team</span>}
+                                </button>
+                            </div>
+
+                            {/* Primary Blue Plus Action Button */}
+                            <button
+                                onClick={() => setIsNewRequestOpen(true)}
+                                className="h-9 w-9 rounded-full bg-[#0A84FF] hover:bg-blue-600 active:scale-90 text-white flex items-center justify-center shadow-md transition-all shrink-0"
+                                title="New Request"
+                            >
+                                <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -168,35 +355,65 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
                 {/* Scrollable Content Body with pt-16 so content slides underneath header */}
                 <div
                     onScroll={handleScroll}
+                    onClick={handleContentClick}
                     className="flex-1 h-full overflow-y-auto px-6 pt-16 pb-20 scrollbar-hide stream-workspace-ipad"
                 >
+                    {/* Hide duplicate internal sidebars, headers, and sub-tab rows */}
                     <style>{`
                         .stream-workspace-ipad aside { display: none !important; }
                         .stream-workspace-ipad .lg\\:hidden { display: block !important; }
+                        .stream-workspace-ipad .flex-col.px-5.md\\:px-0 { display: none !important; }
+                        .stream-workspace-ipad .hidden.md\\:block.lg\\:hidden.md\\:px-0.pb-2 { display: none !important; }
+                        .stream-workspace-ipad h1 { display: none !important; }
+                        .stream-workspace-ipad header { display: none !important; }
                     `}</style>
+
                     <Suspense fallback={<GlobalLoading />}>
+                        {/* FINANCE MODULE VIEWS */}
                         {selectedModule === "finance" && (
                             <FinanceProvider>
-                                <FinanceOverviewClient />
+                                {activeSubTab === "overview" && <FinanceOverviewClient />}
+                                {activeSubTab === "purchasing" && <PurchasingPage />}
+                                {activeSubTab === "reimburse" && <ReimbursementPage />}
+                                {activeSubTab === "petty-cash" && <PettyCashPage />}
+                                {activeSubTab === "funding-sources" && <FundingSourcesPage />}
+                                {activeSubTab === "reports" && <FinancialReportsPage />}
                             </FinanceProvider>
                         )}
+
+                        {/* RESOURCES MODULE VIEWS */}
                         {selectedModule === "resources" && (
-                            <ResourcesOverviewPage />
+                            <>
+                                {activeSubTab === "overview" && <ResourcesOverviewPage />}
+                                {activeSubTab === "materials" && <MaterialsPage />}
+                                {activeSubTab === "tools" && <ToolsPage />}
+                                {activeSubTab === "assets" && <AssetsPage />}
+                                {activeSubTab === "services" && <ServicesPage />}
+                            </>
                         )}
+
+                        {/* REPORTS MODULE VIEWS */}
                         {selectedModule === "reports" && (
                             <ReportsOverviewPage />
                         )}
+
+                        {/* PEOPLE MODULE VIEWS */}
                         {selectedModule === "people" && (
                             <FeelPeoplePage />
                         )}
+
+                        {/* CLOCK MODULE VIEWS */}
                         {selectedModule === "clock" && (
                             <ClockProvider>
                                 <ClockPage />
                             </ClockProvider>
                         )}
+
+                        {/* CREW MODULE VIEWS */}
                         {selectedModule === "crew" && (
                             <CrewPage />
                         )}
+
                         {!["finance", "resources", "reports", "people", "clock", "crew"].includes(selectedModule) && (
                             <div className="space-y-6 max-w-5xl">
                                 <h2 className="text-[20px] font-bold capitalize text-neutral-900 dark:text-white">
@@ -209,6 +426,14 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
                         )}
                     </Suspense>
                 </div>
+
+                {/* Real Finance New Request Drawer Component */}
+                <FinanceProvider>
+                    <NewRequestDrawer
+                        isOpen={isNewRequestOpen}
+                        onClose={() => setIsNewRequestOpen(false)}
+                    />
+                </FinanceProvider>
             </div>
         </HeaderProvider>
     );

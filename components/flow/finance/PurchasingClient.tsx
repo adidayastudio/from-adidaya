@@ -1275,7 +1275,7 @@ function RejectModal({
     );
 }
 
-function ViewModal({
+export function ViewModal({
     item,
     onClose,
     onPreview,

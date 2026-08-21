@@ -79,6 +79,44 @@ const CITY_KEYWORDS = [
 export function classifyInput(input: string): ClassificationResult {
     const normalized = input.toLowerCase().trim();
 
+    // Direct Slash Command Overrides
+    if (normalized.startsWith("/task")) {
+        const title = input.replace(/^\/task\s*/i, "").trim() || "Tugas Baru";
+        return {
+            type: "add_task",
+            data: { title, dueDate: "Hari ini", priority: "high" },
+            confidence: 1.0,
+            rawInput: input,
+        };
+    }
+    if (normalized.startsWith("/finance") || normalized.startsWith("/expense")) {
+        const item = input.replace(/^\/(?:finance|expense)\s*/i, "").trim() || "Pengeluaran Baru";
+        return {
+            type: "log_expense",
+            data: { item, currency: "IDR" },
+            confidence: 1.0,
+            rawInput: input,
+        };
+    }
+    if (normalized.startsWith("/project")) {
+        const name = input.replace(/^\/project\s*/i, "").trim() || "Proyek Baru";
+        return {
+            type: "create_project",
+            data: { name },
+            confidence: 1.0,
+            rawInput: input,
+        };
+    }
+    if (normalized.startsWith("/report") || normalized.startsWith("/progress") || normalized.startsWith("/dcr")) {
+        const target = input.replace(/^\/(?:report|progress|dcr)\s*/i, "").trim() || "Progress Lapangan";
+        return {
+            type: "update_progress",
+            data: { target, progress: 50 },
+            confidence: 1.0,
+            rawInput: input,
+        };
+    }
+
     // Score each intent
     const scores: Record<StreamIntentType, number> = {
         create_project: scoreProjectIntent(normalized),
@@ -95,11 +133,18 @@ export function classifyInput(input: string): ClassificationResult {
     const [bestType, bestScore] = entries[0];
     const confidence = Math.min(bestScore, 1.0);
 
-    // If confidence is too low, fallback to general
+    // If confidence is too low, check if query is non-internal AI query
     if (confidence < 0.3) {
+        const internalKeywords = ["proyek", "project", "task", "tugas", "semen", "besi", "cor", "rab", "biaya", "progress", "dcr", "tukang", "mandor", "site", "rwm", "lax", "fks", "mbm"];
+        const isInternalQuery = internalKeywords.some(kw => normalized.includes(kw));
+
+        const placeholderMessage = isInternalQuery
+            ? input
+            : "Saya adalah asisten operasional Adidaya Studio. Saya diprogram khusus untuk membantu manajemen proyek, tugas lapangan, pengeluaran, dan sistem internal Adidaya. Silakan tanyakan seputar proyek atau gunakan perintah seperti /task, /finance, atau /report.";
+
         return {
             type: "general",
-            data: { message: input } as ParsedGeneralData,
+            data: { message: placeholderMessage } as ParsedGeneralData,
             confidence: 0.1,
             rawInput: input,
         };

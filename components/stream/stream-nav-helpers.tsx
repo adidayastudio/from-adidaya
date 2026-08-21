@@ -5,7 +5,7 @@ import clsx from "clsx";
 import { File } from "lucide-react";
 
 // ─── SidebarNavItem ──────────────────────────────────────────────
-export function SidebarNavItem({ active, onClick, icon, label, badge }: { active: boolean; onClick: () => void; icon: React.ReactElement; label: string; badge?: number }) {
+export function SidebarNavItem({ active, onClick, icon, label, badge }: { active: boolean; onClick: () => void; icon: React.ReactElement<{ className?: string }>; label: string; badge?: number }) {
     const styledIcon = React.cloneElement(icon, {
         className: clsx("w-4 h-4 transition-colors", active ? "text-blue-600 dark:text-blue-400" : "text-neutral-400 dark:text-neutral-500")
     });
@@ -34,7 +34,7 @@ export function SidebarNavItem({ active, onClick, icon, label, badge }: { active
 }
 
 // ─── WorkspaceSubNavItem ─────────────────────────────────────────
-export function WorkspaceSubNavItem({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactElement; label: string }) {
+export function WorkspaceSubNavItem({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactElement<{ className?: string }>; label: string }) {
     const styledIcon = React.cloneElement(icon, {
         className: clsx("w-3.5 h-3.5 transition-colors", active ? "text-blue-600 dark:text-blue-400" : "text-neutral-400 dark:text-neutral-500")
     });
@@ -61,7 +61,7 @@ export function SubTabButton({ active, onClick, icon, label }: { active: boolean
         <button
             onClick={onClick}
             className={clsx(
-                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap",
+                "h-9 flex items-center gap-1.5 px-3.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap",
                 active
                     ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/20 shadow-sm"
                     : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50"

@@ -49,11 +49,11 @@ export default function StreamFeed({ items, onItemTap, isLoading }: StreamFeedPr
                     <div key={dateLabel} className="space-y-2">
                         {/* Date Separator */}
                         <div className="flex items-center gap-3 px-2">
-                            <div className="h-px flex-1 bg-neutral-200/40 dark:bg-neutral-700/30" />
-                            <span className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">
+                            <div className="h-px flex-1 bg-neutral-200/50 dark:bg-neutral-700/40" />
+                            <span className="text-[11px] font-semibold text-neutral-400 dark:text-neutral-500 tracking-tight">
                                 {dateLabel}
                             </span>
-                            <div className="h-px flex-1 bg-neutral-200/40 dark:bg-neutral-700/30" />
+                            <div className="h-px flex-1 bg-neutral-200/50 dark:bg-neutral-700/40" />
                         </div>
 
                         {/* Cards */}

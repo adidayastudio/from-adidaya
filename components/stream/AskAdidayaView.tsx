@@ -45,7 +45,7 @@ export default function AskAdidayaView({
                         </h1>
 
                         <div className="px-1">
-                            <StreamInput onSend={onSend} isProcessing={isProcessing} />
+                            <StreamInput onSend={onSend} isProcessing={isProcessing} placeholder="Work on anything..." />
                         </div>
 
                         <div className="space-y-2.5 pt-2 text-left max-w-xl mx-auto">

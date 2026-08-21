@@ -15,7 +15,12 @@ import {
     MoreHorizontal,
     Camera,
     CloudRain,
+    CheckSquare,
+    CreditCard,
+    Upload,
+    FolderKanban,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import StreamInput from "./StreamInput";
 import StreamSidebar from "./StreamSidebar";
@@ -84,6 +89,8 @@ export default function StreamPage() {
     const [messages, setMessages] = useState<StreamMessage[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [channelMessageText, setChannelMessageText] = useState("");
+    const [showSlashMenu, setShowSlashMenu] = useState(false);
+    const [customChannelMessages, setCustomChannelMessages] = useState<Record<string, any[]>>({});
 
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -138,6 +145,86 @@ export default function StreamPage() {
 
     // Send Stream message
     const handleSend = useCallback(async (text: string, quickType?: StreamIntentType) => {
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        if (navMode === "project_channel") {
+            const userMsg = {
+                id: `cuser-${Date.now()}`,
+                sender: "You (Project Manager)",
+                time: timeStr,
+                content: text,
+                role: "user",
+                isSelf: true,
+            };
+
+            let classification = classifyInput(text);
+            if (quickType && classification.confidence < 0.5) {
+                classification = { ...classification, type: quickType };
+            }
+
+            let systemMsg: any = null;
+
+            if (text.startsWith("/task") || classification.type === "add_task") {
+                const initialTitle = text.replace(/^\/task\s*/i, "").trim() || "Pengecoran Plat Lt 3 Sisi Utara";
+                systemMsg = {
+                    id: `csys-${Date.now()}`,
+                    sender: "AdidayaIntelligence",
+                    time: timeStr,
+                    role: "system",
+                    isTaskDraft: true,
+                    initialTitle: initialTitle,
+                };
+            } else if (text.startsWith("/finance") || classification.type === "log_expense") {
+                const item = text.replace(/^\/(?:finance|expense)\s*/i, "").trim() || "Pengeluaran Material Site";
+                systemMsg = {
+                    id: `csys-${Date.now()}`,
+                    sender: "AdidayaIntelligence",
+                    time: timeStr,
+                    role: "system",
+                    attachment: {
+                        type: "finance",
+                        title: `Expense: ${item}`,
+                        subtitle: `Pencatatan pengeluaran proyek #${selectedChannelCode}`,
+                        amount: "Rp 8.500.000",
+                        status: "PENDING APPROVAL"
+                    }
+                };
+            } else if (text.startsWith("/report") || classification.type === "update_progress") {
+                const target = text.replace(/^\/(?:report|progress|dcr)\s*/i, "").trim() || "DCR Progress Lapangan";
+                systemMsg = {
+                    id: `csys-${Date.now()}`,
+                    sender: "AdidayaIntelligence",
+                    time: timeStr,
+                    role: "system",
+                    attachment: {
+                        type: "task",
+                        title: `Progress Report: ${target}`,
+                        subtitle: `Kategori: Structural Construction · Progress +15% di #${selectedChannelCode}`,
+                        status: "UPDATED"
+                    }
+                };
+            } else {
+                systemMsg = {
+                    id: `csys-${Date.now()}`,
+                    sender: "AdidayaIntelligence",
+                    time: timeStr,
+                    content: `Instruksi diterima untuk proyek #${selectedChannelCode}. Tim operasional telah diberi notifikasi.`,
+                    role: "system"
+                };
+            }
+
+            setCustomChannelMessages(prev => ({
+                ...prev,
+                [selectedChannelCode]: [
+                    ...(prev[selectedChannelCode] || []),
+                    userMsg,
+                    ...(systemMsg ? [systemMsg] : [])
+                ]
+            }));
+            return;
+        }
+
+        // AskAdidaya View handling
         const userMsg: StreamMessage = {
             id: `msg-${Date.now()}`,
             role: "user",
@@ -180,7 +267,7 @@ export default function StreamPage() {
         };
         setMessages(prev => prev.filter(m => !m.isProcessing).concat(systemMsg));
         setIsProcessing(false);
-    }, []);
+    }, [navMode, selectedChannelCode]);
 
     const handleConfirm = useCallback(async (messageId: string) => {
         const msg = messages.find(m => m.id === messageId);
@@ -243,9 +330,9 @@ export default function StreamPage() {
             id: p.id,
             code: `${p.projectNumber || "000"}-${(p.projectCode || "PRJ").toLowerCase()}`,
             name: p.projectName,
-            city: p.city || "Kota Jakarta Timur",
+            city: p.location?.city || (p as any).city || "Kota Jakarta Timur",
             projectCode: p.projectCode || "PRJ",
-            stage: p.stage ? `Stage ${p.stage.toUpperCase()}` : "Stage 06-CN (Construction)"
+            stage: (p as any).stage ? `Stage ${String((p as any).stage).toUpperCase()}` : "Stage 06-CN (Construction)"
         }))
     ];
 
@@ -435,7 +522,6 @@ export default function StreamPage() {
                                             sender="AdidayaIntelligence"
                                             time="08:16 AM"
                                             role="system"
-                                            tag="Task Log"
                                             attachment={{
                                                 type: "task",
                                                 title: "#T-104: Pengecoran Plat Lt 3 Sisi Utara",
@@ -477,7 +563,6 @@ export default function StreamPage() {
                                             sender="AdidayaIntelligence"
                                             time="10:46 AM"
                                             role="system"
-                                            tag="Expense Log"
                                             attachment={{
                                                 type: "finance",
                                                 title: "Pengeluaran Material: Semen Padang 50 sak & Besi 12mm",
@@ -557,10 +642,19 @@ export default function StreamPage() {
                                         <ChannelMessageBubble
                                             sender="Laporan Cuaca"
                                             time="03:00 PM"
-                                            content="Hujan deras mulai pukul 15:00 WIB di lokasi Rawamangun. Pekerjaan cor luar dihentikan sementara."
                                             role="system"
-                                            tag="Weather Alert"
+                                            attachment={{
+                                                type: "weather",
+                                                title: "Hujan Deras di Lokasi Rawamangun",
+                                                subtitle: "Mulai pukul 15:00 WIB · Pekerjaan cor luar dihentikan sementara",
+                                                status: "RAIN ALERT"
+                                            }}
                                         />
+
+                                        {/* Dynamic Channel Messages (Sent by user inside this project channel) */}
+                                        {(customChannelMessages[selectedChannelCode] || []).map(msg => (
+                                            <ChannelMessageBubble key={msg.id} {...msg} />
+                                        ))}
                                     </div>
                                 )}
 
@@ -590,54 +684,116 @@ export default function StreamPage() {
 
                             {/* Bottom Absolute Floating iMessage Input Bar */}
                             {activeChannelSubTab === "chat" && (
-                                <div className="absolute bottom-3 left-4 right-4 z-30 pointer-events-auto flex items-center gap-2">
-                                    <button className="w-9 h-9 rounded-full bg-white/80 dark:bg-neutral-800/80 backdrop-blur-xl border border-neutral-200/80 dark:border-neutral-700/80 flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 transition-all shrink-0 shadow-sm">
-                                        <Plus className="w-5 h-5 stroke-[2.5]" />
-                                    </button>
+                                <div className="absolute bottom-3 left-4 right-4 z-30 pointer-events-auto">
+                                    {/* Slash Command Autocomplete Popover */}
+                                    <AnimatePresence>
+                                        {showSlashMenu && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 8 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: 8 }}
+                                                className="absolute bottom-full mb-2 left-0 right-0 p-2 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-2xl border border-neutral-200/80 dark:border-neutral-800/80 rounded-2xl shadow-xl z-50 space-y-1 max-h-56 overflow-y-auto scrollbar-hide"
+                                            >
+                                                <div className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 px-2.5 py-1">
+                                                    Shortcut Commands
+                                                </div>
+                                                {[
+                                                    { cmd: "/task", label: "Bikin task baru (Title, Assignee, Deadline)", icon: <CheckSquare className="w-4 h-4 text-emerald-500" /> },
+                                                    { cmd: "/finance", label: "Catat pengeluaran & nota", icon: <CreditCard className="w-4 h-4 text-amber-500" /> },
+                                                    { cmd: "/report", label: "Laporan harian / progress DCR", icon: <FileText className="w-4 h-4 text-blue-500" /> },
+                                                    { cmd: "/upload", label: "Upload dokumen / 3D Model SKP", icon: <Upload className="w-4 h-4 text-purple-500" /> },
+                                                    { cmd: "/project", label: "Bikin proyek baru", icon: <FolderKanban className="w-4 h-4 text-sky-500" /> },
+                                                ].filter(s => s.cmd.toLowerCase().includes(channelMessageText.toLowerCase()) || channelMessageText === "/").map((s) => (
+                                                    <button
+                                                        key={s.cmd}
+                                                        onClick={() => {
+                                                            setChannelMessageText(`${s.cmd} `);
+                                                            setShowSlashMenu(false);
+                                                        }}
+                                                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left hover:bg-neutral-100/60 dark:hover:bg-neutral-800/60 transition-colors"
+                                                    >
+                                                        <div className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 shrink-0">
+                                                            {s.icon}
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="text-[13px] font-bold text-neutral-900 dark:text-white font-mono">
+                                                                {s.cmd}
+                                                            </div>
+                                                            <div className="text-[11px] text-neutral-500 truncate">
+                                                                {s.label}
+                                                            </div>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
 
-                                    <div
-                                        style={{
-                                            background: theme === "dark"
-                                                ? "linear-gradient(180deg, rgba(30,30,34,0.95) 0%, rgba(20,20,24,0.85) 100%)"
-                                                : "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(245,245,250,0.85) 100%)",
-                                            backdropFilter: "blur(32px) saturate(180%)",
-                                            WebkitBackdropFilter: "blur(32px) saturate(180%)",
-                                            border: theme === "dark"
-                                                ? "1px solid rgba(255,255,255,0.12)"
-                                                : "1px solid rgba(0,0,0,0.1)",
-                                        }}
-                                        className="flex-1 flex items-center gap-2 px-4 py-1.5 rounded-full shadow-md focus-within:border-[#0A84FF] transition-all"
-                                    >
-                                        <input
-                                            type="text"
-                                            placeholder={`Message #${currentChannel.code}`}
-                                            value={channelMessageText}
-                                            onChange={(e) => setChannelMessageText(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter" && channelMessageText.trim()) {
-                                                    handleSend(channelMessageText.trim());
-                                                    setChannelMessageText("");
-                                                }
-                                            }}
-                                            className="flex-1 bg-transparent border-none outline-none text-[14px] text-neutral-900 dark:text-white placeholder:text-neutral-400 py-1"
-                                        />
+                                    <div className="flex items-center gap-2">
                                         <button
                                             onClick={() => {
-                                                if (channelMessageText.trim()) {
-                                                    handleSend(channelMessageText.trim());
-                                                    setChannelMessageText("");
-                                                }
+                                                setChannelMessageText("/");
+                                                setShowSlashMenu(true);
                                             }}
-                                            disabled={!channelMessageText.trim()}
-                                            className={clsx(
-                                                "w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0",
-                                                channelMessageText.trim()
-                                                    ? "bg-[#0A84FF] text-white shadow-sm hover:bg-blue-600 active:scale-90"
-                                                    : "bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed"
-                                            )}
+                                            className="w-9 h-9 rounded-full bg-white/80 dark:bg-neutral-800/80 backdrop-blur-xl border border-neutral-200/80 dark:border-neutral-700/80 flex items-center justify-center text-neutral-700 dark:text-neutral-200 hover:bg-white dark:hover:bg-neutral-700 transition-all shrink-0 shadow-sm"
                                         >
-                                            <Send className="w-3.5 h-3.5" />
+                                            <Plus className="w-5 h-5 stroke-[2.5]" />
                                         </button>
+
+                                        <div
+                                            style={{
+                                                background: theme === "dark"
+                                                    ? "linear-gradient(180deg, rgba(30,30,34,0.95) 0%, rgba(20,20,24,0.85) 100%)"
+                                                    : "linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(245,245,250,0.85) 100%)",
+                                                backdropFilter: "blur(32px) saturate(180%)",
+                                                WebkitBackdropFilter: "blur(32px) saturate(180%)",
+                                                border: theme === "dark"
+                                                    ? "1px solid rgba(255,255,255,0.12)"
+                                                    : "1px solid rgba(0,0,0,0.1)",
+                                            }}
+                                            className="flex-1 flex items-center gap-2 px-4 py-1.5 rounded-full shadow-md focus-within:border-[#0A84FF] transition-all"
+                                        >
+                                            <input
+                                                type="text"
+                                                placeholder={`Message #${currentChannel.code}`}
+                                                value={channelMessageText}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setChannelMessageText(val);
+                                                    if (val.startsWith("/")) {
+                                                        setShowSlashMenu(true);
+                                                    } else {
+                                                        setShowSlashMenu(false);
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" && channelMessageText.trim()) {
+                                                        handleSend(channelMessageText.trim());
+                                                        setChannelMessageText("");
+                                                        setShowSlashMenu(false);
+                                                    }
+                                                }}
+                                                className="flex-1 bg-transparent border-none outline-none text-[14px] text-neutral-900 dark:text-white placeholder:text-neutral-400 py-1"
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    if (channelMessageText.trim()) {
+                                                        handleSend(channelMessageText.trim());
+                                                        setChannelMessageText("");
+                                                        setShowSlashMenu(false);
+                                                    }
+                                                }}
+                                                disabled={!channelMessageText.trim()}
+                                                className={clsx(
+                                                    "w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0",
+                                                    channelMessageText.trim()
+                                                        ? "bg-[#0A84FF] text-white shadow-sm hover:bg-blue-600 active:scale-90"
+                                                        : "bg-neutral-200 dark:bg-neutral-700 text-neutral-400 cursor-not-allowed"
+                                                )}
+                                            >
+                                                <Send className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}

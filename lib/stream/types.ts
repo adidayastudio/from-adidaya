@@ -115,6 +115,13 @@ export interface FeedItem {
     userName?: string;
     userAvatar?: string;
 
+    // Taxonomy & Permission
+    parentModule?: "stream" | "finance" | "resources" | "reports" | "people" | "clock" | "crew";
+    submodule?: string;
+    event?: string;
+    isRestricted?: boolean;
+    isPersonalClock?: boolean;
+
     // Entity reference
     entityType?: StreamEntityType;
     entityId?: string;
@@ -123,6 +130,7 @@ export interface FeedItem {
     // Visual
     icon?: string;
     accentColor?: string;
+    projectCode?: string;
     metadata?: Record<string, any>;
 
     // Stream-specific
