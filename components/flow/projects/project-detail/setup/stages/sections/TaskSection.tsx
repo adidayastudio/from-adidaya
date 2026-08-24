@@ -31,11 +31,12 @@ export default function TaskSection({
 
   return (
     <div className={clsx(
-      "rounded-2xl border transition-all duration-200 mb-4 shadow-2xs",
+      "rounded-2xl border transition-all duration-200 shadow-sm",
       isOpen
-        ? "bg-white/90 dark:bg-neutral-900/90 border-neutral-200/80 dark:border-neutral-800 shadow-sm overflow-visible"
-        : "bg-white/60 dark:bg-neutral-900/60 border-neutral-200/60 dark:border-neutral-800/60 hover:bg-white/80 overflow-hidden"
+        ? "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 overflow-visible"
+        : "bg-white dark:bg-neutral-900/90 border-neutral-200/80 dark:border-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-700 overflow-hidden"
     )}>
+
       <div
         onClick={onToggle}
         className={clsx(

@@ -202,7 +202,8 @@ export default function StageCN() {
 
     return (
         <>
-            <div className="space-y-0 divide-y divide-neutral-100">
+            <div className="space-y-3.5 sm:space-y-4">
+
                 {CN_SECTIONS.map(section => renderSection(section.code, section.title))}
             </div>
 

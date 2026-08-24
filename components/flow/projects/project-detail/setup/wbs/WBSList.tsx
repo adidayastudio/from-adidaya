@@ -7,12 +7,15 @@ import clsx from "clsx";
 
 type Props = {
   items: WBSItem[];
-  view: WBSView;
-  mode: WBSMode;
-  onUpdateItem: (id: string, patch: Partial<{ nameEn: string; nameId?: string; code?: string; notes?: string }>) => void;
-  onAddChild: (parentId: string, level: number) => void;
+  view?: WBSView;
+  mode?: WBSMode;
+  activeView?: WBSView;
+  onViewChange?: (v: WBSView) => void;
+  statusLabel?: string;
+  onUpdateItem?: (id: string, patch: Partial<{ nameEn: string; nameId?: string; code?: string; notes?: string }>) => void;
+  onAddChild?: (parentId: string, level: number) => void;
   onAddSibling?: (siblingId: string, position: "above" | "below") => void;
-  onRemove: (id: string) => void;
+  onRemove?: (id: string) => void;
   onReorder?: (parentId: string | null, fromIndex: number, toIndex: number) => void;
   onIndent?: (id: string) => void;
   onOutdent?: (id: string) => void;
@@ -52,8 +55,11 @@ function filterTree(items: WBSItem[], query: string): WBSItem[] {
 
 export default function WBSList({
   items: initialItems,
-  view,
-  mode,
+  view = "SUMMARY",
+  mode = "BALLPARK",
+  activeView = view,
+  onViewChange,
+  statusLabel,
   onUpdateItem,
   onAddChild,
   onAddSibling,
@@ -111,37 +117,85 @@ export default function WBSList({
 
   return (
     <div className="w-full space-y-3">
-      {/* Controls Bar: Search & Expand/Collapse All */}
-      <div className="flex items-center justify-between gap-3 bg-neutral-50 p-2 rounded-full border border-neutral-200/80">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search WBS code or title..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-1 focus:ring-brand-red focus:border-brand-red transition-all"
-          />
+      {/* Unified Single Controls Bar: Summary/Breakdown | Search | Undo/Redo | Expand/Collapse */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-neutral-50 dark:bg-neutral-900/60 p-2 rounded-full border border-neutral-200/80 dark:border-neutral-800">
+        {/* LEFT: Summary | Breakdown + Status */}
+        <div className="flex items-center gap-3">
+          {onViewChange && (
+            <div className="flex rounded-full bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 p-0.5 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => onViewChange("SUMMARY")}
+                className={clsx(
+                  "px-3.5 py-1 text-xs font-semibold rounded-full transition-all",
+                  activeView === "SUMMARY"
+                    ? "bg-blue-600 text-white shadow-2xs"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900"
+                )}
+              >
+                Summary
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewChange("BREAKDOWN")}
+                className={clsx(
+                  "px-3.5 py-1 text-xs font-semibold rounded-full transition-all",
+                  activeView === "BREAKDOWN"
+                    ? "bg-blue-600 text-white shadow-2xs"
+                    : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900"
+                )}
+              >
+                Breakdown
+              </button>
+            </div>
+          )}
+
+          {statusLabel && (
+            <span
+              className={clsx(
+                "text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 transition-all",
+                statusLabel === "Ready" && "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800",
+                statusLabel === "Draft" && "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800",
+                statusLabel === "Saved" && "text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800",
+                statusLabel === "Submitted" && "text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800"
+              )}
+            >
+              ● {statusLabel}
+            </span>
+          )}
+
         </div>
 
-        <div className="flex items-center gap-2 pr-1">
+        {/* RIGHT: Search | Undo/Redo | Expand All | Collapse All */}
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="relative flex-1 sm:w-44">
+            <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search WBS code or title..."
+              className="w-full pl-9 pr-3 py-1 text-xs border border-neutral-200 dark:border-neutral-700 rounded-full bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all"
+            />
+          </div>
+
           {/* Undo / Redo */}
           {onUndo && (
-            <div className="flex items-center border border-neutral-200 bg-white rounded-full p-0.5 shadow-sm">
+            <div className="flex items-center border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-full p-0.5 shadow-2xs shrink-0">
               <button
                 disabled={!canUndo}
                 onClick={onUndo}
-                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-neutral-100 text-neutral-600 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
-                title="Undo (Ctrl+Z / Cmd+Z)"
+                className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                title="Undo"
               >
                 <Undo2 className="w-3.5 h-3.5" />
               </button>
-              <div className="w-px h-3 bg-neutral-200" />
+              <div className="w-px h-3 bg-neutral-200 dark:bg-neutral-700" />
               <button
                 disabled={!canRedo}
                 onClick={onRedo}
-                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-neutral-100 text-neutral-600 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
-                title="Redo (Ctrl+Y / Cmd+Shift+Z)"
+                className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                title="Redo"
               >
                 <Redo2 className="w-3.5 h-3.5" />
               </button>
@@ -149,21 +203,27 @@ export default function WBSList({
           )}
 
           <button
+            type="button"
             onClick={() => setExpandAllState(true)}
-            className="px-3.5 py-1.5 rounded-full border border-neutral-200 bg-white hover:bg-neutral-100 text-[11px] font-medium text-neutral-600 flex items-center gap-1.5 transition-colors shadow-sm"
-            title="Expand All Nodes"
+            className="px-3 py-1 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-[11px] font-semibold text-neutral-700 dark:text-neutral-200 flex items-center gap-1 transition-colors shadow-2xs shrink-0"
+            title="Expand All"
           >
-            <Maximize2 className="w-3 h-3 text-neutral-500" /> Expand All
+            <Maximize2 className="w-3 h-3 text-neutral-500 shrink-0" />
+            <span className="leading-none">Expand All</span>
           </button>
           <button
+            type="button"
             onClick={() => setExpandAllState(false)}
-            className="px-3.5 py-1.5 rounded-full border border-neutral-200 bg-white hover:bg-neutral-100 text-[11px] font-medium text-neutral-600 flex items-center gap-1.5 transition-colors shadow-sm"
-            title="Collapse All Nodes"
+            className="px-3 py-1 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-[11px] font-semibold text-neutral-700 dark:text-neutral-200 flex items-center gap-1 transition-colors shadow-2xs shrink-0"
+            title="Collapse All"
           >
-            <Minimize2 className="w-3 h-3 text-neutral-500" /> Collapse All
+            <Minimize2 className="w-3 h-3 text-neutral-500 shrink-0" />
+            <span className="leading-none">Collapse All</span>
           </button>
+
         </div>
       </div>
+
 
       <div className="w-full border border-neutral-200 rounded-lg overflow-hidden bg-white">
         {filteredItems.length === 0 ? (

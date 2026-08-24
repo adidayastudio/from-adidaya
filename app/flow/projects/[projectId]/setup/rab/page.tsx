@@ -14,6 +14,11 @@ import { Download, Save, Plus, Send, RotateCcw } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAutoSave } from "@/lib/hooks/useAutoSave";
 import { SaveStatusBadge, SaveFloatingToast } from "@/components/flow/projects/project-detail/setup/common/SaveStatusBadge";
+import { StageCardsOverview } from "@/components/flow/projects/project-detail/setup/common/StageCardsOverview";
+import { CreateVersionModal } from "@/components/flow/projects/project-detail/setup/common/CreateVersionModal";
+import type { WBSStage, ProjectVersion, StageSummary } from "@/lib/flow/types/versioning.types";
+import { ArrowLeft, GitBranch, Plus as PlusIcon } from "lucide-react";
+
 
 
 import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
@@ -200,7 +205,9 @@ export default function ProjectSetupRABPage() {
       if (meta.estimateValues) setEstimateValues(meta.estimateValues);
       if (meta.adjustmentFactor !== undefined) setAdjustmentFactor(meta.adjustmentFactor);
       if (meta.rabStatus) setRabStatus(meta.rabStatus);
+      if (meta.rabVersions && Array.isArray(meta.rabVersions)) setVersions(meta.rabVersions);
     }
+
   }, [project]);
 
   // 🔥 SOURCE OF TRUTH: PRICE OVERRIDE (LEAF PER m²)
@@ -259,12 +266,78 @@ export default function ProjectSetupRABPage() {
 
 
 
+  const [pageViewMode, setPageViewMode] = useState<"OVERVIEW" | "EDITOR">("OVERVIEW");
+  const [createModalStage, setCreateModalStage] = useState<WBSStage | null>(null);
+
+  const [versions, setVersions] = useState<ProjectVersion[]>(() => {
+    if (typeof window !== "undefined" && projectId) {
+      try {
+        const saved = localStorage.getItem(`project_rab_versions_${projectId}`);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      {
+        id: "rab-ballpark-1",
+        projectId: projectId || "",
+        moduleType: "rab",
+        stage: "BALLPARK",
+        versionCode: "v1.0",
+        name: "Target Ballpark RAB",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+      {
+        id: "rab-estimates-1",
+        projectId: projectId || "",
+        moduleType: "rab",
+        stage: "ESTIMATES",
+        versionCode: "v1.0",
+        name: "Estimates Calculation",
+        sourceVersionId: "rab-ballpark-1",
+        sourceVersionName: "v1.0 - Target Ballpark RAB",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+      {
+        id: "rab-detail-1",
+        projectId: projectId || "",
+        moduleType: "rab",
+        stage: "DETAIL",
+        versionCode: "v1.0",
+        name: "RAB Rinci Pelaksanaan",
+        sourceVersionId: "rab-estimates-1",
+        sourceVersionName: "v1.0 - Estimates Calculation",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+    ];
+  });
+
+  // Sync versions to localStorage when project is loaded or versions change
+  useEffect(() => {
+    if (typeof window !== "undefined" && projectId && versions.length > 0) {
+      try {
+        localStorage.setItem(`project_rab_versions_${projectId}`, JSON.stringify(versions));
+      } catch (e) {
+        console.error("Failed to sync RAB versions to localStorage", e);
+      }
+    }
+  }, [versions, projectId]);
+
+
   /* ===== RESET LOGIC ===== */
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Detail Drawer State
   const [selectedDetailItem, setSelectedDetailItem] = useState<RABItem | null>(null);
   const [activeDrawerTab, setActiveDrawerTab] = useState<"BOQ" | "AHSP">("BOQ");
+
 
   // Check if modified
   const isPristine =
@@ -283,7 +356,10 @@ export default function ProjectSetupRABPage() {
     setRabStatus("draft");
   }
 
+
+
   /* ===== LOCATION LIST (STATIC) ===== */
+
   const locationList = useMemo(() => {
     return (getLocationFactorList as LocationFactor[]) ?? [];
   }, []);
@@ -433,6 +509,140 @@ export default function ProjectSetupRABPage() {
     );
   }, [activeMode, rabTreeBallpark, activeTree, safeArea]);
 
+  const stageSummaries = useMemo<Record<WBSStage, StageSummary>>(() => {
+    const ballparkVers = versions.filter((v) => v.stage === "BALLPARK");
+    const estimatesVers = versions.filter((v) => v.stage === "ESTIMATES");
+    const detailVers = versions.filter((v) => v.stage === "DETAIL");
+
+    const countLeafs = (nodes: any[]): number => {
+      let count = 0;
+      if (!Array.isArray(nodes)) return 0;
+      for (const n of nodes) {
+        if (!n) continue;
+        if (!n.children || n.children.length === 0) count++;
+        else count += countLeafs(n.children);
+      }
+      return count;
+    };
+
+    const leafCount = countLeafs(activeTree);
+
+    return {
+      BALLPARK: {
+        stage: "BALLPARK",
+        activeVersion: ballparkVers.find((v) => v.isActive) || ballparkVers[0],
+        availableVersions: ballparkVers,
+        itemCount: activeTree.length,
+        totalCost: totalProjectCost > 0 ? totalProjectCost : 14564000000,
+      },
+      ESTIMATES: {
+        stage: "ESTIMATES",
+        activeVersion: estimatesVers.find((v) => v.isActive) || estimatesVers[0],
+        availableVersions: estimatesVers,
+        itemCount: leafCount || 42,
+        totalCost: totalProjectCost > 0 ? totalProjectCost : 14564000000,
+      },
+      DETAIL: {
+        stage: "DETAIL",
+        activeVersion: detailVers.find((v) => v.isActive) || detailVers[0],
+        availableVersions: detailVers,
+        itemCount: leafCount || 156,
+        totalCost: totalProjectCost > 0 ? totalProjectCost : 14564000000,
+      },
+    };
+  }, [versions, activeTree, totalProjectCost]);
+
+  const handleUpdateVersionName = async (stage: WBSStage, versionId: string, newName: string) => {
+    let nextVersions: ProjectVersion[] = [];
+    setVersions((prev) => {
+      const targetVer = prev.find((v) => v.id === versionId);
+      const targetCode = targetVer?.versionCode;
+
+      nextVersions = prev.map((v) => {
+        if (v.id === versionId) {
+          return { ...v, name: newName, updatedAt: new Date().toISOString() };
+        }
+        if (v.sourceVersionId === versionId || (targetCode && v.sourceVersionId === targetCode)) {
+          return {
+            ...v,
+            sourceVersionName: `${targetCode || "v1.0"} - ${newName}`,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return v;
+      });
+      return nextVersions;
+    });
+
+    const pid = project?.id || projectId;
+    if (typeof window !== "undefined" && pid) {
+      try {
+        localStorage.setItem(`project_rab_versions_${pid}`, JSON.stringify(nextVersions));
+      } catch (e) {}
+    }
+
+    if (pid) {
+      try {
+        const { data: dbProj } = await supabase.from("projects").select("meta").eq("id", pid).single();
+        const currentMeta = dbProj?.meta || project?.meta || {};
+        const updatedMeta = { ...currentMeta, rabVersions: nextVersions };
+        await supabase.from("projects").update({ meta: updatedMeta }).eq("id", pid);
+      } catch (err) {
+        console.error("Error persisting RAB version update to Supabase DB:", err);
+      }
+    }
+  };
+
+
+
+  const handleSelectStageFromOverview = (stage: WBSStage) => {
+    setActiveMode(stage);
+    setPageViewMode("EDITOR");
+  };
+
+
+  const handleChangeActiveVersion = (stage: WBSStage, versionId: string) => {
+    setVersions((prev) =>
+      prev.map((v) => {
+        if (v.stage === stage) {
+          return { ...v, isActive: v.id === versionId };
+        }
+        return v;
+      })
+    );
+  };
+
+  const handleCreateVersion = (data: {
+    versionCode: string;
+    name: string;
+    description?: string;
+    sourceVersionId?: string;
+  }) => {
+    if (!createModalStage) return;
+    const sourceVer = versions.find((v) => v.id === data.sourceVersionId);
+
+    const newVer: ProjectVersion = {
+      id: crypto.randomUUID(),
+      projectId: project?.id || "",
+      moduleType: "rab",
+      stage: createModalStage,
+      versionCode: data.versionCode,
+      name: data.name,
+      description: data.description,
+      sourceVersionId: data.sourceVersionId,
+      sourceVersionName: sourceVer ? `${sourceVer.versionCode} - ${sourceVer.name}` : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isActive: true,
+    };
+
+    setVersions((prev) => [
+      ...prev.map((v) => (v.stage === createModalStage ? { ...v, isActive: false } : v)),
+      newVer,
+    ]);
+  };
+
+
   const saveRabStateToDb = useCallback(
     async (payload: {
       overrides: Record<string, number>;
@@ -449,7 +659,9 @@ export default function ProjectSetupRABPage() {
         estimateValues: estimates,
         adjustmentFactor: adjFactor,
         rabStatus: status,
+        rabVersions: versions,
       };
+
 
       const { error } = await supabase
         .from("projects")
@@ -675,81 +887,131 @@ export default function ProjectSetupRABPage() {
         <div className="space-y-6 w-full max-w-4xl mx-auto animate-in fade-in duration-500 px-4 md:px-0">
           <ProjectDetailHeader project={projectForHeader as any} />
 
-          {/* ===== HEADER + ACTIONS ===== */}
           <div>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-neutral-900">Cost Estimation (RAB)</h2>
-            </div>
+            {pageViewMode === "OVERVIEW" ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+                      Cost Estimation (RAB)
+                    </h2>
+                    <p className="text-xs text-neutral-500">
+                      Pilih tahapan atau versi perencanaan anggaran untuk membuka RAB Editor
+                    </p>
+                  </div>
 
-            {/* Tabs + Actions Row */}
-            <div className="flex items-end justify-between border-b border-neutral-200 mb-6">
-              <Tabs
-                value={activeMode}
-                onChange={onChangeMode}
-                items={RAB_TABS}
-                className="gap-6"
-              />
-
-              <div className="pb-2 flex items-center gap-2 relative">
-                <SaveStatusBadge status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: rabStatus })} />
-
-                <div className="relative">
-
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => setShowExportMenu(!showExportMenu)}
-                    icon={<Download className="w-4 h-4" />}
-                  >
-                    Export
-                  </Button>
-                  {showExportMenu && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
-                      <div className="absolute right-0 top-full mt-1.5 z-50 bg-white border border-neutral-200 rounded-xl shadow-xl py-1.5 min-w-[140px] animate-in fade-in slide-in-from-top-1 duration-150">
-                        <button
-                          onClick={() => { handleExportExcel(); setShowExportMenu(false); }}
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-neutral-50 text-neutral-700 font-medium"
-                        >
-                          Excel (.xlsx)
-                        </button>
-                        <button
-                          onClick={() => { handleExportPDF(); setShowExportMenu(false); }}
-                          className="w-full px-4 py-2 text-left text-xs hover:bg-neutral-50 text-neutral-700 font-medium"
-                        >
-                          PDF (.pdf)
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  <SaveStatusBadge
+                    status={autoSaveStatus}
+                    errorMessage={autoSaveError}
+                    onRetry={() => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: rabStatus })}
+                  />
                 </div>
 
-                {/* Button Flow: Save Draft > Save Changes > Submit RAB > Add Revision */}
-                {rabStatus === "draft" && (
-                  <Button size="sm" variant="secondary" onClick={saveDraft} icon={<Save className="w-4 h-4" />}>
-                    Save Draft
-                  </Button>
-                )}
-                {rabStatus === "saved" && (
-                  <Button size="sm" variant="secondary" onClick={saveChanges} icon={<Save className="w-4 h-4" />}>
-                    Save Changes
-                  </Button>
-                )}
-                {rabStatus === "saved" && (
-                  <Button size="sm" onClick={submitRAB} icon={<Send className="w-4 h-4" />}>
-                    Submit RAB
-                  </Button>
-                )}
-                {rabStatus === "submitted" && (
-                  <Button size="sm" onClick={addRevision} icon={<Plus className="w-4 h-4" />}>
-                    Add Revision
-                  </Button>
-                )}
+                <StageCardsOverview
+                  moduleType="rab"
+                  summaries={stageSummaries}
+                  onSelectStage={handleSelectStageFromOverview}
+                  onChangeActiveVersion={handleChangeActiveVersion}
+                  onCreateNewVersion={(stg) => setCreateModalStage(stg)}
+                  onUpdateVersionName={handleUpdateVersionName}
+                />
               </div>
-            </div>
+            ) : (
+              <div>
+                {/* Top Editor Bar: Clean Compact Single Row */}
+                <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3.5 mb-5">
+                  {/* LEFT: [<] Detail RAB [v1.0] */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setPageViewMode("OVERVIEW")}
+                      className="p-1.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors shadow-2xs"
+                      title="Back to Stage Overview"
+                    >
+                      <ArrowLeft className="w-4 h-4 shrink-0" />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-neutral-900 dark:text-white capitalize">
+                        {activeMode.toLowerCase()} RAB
+                      </h2>
+                      {stageSummaries[activeMode]?.activeVersion && (
+                        <span className="px-2 py-0.5 rounded font-mono text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
+                          {stageSummaries[activeMode].activeVersion.versionCode}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* RIGHT: Export, Submit RAB */}
+                  <div className="flex items-center gap-2 relative">
+                    <SaveStatusBadge status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: rabStatus })} />
+
+                    {/* Export Dropdown Menu */}
+                    <div className="relative">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setShowExportMenu(!showExportMenu)}
+                        icon={<Download className="w-4 h-4" />}
+                      >
+                        Export
+                      </Button>
+                      {showExportMenu && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                          <div className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xl overflow-hidden py-1 min-w-[140px] animate-in fade-in slide-in-from-top-1 duration-150">
+                            <button
+                              onClick={() => { handleExportExcel(); setShowExportMenu(false); }}
+                              className="w-full px-4 py-2 text-left text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 font-medium transition-colors"
+                            >
+                              Excel (.xlsx)
+                            </button>
+                            <button
+                              onClick={() => { handleExportPDF(); setShowExportMenu(false); }}
+                              className="w-full px-4 py-2 text-left text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 font-medium transition-colors"
+                            >
+                              PDF (.pdf)
+                            </button>
+                          </div>
+
+                        </>
+                      )}
+                    </div>
+
+                    {/* Button Flow: Save Draft > Save Changes > Submit RAB > Add Revision */}
+                    {rabStatus === "draft" && (
+                      <Button size="sm" variant="secondary" onClick={saveDraft} icon={<Save className="w-4 h-4" />}>
+                        Save Draft
+                      </Button>
+                    )}
+                    {rabStatus === "saved" && (
+                      <Button size="sm" variant="secondary" onClick={saveChanges} icon={<Save className="w-4 h-4" />}>
+                        Save Changes
+                      </Button>
+                    )}
+                    {rabStatus !== "submitted" && (
+                      <button
+                        onClick={submitRAB}
+                        className="inline-flex items-center justify-center gap-1.5 h-8 px-4 text-xs font-semibold rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-2xs transition-all border-0 outline-none shrink-0"
+                      >
+                        <Send className="w-3.5 h-3.5 shrink-0" />
+                        <span className="leading-none">Submit RAB</span>
+                      </button>
+                    )}
+                    {rabStatus === "submitted" && (
+                      <Button size="sm" onClick={addRevision} icon={<Plus className="w-4 h-4" />}>
+                        Add Revision
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+            )}
           </div>
 
-          <div className="space-y-4">
+          {pageViewMode === "EDITOR" && (
+            <div className="space-y-4">
+
 
             {/* ===== CONTEXT BAR ===== */}
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-neutral-50 p-4">
@@ -808,20 +1070,32 @@ export default function ProjectSetupRABPage() {
 
                 <div className="flex items-center gap-2 border-l pl-4">
                   <span className="text-xs text-neutral-500">Price Adjustment</span>
-                  <div className="flex items-center gap-2 w-32">
+                  <div className="flex items-center gap-2 w-44">
                     <Input
                       type="range"
-                      min={85}
-                      max={115}
+                      min={50}
+                      max={150}
                       step={1}
                       value={adjustmentFactor}
                       onChange={(e) => setAdjustmentFactor(Number(e.target.value))}
-                      className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-neutral-200 accent-neutral-900"
+                      className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-neutral-200 dark:bg-neutral-700 accent-blue-600"
                       disabled={!isEditing}
                     />
-                    <span className="text-xs w-8 text-right font-medium">{adjustmentFactor}%</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <Input
+                        type="number"
+                        min={50}
+                        max={200}
+                        value={adjustmentFactor}
+                        onChange={(e) => setAdjustmentFactor(Math.max(1, Math.min(200, Number(e.target.value))))}
+                        className="w-14 h-7 text-center text-xs font-semibold px-1 py-0.5 rounded border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800"
+                        disabled={!isEditing}
+                      />
+                      <span className="text-xs font-semibold text-neutral-500">%</span>
+                    </div>
                   </div>
                 </div>
+
 
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-neutral-500">Location</span>
@@ -921,10 +1195,13 @@ export default function ProjectSetupRABPage() {
                 </button>
               </div>
             )}
-
           </div>
-        </div>
-      </PageWrapper>
+        )}
+      </div>
+    </PageWrapper>
+
+
+
 
       <RABDetailDrawer
         isOpen={!!selectedDetailItem}
@@ -946,7 +1223,19 @@ export default function ProjectSetupRABPage() {
         confirmVariant="danger"
       />
 
+      {createModalStage && (
+        <CreateVersionModal
+          isOpen={!!createModalStage}
+          onClose={() => setCreateModalStage(null)}
+          stage={createModalStage}
+          existingVersions={stageSummaries[createModalStage]?.availableVersions || []}
+          allStageVersions={versions}
+          onCreateVersion={handleCreateVersion}
+        />
+      )}
+
       <SaveFloatingToast status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: rabStatus })} />
+
     </>
 
   );

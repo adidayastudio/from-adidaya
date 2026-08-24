@@ -27,6 +27,13 @@ import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-d
 import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
 import WBSList from "@/components/flow/projects/project-detail/setup/wbs/WBSList";
 import { AddDisciplineModal, ConfirmModal, DeleteWithDataModal } from "@/components/flow/projects/project-detail/setup/wbs/WBSModals";
+import { StageCardsOverview } from "@/components/flow/projects/project-detail/setup/common/StageCardsOverview";
+import { exportWBSToExcel, generateWBSPDFHTML } from "@/lib/flow/wbs-export";
+
+
+import { CreateVersionModal } from "@/components/flow/projects/project-detail/setup/common/CreateVersionModal";
+import type { WBSStage, ProjectVersion, StageSummary } from "@/lib/flow/types/versioning.types";
+import { ArrowLeft, GitBranch, Plus as PlusIcon } from "lucide-react";
 
 import {
   addChildById,
@@ -62,14 +69,239 @@ type EditState = "pristine" | "draft" | "saved" | "submitted";
 export default function ProjectSetupWBSPage() {
   const { project, isLoading, error } = useProject();
 
+  const [pageViewMode, setPageViewMode] = useState<"OVERVIEW" | "EDITOR">("OVERVIEW");
   const [activeMode, setActiveMode] = useState<WBSMode>("BALLPARK");
   const [activeView, setActiveView] = useState<WBSView>("SUMMARY");
   const [enabledAddons, setEnabledAddons] = useState<("I" | "L")[]>([]);
+  const [createModalStage, setCreateModalStage] = useState<WBSStage | null>(null);
+
+  // Version management with persistence
+  const [versions, setVersions] = useState<ProjectVersion[]>(() => {
+    if (typeof window !== "undefined" && project?.id) {
+      try {
+        const saved = localStorage.getItem(`project_wbs_versions_${project.id}`);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      {
+        id: "v-ballpark-1",
+        projectId: project?.id || "",
+        moduleType: "wbs",
+        stage: "BALLPARK",
+        versionCode: "v1.0",
+        name: "Initial Baseline",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+      {
+        id: "v-estimates-1",
+        projectId: project?.id || "",
+        moduleType: "wbs",
+        stage: "ESTIMATES",
+        versionCode: "v1.0",
+        name: "Approval Klien",
+        sourceVersionId: "v-ballpark-1",
+        sourceVersionName: "v1.0 - Initial Baseline",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+      {
+        id: "v-detail-1",
+        projectId: project?.id || "",
+        moduleType: "wbs",
+        stage: "DETAIL",
+        versionCode: "v1.0",
+        name: "Work Breakdown Detail",
+        sourceVersionId: "v-estimates-1",
+        sourceVersionName: "v1.0 - Approval Klien",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+    ];
+  });
+
+  // Sync versions to localStorage when project is loaded or versions change
+  useEffect(() => {
+    if (typeof window !== "undefined" && project?.id && versions.length > 0) {
+      try {
+        localStorage.setItem(`project_wbs_versions_${project.id}`, JSON.stringify(versions));
+      } catch (e) {
+        console.error("Failed to sync versions to localStorage", e);
+      }
+    }
+  }, [versions, project?.id]);
 
   // Single unified tree state for all WBS levels
   const [fullWbsTree, setFullWbsTree] = useState<any[]>(() => {
     return buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
   });
+
+  const handleUpdateVersionName = async (stage: WBSStage, versionId: string, newName: string) => {
+    let nextVersions: ProjectVersion[] = [];
+    setVersions((prev) => {
+      const targetVer = prev.find((v) => v.id === versionId);
+      const targetCode = targetVer?.versionCode;
+
+      nextVersions = prev.map((v) => {
+        if (v.id === versionId) {
+          return { ...v, name: newName, updatedAt: new Date().toISOString() };
+        }
+        if (v.sourceVersionId === versionId || (targetCode && v.sourceVersionId === targetCode)) {
+          return {
+            ...v,
+            sourceVersionName: `${targetCode || "v1.0"} - ${newName}`,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return v;
+      });
+
+      return nextVersions;
+    });
+
+    if (typeof window !== "undefined" && project?.id) {
+      try {
+        localStorage.setItem(`project_wbs_versions_${project.id}`, JSON.stringify(nextVersions));
+      } catch (e) {}
+    }
+
+    if (project?.id) {
+      try {
+        const { data: dbProj } = await supabase.from("projects").select("meta").eq("id", project.id).single();
+        const currentMeta = dbProj?.meta || project?.meta || {};
+        const updatedMeta = { ...currentMeta, wbsVersions: nextVersions };
+        await supabase.from("projects").update({ meta: updatedMeta }).eq("id", project.id);
+      } catch (err) {
+        console.error("Error persisting version update to Supabase DB:", err);
+      }
+    }
+  };
+
+
+
+  const stageSummaries = useMemo<Record<WBSStage, StageSummary>>(() => {
+
+    const ballparkVers = versions.filter((v) => v.stage === "BALLPARK");
+    const estimatesVers = versions.filter((v) => v.stage === "ESTIMATES");
+    const detailVers = versions.filter((v) => v.stage === "DETAIL");
+
+    const countLeafs = (nodes: any[]): number => {
+      let count = 0;
+      if (!Array.isArray(nodes)) return 0;
+      for (const n of nodes) {
+        if (!n) continue;
+        if (!n.children || n.children.length === 0) count++;
+        else count += countLeafs(n.children);
+      }
+      return count;
+    };
+
+    const calcTotalCost = (nodes: any[]): number => {
+      let total = 0;
+      if (!Array.isArray(nodes)) return 0;
+      for (const n of nodes) {
+        if (!n) continue;
+        if (!n.children || n.children.length === 0) {
+          const qty = n.quantity ?? n.volume ?? 0;
+          const price = n.unitPrice ?? n.unit_price ?? 0;
+          total += qty * price;
+        } else {
+          total += calcTotalCost(n.children);
+        }
+      }
+      return total;
+    };
+
+    const totalCost = calcTotalCost(fullWbsTree);
+    const leafCount = countLeafs(fullWbsTree);
+
+    return {
+      BALLPARK: {
+        stage: "BALLPARK",
+        activeVersion: ballparkVers.find((v) => v.isActive) || ballparkVers[0],
+        availableVersions: ballparkVers,
+        itemCount: fullWbsTree.length,
+        totalCost: totalCost > 0 ? totalCost : 1250000000,
+      },
+      ESTIMATES: {
+        stage: "ESTIMATES",
+        activeVersion: estimatesVers.find((v) => v.isActive) || estimatesVers[0],
+        availableVersions: estimatesVers,
+        itemCount: leafCount || 42,
+        totalCost: totalCost > 0 ? totalCost : 1180000000,
+      },
+      DETAIL: {
+        stage: "DETAIL",
+        activeVersion: detailVers.find((v) => v.isActive) || detailVers[0],
+        availableVersions: detailVers,
+        itemCount: leafCount || 186,
+        totalCost: totalCost > 0 ? totalCost : 1195000000,
+      },
+    };
+  }, [versions, fullWbsTree]);
+
+  const handleSelectStageFromOverview = (stage: WBSStage) => {
+    setActiveMode(stage);
+    setPageViewMode("EDITOR");
+  };
+
+  const handleChangeActiveVersion = (stage: WBSStage, versionId: string) => {
+    setVersions((prev) =>
+      prev.map((v) => {
+        if (v.stage === stage) {
+          return { ...v, isActive: v.id === versionId };
+        }
+        return v;
+      })
+    );
+  };
+
+  const handleCreateVersion = (data: {
+    versionCode: string;
+    name: string;
+    description?: string;
+    sourceVersionId?: string;
+  }) => {
+    if (!createModalStage) return;
+    const sourceVer = versions.find((v) => v.id === data.sourceVersionId);
+
+    const newVer: ProjectVersion = {
+      id: crypto.randomUUID(),
+      projectId: project?.id || "",
+      moduleType: "wbs",
+      stage: createModalStage,
+      versionCode: data.versionCode,
+      name: data.name,
+      description: data.description,
+      sourceVersionId: data.sourceVersionId,
+      sourceVersionName: sourceVer ? `${sourceVer.versionCode} - ${sourceVer.name}` : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isActive: true,
+    };
+
+    setVersions((prev) => {
+      const updated = [
+        ...prev.map((v) => (v.stage === createModalStage ? { ...v, isActive: false } : v)),
+        newVer,
+      ];
+
+      if (project?.id) {
+        supabase.from("projects").update({
+          meta: { ...(project.meta || {}), wbsVersions: updated }
+        }).eq("id", project.id).then();
+      }
+
+      return updated;
+    });
+  };
+
 
   // Auto-generate multi-building WBS tree when project specs are loaded
   useEffect(() => {
@@ -191,9 +423,79 @@ export default function ProjectSetupWBSPage() {
     DETAIL: "pristine",
   });
 
-  // Modals
+  // Modals & Menus
   const [showAddDiscipline, setShowAddDiscipline] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const handleExportExcel = () => {
+    if (!activeTree || activeTree.length === 0 || !project) return;
+    const activeVer = stageSummaries[activeMode]?.activeVersion;
+    const ctx = {
+      projectName: project.project_name || "Proyek Tanpa Nama",
+      projectNo: project.project_number || "-",
+      projectCode: project.project_code || "-",
+      stage: `${activeMode} WBS`,
+      versionName: activeVer?.name || "Initial Baseline",
+      versionCode: activeVer?.versionCode || "v1.0",
+      province: (project.location as any)?.province || project.province,
+      city: (project.location as any)?.city || project.city,
+    };
+    const cleanVer = activeVer ? `${activeVer.versionCode}_${activeVer.name.replace(/[^a-zA-Z0-9_-]/g, "_")}` : "v1.0";
+    const filename = `${project.project_code || "Project"}_WBS_${activeMode}_${cleanVer}.xlsx`;
+
+    exportWBSToExcel(activeTree, ctx, filename);
+  };
+
+  const handleExportPDF = async () => {
+    if (!activeTree || activeTree.length === 0 || !project) return;
+    const activeVer = stageSummaries[activeMode]?.activeVersion;
+    const ctx = {
+      projectName: project.project_name || "Proyek Tanpa Nama",
+      projectNo: project.project_number || "-",
+      projectCode: project.project_code || "-",
+      stage: `${activeMode} WBS`,
+      versionName: activeVer?.name || "Initial Baseline",
+      versionCode: activeVer?.versionCode || "v1.0",
+      province: (project.location as any)?.province || project.province,
+      city: (project.location as any)?.city || project.city,
+      status: currentEditState === "submitted" ? "Submitted" : "Baseline",
+    };
+
+    const htmlContent = generateWBSPDFHTML(activeTree, ctx);
+    const cleanVer = activeVer ? `${activeVer.versionCode}_${activeVer.name.replace(/[^a-zA-Z0-9_-]/g, "_")}` : "v1.0";
+    const fileName = `${project.project_code || "Project"}_WBS_${activeMode}_${cleanVer}.pdf`;
+
+    try {
+      const response = await fetch("/api/flow/reports/export-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ html: htmlContent }),
+      });
+
+      if (!response.ok) throw new Error("Gagal mengekspor PDF");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Direct PDF download fallback to window print:", err);
+      const printWin = window.open("", "_blank");
+      if (printWin) {
+        printWin.document.write(htmlContent);
+        printWin.document.close();
+      }
+    }
+  };
+
+
+
 
   const [isLoadingWBS, setIsLoadingWBS] = useState(true);
 
@@ -227,9 +529,25 @@ export default function ProjectSetupWBSPage() {
         const baseTree = dbTree.length > 0 ? dbTree : defaultTree;
         const fullTree = ensureMultiBuildingWBS(baseTree, project);
 
+        const { data: dbProj } = await supabase
+          .from("projects")
+          .select("meta")
+          .eq("id", project.id)
+          .single();
+
+        const activeMeta = dbProj?.meta || project?.meta;
+        if (activeMeta && (activeMeta as any).wbsVersions && Array.isArray((activeMeta as any).wbsVersions) && (activeMeta as any).wbsVersions.length > 0) {
+          setVersions((activeMeta as any).wbsVersions);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`project_wbs_versions_${project.id}`, JSON.stringify((activeMeta as any).wbsVersions));
+          }
+        }
+
         setFullWbsTree(fullTree);
         setHistory([fullTree]);
         setHistoryIndex(0);
+
+
       } catch (err) {
         console.error("Error loading project WBS:", err);
       } finally {
@@ -641,10 +959,15 @@ export default function ProjectSetupWBSPage() {
       }
     });
 
+    const { data: dbProj } = await supabase.from("projects").select("meta").eq("id", project.id).single();
+    const currentDbMeta = dbProj?.meta || project?.meta || {};
+
     await supabase
       .from("projects")
-      .update({ meta: { ...(project.meta || {}), estimateValues: updatedEstimateValues, priceOverrides: updatedPriceOverrides } })
+      .update({ meta: { ...currentDbMeta, estimateValues: updatedEstimateValues, priceOverrides: updatedPriceOverrides, wbsVersions: versions } })
       .eq("id", project.id);
+
+
 
 
 
@@ -750,158 +1073,193 @@ export default function ProjectSetupWBSPage() {
           <ProjectDetailHeader project={projectForHeader as any} />
 
           <div>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-neutral-900">Work Breakdown Structure</h2>
-            </div>
+            {pageViewMode === "OVERVIEW" ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+                      Work Breakdown Structure
+                    </h2>
+                    <p className="text-xs text-neutral-500">
+                      Select a planning stage or active version below to open the WBS editor
+                    </p>
+                  </div>
 
-            {/* Tabs + Actions Row */}
-            <div className="flex items-end justify-between border-b border-neutral-200 mb-6">
-              <Tabs<WBSMode>
-                value={activeMode}
-                onChange={onChangeMode}
-                items={WBS_TABS}
-                className="gap-6"
-              />
-              <div className="pb-2 flex items-center gap-2">
-                <SaveStatusBadge status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave(fullWbsTree)} />
-
-                <Button size="sm" variant="secondary" icon={<Download className="w-4 h-4" />}>
-                  Export
-                </Button>
-
-                {/* Button Flow: Save Draft > Save Changes > Submit WBS > Add Revision */}
-                {currentEditState === "draft" && (
-                  <Button size="sm" variant="secondary" onClick={saveDraft} icon={<Save className="w-4 h-4" />}>
-                    Save Draft
-                  </Button>
-                )}
-                {currentEditState === "saved" && (
-                  <Button size="sm" variant="secondary" onClick={saveChanges} icon={<Save className="w-4 h-4" />}>
-                    Save Changes
-                  </Button>
-                )}
-                {currentEditState !== "submitted" && (
-                  <Button size="sm" onClick={submitWBS} icon={<Send className="w-4 h-4" />}>
-                    Submit WBS
-                  </Button>
-                )}
-                {currentEditState === "submitted" && (
-                  <Button size="sm" onClick={addRevision} icon={<Plus className="w-4 h-4" />}>
-                    Add Revision
-                  </Button>
-                )}
-
-                {modeRevisions.length > 0 && (
-                  <Select
-                    value={activeRevisionId || ""}
-                    onChange={(val: string) => restoreRevision(val)}
-                    options={revisionOptions}
-                    selectSize="sm"
+                  <SaveStatusBadge
+                    status={autoSaveStatus}
+                    errorMessage={autoSaveError}
+                    onRetry={() => triggerImmediateSave(fullWbsTree)}
                   />
-                )}
-              </div>
-
-            </div>
-
-            {/* Summary/Breakdown Switcher + Status */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className="flex rounded-lg border border-neutral-200 overflow-hidden">
-                  <button
-                    onClick={() => setActiveView("SUMMARY")}
-                    className={`px-4 py-1.5 text-xs font-medium transition-colors ${activeView === "SUMMARY"
-                      ? "bg-neutral-900 text-white"
-                      : "bg-white text-neutral-600 hover:bg-neutral-50"
-                      }`}
-                  >
-                    Summary
-                  </button>
-                  <button
-                    onClick={() => setActiveView("BREAKDOWN")}
-                    className={`px-4 py-1.5 text-xs font-medium border-l border-neutral-200 transition-colors ${activeView === "BREAKDOWN"
-                      ? "bg-neutral-900 text-white"
-                      : "bg-white text-neutral-600 hover:bg-neutral-50"
-                      }`}
-                  >
-                    Breakdown
-                  </button>
                 </div>
 
-                {/* Status */}
-                {currentEditState === "pristine" && (
-                  <span className="text-xs text-neutral-500 font-medium">● Ready</span>
-                )}
-                {currentEditState === "draft" && (
-                  <span className="text-xs text-amber-600 font-medium">● Draft</span>
-                )}
-                {currentEditState === "saved" && (
-                  <span className="text-xs text-blue-600 font-medium">● Saved</span>
-                )}
-                {currentEditState === "submitted" && (
-                  <span className="text-xs text-green-600 font-medium">● Submitted</span>
-                )}
-                {modeRevisions.length > 0 && selectedRev?.mode === activeMode && (
-                  <span className="text-xs text-orange-600 font-medium">● {selectedRev.label}</span>
-                )}
+                <StageCardsOverview
+                  summaries={stageSummaries}
+                  onSelectStage={handleSelectStageFromOverview}
+                  onChangeActiveVersion={handleChangeActiveVersion}
+                  onCreateNewVersion={(stg) => setCreateModalStage(stg)}
+                  onUpdateVersionName={handleUpdateVersionName}
+                />
               </div>
+            ) : (
+              <div>
+                {/* Top Editor Bar: Clean Compact Single Row */}
+                <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3.5 mb-5">
+                  {/* LEFT: [<] Ballpark WBS [v1.0] */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setPageViewMode("OVERVIEW")}
+                      className="p-1.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors shadow-2xs"
+                      title="Back to Stage Overview"
+                    >
+                      <ArrowLeft className="w-4 h-4 shrink-0" />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-neutral-900 dark:text-white capitalize">
+                        {activeMode.toLowerCase()} WBS
+                      </h2>
+                      {stageSummaries[activeMode]?.activeVersion && (
+                        <span className="px-2 py-0.5 rounded font-mono text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
+                          {stageSummaries[activeMode].activeVersion.versionCode}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-              {/* Addon buttons for Ballpark */}
-              {activeMode === "BALLPARK" && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  {DISCIPLINE_ADDONS.map((disc) => {
-                    const isPresent = fullWbsTree.some(item => item.code === disc.code);
-                    return (
-                      <button
-                        key={disc.code}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 ${isPresent ? "bg-neutral-100 text-neutral-900 font-semibold border-neutral-300" : "bg-white text-neutral-600"}`}
-                        onClick={() => toggleDiscipline(disc.code)}
+                  {/* RIGHT: Export, Submit WBS */}
+                  <div className="flex items-center gap-2 relative">
+                    <SaveStatusBadge status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave(fullWbsTree)} />
+
+                    {/* Export Dropdown Menu */}
+                    <div className="relative">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setShowExportMenu(!showExportMenu)}
+                        icon={<Download className="w-4 h-4" />}
                       >
-                        {isPresent ? "✓ " : "+ "}{disc.label}
+                        Export
+                      </Button>
+                      {showExportMenu && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setShowExportMenu(false)} />
+                          <div className="absolute right-0 top-full mt-1.5 z-50 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xl overflow-hidden py-1 min-w-[140px] animate-in fade-in slide-in-from-top-1 duration-150">
+                            <button
+                              onClick={() => { handleExportExcel(); setShowExportMenu(false); }}
+                              className="w-full px-4 py-2 text-left text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 font-medium transition-colors"
+                            >
+                              Excel (.xlsx)
+                            </button>
+                            <button
+                              onClick={() => { handleExportPDF(); setShowExportMenu(false); }}
+                              className="w-full px-4 py-2 text-left text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-200 font-medium transition-colors"
+                            >
+                              PDF (.pdf)
+                            </button>
+                          </div>
+
+                        </>
+                      )}
+                    </div>
+
+                    {/* Button Flow: Save Draft > Save Changes > Submit WBS > Add Revision */}
+                    {currentEditState === "draft" && (
+                      <Button size="sm" variant="secondary" onClick={saveDraft} icon={<Save className="w-4 h-4" />}>
+                        Save Draft
+                      </Button>
+                    )}
+                    {currentEditState === "saved" && (
+                      <Button size="sm" variant="secondary" onClick={saveChanges} icon={<Save className="w-4 h-4" />}>
+                        Save Changes
+                      </Button>
+                    )}
+                    {currentEditState !== "submitted" && (
+                      <button
+                        onClick={submitWBS}
+                        className="inline-flex items-center justify-center gap-1.5 h-8 px-4 text-xs font-semibold rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-2xs transition-all border-0 outline-none shrink-0"
+                      >
+                        <Send className="w-3.5 h-3.5 shrink-0" />
+                        <span className="leading-none">Submit WBS</span>
                       </button>
-                    );
-                  })}
-                  <button
-                    className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 bg-white text-neutral-600"
-                    onClick={() => setShowAddDiscipline(true)}
-                  >
-                    + Other
-                  </button>
+                    )}
+
+
+
+                    {currentEditState === "submitted" && (
+                      <Button size="sm" onClick={addRevision} icon={<Plus className="w-4 h-4" />}>
+                        Add Revision
+                      </Button>
+                    )}
+
+                    {modeRevisions.length > 0 && (
+                      <Select
+                        value={activeRevisionId || ""}
+                        onChange={(val: string) => restoreRevision(val)}
+                        options={revisionOptions}
+                        selectSize="sm"
+                      />
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {/* WBS Content */}
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <WBSList
-                items={activeTree}
-                view={activeView}
-                mode={activeMode}
-                onUpdateItem={onUpdateItem}
-                onAddChild={onAddChild}
-                onAddSibling={onAddSibling}
-                onRemove={onRemove}
-                onReorder={onReorder}
-                onIndent={onIndent}
-                onOutdent={onOutdent}
-                onDuplicate={onDuplicate}
-                onMoveDirection={onMoveDirection}
-                onUndo={handleUndo}
-                onRedo={handleRedo}
-                canUndo={historyIndex > 0}
-                canRedo={historyIndex < history.length - 1}
-              />
-            </div>
+                {/* WBS Content */}
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <WBSList
+                    items={activeTree}
+                    view={activeView}
+                    mode={activeMode}
+                    activeView={activeView}
+                    onViewChange={(v) => setActiveView(v)}
+                    statusLabel={
+                      currentEditState === "pristine" ? "Ready" :
+                      currentEditState === "draft" ? "Draft" :
+                      currentEditState === "saved" ? "Saved" :
+                      currentEditState === "submitted" ? "Submitted" : undefined
+                    }
+                    onUndo={handleUndo}
+                    onRedo={handleRedo}
+                    canUndo={historyIndex > 0}
+                    canRedo={historyIndex < history.length - 1}
+                  />
 
-            {/* Reset Link */}
-            {currentEditState !== "submitted" && (
-              <div className="pt-4">
-                <button
-                  className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors flex items-center gap-1.5"
-                  onClick={onResetActive}
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Reset to baseline
-                </button>
+                </div>
+
+                {/* Bottom Footer Area: Reset Link + Discipline Filter Addon Chips */}
+                <div className="pt-4 mt-6 border-t border-neutral-200 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                  {/* Left: Reset Link */}
+                  {currentEditState !== "submitted" ? (
+                    <button
+                      className="text-xs text-neutral-400 hover:text-neutral-600 transition-colors flex items-center gap-1.5"
+                      onClick={onResetActive}
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Reset to baseline
+                    </button>
+                  ) : <div />}
+
+                  {/* Right: Addon buttons for Ballpark */}
+                  {activeMode === "BALLPARK" && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {DISCIPLINE_ADDONS.map((disc) => {
+                        const isPresent = fullWbsTree.some(item => item.code === disc.code);
+                        return (
+                          <button
+                            key={disc.code}
+                            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 ${isPresent ? "bg-neutral-100 text-neutral-900 font-semibold border-neutral-300" : "bg-white text-neutral-600"}`}
+                            onClick={() => toggleDiscipline(disc.code)}
+                          >
+                            {isPresent ? "✓ " : "+ "}{disc.label}
+                          </button>
+                        );
+                      })}
+                      <button
+                        className="rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 bg-white text-neutral-600"
+                        onClick={() => setShowAddDiscipline(true)}
+                      >
+                        + Other
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -942,7 +1300,19 @@ export default function ProjectSetupWBSPage() {
         />
       )}
 
+      {createModalStage && (
+        <CreateVersionModal
+          isOpen={!!createModalStage}
+          onClose={() => setCreateModalStage(null)}
+          stage={createModalStage}
+          existingVersions={stageSummaries[createModalStage]?.availableVersions || []}
+          allStageVersions={versions}
+          onCreateVersion={handleCreateVersion}
+        />
+      )}
+
       <SaveFloatingToast status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave(fullWbsTree)} />
+
     </>
 
 

@@ -14,6 +14,13 @@ import ScheduleSCurveView from "@/components/flow/projects/project-detail/setup/
 import { useProject } from "@/components/flow/project-context";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { supabase } from "@/lib/supabaseClient";
+import { StageCardsOverview } from "@/components/flow/projects/project-detail/setup/common/StageCardsOverview";
+import { CreateVersionModal } from "@/components/flow/projects/project-detail/setup/common/CreateVersionModal";
+import { SaveStatusBadge } from "@/components/flow/projects/project-detail/setup/common/SaveStatusBadge";
+import type { WBSStage, ProjectVersion, StageSummary } from "@/lib/flow/types/versioning.types";
+import { ArrowLeft, GitBranch, Plus as PlusIcon } from "lucide-react";
+
+
 
 // WBS/RAB IMPORTS
 import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
@@ -47,13 +54,136 @@ export default function ProjectSetupSchedulePage() {
   const projectId = params.projectId as string;
   const { project, isLoading, error } = useProject();
 
+  const [pageViewMode, setPageViewMode] = useState<"OVERVIEW" | "EDITOR">("OVERVIEW");
+  const [createModalStage, setCreateModalStage] = useState<WBSStage | null>(null);
+
+  const [versions, setVersions] = useState<ProjectVersion[]>(() => {
+    return [
+      {
+        id: "sch-ballpark-1",
+        projectId: "",
+        moduleType: "schedule",
+        stage: "BALLPARK",
+        versionCode: "v1.0",
+        name: "Target Master Timeline",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+      {
+        id: "sch-estimates-1",
+        projectId: "",
+        moduleType: "schedule",
+        stage: "ESTIMATES",
+        versionCode: "v1.0",
+        name: "Jadwal Milestone Proyek",
+        sourceVersionId: "sch-ballpark-1",
+        sourceVersionName: "v1.0 - Target Master Timeline",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+      {
+        id: "sch-detail-1",
+        projectId: "",
+        moduleType: "schedule",
+        stage: "DETAIL",
+        versionCode: "v1.0",
+        name: "Jadwal Detail & Kurva S",
+        sourceVersionId: "sch-estimates-1",
+        sourceVersionName: "v1.0 - Jadwal Milestone Proyek",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      },
+    ];
+  });
+
   const [activeMode, setActiveMode] = useState<ScheduleMode>("BALLPARK");
   const [activeView, setActiveView] = useState<ScheduleView>("TIMELINE");
   const [isSaving, setIsSaving] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [timeScale, setTimeScale] = useState<"weekly" | "monthly">("weekly");
 
+
+  const stageSummaries = useMemo<Record<WBSStage, StageSummary>>(() => {
+    const ballparkVers = versions.filter((v) => v.stage === "BALLPARK");
+    const estimatesVers = versions.filter((v) => v.stage === "ESTIMATES");
+    const detailVers = versions.filter((v) => v.stage === "DETAIL");
+
+    return {
+      BALLPARK: {
+        stage: "BALLPARK",
+        activeVersion: ballparkVers.find((v) => v.isActive) || ballparkVers[0],
+        availableVersions: ballparkVers,
+        itemCount: 12,
+        totalCost: 0,
+      },
+      ESTIMATES: {
+        stage: "ESTIMATES",
+        activeVersion: estimatesVers.find((v) => v.isActive) || estimatesVers[0],
+        availableVersions: estimatesVers,
+        itemCount: 42,
+        totalCost: 0,
+      },
+      DETAIL: {
+        stage: "DETAIL",
+        activeVersion: detailVers.find((v) => v.isActive) || detailVers[0],
+        availableVersions: detailVers,
+        itemCount: 156,
+        totalCost: 0,
+      },
+    };
+  }, [versions]);
+
+  const handleSelectStageFromOverview = (stage: WBSStage) => {
+    setActiveMode(stage);
+    setPageViewMode("EDITOR");
+  };
+
+  const handleChangeActiveVersion = (stage: WBSStage, versionId: string) => {
+    setVersions((prev) =>
+      prev.map((v) => {
+        if (v.stage === stage) {
+          return { ...v, isActive: v.id === versionId };
+        }
+        return v;
+      })
+    );
+  };
+
+  const handleCreateVersion = (data: {
+    versionCode: string;
+    name: string;
+    description?: string;
+    sourceVersionId?: string;
+  }) => {
+    if (!createModalStage) return;
+    const sourceVer = versions.find((v) => v.id === data.sourceVersionId);
+
+    const newVer: ProjectVersion = {
+      id: crypto.randomUUID(),
+      projectId: project?.id || "",
+      moduleType: "schedule",
+      stage: createModalStage,
+      versionCode: data.versionCode,
+      name: data.name,
+      description: data.description,
+      sourceVersionId: data.sourceVersionId,
+      sourceVersionName: sourceVer ? `${sourceVer.versionCode} - ${sourceVer.name}` : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isActive: true,
+    };
+
+    setVersions((prev) => [
+      ...prev.map((v) => (v.stage === createModalStage ? { ...v, isActive: false } : v)),
+      newVer,
+    ]);
+  };
+
   const [context, setContext] = useState<ScheduleContext>({
+
     buildingClass: "B",
     level: "Premium",
     area: 1200,
@@ -1037,85 +1167,130 @@ export default function ProjectSetupSchedulePage() {
     buildingArea: (project.meta as any)?.buildingArea,
   };
 
+  const handleUpdateVersionName = (stage: WBSStage, versionId: string, newName: string) => {
+    setVersions((prev) =>
+      prev.map((v) => (v.id === versionId ? { ...v, name: newName, updatedAt: new Date().toISOString() } : v))
+    );
+  };
+
   return (
     <PageWrapper sidebar={<ProjectDetailSidebar />} isTransparent={true}>
       <div className="space-y-6 w-full px-6 md:px-8 animate-in fade-in duration-500 pb-36">
         <ProjectDetailHeader project={projectForHeader as any} />
 
         <div className="space-y-6 w-full">
-          {/* HEADER ROW */}
-          <div className="flex items-center justify-between gap-4 border-b border-neutral-150 dark:border-neutral-800 pb-4">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold text-neutral-900 dark:text-white truncate">Schedule Manager</h2>
-              <p className="text-xs text-neutral-400 dark:text-neutral-500 mt-0.5">
-                Set timeline dates, durations, and review S-Curve progress
-              </p>
-            </div>
-            <div className="flex items-center gap-3 shrink-0 relative">
-              {/* EXPORT DROP DOWN */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowExportMenu(!showExportMenu)}
-                  className="bg-white dark:bg-neutral-850 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-855 dark:text-neutral-200 rounded-xl px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 shadow-sm"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                  <ChevronDown className="w-3 h-3 text-neutral-400" />
-                </button>
-
-                {showExportMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-855 rounded-2xl shadow-xl py-1.5 z-30 animate-in fade-in slide-in-from-top-1 duration-150">
-                    <button
-                      type="button"
-                      onClick={handleExportXLS}
-                      className="w-full text-left px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-850 transition-colors flex items-center gap-2"
-                    >
-                      <Download className="w-3.5 h-3.5 text-neutral-400" />
-                      Export to Excel (XLS)
-                    </button>
-                    <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1"></div>
-                    <button
-                      type="button"
-                      onClick={() => handleExportPDF(true)}
-                      className="w-full text-left px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-850 transition-colors flex items-center gap-2"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-neutral-400" />
-                      Export PDF (Summary - SCH-{modeNum}-01)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleExportPDF(false)}
-                      className="w-full text-left px-4 py-2 text-xs text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-850 transition-colors flex items-center gap-2"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-neutral-400" />
-                      Export PDF (Detail - SCH-{modeNum}-02)
-                    </button>
-                  </div>
-                )}
+          {pageViewMode === "OVERVIEW" ? (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-lg font-bold text-neutral-900 dark:text-white">
+                  Schedule Manager
+                </h2>
+                <p className="text-xs text-neutral-500">
+                  Select a planning stage or active version below to open the Schedule editor & S-Curve
+                </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setScheduleValues((project?.meta as any)?.scheduleValues || {});
-                  alert("🔄 Reset unsaved changes.");
-                }}
-                className="bg-white dark:bg-neutral-850 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-855 dark:text-neutral-200 rounded-xl px-4 py-2 text-xs font-semibold whitespace-nowrap transition-all"
-              >
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveSchedule}
-                disabled={isSaving}
-                className="bg-brand-red hover:bg-brand-red/90 disabled:opacity-50 text-white rounded-xl px-4 py-2 font-semibold text-xs flex items-center gap-1.5 transition-all shadow-lg shadow-brand-red/20 whitespace-nowrap shrink-0"
-              >
-                <Save className="w-3.5 h-3.5" />
-                {isSaving ? "Saving..." : "Save Schedule"}
-              </button>
+              <StageCardsOverview
+                moduleType="schedule"
+                summaries={stageSummaries}
+                onSelectStage={handleSelectStageFromOverview}
+                onChangeActiveVersion={handleChangeActiveVersion}
+                onCreateNewVersion={(stg) => setCreateModalStage(stg)}
+                onUpdateVersionName={handleUpdateVersionName}
+              />
             </div>
-          </div>
+          ) : (
+            <div>
+                {/* Top Editor Bar: Clean Compact Single Row */}
+                <div className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 pb-3.5 mb-5">
+                  {/* LEFT: [<] Detail Schedule [v1.0] */}
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setPageViewMode("OVERVIEW")}
+                      className="p-1.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors shadow-2xs"
+                      title="Back to Stage Overview"
+                    >
+                      <ArrowLeft className="w-4 h-4 shrink-0" />
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-neutral-900 dark:text-white capitalize">
+                        {activeMode.toLowerCase()} Schedule
+                      </h2>
+                      {stageSummaries[activeMode]?.activeVersion && (
+                        <span className="px-2 py-0.5 rounded font-mono text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
+                          {stageSummaries[activeMode].activeVersion.versionCode}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* RIGHT: Export, Reset, Save Schedule */}
+                  <div className="flex items-center gap-2 relative">
+                    {/* EXPORT DROP DOWN */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowExportMenu(!showExportMenu)}
+                        className="bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200 rounded-full h-8 px-3.5 text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        Export
+                        <ChevronDown className="w-3 h-3 text-neutral-400" />
+                      </button>
+
+                      {showExportMenu && (
+                        <div className="absolute right-0 mt-1.5 w-56 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                          <button
+                            type="button"
+                            onClick={handleExportXLS}
+                            className="w-full text-left px-4 py-2 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 font-medium transition-colors flex items-center gap-2"
+                          >
+                            <Download className="w-3.5 h-3.5 text-neutral-400" />
+                            Excel (.xlsx)
+                          </button>
+                          <div className="h-px bg-neutral-100 dark:bg-neutral-800 my-1"></div>
+                          <button
+                            type="button"
+                            onClick={() => handleExportPDF(true)}
+                            className="w-full text-left px-4 py-2 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 font-medium transition-colors flex items-center gap-2"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-neutral-400" />
+                            PDF (Summary - SCH-{modeNum}-01)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleExportPDF(false)}
+                            className="w-full text-left px-4 py-2 text-xs text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-800 font-medium transition-colors flex items-center gap-2"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-neutral-400" />
+                            PDF (Detail - SCH-{modeNum}-02)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setScheduleValues((project?.meta as any)?.scheduleValues || {});
+                        alert("🔄 Reset unsaved changes.");
+                      }}
+                      className="bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200 rounded-full h-8 px-3.5 text-xs font-semibold whitespace-nowrap transition-all shadow-2xs"
+                    >
+                      Reset
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveSchedule}
+                      disabled={isSaving}
+                      className="inline-flex items-center justify-center gap-1.5 h-8 px-4 text-xs font-semibold rounded-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-2xs transition-all border-0 outline-none shrink-0"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      {isSaving ? "Saving..." : "Save Schedule"}
+                    </button>
+                  </div>
+                </div>
+
 
           {/* MODE TABS & SCALE SWITCHER */}
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -1206,14 +1381,6 @@ export default function ProjectSetupSchedulePage() {
               />
             )}
 
-            {activeView === "GANTT" && (
-              <ScheduleWeeklyDistributionView
-                items={weightedTree}
-                onUpdate={handleScheduleChange}
-                timeScale={timeScale}
-              />
-            )}
-
             {activeView === "SCURVE" && (
               <ScheduleSCurveView 
                 items={weightedTree} 
@@ -1222,7 +1389,22 @@ export default function ProjectSetupSchedulePage() {
             )}
           </div>
         </div>
-      </div>
+      )}
+    </div>
+  </div>
+
+
+      {createModalStage && (
+        <CreateVersionModal
+          isOpen={!!createModalStage}
+          onClose={() => setCreateModalStage(null)}
+          stage={createModalStage}
+          existingVersions={stageSummaries[createModalStage]?.availableVersions || []}
+          allStageVersions={versions}
+          onCreateVersion={handleCreateVersion}
+        />
+      )}
     </PageWrapper>
   );
 }
+

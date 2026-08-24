@@ -26,20 +26,32 @@ export async function POST(req: NextRequest) {
             });
         } else {
             const puppeteer = require("puppeteer");
-            browser = await puppeteer.launch({
-                headless: true,
-                args: [
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-accelerated-2d-canvas",
-                    "--no-first-run",
-                    "--no-zygote",
-                    "--single-process",
-                    "--disable-gpu",
-                ],
-            });
+            const fs = require("fs");
+            const macChromePath = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+
+            try {
+                browser = await puppeteer.launch({
+                    headless: true,
+                    args: [
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--disable-gpu",
+                    ],
+                });
+            } catch (pErr) {
+                if (fs.existsSync(macChromePath)) {
+                    browser = await puppeteer.launch({
+                        executablePath: macChromePath,
+                        headless: true,
+                        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+                    });
+                } else {
+                    throw pErr;
+                }
+            }
         }
+
 
         const page = await browser.newPage();
 

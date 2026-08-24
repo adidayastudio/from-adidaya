@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { CheckCircle2, Loader2, AlertCircle, CloudCheck } from "lucide-react";
 import type { SaveStatus } from "@/lib/hooks/useAutoSave";
 import clsx from "clsx";
@@ -12,6 +13,20 @@ interface SaveStatusProps {
 }
 
 export function SaveStatusBadge({ status, errorMessage, onRetry, className }: SaveStatusProps) {
+  const [showSavedBadge, setShowSavedBadge] = useState(false);
+
+  useEffect(() => {
+    if (status === "saved") {
+      setShowSavedBadge(true);
+      const timer = setTimeout(() => {
+        setShowSavedBadge(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowSavedBadge(false);
+    }
+  }, [status]);
+
   if (status === "saving") {
     return (
       <div className={clsx("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-200/80 font-medium animate-pulse", className)}>
@@ -43,15 +58,17 @@ export function SaveStatusBadge({ status, errorMessage, onRetry, className }: Sa
     );
   }
 
-  return (
-    <div className={clsx("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-medium", className)}>
-      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-      <span>Tersimpan</span>
-    </div>
-  );
-}
+  if (status === "saved" && showSavedBadge) {
+    return (
+      <div className={clsx("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-medium transition-all duration-300", className)}>
+        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+        <span>Tersimpan</span>
+      </div>
+    );
+  }
 
-import { useState, useEffect } from "react";
+  return null;
+}
 
 export function SaveFloatingToast({ status, errorMessage, onRetry }: SaveStatusProps) {
   const [showSavedToast, setShowSavedToast] = useState(false);
@@ -109,4 +126,3 @@ export function SaveFloatingToast({ status, errorMessage, onRetry }: SaveStatusP
 
   return null;
 }
-
