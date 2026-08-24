@@ -31,16 +31,43 @@ type Props = {
   total: number;
   area: number;
   mode: RABMode;
+  searchQuery?: string;
+  expandAllState?: boolean | null;
   onPriceCommit?: (code: string, value: number) => void;
   onEstimateCommit?: (code: string, value: { volume: number; unit: string; unitPrice: number }) => void;
   onSelect?: (item: RABItem, initialTab?: "BOQ" | "AHSP") => void;
 };
+
+function filterRABTree(items: RABItem[], query: string): RABItem[] {
+  if (!query.trim()) return items;
+  const q = query.toLowerCase().trim();
+
+  return items.reduce<RABItem[]>((acc, item) => {
+    const codeMatch = item.code?.toLowerCase().includes(q);
+    const nameEnMatch = item.nameEn?.toLowerCase().includes(q);
+    const nameIdMatch = item.nameId?.toLowerCase().includes(q) ?? false;
+    const notesMatch = item.notes?.toLowerCase().includes(q) ?? false;
+    const matchesSelf = codeMatch || nameEnMatch || nameIdMatch || notesMatch;
+
+    const filteredChildren = item.children ? filterRABTree(item.children, q) : [];
+
+    if (matchesSelf || filteredChildren.length > 0) {
+      acc.push({
+        ...item,
+        children: filteredChildren.length > 0 ? filteredChildren : item.children
+      });
+    }
+    return acc;
+  }, []);
+}
 
 export default function RABBreakdownTable({
   items,
   total,
   area,
   mode,
+  searchQuery = "",
+  expandAllState = null,
   onPriceCommit,
   onEstimateCommit,
   onSelect,
@@ -48,6 +75,9 @@ export default function RABBreakdownTable({
   const [includePPN, setIncludePPN] = useState(true);
   const [includeRounding, setIncludeRounding] = useState(false);
   const [roundingDigits, setRoundingDigits] = useState(3);
+
+  const filteredItems = filterRABTree(items, searchQuery);
+  const effectiveExpandAll = searchQuery.trim() ? true : expandAllState;
 
   const ppnAmount = includePPN ? Math.round(total * PPN_RATE) : 0;
   const subtotalAfterPPN = Math.round(total) + ppnAmount;
@@ -65,6 +95,7 @@ export default function RABBreakdownTable({
       </>
     ) : (
       <>
+        <td className={`${py} px-3`} />
         <td className={`${py} px-3`} />
         <td className={`${py} px-3`} />
         <td className={`${py} px-3`} />
@@ -135,15 +166,17 @@ export default function RABBreakdownTable({
           </tr>
 
           <RABBreakdownList
-            items={items}
+            items={filteredItems}
             level={0}
             total={total}
             area={area}
             mode={mode}
+            expandAllState={effectiveExpandAll}
             onPriceCommit={onPriceCommit}
             onEstimateCommit={onEstimateCommit}
             onSelect={onSelect}
           />
+
 
           {/* ===== PPN ROW (conditional) ===== */}
           {includePPN && (

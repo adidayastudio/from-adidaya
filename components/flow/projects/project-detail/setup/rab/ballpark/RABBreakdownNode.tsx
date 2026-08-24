@@ -12,6 +12,7 @@ type Props = {
   total: number; // total project (Rp) - only used for weighting in Ballpark
   area: number; // m²
   mode: RABMode;
+  expandAllState?: boolean | null;
   onPriceCommit?: (code: string, value: number) => void;
   onEstimateCommit?: (code: string, value: { volume: number; unit: string; unitPrice: number }) => void;
   onSelect?: (item: RABItem, initialTab?: "BOQ" | "AHSP") => void;
@@ -23,12 +24,20 @@ export default function RABBreakdownNode({
   total,
   area,
   mode,
+  expandAllState,
   onPriceCommit,
   onEstimateCommit,
   onSelect,
 }: Props) {
   const hasChildren = !!item.children?.length;
   const [open, setOpen] = useState(level === 0);
+
+  useEffect(() => {
+    if (expandAllState !== null && expandAllState !== undefined && hasChildren) {
+      setOpen(expandAllState);
+    }
+  }, [expandAllState, hasChildren]);
+
 
   /* ===============================
      CALCULATIONS
@@ -345,7 +354,9 @@ export default function RABBreakdownNode({
           total={total}
           area={area}
           mode={mode}
+          expandAllState={expandAllState}
           onPriceCommit={onPriceCommit}
+
           onEstimateCommit={onEstimateCommit}
           onSelect={onSelect}
         />

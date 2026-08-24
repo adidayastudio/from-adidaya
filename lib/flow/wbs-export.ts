@@ -173,6 +173,18 @@ export function generateWBSPDFHTML(
     `;
   }).join('');
 
+  const getRevString = (verCode?: string): string => {
+    if (!verCode) return "00";
+    const match = verCode.match(/v?(\d+)/i);
+    if (match && match[1]) {
+      const num = parseInt(match[1], 10);
+      const revNum = Math.max(0, num - 1);
+      return String(revNum).padStart(2, "0");
+    }
+    return "00";
+  };
+  const revString = getRevString(context.versionCode);
+
   pagesHTML += `
     <div class="pdf-page">
       <!-- HEADER -->
@@ -185,20 +197,20 @@ export function generateWBSPDFHTML(
           </div>
           <div class="header-divider"></div>
           <div class="header-info">
-            <div class="info-group">
-              <span class="info-label">PROYEK</span>
+            <div class="info-group-block">
+              <div class="info-label">PROYEK</div>
               <div class="info-value-project">
                 <span class="project-code-badge">${context.projectCode || "PRG"}</span>
                 <span class="project-name-text">${context.projectName}</span>
               </div>
             </div>
-            <div class="info-group">
-              <span class="info-label">LOKASI</span>
-              <span class="info-value-text">${context.province || "DKI Jakarta"}${context.city ? ', ' + context.city : ''}</span>
+            <div class="info-group-block">
+              <div class="info-label">LOKASI</div>
+              <div class="info-value-text">${context.province || "DKI Jakarta"}${context.city ? ', ' + context.city : ''}</div>
             </div>
-            <div class="info-group">
-              <span class="info-label">TAHAPAN WBS</span>
-              <span class="info-value-text font-bold" style="color: #2563eb;">${context.stage}</span>
+            <div class="info-group-block">
+              <div class="info-label">TAHAPAN WBS</div>
+              <div class="info-value-text font-bold" style="color: #2563eb;">${context.stage}</div>
             </div>
           </div>
         </div>
@@ -219,11 +231,12 @@ export function generateWBSPDFHTML(
             </div>
             <div class="footer-col-right">
               <div class="footer-label">REV</div>
-              <div class="footer-val">00</div>
+              <div class="footer-val">${revString}</div>
             </div>
           </div>
         </div>
       </div>
+
 
       <!-- PREMIUM METRICS ROW -->
       <div class="metrics-container">
@@ -441,23 +454,22 @@ export function generateWBSPDFHTML(
         .header-divider {
           width: 1px;
           height: 42px;
-          background-color: #ef4444;
+          background-color: #e5e7eb;
         }
         .header-info {
           display: flex;
           flex-direction: column;
-          gap: 3px;
+          gap: 6px;
         }
-        .info-group {
+        .info-group-block {
           display: flex;
-          align-items: center;
-          gap: 8px;
+          flex-direction: column;
+          gap: 2px;
         }
         .info-label {
           font-size: 7px;
           font-weight: 750;
           color: #9ca3af;
-          width: 85px;
           letter-spacing: 0.5px;
           text-transform: uppercase;
         }
@@ -473,7 +485,7 @@ export function generateWBSPDFHTML(
           font-weight: 800;
           padding: 1px 5px;
           border-radius: 3px;
-          font-family: monospace;
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         }
         .project-name-text {
           font-size: 11px;
@@ -541,7 +553,7 @@ export function generateWBSPDFHTML(
           text-align: center;
           padding: 4px 0;
           letter-spacing: 0.5px;
-          font-family: monospace;
+          font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         }
         .card-footer-section {
           padding: 6px 10px 8px 10px;
@@ -610,14 +622,15 @@ export function generateWBSPDFHTML(
           margin-top: 10px;
         }
         table.wbs-table th {
-          background-color: #f3f4f6;
-          color: #374151;
+          background-color: #111827;
+          color: #ffffff;
           font-weight: 700;
           padding: 8px 10px;
-          border-top: 1px solid #d1d5db;
-          border-bottom: 2px solid #d1d5db;
+          border-top: 1px solid #111827;
+          border-bottom: 2px solid #111827;
           text-align: left;
         }
+
         tr {
           page-break-inside: avoid;
         }

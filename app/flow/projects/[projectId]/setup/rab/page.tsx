@@ -10,7 +10,7 @@ import { Tabs } from "@/shared/ui/layout/Tabs";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { Select } from "@/shared/ui/primitives/select/select";
 import { Input } from "@/shared/ui/primitives/input/input";
-import { Download, Save, Plus, Send, RotateCcw } from "lucide-react";
+import { Download, Save, Plus, Send, RotateCcw, Search, Maximize2, Minimize2, Undo2, Redo2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAutoSave } from "@/lib/hooks/useAutoSave";
 import { SaveStatusBadge, SaveFloatingToast } from "@/components/flow/projects/project-detail/setup/common/SaveStatusBadge";
@@ -18,6 +18,7 @@ import { StageCardsOverview } from "@/components/flow/projects/project-detail/se
 import { CreateVersionModal } from "@/components/flow/projects/project-detail/setup/common/CreateVersionModal";
 import type { WBSStage, ProjectVersion, StageSummary } from "@/lib/flow/types/versioning.types";
 import { ArrowLeft, GitBranch, Plus as PlusIcon } from "lucide-react";
+
 
 
 
@@ -268,6 +269,9 @@ export default function ProjectSetupRABPage() {
 
   const [pageViewMode, setPageViewMode] = useState<"OVERVIEW" | "EDITOR">("OVERVIEW");
   const [createModalStage, setCreateModalStage] = useState<WBSStage | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [expandAllState, setExpandAllState] = useState<boolean | null>(null);
+
 
   const [versions, setVersions] = useState<ProjectVersion[]>(() => {
     if (typeof window !== "undefined" && projectId) {
@@ -355,6 +359,12 @@ export default function ProjectSetupRABPage() {
     setAdjustmentFactor(100);
     setRabStatus("draft");
   }
+
+  const canUndo = !isPristine;
+  const canRedo = false;
+  const undo = () => doReset();
+  const redo = () => {};
+
 
 
 
@@ -1013,11 +1023,11 @@ export default function ProjectSetupRABPage() {
             <div className="space-y-4">
 
 
-            {/* ===== CONTEXT BAR ===== */}
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-neutral-50 p-4">
+            {/* ===== CARD 1: CONTEXT PARAMETERS BAR ===== */}
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-4 shadow-2xs">
               <div className="flex flex-wrap items-center gap-6">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-neutral-500">Class</span>
+                  <span className="text-xs text-neutral-500 font-medium">Class</span>
                   <Select
                     value={context.buildingClass}
                     options={[
@@ -1036,7 +1046,7 @@ export default function ProjectSetupRABPage() {
                     disabled={!isEditing}
                   />
 
-                  <span className="text-xs text-neutral-500">Level</span>
+                  <span className="text-xs text-neutral-500 font-medium">Level</span>
                   <Select
                     value={derivedLevel}
                     options={[
@@ -1051,7 +1061,7 @@ export default function ProjectSetupRABPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-neutral-500">Area</span>
+                  <span className="text-xs text-neutral-500 font-medium">Area</span>
                   <Input
                     type="number"
                     inputSize="sm"
@@ -1068,8 +1078,8 @@ export default function ProjectSetupRABPage() {
                   <span className="text-xs text-neutral-400">m²</span>
                 </div>
 
-                <div className="flex items-center gap-2 border-l pl-4">
-                  <span className="text-xs text-neutral-500">Price Adjustment</span>
+                <div className="flex items-center gap-2 border-l border-neutral-200 dark:border-neutral-800 pl-4">
+                  <span className="text-xs text-neutral-500 font-medium">Price Adjustment</span>
                   <div className="flex items-center gap-2 w-44">
                     <Input
                       type="range"
@@ -1096,10 +1106,8 @@ export default function ProjectSetupRABPage() {
                   </div>
                 </div>
 
-
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-neutral-500">Location</span>
-
+                  <span className="text-xs text-neutral-500 font-medium">Location</span>
                   <Select
                     value={context.province}
                     options={provinceOptions}
@@ -1114,7 +1122,6 @@ export default function ProjectSetupRABPage() {
                     disabled={!isEditing}
                   />
 
-
                   <Select
                     value={context.city}
                     options={cityOptions}
@@ -1127,31 +1134,94 @@ export default function ProjectSetupRABPage() {
                       }))
                     }
                   />
-
                 </div>
               </div>
+            </div>
 
-              <div className="flex overflow-hidden rounded-md border">
+            {/* ===== CARD 2: TOOLBAR CONTROLS BAR (LIKE WBS) ===== */}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 shadow-2xs">
+              {/* Left: Summary / Breakdown Pill */}
+              <div className="flex items-center gap-1.5 border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-full">
                 <button
                   onClick={() => setActiveView("SUMMARY")}
-                  className={`px-4 py-2 text-xs ${activeView === "SUMMARY"
-                    ? "bg-neutral-900 text-white"
-                    : "bg-white"
-                    }`}
+                  className={`px-4 py-1 text-xs font-semibold rounded-full transition-all ${
+                    activeView === "SUMMARY"
+                      ? "bg-blue-600 text-white shadow-2xs font-bold"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
                 >
                   Summary
                 </button>
                 <button
                   onClick={() => setActiveView("BREAKDOWN")}
-                  className={`border-l px-4 py-2 text-xs ${activeView === "BREAKDOWN"
-                    ? "bg-neutral-900 text-white"
-                    : "bg-white"
-                    }`}
+                  className={`px-4 py-1 text-xs font-semibold rounded-full transition-all ${
+                    activeView === "BREAKDOWN"
+                      ? "bg-blue-600 text-white shadow-2xs font-bold"
+                      : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white"
+                  }`}
                 >
                   Breakdown
                 </button>
               </div>
+
+
+              {/* Right: Search, Undo/Redo, Expand/Collapse */}
+              <div className="flex items-center gap-2 flex-wrap ml-auto">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search RAB item..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-48 sm:w-60 h-8 pl-8 pr-3 text-xs bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-neutral-900 dark:text-white placeholder:text-neutral-400 shadow-2xs transition-all"
+                  />
+                </div>
+
+                {/* Undo / Redo */}
+                <div className="flex items-center border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 rounded-full p-0.5 shadow-2xs shrink-0">
+                  <button
+                    disabled={!canUndo}
+                    onClick={undo}
+                    className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                    title="Undo"
+                  >
+                    <Undo2 className="w-3.5 h-3.5" />
+                  </button>
+                  <div className="w-px h-3 bg-neutral-200 dark:bg-neutral-700" />
+                  <button
+                    disabled={!canRedo}
+                    onClick={redo}
+                    className="w-6 h-6 rounded-full flex items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 transition-colors disabled:opacity-30 disabled:hover:bg-transparent"
+                    title="Redo"
+                  >
+                    <Redo2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Expand / Collapse All */}
+                <button
+                  type="button"
+                  onClick={() => setExpandAllState(true)}
+                  className="px-3 py-1 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-[11px] font-semibold text-neutral-700 dark:text-neutral-200 flex items-center gap-1 transition-colors shadow-2xs shrink-0"
+                  title="Expand All"
+                >
+                  <Maximize2 className="w-3 h-3 text-neutral-500 shrink-0" />
+                  <span className="leading-none">Expand All</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpandAllState(false)}
+                  className="px-3 py-1 rounded-full border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-[11px] font-semibold text-neutral-700 dark:text-neutral-200 flex items-center gap-1 transition-colors shadow-2xs shrink-0"
+                  title="Collapse All"
+                >
+                  <Minimize2 className="w-3 h-3 text-neutral-500 shrink-0" />
+                  <span className="leading-none">Collapse All</span>
+                </button>
+              </div>
             </div>
+
 
             {/* ===== CONTENT ===== */}
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -1173,6 +1243,8 @@ export default function ProjectSetupRABPage() {
                   total={totalProjectCost}
                   area={safeArea}
                   mode={activeMode}
+                  searchQuery={searchQuery}
+                  expandAllState={expandAllState}
                   onPriceCommit={isEditing ? onPriceCommit : undefined}
                   onEstimateCommit={isEditing ? onEstimateCommit : undefined}
                   onSelect={(item, tab) => {
@@ -1180,6 +1252,7 @@ export default function ProjectSetupRABPage() {
                     setActiveDrawerTab(tab || "BOQ");
                   }}
                 />
+
               )}
             </div>
 

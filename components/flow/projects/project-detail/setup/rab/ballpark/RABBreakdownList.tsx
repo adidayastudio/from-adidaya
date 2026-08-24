@@ -11,6 +11,7 @@ type Props = {
   total: number;
   area: number;
   mode: RABMode;
+  expandAllState?: boolean | null;
   onPriceCommit?: (code: string, value: number) => void;
   onEstimateCommit?: (code: string, value: { volume: number; unit: string; unitPrice: number }) => void;
   onSelect?: (item: RABItem, initialTab?: "BOQ" | "AHSP") => void;
@@ -22,6 +23,7 @@ export default function RABBreakdownList({
   total,
   area,
   mode,
+  expandAllState,
   onPriceCommit,
   onEstimateCommit,
   onSelect,
@@ -36,6 +38,7 @@ export default function RABBreakdownList({
           total={total}
           area={area}
           mode={mode}
+          expandAllState={expandAllState}
           onPriceCommit={onPriceCommit}
           onEstimateCommit={onEstimateCommit}
           onSelect={onSelect}
@@ -44,3 +47,4 @@ export default function RABBreakdownList({
     </>
   );
 }
+
