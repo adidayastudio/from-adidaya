@@ -169,16 +169,19 @@ function distributePerM2ToChildren(
  *   BUT UI totals must use getNodeTotalPerM2() (sum leaf) — as you already do.
  */
 function buildNode(item: WBSItem, portionPerM2: number, rabClass: RABClass): RABItem {
-  const hasChildren = !!item.children?.length;
+  const itemCode = item?.code || "";
+  const hasChildren = !!item?.children?.length;
+  const nameEn = item?.nameEn || (item as any)?.name_en || (item as any)?.name || (item as any)?.title || itemCode;
+  const nameId = item?.nameId || (item as any)?.name_id || "";
 
   if (!hasChildren) {
     // ✅ leaf: deterministic naturalize ONCE (safe for SSR/CSR)
-    const leaf = naturalizeStableLeaf(item.code, portionPerM2);
+    const leaf = naturalizeStableLeaf(itemCode, portionPerM2);
     return {
-      code: item.code,
-      nameEn: item.nameEn,
-      nameId: item.nameId,
-      notes: (item as any).notes,
+      code: itemCode,
+      nameEn,
+      nameId,
+      notes: (item as any)?.notes,
       unitPrice: leaf, // per m²
       children: [],
     };
@@ -190,10 +193,10 @@ function buildNode(item: WBSItem, portionPerM2: number, rabClass: RABClass): RAB
   );
 
   return {
-    code: item.code,
-    nameEn: item.nameEn,
-    nameId: item.nameId,
-    notes: (item as any).notes,
+    code: itemCode,
+    nameEn,
+    nameId,
+    notes: (item as any)?.notes,
     unitPrice: portionPerM2, // raw container per m²
     children,
   };
@@ -214,34 +217,68 @@ export function buildRABFromWBS({
   rf: number;
   df: number;
 }): RABItem[] {
-  return wbs.map((root) => {
-    // Check if root is a Level 0 Building Mass Container (children are SAMIL disciplines like A.S, A.A, A.M, A.I, A.L)
-    const isBuildingMassContainer = !!root.children?.some((child) => {
-      const childSub = child.code.replace(/^[A-Z]\./, "");
-      return ["S", "A", "M", "I", "L"].includes(childSub) || ["S", "A", "M", "I", "L"].includes(child.code);
-    });
+  if (!Array.isArray(wbs)) return [];
 
-    if (isBuildingMassContainer && root.children?.length) {
-      const children = root.children.map((child) => {
-        const childSamilCode = child.code.split(".").pop()!;
-        const childBasePerM2 = getBasePerM2FromBallpark(childSamilCode, rabClass);
-        const childRootPerM2 = applyRfDf(childBasePerM2, rf, df);
-        return buildNode(child, childRootPerM2, rabClass);
+  return wbs
+    .filter((root): root is WBSItem => !!root && typeof root === "object")
+    .map((root) => {
+      const rootCode = root.code || "";
+      // Check if root is a Level 0 Building Mass Container (children are SAMIL disciplines like A.S, A.A, A.M, A.I, A.L)
+      const isBuildingMassContainer = !!root.children?.some((child) => {
+        if (!child || !child.code) return false;
+        const childSub = child.code.replace(/^[A-Z]\./, "");
+        return ["S", "A", "M", "I", "L"].includes(childSub) || ["S", "A", "M", "I", "L"].includes(child.code);
       });
 
+      if (isBuildingMassContainer && root.children?.length) {
+        const children = root.children
+          .filter((child): child is WBSItem => !!child && typeof child === "object")
+          .map((child) => {
+            const childCode = child.code || "";
+            const childSamilCode = childCode.includes(".") ? childCode.split(".").pop()! : childCode;
+            const childBasePerM2 = getBasePerM2FromBallpark(childSamilCode, rabClass);
+            const childRootPerM2 = applyRfDf(childBasePerM2, rf, df);
+            return buildNode(child, childRootPerM2, rabClass);
+          });
+
+        return {
+          code: rootCode,
+          nameEn: root.nameEn || (root as any).name_en || (root as any).name || (root as any).title || rootCode,
+          nameId: root.nameId || (root as any).name_id || "",
+          notes: (root as any).notes,
+          unitPrice: 0,
+          children,
+        };
+      }
+
+      const cleanCode = rootCode.includes(".") ? rootCode.split(".").pop()! : rootCode;
+      const basePerM2 = getBasePerM2FromBallpark(cleanCode, rabClass);
+      const rootPerM2 = applyRfDf(basePerM2, rf, df);
+      return buildNode(root, rootPerM2, rabClass);
+    });
+}
+
+export function applyPriceOverrides(
+  tree: RABItem[],
+  overrides: Record<string, number>
+): RABItem[] {
+  function walk(node: RABItem): RABItem {
+    const children = node.children ?? [];
+
+    if (children.length === 0) {
+      const v = overrides[node.code];
       return {
-        code: root.code,
-        nameEn: root.nameEn,
-        nameId: root.nameId,
-        notes: (root as any).notes,
-        unitPrice: 0,
-        children,
+        ...node,
+        unitPrice: Number.isFinite(v) ? v : node.unitPrice,
+        children: [],
       };
     }
 
-    const cleanCode = root.code.includes(".") ? root.code.split(".").pop()! : root.code;
-    const basePerM2 = getBasePerM2FromBallpark(cleanCode, rabClass);
-    const rootPerM2 = applyRfDf(basePerM2, rf, df);
-    return buildNode(root, rootPerM2, rabClass);
-  });
+    return {
+      ...node,
+      children: children.map(walk),
+    };
+  }
+
+  return tree.map(walk);
 }

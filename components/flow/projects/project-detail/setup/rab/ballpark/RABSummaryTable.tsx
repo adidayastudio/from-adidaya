@@ -113,13 +113,15 @@ export default function RABSummaryTable({
     );
 
   return (
-    <div className="w-full text-xs">
+    <div className="w-full text-xs rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-2xs overflow-hidden">
       <table className="w-full border-collapse">
+
         <thead className="sticky top-0 bg-neutral-50 z-10">
           <tr className="border-b border-neutral-200 text-neutral-500 font-medium">
             <th className="w-8 py-3 px-3" />
             <th className="py-3 px-3 text-left w-20">Code</th>
-            <th className="py-3 px-3 text-left">Item</th>
+            <th className="py-3 px-3 text-left w-full min-w-[200px]">Item</th>
+
             {mode === "BALLPARK" && (
               <>
                 <th className="py-3 px-3 text-right whitespace-nowrap min-w-[140px]">Price / m²</th>

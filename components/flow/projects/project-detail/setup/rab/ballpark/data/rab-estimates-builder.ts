@@ -59,26 +59,46 @@ export function buildRABEstimates(
     return wbsTree.map(node => processNode(node, values, context));
 }
 
+function getEstimateValueForNode(code: string, values: EstimateValues): EstimateValue | undefined {
+    if (!code || !values) return undefined;
+    if (values[code]) return values[code];
+
+    // Try stripping leading building mass letter: "A.S.1.1" -> "S.1.1" or "A.1.1" -> "1.1"
+    const withoutMass = code.replace(/^[A-Z]\./, "");
+    if (values[withoutMass]) return values[withoutMass];
+
+    // Try stripping leading discipline letter: "S.1.1" -> "1.1"
+    const withoutDiscipline = code.replace(/^[A-Z]\./, "");
+    if (values[withoutDiscipline]) return values[withoutDiscipline];
+
+    // Try stripping both mass & discipline: "A.S.1.1" -> "1.1"
+    const strippedBoth = code.replace(/^[A-Z]\.([A-Z]\.)?/, "");
+    if (values[strippedBoth]) return values[strippedBoth];
+
+    // Try matching numeric portion: "A.3.1.1.1.5.1" -> "3.1.1.1.5.1"
+    const numMatch = code.match(/\d+(\.\d+)*/);
+    if (numMatch && values[numMatch[0]]) return values[numMatch[0]];
+
+    return undefined;
+}
+
 function processNode(node: any, values: EstimateValues, context: EstimateContext): RABItem {
     const { rabClass, rf, df, adjustmentFactor } = context;
 
-    // 1. Calculate Default Price (Adjusted)
-    const basePrice = node.unitPrice ?? node.price ?? 0;
-    const adjustedDefaultPrice = Math.round(basePrice * rf * df * (adjustmentFactor / 100));
+    const classFactor = CLASS_FACTORS[rabClass] || 1.0;
     const defaultUnit = node.unit || "m³";
 
-    // 2. Resolve final EstimateValue
-    const strippedCode = (node.code || "").replace(/^[A-Z]\./, "");
-    const existingVal = values[node.code] || values[strippedCode];
+    // 1. Resolve final EstimateValue
+    const code = node.code || "";
+    const existingVal = getEstimateValueForNode(code, values);
     const nodeDefaultVolume = node.quantity ?? node.volume ?? 0;
 
     const resolvedVolume = (existingVal?.volume !== undefined && existingVal?.volume !== 0)
         ? existingVal.volume
         : nodeDefaultVolume;
 
-    const resolvedUnitPrice = (existingVal?.unitPrice !== undefined && existingVal?.unitPrice !== 0)
-        ? existingVal.unitPrice
-        : (adjustedDefaultPrice !== 0 ? adjustedDefaultPrice : (node.unitPrice || 0));
+    const baseUnitPrice = existingVal?.unitPrice ?? node.unitPrice ?? node.price ?? 0;
+    const resolvedUnitPrice = Math.round(baseUnitPrice * classFactor * rf * df * (adjustmentFactor / 100));
 
     const resolvedUnit = existingVal?.unit || defaultUnit;
 
@@ -87,6 +107,8 @@ function processNode(node: any, values: EstimateValues, context: EstimateContext
         unit: resolvedUnit,
         unitPrice: resolvedUnitPrice,
     };
+
+
 
     // Recursively process children
     const childItems = node.children ? node.children.map((child: any) => processNode(child, values, context)) : [];
@@ -103,8 +125,8 @@ function processNode(node: any, values: EstimateValues, context: EstimateContext
         id: node.id,
         projectId: node.project_id || node.projectId,
         code: node.code,
-        nameEn: node.nameEn,
-        nameId: node.nameId,
+        nameEn: node.nameEn || node.name_en || node.name || node.title || node.code || "",
+        nameId: node.nameId || node.name_id || "",
         unitPrice: customVal.unitPrice,
         volume: customVal.volume,
         unit: customVal.unit,

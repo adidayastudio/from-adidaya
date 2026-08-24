@@ -170,7 +170,7 @@ export default function ProjectSetupRABPage() {
 
   const [context, setContext] = useState<RABContext>({
     buildingClass: ((project?.meta as any)?.rabClass || project?.rabClass || "B") as any,
-    area: 1200,
+    area: 1000,
     province: "DKI Jakarta",
     city: "Jakarta Selatan",
     rf: 1,
@@ -185,11 +185,11 @@ export default function ProjectSetupRABPage() {
     if (!project) return;
 
     // Parse area "1,500 m2" -> 1500
-    let area = 1200;
+    let area = 1000;
     const rawArea = (project.meta as any)?.buildingArea || (project as any).buildingArea;
     if (rawArea) {
       const num = parseInt(String(rawArea).replace(/\D/g, ""));
-      if (!isNaN(num)) area = num;
+      if (!isNaN(num) && num > 0) area = num;
     }
 
     setContext(prev => ({
@@ -199,6 +199,7 @@ export default function ProjectSetupRABPage() {
       province: project.province || "DKI Jakarta",
       city: project.city || "Jakarta Selatan"
     }));
+
 
     const meta = project.meta as any;
     if (meta) {

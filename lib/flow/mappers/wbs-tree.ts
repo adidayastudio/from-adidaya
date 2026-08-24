@@ -121,29 +121,34 @@ export function buildWBSTree(items: any[]): WBSNode[] {
 }
 
 export function ensureMultiBuildingWBS(wbsTree: any[], project: any): any[] {
-    const count = project?.building_mass_count || (project?.meta as any)?.buildingMassCount || (Array.isArray((project?.meta as any)?.buildingMasses) ? (project?.meta as any)?.buildingMasses.length : 1);
     let masses = project?.building_masses || (project?.meta as any)?.buildingMasses || [];
 
-    if (!Array.isArray(masses) || masses.length === 0) {
-        if (count > 1) {
-            masses = [
-                { code: "A", name: "Main Building" },
-                { code: "B", name: "Massa B" },
-                { code: "C", name: "Site Work", isSiteWork: true }
-            ];
-        }
+    if (!Array.isArray(masses)) masses = [];
+
+    const effectiveCount = masses.length > 0 ? masses.length : ((project?.meta as any)?.buildingMassCount || project?.building_mass_count || 1);
+
+    if (masses.length === 0 && effectiveCount > 1) {
+        masses = [
+            { code: "A", name: "Main Building" },
+            { code: "B", name: "Massa B" },
+            { code: "C", name: "Site Work", isSiteWork: true }
+        ];
     }
 
-    if (count <= 1 || masses.length === 0) {
+    if (masses.length <= 1) {
         return wbsTree;
     }
 
-    // Check if wbsTree is ALREADY multi-building (roots match building mass codes)
-    const isAlreadyMultiBuilding = wbsTree.some((root) => masses.some((m: any) => m.code === root.code));
+    // Check if wbsTree is ALREADY multi-building (multiple root codes match building mass codes)
+    const massCodes = new Set(masses.map((m: any) => m.code));
+    const matchingRootsCount = wbsTree.filter((root) => massCodes.has(root.code)).length;
+    const isAlreadyMultiBuilding = matchingRootsCount >= 2;
 
     if (isAlreadyMultiBuilding) {
         return wbsTree;
     }
+
+
 
     // Legacy single building tree -> wrap all existing items into Massa A, Massa B, Massa C...
     return masses.map((mass: any, idx: number) => {
@@ -177,6 +182,7 @@ export function ensureMultiBuildingWBS(wbsTree: any[], project: any): any[] {
         };
     });
 }
+
 
 export function mergeWBSTrees(dbTree: any[], defaultTree: any[]): any[] {
     if (!dbTree || dbTree.length === 0) return defaultTree;

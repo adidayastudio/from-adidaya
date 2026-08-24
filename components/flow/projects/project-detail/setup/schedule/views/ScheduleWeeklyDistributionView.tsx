@@ -193,7 +193,7 @@ export default function ScheduleWeeklyDistributionView({ items, onUpdate, timeSc
         {/* Table Pinned Header */}
         <div className="bg-neutral-50 dark:bg-neutral-950/80 border-b border-neutral-200 dark:border-neutral-800 h-10 px-3 flex items-center font-bold text-neutral-505 uppercase tracking-wider text-[9px] shrink-0 sticky top-0 z-10">
           <span className="flex-1">Task Name</span>
-          <span className="w-10 text-center shrink-0">Wgt</span>
+          <span className="w-14 text-center shrink-0">Wgt</span>
           <span className="w-20 text-center shrink-0">Start</span>
           <span className="w-12 text-center shrink-0">Dur</span>
           <span className="w-20 text-center shrink-0">Predecessor</span>
@@ -205,7 +205,7 @@ export default function ScheduleWeeklyDistributionView({ items, onUpdate, timeSc
           onScroll={handleVerticalScroll}
           className="flex-1 overflow-y-auto divide-y divide-neutral-150 dark:divide-neutral-850/60 no-scrollbar pb-16 bg-white dark:bg-neutral-900"
         >
-          {flatItems.map(({ item, depth }) => {
+          {flatItems.map(({ item, depth }, index) => {
             const hasChildren = item.children && item.children.length > 0;
             const isExpanded = expanded[item.code] ?? (depth < 2);
 
@@ -213,36 +213,36 @@ export default function ScheduleWeeklyDistributionView({ items, onUpdate, timeSc
             const durationDays = item.schedule?.durationDays || 0;
             const predecessor = item.schedule?.predecessor || "";
 
-            const activityName = item.nameEn || item.name || "Unnamed Activity";
-            const activitySubName = item.nameId || item.description;
+            const activityName = item.nameEn || (item as any).name_en || item.name || (item as any).title || (item.code ? `Item ${item.code}` : "Unnamed Activity");
+            const activitySubName = item.nameId || (item as any).name_id || item.description || "";
 
             return (
               <div
-                key={item.code}
+                key={item.id ? `${item.id}-${index}` : `${item.code}-${depth}-${index}`}
                 className="flex items-center hover:bg-neutral-50/50 dark:hover:bg-neutral-800/10 transition-colors py-1 overflow-hidden bg-white dark:bg-neutral-900"
                 style={{ height: ROW_HEIGHT }}
               >
                 {/* Name */}
-                <div className="flex-1 min-w-0 px-3 flex items-start gap-1.5 py-0.5">
-                  <div style={{ width: depth * 10 }} className="shrink-0" />
+                <div className="flex-1 min-w-0 px-3 flex items-center gap-1.5 py-0.5">
+                  <div style={{ width: depth * 14 }} className="shrink-0" />
                   {hasChildren ? (
                     <button
                       onClick={() => toggle(item.code)}
-                      className="p-0.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-850 text-neutral-550 transition-colors shrink-0 mt-0.5"
+                      className="p-1 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors shrink-0"
                     >
-                      {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                      {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                     </button>
                   ) : (
-                    <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0 mt-0.5">
-                      <Hash size={8} className="text-neutral-400" />
+                    <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                      <Hash size={10} className="text-neutral-400" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-1 w-full min-w-0 flex-wrap">
-                      <span className="font-mono text-[8px] font-bold text-neutral-400 dark:text-neutral-555 shrink-0 select-none mr-1">
+                    <div className="flex items-center gap-1.5 w-full min-w-0 flex-wrap">
+                      <span className="inline-flex items-center justify-center font-mono text-[9px] font-bold px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200/80 dark:border-neutral-700 shrink-0 select-none">
                         {item.code}
                       </span>
-                      <span className={`whitespace-normal break-words leading-tight ${depth === 0 ? "font-bold text-neutral-900 dark:text-white" : "text-neutral-700 dark:text-neutral-300"}`}>
+                      <span className={`whitespace-normal break-words leading-tight ${depth === 0 ? "font-bold text-neutral-900 dark:text-white text-xs" : "text-neutral-800 dark:text-neutral-200 text-[11px]"}`}>
                         {activityName}
                       </span>
                     </div>
@@ -255,8 +255,8 @@ export default function ScheduleWeeklyDistributionView({ items, onUpdate, timeSc
                 </div>
 
                 {/* Weight */}
-                <span className="w-10 px-1 text-center font-mono text-[9px] text-neutral-500 shrink-0">
-                  {item.weight ? `${item.weight.toFixed(0)}%` : "0%"}
+                <span className="w-14 px-1 text-center font-mono text-[9px] text-neutral-600 dark:text-neutral-400 shrink-0">
+                  {(item.weight || 0).toFixed(2)}%
                 </span>
 
                 {/* Start Date */}
@@ -343,10 +343,10 @@ export default function ScheduleWeeklyDistributionView({ items, onUpdate, timeSc
           className="flex-1 divide-y divide-neutral-150 dark:divide-neutral-850/60 pb-16 bg-white dark:bg-neutral-900"
           style={{ width: matrixWidth }}
         >
-          {flatItems.map(({ item }) => {
+          {flatItems.map(({ item, depth }, index) => {
             return (
               <div
-                key={item.code}
+                key={item.id ? `matrix-${item.id}-${index}` : `matrix-${item.code}-${depth}-${index}`}
                 className="flex items-center hover:bg-neutral-50/40 dark:hover:bg-neutral-800/5 transition-colors bg-white dark:bg-neutral-900"
                 style={{ height: ROW_HEIGHT }}
               >

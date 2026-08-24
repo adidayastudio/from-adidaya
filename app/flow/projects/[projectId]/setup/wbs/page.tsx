@@ -303,17 +303,68 @@ export default function ProjectSetupWBSPage() {
   };
 
 
+function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, any>): any[] {
+  if (!estimateValues || Object.keys(estimateValues).length === 0) return tree;
+
+  const getEstimateValueForNode = (code: string): any => {
+    if (!code) return undefined;
+    if (estimateValues[code]) return estimateValues[code];
+    const withoutMass = code.replace(/^[A-Z]\./, "");
+    if (estimateValues[withoutMass]) return estimateValues[withoutMass];
+    const withoutDiscipline = code.replace(/^[A-Z]\./, "");
+    if (estimateValues[withoutDiscipline]) return estimateValues[withoutDiscipline];
+    const strippedBoth = code.replace(/^[A-Z]\.([A-Z]\.)?/, "");
+    if (estimateValues[strippedBoth]) return estimateValues[strippedBoth];
+    const numMatch = code.match(/\d+(\.\d+)*/);
+    if (numMatch && estimateValues[numMatch[0]]) return estimateValues[numMatch[0]];
+    return undefined;
+  };
+
+  const walk = (nodes: any[]): any[] => {
+    return nodes.map((node) => {
+      const code = node.code || "";
+      const ev = getEstimateValueForNode(code);
+
+      const updatedNode = { ...node };
+
+      if (ev) {
+        if (ev.volume !== undefined && ev.volume !== null) {
+          updatedNode.volume = ev.volume;
+          updatedNode.quantity = ev.volume;
+        }
+        if (ev.unit) updatedNode.unit = ev.unit;
+        if (ev.unitPrice !== undefined && ev.unitPrice !== null) {
+          updatedNode.unitPrice = ev.unitPrice;
+        }
+      }
+
+      if (node.children && node.children.length > 0) {
+        updatedNode.children = walk(node.children);
+      }
+
+      return updatedNode;
+    });
+  };
+
+  return walk(tree);
+}
+
   // Auto-generate multi-building WBS tree when project specs are loaded
   useEffect(() => {
     if (!project) return;
 
-    const count = project.building_mass_count || 1;
-    const masses = project.building_masses || [];
+    const savedValues = (project.meta as any)?.estimateValues || {};
+    const count = project.building_mass_count || (project.meta as any)?.buildingMassCount || (Array.isArray(project.building_masses) ? project.building_masses.length : 1);
+    let masses = project.building_masses || (project.meta as any)?.buildingMasses || [];
 
-    if (count > 1 && Array.isArray(masses) && masses.length > 0) {
+    if (!Array.isArray(masses)) masses = [];
+
+    let initialTree: any[] = [];
+
+    if (masses.length > 0) {
       const baseDetail = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
 
-      const multiBuildingTree = masses.map((mass: any, idx: number) => {
+      initialTree = masses.map((mass: any, idx: number) => {
         const prefix = mass.code;
         const massTitle = `${prefix}. ${mass.name}`;
 
@@ -334,10 +385,17 @@ export default function ProjectSetupWBSPage() {
           children: prefixChildren(baseDetail),
         };
       });
-
-      setFullWbsTree(multiBuildingTree);
+    } else {
+      initialTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
     }
+
+    if (savedValues && Object.keys(savedValues).length > 0) {
+      initialTree = applyEstimateValuesToWBS(initialTree, savedValues);
+    }
+
+    setFullWbsTree(initialTree);
   }, [project]);
+
 
   // History state for Undo / Redo
   const [history, setHistory] = useState<any[][]>([]);
@@ -647,9 +705,17 @@ export default function ProjectSetupWBSPage() {
     markEdited();
   };
 
-  const computedEstimatesTree = useMemo(() => fullWbsTree, [fullWbsTree]);
-  const computedDetailTree = useMemo(() => fullWbsTree, [fullWbsTree]);
-  const rawActiveTree = useMemo(() => fullWbsTree, [fullWbsTree]);
+  const computedEstimatesTree = useMemo(() => ensureMultiBuildingWBS(fullWbsTree, project), [fullWbsTree, project]);
+  const computedDetailTree = useMemo(() => ensureMultiBuildingWBS(fullWbsTree, project), [fullWbsTree, project]);
+  const rawActiveTree = useMemo(() => {
+    const multi = ensureMultiBuildingWBS(fullWbsTree, project);
+    const savedValues = (project?.meta as any)?.estimateValues || {};
+    if (savedValues && Object.keys(savedValues).length > 0) {
+      return applyEstimateValuesToWBS(multi, savedValues);
+    }
+    return multi;
+  }, [fullWbsTree, project]);
+
 
   // Apply view depth pruning
   const activeTree = useMemo(() => {

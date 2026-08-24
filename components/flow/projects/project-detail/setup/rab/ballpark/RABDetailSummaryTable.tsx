@@ -44,13 +44,15 @@ export default function RABDetailSummaryTable({ items }: Props) {
     const grandTotal = roundedTotal;
 
     return (
-        <div className="w-full text-xs animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="w-full text-xs rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-2xs overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
+
             <table className="w-full border-collapse">
                 <thead className="sticky top-0 bg-neutral-50 z-10">
                     <tr className="border-b border-neutral-200 text-neutral-500 font-medium">
                         <th className="w-8 py-3 px-3" />
                         <th className="py-3 px-3 text-left w-20">Code</th>
-                        <th className="py-3 px-3 text-left">Item</th>
+                        <th className="py-3 px-3 text-left w-full min-w-[200px]">Item</th>
+
                         <th className="py-3 px-3 text-right whitespace-nowrap min-w-[160px]">Total Cost</th>
                         <th className="py-3 px-3 text-right whitespace-nowrap min-w-[70px] pr-6">Weight</th>
                     </tr>
@@ -140,7 +142,7 @@ export default function RABDetailSummaryTable({ items }: Props) {
                                         type="checkbox"
                                         checked={includePPN}
                                         onChange={(e) => setIncludePPN(e.target.checked)}
-                                        className="w-3.5 h-3.5 rounded border-neutral-300 cursor-pointer accent-red-600"
+                                        className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500/30 cursor-pointer accent-blue-600"
                                     />
                                     <span className="text-neutral-600 group-hover:text-neutral-900 transition-colors text-[11px] font-medium">
                                         PPN {(PPN_RATE * 100).toFixed(0)}%
@@ -153,7 +155,7 @@ export default function RABDetailSummaryTable({ items }: Props) {
                                             type="checkbox"
                                             checked={includeRounding}
                                             onChange={(e) => setIncludeRounding(e.target.checked)}
-                                            className="w-3.5 h-3.5 rounded border-neutral-300 cursor-pointer accent-red-600"
+                                            className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500/30 cursor-pointer accent-blue-600"
                                         />
                                         <span className="text-neutral-600 group-hover:text-neutral-900 transition-colors text-[11px] font-medium">
                                             Pembulatan
@@ -163,7 +165,7 @@ export default function RABDetailSummaryTable({ items }: Props) {
                                         <select
                                             value={roundingDigits}
                                             onChange={(e) => setRoundingDigits(Number(e.target.value))}
-                                            className="text-[11px] border border-neutral-300 rounded-md px-2 py-1 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-brand-red/30 cursor-pointer"
+                                            className="text-[11px] border border-neutral-300 rounded-md px-2 py-1 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500/30 cursor-pointer"
                                         >
                                             {ROUNDING_OPTIONS.filter((opt) => Math.pow(10, opt.value) < subtotalAfterPPN).map((opt) => (
                                                 <option key={opt.value} value={opt.value}>{opt.label}</option>

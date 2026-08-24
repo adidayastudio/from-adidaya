@@ -98,18 +98,19 @@ export default function RABBreakdownTable({
         <td className={`${py} px-3`} />
         <td className={`${py} px-3`} />
         <td className={`${py} px-3`} />
-        <td className={`${py} px-3`} />
       </>
     );
 
+
   return (
-    <div className="w-full text-xs animate-in fade-in">
+    <div className="w-full text-xs rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-2xs overflow-hidden animate-in fade-in">
       <table className="w-full border-collapse">
         <thead className="sticky top-0 bg-neutral-50 z-10">
           <tr className="border-b border-neutral-200 text-neutral-500 font-medium">
             <th className="w-8 py-3 px-3" />
             <th className="py-3 px-3 text-left w-20">Code</th>
-            <th className="py-3 px-3 text-left">Item</th>
+            <th className="py-3 px-3 text-left w-full min-w-[200px]">Item</th>
+
 
             {mode === "BALLPARK" && (
               <>
@@ -132,21 +133,21 @@ export default function RABBreakdownTable({
 
         <tbody>
           {/* ===== TOTAL PROJECT ROW ===== */}
-          <tr className="border-b-2 border-neutral-200 bg-neutral-100/50 font-bold hover:bg-neutral-100/80 transition-colors">
+          <tr className="border-b-2 border-neutral-200 bg-blue-50/40 dark:bg-blue-950/20 font-bold hover:bg-blue-50/70 transition-colors">
             <td className="py-3 px-3" />
             <td className="py-3 px-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-300 bg-neutral-100 text-[10px] font-bold text-neutral-600">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full border border-blue-200 bg-blue-600 text-[10px] font-bold text-white">
                 RAB
               </div>
             </td>
-            <td className="py-3 px-3 text-neutral-900">Total Project Cost</td>
+            <td className="py-3 px-3 text-neutral-900 dark:text-white">Total Project Cost</td>
 
             {mode === "BALLPARK" && (
               <>
                 <td className="py-3 px-3 text-right whitespace-nowrap">
                   Rp {Math.round(area > 0 ? total / area : 0).toLocaleString("id-ID")}
                 </td>
-                <td className="py-3 px-3 text-right text-neutral-900 whitespace-nowrap">
+                <td className="py-3 px-3 text-right text-neutral-900 dark:text-white whitespace-nowrap">
                   Rp {Math.round(total).toLocaleString("id-ID")}
                 </td>
                 <td className="py-3 px-3 text-right pr-6 whitespace-nowrap">100.00%</td>
@@ -158,7 +159,7 @@ export default function RABBreakdownTable({
                 <td className="py-3 px-3" />
                 <td className="py-3 px-3" />
                 <td className="py-3 px-3" />
-                <td className="py-3 px-3 text-right text-neutral-900 pr-6 whitespace-nowrap">
+                <td className="py-3 px-3 text-right text-neutral-900 dark:text-white pr-6 whitespace-nowrap">
                   Rp {Math.round(total).toLocaleString("id-ID")}
                 </td>
               </>
@@ -180,56 +181,96 @@ export default function RABBreakdownTable({
 
           {/* ===== PPN ROW (conditional) ===== */}
           {includePPN && (
-            <tr className="border-t-2 border-neutral-200 bg-neutral-50/80">
+            <tr className="border-t-2 border-neutral-200 bg-neutral-50/80 dark:bg-neutral-800/40">
               <td className="py-2.5 px-3" />
               <td className="py-2.5 px-3" />
-              <td className="py-2.5 px-3 text-neutral-600 font-medium">
+              <td className="py-2.5 px-3 text-neutral-700 dark:text-neutral-300 font-medium">
                 PPN {(PPN_RATE * 100).toFixed(0)}%
               </td>
-              {renderSpacers("py-2.5")}
-              <td className="py-2.5 px-3 text-right text-neutral-700 font-medium whitespace-nowrap">
-                Rp {ppnAmount.toLocaleString("id-ID")}
-              </td>
-              {mode === "BALLPARK" && <td className="py-2.5 px-3 pr-6" />}
+              {mode === "BALLPARK" ? (
+                <>
+                  <td className="py-2.5 px-3" />
+                  <td className="py-2.5 px-3 text-right text-neutral-800 dark:text-neutral-200 font-medium whitespace-nowrap">
+                    Rp {ppnAmount.toLocaleString("id-ID")}
+                  </td>
+                  <td className="py-2.5 px-3 pr-6" />
+                </>
+              ) : (
+                <>
+                  <td className="py-2.5 px-3" />
+                  <td className="py-2.5 px-3" />
+                  <td className="py-2.5 px-3" />
+                  <td className="py-2.5 px-3 text-right text-neutral-800 dark:text-neutral-200 font-medium whitespace-nowrap pr-6">
+                    Rp {ppnAmount.toLocaleString("id-ID")}
+                  </td>
+                </>
+              )}
             </tr>
           )}
 
           {/* ===== ROUNDING ROW (conditional) ===== */}
           {includeRounding && roundingDiff > 0 && (
-            <tr className="border-t border-neutral-200 bg-neutral-50/80">
+            <tr className="border-t border-neutral-200 bg-neutral-50/80 dark:bg-neutral-800/40">
               <td className="py-2.5 px-3" />
               <td className="py-2.5 px-3" />
-              <td className="py-2.5 px-3 text-neutral-600 font-medium">Pembulatan</td>
-              {renderSpacers("py-2.5")}
-              <td className="py-2.5 px-3 text-right text-neutral-700 font-medium whitespace-nowrap">
-                Rp {roundingDiff.toLocaleString("id-ID")}
-              </td>
-              {mode === "BALLPARK" && <td className="py-2.5 px-3 pr-6" />}
+              <td className="py-2.5 px-3 text-neutral-700 dark:text-neutral-300 font-medium">Pembulatan</td>
+              {mode === "BALLPARK" ? (
+                <>
+                  <td className="py-2.5 px-3" />
+                  <td className="py-2.5 px-3 text-right text-neutral-800 dark:text-neutral-200 font-medium whitespace-nowrap">
+                    Rp {roundingDiff.toLocaleString("id-ID")}
+                  </td>
+                  <td className="py-2.5 px-3 pr-6" />
+                </>
+              ) : (
+                <>
+                  <td className="py-2.5 px-3" />
+                  <td className="py-2.5 px-3" />
+                  <td className="py-2.5 px-3" />
+                  <td className="py-2.5 px-3 text-right text-neutral-800 dark:text-neutral-200 font-medium whitespace-nowrap pr-6">
+                    Rp {roundingDiff.toLocaleString("id-ID")}
+                  </td>
+                </>
+              )}
             </tr>
           )}
 
           {/* ===== GRAND TOTAL ROW ===== */}
           {(includePPN || includeRounding) && (
-            <tr className="border-t border-neutral-300 bg-neutral-100 font-bold">
+            <tr className="border-t border-neutral-300 bg-neutral-100 dark:bg-neutral-800 font-bold">
               <td className="py-3 px-3" />
               <td className="py-3 px-3" />
-              <td className="py-3 px-3 text-neutral-900">Grand Total</td>
-              {renderSpacers("py-3")}
-              <td className="py-3 px-3 text-right text-neutral-900 font-bold whitespace-nowrap">
-                Rp {grandTotal.toLocaleString("id-ID")}
-              </td>
-              {mode === "BALLPARK" && <td className="py-3 px-3 pr-6" />}
+              <td className="py-3 px-3 text-neutral-900 dark:text-white">Grand Total</td>
+              {mode === "BALLPARK" ? (
+                <>
+                  <td className="py-3 px-3" />
+                  <td className="py-3 px-3 text-right text-neutral-900 dark:text-white font-bold whitespace-nowrap">
+                    Rp {grandTotal.toLocaleString("id-ID")}
+                  </td>
+                  <td className="py-3 px-3 pr-6" />
+                </>
+              ) : (
+                <>
+                  <td className="py-3 px-3" />
+                  <td className="py-3 px-3" />
+                  <td className="py-3 px-3" />
+                  <td className="py-3 px-3 text-right text-neutral-900 dark:text-white font-bold whitespace-nowrap pr-6">
+                    Rp {grandTotal.toLocaleString("id-ID")}
+                  </td>
+                </>
+              )}
             </tr>
           )}
 
+
           {/* ===== TERBILANG ROW ===== */}
-          <tr className="bg-neutral-50/50">
+          <tr className="bg-neutral-50/50 dark:bg-neutral-900/50">
             <td colSpan={colCount} className="py-3 px-4">
               <div className="flex items-start gap-2">
                 <span className="text-neutral-400 font-medium uppercase text-[10px] tracking-wider shrink-0 pt-0.5">
                   Terbilang
                 </span>
-                <span className="text-neutral-600 italic text-[11px] leading-relaxed">
+                <span className="text-neutral-600 dark:text-neutral-400 italic text-[11px] leading-relaxed">
                   {terbilang(grandTotal)}
                 </span>
               </div>
@@ -237,7 +278,7 @@ export default function RABBreakdownTable({
           </tr>
 
           {/* ===== OPTIONS ROW ===== */}
-          <tr className="border-t border-neutral-200">
+          <tr className="border-t border-neutral-200 dark:border-neutral-800">
             <td colSpan={colCount} className="py-3 px-4">
               <div className="flex items-center gap-6 flex-wrap">
                 <label className="flex items-center gap-2 cursor-pointer select-none group">
@@ -245,9 +286,9 @@ export default function RABBreakdownTable({
                     type="checkbox"
                     checked={includePPN}
                     onChange={(e) => setIncludePPN(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded border-neutral-300 cursor-pointer accent-red-600"
+                    className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500/30 cursor-pointer accent-blue-600"
                   />
-                  <span className="text-neutral-600 group-hover:text-neutral-900 transition-colors text-[11px] font-medium">
+                  <span className="text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors text-[11px] font-medium">
                     PPN {(PPN_RATE * 100).toFixed(0)}%
                   </span>
                 </label>
@@ -258,9 +299,9 @@ export default function RABBreakdownTable({
                       type="checkbox"
                       checked={includeRounding}
                       onChange={(e) => setIncludeRounding(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded border-neutral-300 cursor-pointer accent-red-600"
+                      className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500/30 cursor-pointer accent-blue-600"
                     />
-                    <span className="text-neutral-600 group-hover:text-neutral-900 transition-colors text-[11px] font-medium">
+                    <span className="text-neutral-700 dark:text-neutral-300 group-hover:text-neutral-900 dark:group-hover:text-white transition-colors text-[11px] font-medium">
                       Pembulatan
                     </span>
                   </label>
@@ -268,7 +309,7 @@ export default function RABBreakdownTable({
                     <select
                       value={roundingDigits}
                       onChange={(e) => setRoundingDigits(Number(e.target.value))}
-                      className="text-[11px] border border-neutral-300 rounded-md px-2 py-1 text-neutral-700 bg-white focus:outline-none focus:ring-1 focus:ring-brand-red/30 cursor-pointer"
+                      className="text-[11px] border border-neutral-300 dark:border-neutral-700 rounded-md px-2 py-1 text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-500/30 cursor-pointer"
                     >
                       {ROUNDING_OPTIONS.filter((opt) => Math.pow(10, opt.value) < subtotalAfterPPN).map((opt) => (
                         <option key={opt.value} value={opt.value}>{opt.label}</option>

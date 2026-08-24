@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import PageWrapper from "@/components/layout/PageWrapper";
 import ProjectDetailSidebar from "@/components/flow/projects/project-detail/ProjectDetailSidebar";
 import ProjectDetailHeader from "@/components/flow/projects/project-detail/ProjectDetailHeader";
@@ -28,19 +28,42 @@ import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-deta
 import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-inherit";
 import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
 import { buildWBSTree, ensureMultiBuildingWBS, mergeWBSTrees } from "@/lib/flow/mappers/wbs-tree";
-import { buildRABFromWBS } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-from-wbs";
+import { buildRABFromWBS, applyPriceOverrides } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-from-wbs";
 import { buildRABEstimates, EstimateValues } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-estimates-builder";
+import { getLocationFactor as getLocationFactorList, LocationFactor } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-factors";
 import { RABItem } from "@/components/flow/projects/project-detail/setup/rab/ballpark/types/rab.types";
 import { getNodeTotalPerM2 } from "@/components/flow/projects/project-detail/setup/rab/ballpark/data/rab-utils";
 
 import { ScheduleMode, ScheduleView, ScheduleValue, WeightedItem } from "@/components/flow/projects/project-detail/setup/schedule/schedule.types";
 
 interface ScheduleContext {
-  buildingClass: "A" | "B" | "C";
-  level: "Luxury" | "Premium" | "Standard";
+  buildingClass: "A" | "B" | "C" | "D";
+  level: "Luxury" | "Premium" | "Standard" | "Basic";
   area: number;
   province: string;
   city: string;
+  rf: number;
+  df: number;
+}
+
+function resolveLocationFactor(
+  list: LocationFactor[],
+  province: string,
+  city: string
+) {
+  const cityRow = list.find(
+    (r) => r.province === province && (r.city ?? "") === city
+  );
+  if (cityRow)
+    return { rf: cityRow.regionalFactor, df: cityRow.difficultyFactor };
+
+  const provRow = list.find(
+    (r) => r.province === province && (!r.city || r.city.trim() === "")
+  );
+  if (provRow)
+    return { rf: provRow.regionalFactor, df: provRow.difficultyFactor };
+
+  return { rf: 1, df: 1 };
 }
 
 const SCHEDULE_TABS = [
@@ -99,7 +122,15 @@ export default function ProjectSetupSchedulePage() {
     ];
   });
 
-  const [activeMode, setActiveMode] = useState<ScheduleMode>("BALLPARK");
+  const searchParams = useSearchParams();
+  const urlStage = (searchParams.get("stage") || searchParams.get("mode"))?.toUpperCase();
+
+  const [activeMode, setActiveMode] = useState<ScheduleMode>(() => {
+    if (urlStage && ["BALLPARK", "ESTIMATES", "DETAIL"].includes(urlStage)) {
+      return urlStage as ScheduleMode;
+    }
+    return "BALLPARK";
+  });
   const [activeView, setActiveView] = useState<ScheduleView>("TIMELINE");
   const [isSaving, setIsSaving] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -182,13 +213,22 @@ export default function ProjectSetupSchedulePage() {
     ]);
   };
 
-  const [context, setContext] = useState<ScheduleContext>({
+  const locationList = useMemo(() => {
+    return (getLocationFactorList as LocationFactor[]) ?? [];
+  }, []);
 
-    buildingClass: "B",
-    level: "Premium",
-    area: 1200,
+  const [priceOverrides, setPriceOverrides] = useState<Record<string, number>>({});
+  const [estimateValuesState, setEstimateValuesState] = useState<EstimateValues>({});
+  const [adjustmentFactor, setAdjustmentFactor] = useState<number>(100);
+
+  const [context, setContext] = useState<ScheduleContext>({
+    buildingClass: "A",
+    level: "Luxury",
+    area: 2085,
     province: "DKI Jakarta",
     city: "Jakarta Selatan",
+    rf: 1,
+    df: 1,
   });
 
   const [scheduleValues, setScheduleValues] = useState<Record<string, ScheduleValue>>({});
@@ -196,21 +236,36 @@ export default function ProjectSetupSchedulePage() {
 
   useEffect(() => {
     if (project) {
-      let area = 1200;
+      let area = 2085;
       if (project.buildingArea) {
         const num = parseInt(project.buildingArea.replace(/\D/g, ""));
         if (!isNaN(num)) area = num;
       }
-      setContext(prev => ({
-        ...prev,
-        buildingClass: (project.rabClass || "B") as any,
-        area
-      }));
 
-      const savedSchedules = (project.meta as any)?.scheduleValues || {};
+      const rabClass = (project.rabClass || "A") as any;
+      const province = project.province || "DKI Jakarta";
+      const city = project.city || "Jakarta Selatan";
+      const factors = resolveLocationFactor(locationList, province, city);
+
+      setContext({
+        buildingClass: rabClass,
+        level: rabClass === "A" ? "Luxury" : rabClass === "B" ? "Premium" : rabClass === "C" ? "Standard" : "Basic",
+        area,
+        province,
+        city,
+        rf: factors.rf,
+        df: factors.df,
+      });
+
+      const meta = (project.meta as any) || {};
+      if (meta.priceOverrides) setPriceOverrides(meta.priceOverrides);
+      if (meta.estimateValues) setEstimateValuesState(meta.estimateValues);
+      if (typeof meta.adjustmentFactor === "number") setAdjustmentFactor(meta.adjustmentFactor);
+
+      const savedSchedules = meta.scheduleValues || {};
       setScheduleValues(savedSchedules);
     }
-  }, [project]);
+  }, [project, locationList]);
 
   useEffect(() => {
     if (!project?.id) return;
@@ -243,45 +298,68 @@ export default function ProjectSetupSchedulePage() {
     fetchWbs();
   }, [project?.id]);
 
-  const activeWBS = useMemo(() => {
-    const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
-    const dbTree = buildWBSTree(dbWbsItems);
-    const baseTree = dbTree.length > 0 ? dbTree : defaultTree;
+  const dbTree = useMemo(() => {
+    return dbWbsItems.length > 0 ? buildWBSTree(dbWbsItems) : [];
+  }, [dbWbsItems]);
 
+  const wbsBallpark = useMemo(() => {
+    const baseTree = dbTree.length > 0 ? dbTree : WBS_BALLPARK;
     return ensureMultiBuildingWBS(baseTree, project);
-  }, [dbWbsItems, project]);
+  }, [dbTree, project]);
+
+  const wbsEstimates = useMemo(() => {
+    const defaultTree = buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA);
+    const baseTree = dbTree.length > 0 ? dbTree : defaultTree;
+    return ensureMultiBuildingWBS(baseTree, project);
+  }, [dbTree, project]);
+
+  const wbsDetail = useMemo(() => {
+    const defaultTree = buildDetailFromEstimates(buildEstimatesFromBallpark(WBS_BALLPARK, RAW_WBS_ESTIMATES_DELTA));
+    const baseTree = dbTree.length > 0 ? dbTree : defaultTree;
+    return ensureMultiBuildingWBS(baseTree, project);
+  }, [dbTree, project]);
 
   const estimateValues = useMemo<EstimateValues>(() => {
-    return (project?.meta as any)?.estimateValues || {};
-  }, [project]);
+    return estimateValuesState || (project?.meta as any)?.estimateValues || {};
+  }, [estimateValuesState, project]);
 
   const rabTreeBallpark = useMemo(() => {
-    return buildRABFromWBS({
-      wbs: activeWBS,
+    const baseTree = buildRABFromWBS({
+      wbs: wbsBallpark,
       rabClass: context.buildingClass,
-      rf: 1, df: 1
+      rf: context.rf,
+      df: context.df,
     });
-  }, [activeWBS, context.buildingClass]);
+
+    const adjustedTree = baseTree.map(function applyFactor(node: RABItem): RABItem {
+      const adjustedPrice = Math.round(node.unitPrice * (adjustmentFactor / 100));
+      return {
+        ...node,
+        unitPrice: adjustedPrice,
+        children: node.children?.map(applyFactor),
+      };
+    });
+
+    return applyPriceOverrides(adjustedTree, priceOverrides);
+  }, [wbsBallpark, context.buildingClass, context.rf, context.df, priceOverrides, adjustmentFactor]);
 
   const rabTreeEstimates = useMemo(() => {
-    const wbsEstimates = dbWbsItems.length > 0
-      ? activeWBS
-      : buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA);
     return buildRABEstimates(wbsEstimates, estimateValues, {
       rabClass: context.buildingClass,
-      rf: 1, df: 1, adjustmentFactor: 100
+      rf: context.rf,
+      df: context.df,
+      adjustmentFactor: adjustmentFactor,
     });
-  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass]);
+  }, [estimateValues, wbsEstimates, context.buildingClass, context.rf, context.df, adjustmentFactor]);
 
   const rabTreeDetail = useMemo(() => {
-    const wbsDetail = dbWbsItems.length > 0
-      ? activeWBS
-      : buildDetailFromEstimates(buildEstimatesFromBallpark(activeWBS, RAW_WBS_ESTIMATES_DELTA));
     return buildRABEstimates(wbsDetail, estimateValues, {
-      rabClass: context.buildingClass || "C",
-      rf: 1.0, df: 1.0, adjustmentFactor: 100
+      rabClass: context.buildingClass,
+      rf: context.rf,
+      df: context.df,
+      adjustmentFactor: adjustmentFactor,
     });
-  }, [estimateValues, activeWBS, dbWbsItems.length, context.buildingClass]);
+  }, [estimateValues, wbsDetail, context.buildingClass, context.rf, context.df, adjustmentFactor]);
 
   const activeTree = useMemo(() => {
     if (activeMode === "BALLPARK") return rabTreeBallpark;
@@ -306,7 +384,7 @@ export default function ProjectSetupSchedulePage() {
       }, 0);
     };
 
-    total = calculateTotal(activeTree);
+    total = Math.round(calculateTotal(activeTree));
 
     const mapWeighted = (nodes: RABItem[]): WeightedItem[] => {
       return nodes.map(node => {
@@ -1213,8 +1291,8 @@ export default function ProjectSetupSchedulePage() {
                       <ArrowLeft className="w-4 h-4 shrink-0" />
                     </button>
                     <div className="flex items-center gap-2">
-                      <h2 className="text-base font-bold text-neutral-900 dark:text-white capitalize">
-                        {activeMode.toLowerCase()} Schedule
+                      <h2 className="text-base font-bold text-neutral-900 dark:text-white">
+                        {activeMode === "BALLPARK" ? "Ballpark Schedule" : activeMode === "ESTIMATES" ? "Estimates Schedule" : "Detail Schedule"}
                       </h2>
                       {stageSummaries[activeMode]?.activeVersion && (
                         <span className="px-2 py-0.5 rounded font-mono text-xs font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700">
@@ -1292,42 +1370,9 @@ export default function ProjectSetupSchedulePage() {
                 </div>
 
 
-          {/* MODE TABS & SCALE SWITCHER */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <Tabs value={activeMode} onChange={setActiveMode} items={SCHEDULE_TABS} />
-
-            {/* SCALE SELECTOR (WEEKLY vs MONTHLY) */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[10px] text-neutral-455 uppercase font-bold tracking-wider">Time Scale:</span>
-              <div className="flex bg-neutral-100 dark:bg-neutral-800 p-0.5 rounded-xl border border-neutral-200 dark:border-neutral-700 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setTimeScale("weekly")}
-                  className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
-                    timeScale === "weekly"
-                      ? "bg-neutral-900 dark:bg-neutral-900 text-white shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-450 dark:hover:text-neutral-200"
-                  }`}
-                >
-                  Weekly
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTimeScale("monthly")}
-                  className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
-                    timeScale === "monthly"
-                      ? "bg-neutral-900 dark:bg-neutral-900 text-white shadow-sm"
-                      : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-450 dark:hover:text-neutral-200"
-                  }`}
-                >
-                  Monthly
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* CONTEXT BAR */}
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutral-200 dark:border-neutral-800/80 bg-neutral-50/50 dark:bg-neutral-950/20 p-4 shadow-sm">
+          {/* CONTROL BAR (SINGLE ROW) */}
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-neutral-200 dark:border-neutral-800/80 bg-neutral-50/50 dark:bg-neutral-950/20 p-3.5 px-4 shadow-2xs">
+            {/* Left: Total Project Cost & Est Duration */}
             <div className="flex items-center gap-6 text-xs text-neutral-600 dark:text-neutral-400 font-medium">
               <div>
                 <span className="text-neutral-400 dark:text-neutral-500 mr-2">Total Project Cost:</span>
@@ -1344,23 +1389,56 @@ export default function ProjectSetupSchedulePage() {
               </div>
             </div>
 
-            {/* VIEW SWITCHER */}
-            <div className="flex overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm p-0.5">
-              {["SUMMARY", "TIMELINE", "GANTT", "SCURVE"].map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setActiveView(v as any)}
-                  className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
-                    activeView === v
-                      ? "bg-neutral-900 dark:bg-neutral-850 text-white shadow-sm"
-                      : "text-neutral-500 dark:text-neutral-450 hover:bg-neutral-50 dark:hover:bg-neutral-850"
-                  }`}
-                >
-                  {v === "SCURVE"
-                    ? "S-Curve"
-                    : v.charAt(0) + v.slice(1).toLowerCase()}
-                </button>
-              ))}
+            {/* Right: View Switcher (Summary/Timeline/Gantt/S-Curve) & Time Scale (Weekly/Monthly) */}
+            <div className="flex items-center gap-4 flex-wrap">
+              {/* VIEW SWITCHER */}
+              <div className="flex overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-2xs p-0.5">
+                {["SUMMARY", "TIMELINE", "GANTT", "SCURVE"].map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setActiveView(v as any)}
+                    className={`px-3 py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
+                      activeView === v
+                        ? "bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 font-bold border border-blue-200/80 dark:border-blue-800/60 shadow-2xs"
+                        : "text-neutral-500 dark:text-neutral-400 hover:bg-neutral-50 dark:hover:bg-neutral-850"
+                    }`}
+                  >
+                    {v === "SCURVE"
+                      ? "S-Curve"
+                      : v.charAt(0) + v.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+
+              {/* SCALE SELECTOR (WEEKLY vs MONTHLY) */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] text-neutral-400 dark:text-neutral-500 uppercase font-bold tracking-wider">Time Scale:</span>
+                <div className="flex bg-white dark:bg-neutral-900 p-0.5 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setTimeScale("weekly")}
+                    className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
+                      timeScale === "weekly"
+                        ? "bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/60 shadow-2xs"
+                        : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+                    }`}
+                  >
+                    Weekly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimeScale("monthly")}
+                    className={`px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ${
+                      timeScale === "monthly"
+                        ? "bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/60 shadow-2xs"
+                        : "text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200"
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

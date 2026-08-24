@@ -161,10 +161,11 @@ export default function RABBreakdownNode({
         </td>
 
         {/* ITEM */}
-        <td className="py-2 px-4">
+        <td className="py-2 px-4 w-full min-w-[200px]">
+
           <div className="leading-tight">
             <div
-              className={`text-neutral-900 ${mode === "DETAIL" && !hasChildren ? "cursor-pointer hover:text-brand-red hover:underline" : ""}`}
+              className={`text-neutral-900 ${mode === "DETAIL" && !hasChildren ? "cursor-pointer hover:text-blue-600 hover:underline" : ""}`}
               onClick={() => {
                 if (mode === "DETAIL" && !hasChildren && onSelect) {
                   onSelect(item);
@@ -202,7 +203,7 @@ export default function RABBreakdownNode({
                 <div className="flex flex-col items-end gap-1">
                   <input
                     type="number"
-                    className="w-28 rounded border border-neutral-300 px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 focus:ring-brand-red"
+                    className="w-28 rounded border border-neutral-300 px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={draft}
                     onChange={(e) => setDraft(Number(e.target.value))}
                     onBlur={commitBallpark}
@@ -216,7 +217,7 @@ export default function RABBreakdownNode({
                   onClick={startEditing}
                   className={`${hasChildren
                     ? "cursor-default text-neutral-900 font-medium"
-                    : "hover:underline hover:text-brand-red text-neutral-900 font-medium"
+                    : "hover:underline hover:text-blue-600 text-neutral-900 font-medium"
                     }`}
                 >
                   Rp {Math.round(ballparkTotal).toLocaleString("id-ID")}
@@ -241,7 +242,7 @@ export default function RABBreakdownNode({
                   {editingField === "volume" ? (
                     <input
                       type="number"
-                      className="w-20 rounded border border-neutral-300 px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 focus:ring-brand-red"
+                      className="w-20 rounded border border-neutral-300 px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                       value={estValues.volume}
                       onChange={(e) => commitEstimate("volume", e.target.value)}
                       onBlur={() => setEditingField(null)}
@@ -280,7 +281,7 @@ export default function RABBreakdownNode({
                 editingField === "unit" ? (
                   <input
                     type="text"
-                    className="w-12 rounded border border-neutral-300 px-1 py-1 text-center text-xs focus:outline-none focus:ring-1 focus:ring-brand-red"
+                    className="w-12 rounded border border-neutral-300 px-1 py-1 text-center text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={estValues.unit}
                     onChange={(e) => commitEstimate("unit", e.target.value)}
                     onBlur={() => setEditingField(null)}
@@ -306,7 +307,7 @@ export default function RABBreakdownNode({
                 editingField === "unitPrice" ? (
                   <input
                     type="number"
-                    className="w-28 rounded border border-neutral-300 px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 focus:ring-brand-red"
+                    className="w-28 rounded border border-neutral-300 px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={estValues.unitPrice}
                     onChange={(e) => commitEstimate("unitPrice", e.target.value)}
                     onBlur={() => setEditingField(null)}
