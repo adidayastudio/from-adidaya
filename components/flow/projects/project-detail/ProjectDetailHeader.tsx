@@ -45,8 +45,16 @@ export interface ProjectHeaderProps {
    COMPONENT
 ====================== */
 
-export default function ProjectDetailHeader({ project }: { project: ProjectHeaderProps }) {
-  const { name, projectNo, code, type, stage, status, progress } = project;
+export default function ProjectDetailHeader({ project }: { project?: ProjectHeaderProps }) {
+  const {
+    name = "Project",
+    projectNo = "-",
+    code = "-",
+    type = "design-build",
+    stage = "sd",
+    status = "active",
+    progress = 0,
+  } = project || {};
   const theme = STATUS_THEME[status] || STATUS_THEME["active"];
 
   const params = useParams();
@@ -182,6 +190,8 @@ export default function ProjectDetailHeader({ project }: { project: ProjectHeade
           { label: "Stages", href: `${basePath}/setup/stages` },
           { label: "WBS", href: `${basePath}/setup/wbs` },
           { label: "RAB", href: `${basePath}/setup/rab` },
+          { label: "RAB V2", href: `${basePath}/setup/rab-v2` },
+          { label: "RAB V3", href: `${basePath}/setup/rab-v3` },
           { label: "Schedule", href: `${basePath}/setup/schedule` },
           { label: "Tasks", href: `${basePath}/tasks` },
           { label: "Tracking", href: `${basePath}/tracking` },

@@ -123,6 +123,7 @@ export default function ProjectDetailSidebar() {
     { label: "WBS", href: `${basePath}/setup/wbs`, icon: Grid3X3 },
     { label: "Volume Calc", href: `${basePath}/setup/volume-calc`, icon: Calculator },
     { label: "RAB", href: `${basePath}/setup/rab`, icon: DollarSign },
+    { label: "RAB V3", href: `${basePath}/setup/rab-v3`, icon: FileSpreadsheet },
     { label: "Schedule", href: `${basePath}/setup/schedule`, icon: Calendar },
     { label: "Index", href: `${basePath}/setup/index`, icon: Hash },
   ];

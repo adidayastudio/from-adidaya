@@ -1281,6 +1281,15 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
                       currentEditState === "saved" ? "Saved" :
                       currentEditState === "submitted" ? "Submitted" : undefined
                     }
+                    onUpdateItem={onUpdateItem}
+                    onAddChild={onAddChild}
+                    onAddSibling={onAddSibling}
+                    onRemove={onRemove}
+                    onReorder={onReorder}
+                    onIndent={onIndent}
+                    onOutdent={onOutdent}
+                    onDuplicate={onDuplicate}
+                    onMoveDirection={onMoveDirection}
                     onUndo={handleUndo}
                     onRedo={handleRedo}
                     canUndo={historyIndex > 0}

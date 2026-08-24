@@ -429,13 +429,13 @@ function WBSNode({
           <div>
             <InlineEdit
               value={item.nameEn}
-              onSave={(v) => onUpdate(itemId, { nameEn: v })}
+              onSave={(v) => onUpdate?.(itemId, { nameEn: v })}
               className="text-sm font-medium text-neutral-900"
             />
             {item.nameId && (
               <InlineEdit
                 value={item.nameId}
-                onSave={(v) => onUpdate(itemId, { nameId: v || undefined })}
+                onSave={(v) => onUpdate?.(itemId, { nameId: v || undefined })}
                 className="text-xs text-neutral-400 italic mt-0.5"
               />
             )}
@@ -446,7 +446,7 @@ function WBSNode({
                 <InlineEdit
                   value={item.notes || ""}
                   onSave={(v) => {
-                    onUpdate(itemId, { notes: v || undefined });
+                    onUpdate?.(itemId, { notes: v || undefined });
                     if (!v) {
                       setShowSpecInput(false);
                     }
