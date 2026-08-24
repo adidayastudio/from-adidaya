@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import PageWrapper from "@/components/layout/PageWrapper";
 import ProjectDetailSidebar from "@/components/flow/projects/project-detail/ProjectDetailSidebar";
 import ProjectDetailHeader from "@/components/flow/projects/project-detail/ProjectDetailHeader";
@@ -10,8 +10,9 @@ import { Select } from "@/shared/ui/primitives/select/select";
 import { useProject } from "@/components/flow/project-context";
 import { Download, Save, Send, Plus, RotateCcw } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { useEffect } from "react";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
+import { useAutoSave } from "@/lib/hooks/useAutoSave";
+import { SaveStatusBadge, SaveFloatingToast } from "@/components/flow/projects/project-detail/setup/common/SaveStatusBadge";
 
 import type {
   WBSMode,
@@ -25,7 +26,8 @@ import { buildWBSTree, ensureMultiBuildingWBS, mergeWBSTrees } from "@/lib/flow/
 import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-inherit";
 import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
 import WBSList from "@/components/flow/projects/project-detail/setup/wbs/WBSList";
-import { AddDisciplineModal, ConfirmModal } from "@/components/flow/projects/project-detail/setup/wbs/WBSModals";
+import { AddDisciplineModal, ConfirmModal, DeleteWithDataModal } from "@/components/flow/projects/project-detail/setup/wbs/WBSModals";
+
 import {
   addChildById,
   addRootDiscipline,
@@ -128,9 +130,11 @@ export default function ProjectSetupWBSPage() {
         return newHist;
       });
 
+      scheduleSave(nextTree);
       return nextTree;
     });
   };
+
 
   const handleUndo = () => {
     if (historyIndex > 0 && history[historyIndex - 1]) {
@@ -379,9 +383,64 @@ export default function ProjectSetupWBSPage() {
     setTreeWithHistory((prev: any[]) => addSiblingToTree(prev, siblingId, position));
   };
 
+  const [deleteCandidate, setDeleteCandidate] = useState<{
+    id: string;
+    code: string;
+    name: string;
+    volume: number;
+    unit: string;
+    unitPrice: number;
+  } | null>(null);
+
+  const findNodeWithData = (nodes: any[], targetId: string): any | null => {
+    for (const node of nodes) {
+      if (!node) continue;
+      if (node.id === targetId || node.code === targetId) return node;
+      if (node.children && node.children.length > 0) {
+        const found = findNodeWithData(node.children, targetId);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const hasDataInSubtree = (node: any): { hasData: boolean; volume: number; unitPrice: number } => {
+    let vol = node?.volume ?? node?.quantity ?? 0;
+    let price = node?.unitPrice ?? node?.unit_price ?? 0;
+
+    if (vol > 0 || price > 0) {
+      return { hasData: true, volume: vol, unitPrice: price };
+    }
+
+    if (node?.children && node.children.length > 0) {
+      for (const child of node.children) {
+        const sub = hasDataInSubtree(child);
+        if (sub.hasData) return sub;
+      }
+    }
+
+    return { hasData: false, volume: 0, unitPrice: 0 };
+  };
+
   const onRemove = (id: string) => {
+    const targetNode = findNodeWithData(fullWbsTree, id);
+    if (targetNode) {
+      const dataCheck = hasDataInSubtree(targetNode);
+      if (dataCheck.hasData) {
+        setDeleteCandidate({
+          id,
+          code: targetNode.code || "ITEM",
+          name: targetNode.nameEn || targetNode.title || "Unnamed",
+          volume: dataCheck.volume,
+          unit: targetNode.unit || "m³",
+          unitPrice: dataCheck.unitPrice,
+        });
+        return;
+      }
+    }
     setTreeWithHistory((prev: any[]) => removeById(prev, id));
   };
+
 
   const onIndent = (id: string) => {
     setTreeWithHistory((prev: any[]) => indentNodeById(prev, id));
@@ -438,117 +497,143 @@ export default function ProjectSetupWBSPage() {
     });
   };
 
-  const saveTreeToDb = async (treeToSave: any[]) => {
+  const saveTreeToDb = useCallback(async (treeToSave: any[]) => {
     if (!project?.id) return;
     
-    try {
-      setIsLoadingWBS(true);
+    // Assign consistent UUIDs so in-memory state matches DB IDs
+    const prepareTreeWithUuids = (nodes: any[]): any[] => {
+      return nodes.map(node => {
+        const isUuid = node.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(node.id);
+        const validId = isUuid ? node.id : crypto.randomUUID();
+        return {
+          ...node,
+          id: validId,
+          children: node.children ? prepareTreeWithUuids(node.children) : []
+        };
+      });
+    };
 
-      // 1. Assign consistent UUIDs so in-memory state matches DB IDs
-      const prepareTreeWithUuids = (nodes: any[]): any[] => {
-        return nodes.map(node => {
-          const isUuid = node.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(node.id);
-          const validId = isUuid ? node.id : crypto.randomUUID();
-          return {
-            ...node,
-            id: validId,
-            children: node.children ? prepareTreeWithUuids(node.children) : []
-          };
-        });
-      };
+    const treeWithUuids = prepareTreeWithUuids(treeToSave);
+    const rowsToInsert: any[] = [];
+    const currentMetaEst = (project?.meta as any)?.estimateValues || {};
+    const currentPriceOverrides = (project?.meta as any)?.priceOverrides || {};
 
-      const treeWithUuids = prepareTreeWithUuids(treeToSave);
+    const traverseAndPrepare = (item: any, parentDbId: string | null = null, indentLevel: number = 0, pos: number = 0) => {
+      const code = item.code || "NO-CODE";
+      const title = item.nameEn || item.name || "Unnamed";
+      const titleEn = item.nameId || item.description || null;
+      const notes = item.notes || null;
 
-      // 2. Delete all current WBS items for this project
-      const { error: deleteError } = await supabase
-        .from('project_wbs_items')
-        .delete()
-        .eq('project_id', project.id);
-        
-      if (deleteError) throw deleteError;
-      
-      // 3. Flatten tree client-side and prepare rows for project_wbs_items
-      const rowsToInsert: any[] = [];
-      const currentMetaEst = (project?.meta as any)?.estimateValues || {};
+      const fallbackQty = currentMetaEst[code]?.volume;
+      const qtyToSave = (item.quantity !== undefined && item.quantity !== null && item.quantity !== 0)
+        ? item.quantity
+        : (item.volume !== undefined && item.volume !== null && item.volume !== 0)
+        ? item.volume
+        : fallbackQty ?? null;
 
-      const traverseAndPrepare = (item: any, parentDbId: string | null = null, indentLevel: number = 0, pos: number = 0) => {
-        const code = item.code || "NO-CODE";
-        const title = item.nameEn || item.name || "Unnamed";
-        const titleEn = item.nameId || item.description || null;
-        const notes = item.notes || null;
+      const fallbackPrice = currentMetaEst[code]?.unitPrice ?? currentPriceOverrides[code];
+      const priceToSave = (item.unitPrice !== undefined && item.unitPrice !== null && item.unitPrice !== 0)
+        ? item.unitPrice
+        : (item.unit_price !== undefined && item.unit_price !== null && item.unit_price !== 0)
+        ? item.unit_price
+        : fallbackPrice ?? null;
 
-        // Preserve quantity from item, or fallback to project.meta.estimateValues[code]
-        const fallbackQty = currentMetaEst[code]?.volume;
-        const qtyToSave = (item.quantity !== undefined && item.quantity !== null && item.quantity !== 0)
-          ? item.quantity
-          : (item.volume !== undefined && item.volume !== null && item.volume !== 0)
-          ? item.volume
-          : fallbackQty ?? null;
+      const unitToSave = item.unit || currentMetaEst[code]?.unit || null;
 
-        const unitToSave = item.unit || currentMetaEst[code]?.unit || null;
+      rowsToInsert.push({
+        id: item.id,
+        project_id: project.id,
+        wbs_code: code,
+        title: title,
+        title_en: titleEn,
+        level: indentLevel,
+        position: pos,
+        parent_id: parentDbId,
+        is_leaf: !item.children || item.children.length === 0,
+        notes: notes,
+        unit: unitToSave,
+        quantity: qtyToSave,
+        unit_price: priceToSave,
+        ahsp_id: item.ahsp_id || null,
+      });
 
-        rowsToInsert.push({
-          id: item.id,
-          project_id: project.id,
-          wbs_code: code,
-          title: title,
-          title_en: titleEn,
-          level: indentLevel,
-          position: pos,
-          parent_id: parentDbId,
-          is_leaf: !item.children || item.children.length === 0,
-          notes: notes,
-          unit: unitToSave,
-          quantity: qtyToSave,
-          ahsp_id: item.ahsp_id || null,
-        });
-
-        const children = item.children || [];
-        for (let i = 0; i < children.length; i++) {
-          traverseAndPrepare(children[i], item.id, indentLevel + 1, i + 1);
-        }
-      };
-
-      for (let i = 0; i < treeWithUuids.length; i++) {
-        traverseAndPrepare(treeWithUuids[i], null, 0, i + 1);
+      const children = item.children || [];
+      for (let i = 0; i < children.length; i++) {
+        traverseAndPrepare(children[i], item.id, indentLevel + 1, i + 1);
       }
+    };
 
-      // 4. Single Bulk Insert to project_wbs_items database
-      const { error: insertError } = await supabase
-        .from("project_wbs_items")
-        .insert(rowsToInsert);
-
-      if (insertError) throw insertError;
-      
-      // Sync state with UUIDs
-      setFullWbsTree(treeWithUuids);
-      
-      alert("✅ WBS saved successfully to database!");
-    } catch (err: any) {
-      console.error("Error saving WBS tree:", err);
-      alert("❌ Failed to save WBS to database: " + err.message);
-    } finally {
-      setIsLoadingWBS(false);
+    for (let i = 0; i < treeWithUuids.length; i++) {
+      traverseAndPrepare(treeWithUuids[i], null, 0, i + 1);
     }
-  };
+
+    // Upsert rows to project_wbs_items without wiping whole table
+    const { error: upsertError } = await supabase
+      .from("project_wbs_items")
+      .upsert(rowsToInsert, { onConflict: "id" });
+
+    if (upsertError) throw upsertError;
+
+    // Sync back estimateValues into project.meta
+    const updatedEstimateValues = { ...currentMetaEst };
+    rowsToInsert.forEach((row) => {
+      if (row.wbs_code && (row.quantity || row.unit_price || row.unit)) {
+        const existing = updatedEstimateValues[row.wbs_code] || {};
+        updatedEstimateValues[row.wbs_code] = {
+          ...existing,
+          volume: row.quantity ?? existing.volume ?? 0,
+          unit: row.unit ?? existing.unit ?? "ls",
+          unitPrice: row.unit_price ?? existing.unitPrice ?? 0,
+        };
+      }
+    });
+
+    await supabase
+      .from("projects")
+      .update({ meta: { ...(project.meta || {}), estimateValues: updatedEstimateValues } })
+      .eq("id", project.id);
+
+
+    // Remove deleted nodes
+    const activeIds = rowsToInsert.map((r) => r.id);
+    if (activeIds.length > 0) {
+      const { data: dbItems } = await supabase
+        .from("project_wbs_items")
+        .select("id")
+        .eq("project_id", project.id);
+
+      if (dbItems) {
+        const deletedIds = dbItems.map((d) => d.id).filter((id) => !activeIds.includes(id));
+        if (deletedIds.length > 0) {
+          await supabase.from("project_wbs_items").delete().in("id", deletedIds);
+        }
+      }
+    }
+  }, [project?.id, project?.meta]);
+
+  const { status: autoSaveStatus, errorMessage: autoSaveError, scheduleSave, triggerImmediateSave } = useAutoSave({
+    onSave: saveTreeToDb,
+    delayMs: 1500,
+  });
 
   // Save Draft
   const saveDraft = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "saved" }));
-    await saveTreeToDb(fullWbsTree);
+    await triggerImmediateSave(fullWbsTree);
   };
 
   // Save Changes
   const saveChanges = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "saved" }));
-    await saveTreeToDb(fullWbsTree);
+    await triggerImmediateSave(fullWbsTree);
   };
 
   // Submit WBS
   const submitWBS = async () => {
     setEditState(prev => ({ ...prev, [activeMode]: "submitted" }));
-    await saveTreeToDb(fullWbsTree);
+    await triggerImmediateSave(fullWbsTree);
   };
+
 
   // Add revision
   function addRevision() {
@@ -624,6 +709,8 @@ export default function ProjectSetupWBSPage() {
                 className="gap-6"
               />
               <div className="pb-2 flex items-center gap-2">
+                <SaveStatusBadge status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave(fullWbsTree)} />
+
                 <Button size="sm" variant="secondary" icon={<Download className="w-4 h-4" />}>
                   Export
                 </Button>
@@ -659,6 +746,7 @@ export default function ProjectSetupWBSPage() {
                   />
                 )}
               </div>
+
             </div>
 
             {/* Summary/Breakdown Switcher + Status */}
@@ -783,7 +871,27 @@ export default function ProjectSetupWBSPage() {
         confirmLabel="Reset"
         confirmVariant="danger"
       />
+
+      {deleteCandidate && (
+        <DeleteWithDataModal
+          isOpen={!!deleteCandidate}
+          onClose={() => setDeleteCandidate(null)}
+          onConfirm={() => {
+            setTreeWithHistory((prev: any[]) => removeById(prev, deleteCandidate.id));
+            setDeleteCandidate(null);
+          }}
+          itemCode={deleteCandidate.code}
+          itemName={deleteCandidate.name}
+          volume={deleteCandidate.volume}
+          unit={deleteCandidate.unit}
+          unitPrice={deleteCandidate.unitPrice}
+        />
+      )}
+
+      <SaveFloatingToast status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave(fullWbsTree)} />
     </>
+
+
   );
 }
 

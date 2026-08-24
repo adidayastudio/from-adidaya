@@ -39,6 +39,7 @@ import type { ThreadData } from "./PumbleThreadPanel";
 import { classifyInput } from "@/lib/stream/stream-classifier";
 import { fetchFeedItems } from "@/lib/stream/stream-feed";
 import { fetchAllProjects } from "@/lib/api/projects";
+import { handleWorkspacePrompt } from "@/lib/stream/adidaya-intelligence";
 import type { Project } from "@/types/project";
 import {
     saveStreamActivity,
@@ -61,8 +62,11 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
 
     // Feed & Activity state
     const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+    const lastCrewContextRef = useRef<any>(null);
     const [isLoadingFeed, setIsLoadingFeed] = useState(true);
     const [selectedItem, setSelectedItem] = useState<FeedItem | null>(null);
+    const [hasNewActivity, setHasNewActivity] = useState(false);
+    const [pendingActivity, setPendingActivity] = useState<FeedItem | null>(null);
 
     // Projects list from DB
     const [projects, setProjects] = useState<Project[]>([]);
@@ -199,6 +203,56 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
         }
     }, [messages, navMode]);
 
+    // Real-time Background Activity Alert Simulation
+    useEffect(() => {
+        if (navMode !== "workspace_module") {
+            setHasNewActivity(false);
+            setPendingActivity(null);
+            return;
+        }
+
+        // Set a timer for 15 seconds to simulate a worker logging an update from site
+        const timer = setTimeout(() => {
+            const newAct: FeedItem = {
+                id: `act-sim-${Date.now()}`,
+                title: "Dian (Supervisor) logged site weather report",
+                subtitle: "Heavy rain at 14:00 WIB, work halted temporarily.",
+                description: "",
+                type: "activity" as any,
+                parentModule: "crew",
+                submodule: "Daily Log",
+                event: "Weather Logged",
+                timestamp: new Date().toISOString(),
+                projectCode: "RBH"
+            };
+            setPendingActivity(newAct);
+            setHasNewActivity(true);
+        }, 15000);
+
+        return () => clearTimeout(timer);
+    }, [navMode, selectedModule]);
+
+    const handleRefreshFeed = useCallback(() => {
+        if (pendingActivity) {
+            setFeedItems(prev => [pendingActivity, ...prev]);
+            setPendingActivity(null);
+            setHasNewActivity(false);
+        }
+    }, [pendingActivity]);
+
+    const handleSaveConversation = useCallback(() => {
+        setFeedItems(prev => prev.map(item => {
+            if (item.type === ("chat_prompt" as any) || item.type === ("chat_response" as any)) {
+                return {
+                    ...item,
+                    type: "info" as any, // Convert to permanent info feed card!
+                    subtitle: "Saved Intelligence Prompt Log"
+                };
+            }
+            return item;
+        }));
+    }, []);
+
     // Send Stream message
     const handleSend = useCallback(async (text: string, quickType?: StreamIntentType) => {
         const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -280,6 +334,47 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
             return;
         }
 
+        if (navMode === "workspace_module") {
+            const userFeedItem: FeedItem = {
+                id: `luser-${Date.now()}`,
+                title: text,
+                subtitle: "You sent a prompt to Adidaya AI",
+                description: "",
+                type: "chat_prompt" as any,
+                parentModule: selectedModule as any,
+                submodule: "Prompt",
+                event: "Sent",
+                timestamp: new Date().toISOString(),
+                projectCode: "PM"
+            };
+
+            const { aiText, attachment, aiEvent, routingContext } = await handleWorkspacePrompt(text, selectedModule, lastCrewContextRef.current);
+
+            // Track context for follow-up questions
+            if (routingContext) {
+                lastCrewContextRef.current = routingContext;
+            }
+
+            const aiFeedItem: FeedItem = {
+                id: `lai-${Date.now()}`,
+                title: aiText,
+                subtitle: "",
+                description: "",
+                type: "chat_response" as any,
+                parentModule: selectedModule as any,
+                submodule: "Adidaya AI",
+                event: aiEvent,
+                timestamp: new Date().toISOString(),
+                projectCode: "AI",
+                metadata: {
+                    attachment
+                }
+            };
+
+            setFeedItems(prev => [userFeedItem, aiFeedItem, ...prev]);
+            return;
+        }
+
         // AskAdidaya View handling
         const userMsg: StreamMessage = {
             id: `msg-${Date.now()}`,
@@ -323,7 +418,7 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
         };
         setMessages(prev => prev.filter(m => !m.isProcessing).concat(systemMsg));
         setIsProcessing(false);
-    }, [navMode, selectedChannelCode]);
+    }, [navMode, selectedChannelCode, selectedModule]);
 
     const handleConfirm = useCallback(async (messageId: string) => {
         const msg = messages.find(m => m.id === messageId);
@@ -889,6 +984,11 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                     selectedChannelCode={selectedChannelCode}
                     isLoadingFeed={isLoadingFeed}
                     loadFeed={loadFeed}
+                    onSendPrompt={handleSend}
+                    isProcessingPrompt={isProcessing}
+                    hasNewActivity={hasNewActivity}
+                    onRefreshFeed={handleRefreshFeed}
+                    onSaveConversation={handleSaveConversation}
                 />
 
             </div>

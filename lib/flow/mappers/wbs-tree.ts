@@ -77,6 +77,8 @@ export function buildWBSTree(items: any[]): WBSNode[] {
             nameId: item.title_en || item.nameId || item.title || item.description || "",
             unit: item.unit || "m³",
             quantity: item.quantity ?? item.volume ?? item.qty ?? 0,
+            volume: item.quantity ?? item.volume ?? item.qty ?? 0,
+            unitPrice: item.unit_price ?? item.unitPrice ?? item.price ?? 0,
             notes: item.notes || null,
             ahsp_id: item.ahsp_id || null,
             children: [],

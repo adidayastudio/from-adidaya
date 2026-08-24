@@ -8,6 +8,7 @@ import clsx from "clsx";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, ArrowUpDown, Plus, Minus, Edit2, FileDown, Users, Search, X, Clock, TrendingUp } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
+import { Select } from "@/shared/ui/primitives/select/select";
 import { CREW_ROLE_LABELS, CrewRole, CrewRequest, fetchCrewMembers, fetchDailyLogs, DailyLog, CrewMember, fetchRequests } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
@@ -555,51 +556,54 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
     return (
         <div className="space-y-6 w-full animate-in fade-in duration-500">
             {/* CARDS */}
-            <SummaryCardsRow>
+            <SummaryCardsRow className="lg:grid-cols-5 !gap-3">
                 <SummaryCard
                     icon={<Users className="w-5 h-5 text-neutral-600" />}
                     iconBg="bg-neutral-50"
                     label="Base Pay"
-                    value={<CurrencyValue value={totals.base} className={totals.base === 0 ? "text-neutral-300 font-medium" : "text-neutral-900"} />}
+                    value={<CurrencyValue value={totals.base} className={totals.base === 0 ? "text-neutral-300 font-medium" : "text-neutral-900 !text-sm lg:!text-base"} />}
                 />
                 <SummaryCard
                     icon={<Clock className="w-5 h-5 text-blue-600" />}
                     iconBg="bg-blue-50"
                     label="Overtime"
-                    value={<CurrencyValue value={totals.ot} className={totals.ot === 0 ? "text-neutral-300 font-medium" : "text-blue-600"} />}
+                    value={<CurrencyValue value={totals.ot} className={totals.ot === 0 ? "text-neutral-300 font-medium" : "text-blue-600 !text-sm lg:!text-base"} />}
                 />
                 <SummaryCard
                     icon={<Minus className="w-5 h-5 text-red-600" />}
                     iconBg={totals.kasbon === 0 ? "bg-neutral-50" : "bg-red-50"}
                     label="Kasbon"
-                    value={<CurrencyValue value={totals.kasbon} className={totals.kasbon === 0 ? "text-neutral-300 font-medium" : "text-red-600"} />}
+                    value={<CurrencyValue value={totals.kasbon} className={totals.kasbon === 0 ? "text-neutral-300 font-medium" : "text-red-600 !text-sm lg:!text-base"} />}
                 />
                 <SummaryCard
                     icon={<Plus className="w-5 h-5 text-blue-600" />}
                     iconBg={totals.reimburse === 0 ? "bg-neutral-50" : "bg-blue-50"}
                     label="Reimburse"
-                    value={<CurrencyValue value={totals.reimburse} className={totals.reimburse === 0 ? "text-neutral-300 font-medium" : "text-blue-600"} />}
+                    value={<CurrencyValue value={totals.reimburse} className={totals.reimburse === 0 ? "text-neutral-300 font-medium" : "text-blue-600 !text-sm lg:!text-base"} />}
                 />
                 <SummaryCard
                     icon={<TrendingUp className="w-5 h-5 text-emerald-600" />}
                     iconBg={totals.total === 0 ? "bg-neutral-50" : totals.total < 0 ? "bg-red-50" : "bg-emerald-50"}
                     label="Total"
-                    value={<CurrencyValue value={totals.total} className={totals.total === 0 ? "text-neutral-300 font-medium" : totals.total < 0 ? "text-red-600" : "text-emerald-700"} />}
+                    value={<CurrencyValue value={totals.total} className={totals.total === 0 ? "text-neutral-300 font-medium" : totals.total < 0 ? "text-red-600 !text-sm lg:!text-base" : "text-emerald-700 !text-sm lg:!text-base"} />}
+                    className={totals.total === 0 ? "" : totals.total < 0 ? "!bg-red-50/50 dark:!bg-red-950/20 !border-red-200/50" : "!bg-emerald-50/50 dark:!bg-emerald-950/20 !border-emerald-200/50"}
                 />
             </SummaryCardsRow>
 
             {/* TOOLBAR */}
-            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 w-full">
+            <div className="flex items-center justify-between gap-4 w-full">
                 {/* Left section: Selector + Date + Weekly/Monthly */}
-                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                <div className="flex items-center gap-3">
                     {/* Project select */}
                     {!urlProjectId && !forceProjectSuffix && projects.length > 0 && (
-                        <div className="relative w-full sm:w-auto sm:min-w-[200px]">
-                            <select value={selectedProject} onChange={(e) => setSelectedProject(e.target.value)} className="appearance-none w-full pl-3 pr-7 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all">
-                                <option value="">Select Project</option>
-                                {projects.map(p => <option key={p.code} value={formatProjectCode(p.code)}>[{formatProjectCode(p.code)}] {p.name}</option>)}
-                            </select>
-                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+                        <div className="w-48 flex-shrink-0">
+                            <Select
+                                value={selectedProject}
+                                onChange={setSelectedProject}
+                                options={[{ value: "", label: "Select Project" }, ...projects.map(p => ({ value: formatProjectCode(p.code), label: `[${formatProjectCode(p.code)}] ${p.name}` }))]}
+                                placeholder="Project"
+                                accentColor="blue"
+                            />
                         </div>
                     )}
 
@@ -617,20 +621,8 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                     </div>
                 </div>
 
-                {/* Right section: Search + Export */}
+                {/* Right section: Search Button + Export */}
                 <div className="flex items-center gap-2 ml-auto">
-                    {showSearch && (
-                        <div className="relative animate-in slide-in-from-right-2 duration-200">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                            <input
-                                type="text"
-                                placeholder="Search name..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 pr-3 py-1.5 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-blue-500 w-40 sm:w-48 transition-all"
-                            />
-                        </div>
-                    )}
                     <button
                         type="button"
                         onClick={() => {
@@ -638,24 +630,38 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                             if (showSearch) setSearchQuery("");
                         }}
                         className={clsx(
-                            "w-8 h-8 rounded-full border border-neutral-200 hover:bg-neutral-50 transition-colors flex items-center justify-center shrink-0",
-                            showSearch ? "bg-neutral-100 text-neutral-600" : "bg-white text-neutral-500"
+                            "w-9 h-9 rounded-full border transition-colors flex items-center justify-center shrink-0",
+                            showSearch || searchQuery ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50"
                         )}
                         title="Search"
                     >
-                        {showSearch ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+                        <Search className="w-4 h-4" />
                     </button>
                     <Button
                         variant="secondary"
                         className="!rounded-full !py-1.5 !px-4 shadow-sm active:scale-95 transition-all"
-                        icon={<Download className="w-4 h-4" />}
                         onClick={handleExport}
                         disabled={loading || exporting || payrollData.length === 0}
+                        icon={<Download className="w-4 h-4" />}
                     >
                         {exporting ? "..." : "Export"}
                     </Button>
                 </div>
             </div>
+
+            {/* Search Bar - Full Width (Conditional) */}
+            {showSearch && (
+                <div className="relative w-full pointer-events-auto z-10 animate-in slide-in-from-top-2 duration-200">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <input
+                        type="text"
+                        placeholder="Search name..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-11 pr-4 py-2.5 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-full shadow-xs hover:shadow-sm transition-all"
+                    />
+                </div>
+            )}
 
             {/* EMPTY STATE */}
             {payrollData.length === 0 && (

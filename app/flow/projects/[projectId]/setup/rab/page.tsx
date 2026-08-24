@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import PageWrapper from "@/components/layout/PageWrapper";
 import ProjectDetailSidebar from "@/components/flow/projects/project-detail/ProjectDetailSidebar";
@@ -12,6 +12,9 @@ import { Select } from "@/shared/ui/primitives/select/select";
 import { Input } from "@/shared/ui/primitives/input/input";
 import { Download, Save, Plus, Send, RotateCcw } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { useAutoSave } from "@/lib/hooks/useAutoSave";
+import { SaveStatusBadge, SaveFloatingToast } from "@/components/flow/projects/project-detail/setup/common/SaveStatusBadge";
+
 
 import { WBS_BALLPARK } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-ballpark";
 import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-estimates";
@@ -430,6 +433,83 @@ export default function ProjectSetupRABPage() {
     );
   }, [activeMode, rabTreeBallpark, activeTree, safeArea]);
 
+  const saveRabStateToDb = useCallback(
+    async (payload: {
+      overrides: Record<string, number>;
+      estimates: EstimateValues;
+      adjFactor: number;
+      status: RABStatus;
+    }) => {
+      if (!project?.id) return;
+      const { overrides, estimates, adjFactor, status } = payload;
+
+      const updatedMeta = {
+        ...(project.meta || {}),
+        priceOverrides: overrides,
+        estimateValues: estimates,
+        adjustmentFactor: adjFactor,
+        rabStatus: status,
+      };
+
+      const { error } = await supabase
+        .from("projects")
+        .update({ meta: updatedMeta })
+        .eq("id", project.id);
+
+      if (error) throw error;
+
+      for (const [code, val] of Object.entries(estimates)) {
+        if (val && typeof val === "object" && (val.volume !== undefined || val.unit !== undefined || val.unitPrice !== undefined)) {
+          const stripped = code.replace(/^[A-Z]\./, "");
+          await supabase
+            .from("project_wbs_items")
+            .update({
+              quantity: val.volume ?? null,
+              unit: val.unit ?? null,
+              unit_price: val.unitPrice ?? null,
+            })
+            .eq("project_id", project.id)
+            .in("wbs_code", [code, stripped]);
+        }
+      }
+
+      for (const [code, priceVal] of Object.entries(overrides)) {
+        if (typeof priceVal === "number") {
+          const stripped = code.replace(/^[A-Z]\./, "");
+          await supabase
+            .from("project_wbs_items")
+            .update({
+              unit_price: priceVal,
+            })
+            .eq("project_id", project.id)
+            .in("wbs_code", [code, stripped]);
+        }
+      }
+
+      setRabStatus(status);
+
+    },
+    [project?.id, project?.meta]
+  );
+
+  const { status: autoSaveStatus, errorMessage: autoSaveError, scheduleSave, triggerImmediateSave } = useAutoSave({
+    onSave: saveRabStateToDb,
+    delayMs: 1500,
+  });
+
+  const triggerRabSave = (
+    overrides?: Record<string, number>,
+    estimates?: EstimateValues,
+    adj?: number
+  ) => {
+    scheduleSave({
+      overrides: overrides !== undefined ? overrides : priceOverrides,
+      estimates: estimates !== undefined ? estimates : estimateValues,
+      adjFactor: adj !== undefined ? adj : adjustmentFactor,
+      status: rabStatus,
+    });
+  };
+
   /* ===== HANDLERS ===== */
   function onChangeMode(next: RABMode) {
     setActiveMode(next);
@@ -438,16 +518,20 @@ export default function ProjectSetupRABPage() {
 
   function onPriceCommit(code: string, value: number) {
     if (!Number.isFinite(value) || value < 0) return;
-    setPriceOverrides((p) => ({ ...p, [code]: value }));
+    const next = { ...priceOverrides, [code]: value };
+    setPriceOverrides(next);
+    triggerRabSave(next, undefined, undefined);
   }
 
   function onEstimateCommit(code: string, value: { volume: number; unit: string; unitPrice: number }) {
     const strippedCode = code.replace(/^[A-Z]\./, "");
-    setEstimateValues(prev => ({
-      ...prev,
+    const next = {
+      ...estimateValues,
       [code]: value,
       [strippedCode]: value,
-    }));
+    };
+    setEstimateValues(next);
+    triggerRabSave(undefined, next, undefined);
   }
 
   function handleDetailApply(price: number) {
@@ -469,54 +553,11 @@ export default function ProjectSetupRABPage() {
     setSelectedDetailItem(null);
   }
 
-  // Action Handlers
-  const saveRABToDb = async (status: RABStatus) => {
-    if (!project) return;
-    try {
-      const updatedMeta = {
-        ...(project.meta || {}),
-        priceOverrides,
-        estimateValues,
-        adjustmentFactor,
-        rabStatus: status,
-      };
+  const saveDraft = () => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: "saved" });
+  const saveChanges = () => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: "saved" });
+  const submitRAB = () => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: "submitted" });
+  const addRevision = () => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: "saved" });
 
-      const { error } = await supabase
-        .from("projects")
-        .update({
-          meta: updatedMeta
-        })
-        .eq("id", project.id);
-
-      if (error) throw error;
-
-      // Bi-directionally sync volumes & units into project_wbs_items table for each entry in estimateValues
-      for (const [code, val] of Object.entries(estimateValues)) {
-        if (val && typeof val === "object" && (val.volume !== undefined || val.unit !== undefined)) {
-          const stripped = code.replace(/^[A-Z]\./, "");
-          await supabase
-            .from("project_wbs_items")
-            .update({
-              quantity: val.volume ?? null,
-              unit: val.unit ?? null,
-            })
-            .eq("project_id", project.id)
-            .in("wbs_code", [code, stripped]);
-        }
-      }
-
-      setRabStatus(status);
-      alert(`✅ RAB ${status === "submitted" ? "submitted" : "saved"} successfully!`);
-    } catch (err: any) {
-      console.error("Error saving RAB:", err);
-      alert("❌ Failed to save RAB: " + err.message);
-    }
-  };
-
-  const saveDraft = () => saveRABToDb("saved");
-  const saveChanges = () => saveRABToDb("saved");
-  const submitRAB = () => saveRABToDb("submitted");
-  const addRevision = () => saveRABToDb("saved");
 
   const handleExportExcel = () => {
     if (!project) return;
@@ -663,7 +704,10 @@ export default function ProjectSetupRABPage() {
               />
 
               <div className="pb-2 flex items-center gap-2 relative">
+                <SaveStatusBadge status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: rabStatus })} />
+
                 <div className="relative">
+
                   <Button
                     size="sm"
                     variant="secondary"
@@ -914,6 +958,9 @@ export default function ProjectSetupRABPage() {
         confirmLabel="Reset"
         confirmVariant="danger"
       />
+
+      <SaveFloatingToast status={autoSaveStatus} errorMessage={autoSaveError} onRetry={() => triggerImmediateSave({ overrides: priceOverrides, estimates: estimateValues, adjFactor: adjustmentFactor, status: rabStatus })} />
     </>
+
   );
 }

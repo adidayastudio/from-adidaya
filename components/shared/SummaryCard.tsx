@@ -30,7 +30,8 @@ export function SummaryCard({
     onClick,
     isActive,
     activeColor,
-    activeBg
+    activeBg,
+    className
 }: {
     icon: React.ReactNode;
     iconBg: string;
@@ -42,6 +43,7 @@ export function SummaryCard({
     isActive?: boolean;
     activeColor?: string;
     activeBg?: string;
+    className?: string;
 }) {
     return (
         <div
@@ -51,7 +53,8 @@ export function SummaryCard({
                 onClick ? "hover:shadow-md dark:hover:shadow-neutral-900/50 active:scale-95" : "",
                 isActive
                     ? clsx(activeBg || "bg-blue-50/80 dark:bg-blue-950/30", "border border-transparent dark:border-transparent")
-                    : "bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800"
+                    : "bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800",
+                className
             )}
         >
             <div className="flex items-center justify-between mb-2 lg:mb-4">

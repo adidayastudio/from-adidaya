@@ -214,3 +214,66 @@ export function ConfirmModal({
         </WBSModal>
     );
 }
+
+// Delete Warning Modal when item has cost/volume data
+type DeleteWithDataModalProps = {
+    isOpen: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    itemCode: string;
+    itemName: string;
+    volume: number;
+    unit: string;
+    unitPrice: number;
+};
+
+export function DeleteWithDataModal({
+    isOpen,
+    onClose,
+    onConfirm,
+    itemCode,
+    itemName,
+    volume,
+    unit,
+    unitPrice,
+}: DeleteWithDataModalProps) {
+    const handleConfirm = () => {
+        onConfirm();
+        onClose();
+    };
+
+    return (
+        <WBSModal isOpen={isOpen} onClose={onClose} title="Konfirmasi Hapus Item">
+            <div className="space-y-4">
+                <div className="flex items-start gap-3 p-3.5 bg-amber-50 rounded-xl border border-amber-200">
+                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="text-xs text-amber-900 space-y-1">
+                        <p className="font-semibold text-amber-950">
+                            Perhatian: Item ini memiliki data terisi!
+                        </p>
+                        <p>
+                            Item <span className="font-bold">[{itemCode}] {itemName}</span> memiliki data volume / harga yang telah diinput:
+                        </p>
+                        <ul className="list-disc list-inside pt-1 font-mono font-medium text-amber-900">
+                            {volume > 0 && <li>Volume: <strong>{volume} {unit || "m³"}</strong></li>}
+                            {unitPrice > 0 && <li>Harga Satuan: <strong>Rp {unitPrice.toLocaleString("id-ID")}</strong></li>}
+                        </ul>
+                        <p className="pt-1 italic">
+                            Apakah Anda benar-benar yakin ingin menghapus item ini beserta nilainya?
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                    <Button size="sm" variant="secondary" onClick={onClose}>
+                        Batal
+                    </Button>
+                    <Button size="sm" onClick={handleConfirm} className="bg-red-600 hover:bg-red-700 text-white">
+                        Ya, Hapus Item
+                    </Button>
+                </div>
+            </div>
+        </WBSModal>
+    );
+}
+

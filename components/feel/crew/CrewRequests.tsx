@@ -36,6 +36,11 @@ type FilterCard = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
 
 const getInitials = (n?: string) => { if (!n) return "??"; const w = n.trim().split(/\s+/); return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : w[0].substring(0, 2).toUpperCase(); };
 const formatNum = (n: number) => n.toLocaleString("id-ID");
+const formatProjectCode = (code?: string) => {
+    if (!code) return "-";
+    const parts = code.split("-");
+    return parts.length > 1 ? parts[1] : code;
+};
 
 type ViewMode = "weekly" | "monthly";
 
@@ -188,6 +193,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
     const [viewMode, setViewMode] = useState<ViewMode>("weekly");
 
     const [sortBy, setSortBy] = useState<"date" | "type" | "status">("date");
+    const [showSearch, setShowSearch] = useState(false);
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
     const [showDrawer, setShowDrawer] = useState(false);
     const [viewingRequest, setViewingRequest] = useState<CrewRequest | null>(null);
@@ -820,7 +826,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                                     label="Crew Member *" 
                                     value={formCrew} 
                                     onChange={setFormCrew} 
-                                    options={crewList.map(c => ({ value: c.id, label: c.name }))} 
+                                    options={crew.map(c => ({ value: c.id, label: c.name }))} 
                                     placeholder="Select crew member"
                                     accentColor="blue"
                                 />
@@ -1033,23 +1039,11 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
             </SummaryCardsRow>
 
             {/* TOOLBAR */}
-            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 w-full bg-neutral-100/50 p-2 rounded-full border border-neutral-200/50 backdrop-blur-sm">
+            <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 w-full">
 
                 {/* 1. Filters Group */}
                 <div className="flex flex-col lg:flex-row items-start lg:items-center gap-2 w-full xl:w-auto">
-                    {/* Search - Full width on mobile/tablet, auto on desktop */}
-                    <div className="relative w-full lg:w-auto pointer-events-auto z-10">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full lg:w-64 pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all"
-                        />
-                    </div>
-
-                    {/* Period Selector & Project */}
+                    {/* Period Selector, Project & Type */}
                     <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full lg:w-auto pointer-events-auto z-10">
                         {/* Period Selection */}
                         <div className="flex items-center gap-2">
@@ -1075,25 +1069,36 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                                 />
                             </div>
                         )}
+
+                        {/* Type Select */}
+                        <div className="flex-1 sm:flex-none sm:w-40">
+                            <Select
+                                value={selectedType}
+                                onChange={(v) => setSelectedType(v as any)}
+                                options={[
+                                    { value: "ALL", label: "All Types" },
+                                    { value: "LEAVE", label: "Leave" },
+                                    { value: "KASBON", label: "Kasbon" },
+                                    { value: "REIMBURSE", label: "Reimburse" }
+                                ]}
+                                placeholder="Type"
+                                accentColor="blue"
+                            />
+                        </div>
                     </div>
                 </div>
 
                 {/* 2. Actions Group */}
-                <div className="flex items-center justify-between xl:justify-end gap-2 w-full xl:w-auto overflow-x-auto xl:overflow-visible no-scrollbar">
-                    <div className="flex items-center bg-neutral-200/50 rounded-full p-1 flex-shrink-0">
-                        {(["ALL", "LEAVE", "KASBON", "REIMBURSE"] as (RequestType | "ALL")[]).map(t => (
-                            <button
-                                key={t}
-                                onClick={() => setSelectedType(t)}
-                                className={clsx(
-                                    "px-3 py-1.5 text-xs font-medium rounded-full transition-colors whitespace-nowrap",
-                                    selectedType === t ? "bg-white shadow text-neutral-900" : "text-neutral-500 hover:text-neutral-700"
-                                )}
-                            >
-                                {t === "ALL" ? "All" : t === "LEAVE" ? "Leave" : t === "KASBON" ? "Kasbon" : "Reimb"}
-                            </button>
-                        ))}
-                    </div>
+                <div className="flex items-center justify-end gap-2 pointer-events-auto z-10 flex-shrink-0 ml-auto">
+                    <button 
+                        onClick={() => setShowSearch(!showSearch)} 
+                        className={clsx(
+                            "p-2 rounded-full border transition-colors flex items-center justify-center w-9 h-9",
+                            showSearch || searchQuery ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50"
+                        )}
+                    >
+                        <Search className="w-4 h-4" />
+                    </button>
 
                     <Button
                         variant="secondary"
@@ -1106,6 +1111,20 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                     </Button>
                 </div>
             </div>
+
+            {/* Search Bar - Full Width (Conditional) */}
+            {showSearch && (
+                <div className="relative w-full pointer-events-auto z-10 animate-in slide-in-from-top-2 duration-200">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <input
+                        type="text"
+                        placeholder="Search name, project or details..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="pl-11 pr-4 py-2.5 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-full shadow-xs hover:shadow-sm transition-all"
+                    />
+                </div>
+            )}
 
             {!loading && filtered.length === 0 && (
                 <div className="bg-white/40 backdrop-blur-md rounded-[32px] border border-white/60 p-16 text-center shadow-sm animate-in fade-in zoom-in duration-500">
@@ -1224,17 +1243,17 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                     </div>
 
                     {/* DESKTOP TABLE */}
-                    <div className="hidden lg:block bg-white rounded-xl border border-neutral-200 overflow-hidden shadow-sm">
+                    <div className="hidden lg:block bg-white rounded-[22px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm">
-                                <thead className="bg-neutral-50 border-b border-neutral-200">
+                                <thead className="border-b border-neutral-100">
                                     <tr>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase">Name</th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden sm:table-cell">Project</th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("type")}><div className="flex items-center gap-1">Type <SortIcon c="type" /></div></th>
-                                        <th className="text-left px-4 py-3 text-xs font-semibold text-neutral-600 uppercase hidden md:table-cell">Details</th>
-                                        <th className="text-center px-4 py-3 text-xs font-semibold text-neutral-600 uppercase cursor-pointer hover:bg-neutral-100" onClick={() => handleSort("status")}><div className="flex items-center justify-center gap-1">Status <SortIcon c="status" /></div></th>
-                                        {(role && ["pm", "admin", "superadmin", "administrator", "supervisor"].includes(role)) && <th className="text-right px-4 py-3 text-xs font-semibold text-neutral-600 uppercase w-24">Actions</th>}
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400">Name</th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden sm:table-cell">Project</th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("type")}><div className="flex items-center gap-1">Type <SortIcon c="type" /></div></th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden md:table-cell">Details</th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("status")}><div className="flex items-center justify-center gap-1">Status <SortIcon c="status" /></div></th>
+                                        {(role && ["pm", "admin", "superadmin", "administrator", "supervisor"].includes(role)) && <th className="text-right px-4 py-3.5 text-xs font-semibold text-neutral-400 w-24">Actions</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-100">

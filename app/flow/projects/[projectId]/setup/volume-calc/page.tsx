@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import PageWrapper from "@/components/layout/PageWrapper";
 import ProjectDetailSidebar from "@/components/flow/projects/project-detail/ProjectDetailSidebar";
@@ -15,6 +15,9 @@ import { RAW_WBS_ESTIMATES_DELTA } from "@/components/flow/projects/project-deta
 import { buildEstimatesFromBallpark } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-inherit";
 import { buildDetailFromEstimates } from "@/components/flow/projects/project-detail/setup/wbs/data/wbs-detail";
 import { buildWBSTree, ensureMultiBuildingWBS, mergeWBSTrees } from "@/lib/flow/mappers/wbs-tree";
+import { useAutoSave } from "@/lib/hooks/useAutoSave";
+import { SaveStatusBadge, SaveFloatingToast } from "@/components/flow/projects/project-detail/setup/common/SaveStatusBadge";
+
 
 // Define calculation item structure
 interface VolumeRow {
@@ -225,57 +228,30 @@ export default function VolumeCalcPage() {
     setSelectedWbsUnit(savedMetaUnit || unit || "m³");
   };
 
-  const handleAddRow = () => {
-    const defaultFormula =
-      unitCategory === "VOLUME"
-        ? "BOX"
-        : unitCategory === "AREA"
-        ? "AREA"
-        : unitCategory === "LINE"
-        ? "LINE"
-        : "MANUAL";
+  const saveVolumeCalcToDb = useCallback(
+    async (payload: { rows: VolumeRow[]; wbsCode: string; unit: string }) => {
+      if (!project?.id || !payload.wbsCode) return;
 
-    setCalcRows((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        name: `Kalkulasi Baru ${prev.length + 1}`,
-        formulaType: defaultFormula,
-        length: 0,
-        width: 0,
-        height: 0,
-        count: 1,
-      },
-    ]);
-  };
+      const { rows, wbsCode, unit } = payload;
+      const strippedCode = wbsCode.replace(/^[A-Z]\./, "");
 
-  const handleRemoveRow = (id: string) => {
-    setCalcRows((prev) => prev.filter((r) => r.id !== id));
-  };
+      // 1. Calculate computed volume sum for rows
+      let sumVol = 0;
+      const rowsToInsert = rows.map((r) => {
+        let volume = 0;
+        if (r.formulaType === "BOX") volume = r.length * r.width * r.height * r.count;
+        else if (r.formulaType === "TRAPEZOIDAL") volume = (((r.topWidth || 0) + (r.bottomWidth || 0)) / 2) * r.height * r.length * r.count;
+        else if (r.formulaType === "COLUMN_BEAM") volume = r.length * r.width * r.height * r.count;
+        else if (r.formulaType === "AREA") volume = r.length * r.width * r.count;
+        else if (r.formulaType === "LINE") volume = r.length * r.count;
+        else if (r.formulaType === "MANUAL") volume = (r.manualVolume || 0) * r.count;
 
-  const handleUpdateRow = (id: string, updates: Partial<VolumeRow>) => {
-    setCalcRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
-  };
+        const calcVol = Number(volume.toFixed(3));
+        sumVol += calcVol;
 
-  // Save changes and push volume back to project metadata RAB leaf node
-  const handleSaveAndApply = async () => {
-    if (!project || !selectedWbsCode) return;
-
-    try {
-      setIsSaving(true);
-
-      // 1. Delete old rows for this wbs_code
-      await supabase
-        .from("project_volume_calcs")
-        .delete()
-        .eq("project_id", project.id)
-        .eq("wbs_code", selectedWbsCode);
-
-      // 2. Insert new rows
-      if (computedRows.length > 0) {
-        const rowsToInsert = computedRows.map((r) => ({
+        return {
           project_id: project.id,
-          wbs_code: selectedWbsCode,
+          wbs_code: wbsCode,
           name: r.name,
           formula_type: r.formulaType,
           parameters: {
@@ -287,79 +263,125 @@ export default function VolumeCalcPage() {
             count: r.count,
             manualVolume: r.manualVolume,
           },
-          calculated_volume: r.volume,
-        }));
+          calculated_volume: calcVol,
+        };
+      });
 
-        const { error: insertErr } = await supabase
-          .from("project_volume_calcs")
-          .insert(rowsToInsert);
+      // 2. Delete old rows for this wbs_code
+      await supabase
+        .from("project_volume_calcs")
+        .delete()
+        .eq("project_id", project.id)
+        .in("wbs_code", [wbsCode, strippedCode]);
 
+      // 3. Insert new rows
+      if (rowsToInsert.length > 0) {
+        const { error: insertErr } = await supabase.from("project_volume_calcs").insert(rowsToInsert);
         if (insertErr) throw insertErr;
       }
 
-      // 3. Update project metadata (sync into estimateValues)
+      // 4. Update project metadata (sync into estimateValues)
       const currentMeta = project.meta || {};
       const currentEstValues = (currentMeta as any).estimateValues || {};
 
-      const strippedCode = selectedWbsCode.replace(/^[A-Z]\./, "");
-      const nodeVal = currentEstValues[selectedWbsCode] || currentEstValues[strippedCode] || {
-        unitPrice: 0,
-      };
-
-      const updatedVal = {
-        ...nodeVal,
-        volume: totalVolume,
-        unit: selectedWbsUnit,
-      };
+      const nodeVal = currentEstValues[wbsCode] || currentEstValues[strippedCode] || { unitPrice: 0 };
+      const updatedVal = { ...nodeVal, volume: sumVol, unit };
 
       const updatedMeta = {
         ...currentMeta,
         estimateValues: {
           ...currentEstValues,
-          [selectedWbsCode]: updatedVal,
+          [wbsCode]: updatedVal,
           [strippedCode]: updatedVal,
         },
       };
 
-      const { error: metaErr } = await supabase
-        .from("projects")
-        .update({ meta: updatedMeta })
-        .eq("id", project.id);
+      await supabase.from("projects").update({ meta: updatedMeta }).eq("id", project.id);
 
-      if (metaErr) throw metaErr;
-
-      // 4. Update the volume/quantity and unit in project_wbs_items table directly
+      // 5. Update quantity and unit in project_wbs_items
       await supabase
         .from("project_wbs_items")
-        .update({
-          quantity: totalVolume,
-          unit: selectedWbsUnit
-        })
+        .update({ quantity: sumVol, unit })
         .eq("project_id", project.id)
-        .in("wbs_code", [selectedWbsCode, strippedCode]);
+        .in("wbs_code", [wbsCode, strippedCode]);
 
-      // Refresh the project context to automatically propagate the updated estimateValues across the app (like RAB page)
-      if (refresh) {
-        await refresh();
-      }
-
-      // Update quantity & unit in the active list directly
-      setDbWbsItems(prev =>
-        prev.map(item =>
-          (item.wbs_code === selectedWbsCode || item.code === selectedWbsCode)
-            ? { ...item, quantity: totalVolume, unit: selectedWbsUnit }
+      setDbWbsItems((prev) =>
+        prev.map((item) =>
+          item.wbs_code === wbsCode || item.code === wbsCode
+            ? { ...item, quantity: sumVol, unit }
             : item
         )
       );
 
-      alert(`✅ Volume and unit saved and applied to WBS node ${selectedWbsCode} in RAB!`);
-    } catch (err: any) {
-      console.error(err);
-      alert("❌ Failed to save volume calculations: " + err.message);
-    } finally {
-      setIsSaving(false);
-    }
+      if (refresh) {
+        await refresh();
+      }
+    },
+    [project, refresh]
+  );
+
+  const { status: autoSaveStatus, errorMessage: autoSaveError, scheduleSave, triggerImmediateSave } = useAutoSave({
+    onSave: saveVolumeCalcToDb,
+    delayMs: 1500,
+  });
+
+  const triggerCalcSave = (newRows: VolumeRow[], unitStr?: string) => {
+    if (!selectedWbsCode) return;
+    scheduleSave({
+      rows: newRows,
+      wbsCode: selectedWbsCode,
+      unit: unitStr !== undefined ? unitStr : selectedWbsUnit,
+    });
   };
+
+  const handleAddRow = () => {
+    const defaultFormula =
+      unitCategory === "VOLUME"
+        ? "BOX"
+        : unitCategory === "AREA"
+        ? "AREA"
+        : unitCategory === "LINE"
+        ? "LINE"
+        : "MANUAL";
+
+    const newRows: VolumeRow[] = [
+      ...calcRows,
+      {
+        id: Math.random().toString(),
+        name: `Kalkulasi Baru ${calcRows.length + 1}`,
+        formulaType: defaultFormula,
+        length: 0,
+        width: 0,
+        height: 0,
+        count: 1,
+      },
+    ];
+
+    setCalcRows(newRows);
+    triggerCalcSave(newRows);
+  };
+
+  const handleRemoveRow = (id: string) => {
+    const newRows = calcRows.filter((r) => r.id !== id);
+    setCalcRows(newRows);
+    triggerCalcSave(newRows);
+  };
+
+  const handleUpdateRow = (id: string, updates: Partial<VolumeRow>) => {
+    const newRows = calcRows.map((r) => (r.id === id ? { ...r, ...updates } : r));
+    setCalcRows(newRows);
+    triggerCalcSave(newRows);
+  };
+
+  const handleSaveAndApply = async () => {
+    if (!selectedWbsCode) return;
+    await triggerImmediateSave({
+      rows: calcRows,
+      wbsCode: selectedWbsCode,
+      unit: selectedWbsUnit,
+    });
+  };
+
 
   // Build hierarchical WBS Tree with exact natural sorting matching the WBS page
   const wbsTree = useMemo(() => {
@@ -538,14 +560,18 @@ export default function VolumeCalcPage() {
                       </div>
                     </div>
 
-                    <button
-                      onClick={handleSaveAndApply}
-                      disabled={isSaving}
-                      className="bg-brand-red hover:bg-brand-red/90 text-white rounded-xl px-4 py-2 font-semibold text-xs flex items-center gap-2 transition-all shadow-lg shadow-brand-red/20 shrink-0"
-                    >
-                      <Save size={14} />
-                      {isSaving ? "Saving..." : "Save & Apply to RAB"}
-                    </button>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <SaveStatusBadge status={autoSaveStatus} errorMessage={autoSaveError} onRetry={handleSaveAndApply} />
+                      <button
+                        onClick={handleSaveAndApply}
+                        disabled={autoSaveStatus === "saving"}
+                        className="bg-brand-red hover:bg-brand-red/90 text-white rounded-xl px-4 py-2 font-semibold text-xs flex items-center gap-2 transition-all shadow-lg shadow-brand-red/20 shrink-0"
+                      >
+                        <Save size={14} />
+                        {autoSaveStatus === "saving" ? "Saving..." : "Save & Apply to RAB"}
+                      </button>
+                    </div>
+
                   </div>
 
                   {/* Bottom Row: Unit selector (left) and Running Total badge (right) */}
@@ -923,6 +949,8 @@ export default function VolumeCalcPage() {
           </div>
         </div>
       </div>
+      <SaveFloatingToast status={autoSaveStatus} errorMessage={autoSaveError} onRetry={handleSaveAndApply} />
     </PageWrapper>
+
   );
 }
