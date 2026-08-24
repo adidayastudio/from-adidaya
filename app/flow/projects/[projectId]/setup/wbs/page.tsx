@@ -540,6 +540,11 @@ export default function ProjectSetupWBSPage() {
 
       const unitToSave = item.unit || currentMetaEst[code]?.unit || null;
 
+      // Store in metadata map (do NOT include unit_price in project_wbs_items because column does not exist on project_wbs_items)
+      if (priceToSave !== undefined && priceToSave !== null && priceToSave > 0) {
+        (item as any)._metaPrice = priceToSave;
+      }
+
       rowsToInsert.push({
         id: item.id,
         project_id: project.id,
@@ -553,8 +558,8 @@ export default function ProjectSetupWBSPage() {
         notes: notes,
         unit: unitToSave,
         quantity: qtyToSave,
-        unit_price: priceToSave,
         ahsp_id: item.ahsp_id || null,
+        _priceToSave: priceToSave,
       });
 
       const children = item.children || [];
@@ -567,31 +572,41 @@ export default function ProjectSetupWBSPage() {
       traverseAndPrepare(treeWithUuids[i], null, 0, i + 1);
     }
 
+    // Clean payload for project_wbs_items (removing temporary internal fields)
+    const dbPayload = rowsToInsert.map(({ _priceToSave, ...rest }) => rest);
+
     // Upsert rows to project_wbs_items without wiping whole table
     const { error: upsertError } = await supabase
       .from("project_wbs_items")
-      .upsert(rowsToInsert, { onConflict: "id" });
+      .upsert(dbPayload, { onConflict: "id" });
 
     if (upsertError) throw upsertError;
 
-    // Sync back estimateValues into project.meta
+    // Sync back estimateValues and priceOverrides into project.meta so RAB prices are NEVER lost
     const updatedEstimateValues = { ...currentMetaEst };
+    const updatedPriceOverrides = { ...currentPriceOverrides };
+
     rowsToInsert.forEach((row) => {
-      if (row.wbs_code && (row.quantity || row.unit_price || row.unit)) {
-        const existing = updatedEstimateValues[row.wbs_code] || {};
-        updatedEstimateValues[row.wbs_code] = {
-          ...existing,
-          volume: row.quantity ?? existing.volume ?? 0,
-          unit: row.unit ?? existing.unit ?? "ls",
-          unitPrice: row.unit_price ?? existing.unitPrice ?? 0,
-        };
+      if (row.wbs_code) {
+        const p = row._priceToSave;
+        if (p !== undefined && p !== null && p > 0) {
+          const existing = updatedEstimateValues[row.wbs_code] || {};
+          updatedEstimateValues[row.wbs_code] = {
+            ...existing,
+            volume: row.quantity ?? existing.volume ?? 0,
+            unit: row.unit ?? existing.unit ?? "ls",
+            unitPrice: p,
+          };
+          updatedPriceOverrides[row.wbs_code] = p;
+        }
       }
     });
 
     await supabase
       .from("projects")
-      .update({ meta: { ...(project.meta || {}), estimateValues: updatedEstimateValues } })
+      .update({ meta: { ...(project.meta || {}), estimateValues: updatedEstimateValues, priceOverrides: updatedPriceOverrides } })
       .eq("id", project.id);
+
 
 
     // Remove deleted nodes

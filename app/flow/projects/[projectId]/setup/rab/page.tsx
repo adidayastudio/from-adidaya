@@ -459,27 +459,13 @@ export default function ProjectSetupRABPage() {
       if (error) throw error;
 
       for (const [code, val] of Object.entries(estimates)) {
-        if (val && typeof val === "object" && (val.volume !== undefined || val.unit !== undefined || val.unitPrice !== undefined)) {
+        if (val && typeof val === "object" && (val.volume !== undefined || val.unit !== undefined)) {
           const stripped = code.replace(/^[A-Z]\./, "");
           await supabase
             .from("project_wbs_items")
             .update({
               quantity: val.volume ?? null,
               unit: val.unit ?? null,
-              unit_price: val.unitPrice ?? null,
-            })
-            .eq("project_id", project.id)
-            .in("wbs_code", [code, stripped]);
-        }
-      }
-
-      for (const [code, priceVal] of Object.entries(overrides)) {
-        if (typeof priceVal === "number") {
-          const stripped = code.replace(/^[A-Z]\./, "");
-          await supabase
-            .from("project_wbs_items")
-            .update({
-              unit_price: priceVal,
             })
             .eq("project_id", project.id)
             .in("wbs_code", [code, stripped]);
@@ -487,6 +473,7 @@ export default function ProjectSetupRABPage() {
       }
 
       setRabStatus(status);
+
 
     },
     [project?.id, project?.meta]
