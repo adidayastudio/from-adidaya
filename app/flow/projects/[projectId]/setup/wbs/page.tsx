@@ -572,8 +572,44 @@ export default function ProjectSetupWBSPage() {
       traverseAndPrepare(treeWithUuids[i], null, 0, i + 1);
     }
 
-    // Clean payload for project_wbs_items (removing temporary internal fields)
-    const dbPayload = rowsToInsert.map(({ _priceToSave, ...rest }) => rest);
+    // Clean payload for project_wbs_items and guarantee unique wbs_code per project
+    const seenCodes = new Set<string>();
+    const dbPayload = rowsToInsert.map(({ _priceToSave, ...rest }) => {
+      let baseCode = rest.wbs_code || "WBS";
+      let uniqueCode = baseCode;
+      let counter = 1;
+      while (seenCodes.has(uniqueCode)) {
+        uniqueCode = `${baseCode}_${counter}`;
+        counter++;
+      }
+      seenCodes.add(uniqueCode);
+      return { ...rest, wbs_code: uniqueCode };
+    });
+
+    // To prevent PostgreSQL 'project_wbs_code_ux' unique constraint collision when node codes shift/re-order,
+    // check if any existing item in DB has a code collision with a different ID
+    const { data: existingDbRows } = await supabase
+      .from("project_wbs_items")
+      .select("id, wbs_code")
+      .eq("project_id", project.id);
+
+    if (existingDbRows && existingDbRows.length > 0) {
+      const dbCodeMap = new Map(existingDbRows.map(r => [r.wbs_code, r.id]));
+      const hasCodeCollision = dbPayload.some(row => {
+        const existingId = dbCodeMap.get(row.wbs_code);
+        return existingId && existingId !== row.id;
+      });
+
+      if (hasCodeCollision) {
+        // Temporarily set wbs_code to temporary strings to clear unique constraint conflicts
+        const tempUpdates = existingDbRows.map(r => ({
+          id: r.id,
+          project_id: project.id,
+          wbs_code: `__TEMP_${r.id}`,
+        }));
+        await supabase.from("project_wbs_items").upsert(tempUpdates, { onConflict: "id" });
+      }
+    }
 
     // Upsert rows to project_wbs_items without wiping whole table
     const { error: upsertError } = await supabase
@@ -581,6 +617,7 @@ export default function ProjectSetupWBSPage() {
       .upsert(dbPayload, { onConflict: "id" });
 
     if (upsertError) throw upsertError;
+
 
     // Sync back estimateValues and priceOverrides into project.meta so RAB prices are NEVER lost
     const updatedEstimateValues = { ...currentMetaEst };
@@ -991,11 +1028,12 @@ function addSiblingToTree(tree: any[], siblingId: string, position: "above" | "b
     // Found at this level - insert new item
     const newItem = {
       id: `wbs-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      code: "NEW",
+      code: `X.${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
       nameEn: "New Work Item",
       nameId: "Item Pekerjaan Baru",
       children: []
     };
+
 
     const newTree = [...tree];
     const insertIdx = position === "above" ? siblingIdx : siblingIdx + 1;
