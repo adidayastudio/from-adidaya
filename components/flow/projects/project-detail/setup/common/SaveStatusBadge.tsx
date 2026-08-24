@@ -46,7 +46,7 @@ export function SaveStatusBadge({ status, errorMessage, onRetry, className }: Sa
   return (
     <div className={clsx("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-medium", className)}>
       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-      <span>Ter-simpan</span>
+      <span>Tersimpan</span>
     </div>
   );
 }
