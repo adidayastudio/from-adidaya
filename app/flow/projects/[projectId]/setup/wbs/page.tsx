@@ -504,7 +504,8 @@ export default function ProjectSetupWBSPage() {
     const prepareTreeWithUuids = (nodes: any[]): any[] => {
       return nodes.map(node => {
         const isUuid = node.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(node.id);
-        const validId = isUuid ? node.id : crypto.randomUUID();
+        const validId = isUuid ? node.id : (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : uid("wbs"));
+        node.id = validId;
         return {
           ...node,
           id: validId,
@@ -512,6 +513,7 @@ export default function ProjectSetupWBSPage() {
         };
       });
     };
+
 
     const treeWithUuids = prepareTreeWithUuids(treeToSave);
     const rowsToInsert: any[] = [];

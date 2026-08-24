@@ -51,8 +51,24 @@ export function SaveStatusBadge({ status, errorMessage, onRetry, className }: Sa
   );
 }
 
+import { useState, useEffect } from "react";
+
 export function SaveFloatingToast({ status, errorMessage, onRetry }: SaveStatusProps) {
-  if (status === "saved") {
+  const [showSavedToast, setShowSavedToast] = useState(false);
+
+  useEffect(() => {
+    if (status === "saved") {
+      setShowSavedToast(true);
+      const timer = setTimeout(() => {
+        setShowSavedToast(false);
+      }, 2500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowSavedToast(false);
+    }
+  }, [status]);
+
+  if (status === "saved" && showSavedToast) {
     return (
       <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-neutral-900/90 text-white shadow-xl backdrop-blur-sm border border-neutral-700/50 text-xs font-medium animate-in fade-in slide-in-from-bottom-3 duration-300">
         <CloudCheck className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -93,3 +109,4 @@ export function SaveFloatingToast({ status, errorMessage, onRetry }: SaveStatusP
 
   return null;
 }
+
