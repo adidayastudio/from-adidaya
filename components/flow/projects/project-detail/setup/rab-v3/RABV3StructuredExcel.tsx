@@ -553,6 +553,7 @@ export default function RABV3StructuredExcel({
                         value={editInputVal}
                         onChange={(e) => setEditInputVal(e.target.value)}
                         onBlur={() => commitEdit(row.id, "title", editInputVal)}
+                        onKeyDown={(e) => e.key === "Enter" && commitEdit(row.id, "title", editInputVal)}
                         className="w-full px-1 py-0.5 bg-white dark:bg-neutral-800 border-2 border-emerald-500 rounded focus:outline-none"
                       />
                     ) : (
@@ -576,6 +577,7 @@ export default function RABV3StructuredExcel({
                         value={editInputVal}
                         onChange={(e) => setEditInputVal(e.target.value)}
                         onBlur={() => commitEdit(row.id, "volume", editInputVal)}
+                        onKeyDown={(e) => e.key === "Enter" && commitEdit(row.id, "volume", editInputVal)}
                         className="w-full px-1 py-0.5 text-right font-mono bg-white dark:bg-neutral-800 border-2 border-emerald-500 rounded focus:outline-none"
                       />
                     ) : (
@@ -602,6 +604,7 @@ export default function RABV3StructuredExcel({
                         value={editInputVal}
                         onChange={(e) => setEditInputVal(e.target.value)}
                         onBlur={() => commitEdit(row.id, "unitPrice", editInputVal)}
+                        onKeyDown={(e) => e.key === "Enter" && commitEdit(row.id, "unitPrice", editInputVal)}
                         className="w-full px-1 py-0.5 text-right font-mono bg-white dark:bg-neutral-800 border-2 border-emerald-500 rounded focus:outline-none"
                       />
                     ) : (

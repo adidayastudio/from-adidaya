@@ -312,17 +312,13 @@ export default function VolumeCalcPage() {
             : item
         )
       );
-
-      if (refresh) {
-        await refresh();
-      }
     },
-    [project, refresh]
+    [project]
   );
 
   const { status: autoSaveStatus, errorMessage: autoSaveError, scheduleSave, triggerImmediateSave } = useAutoSave({
     onSave: saveVolumeCalcToDb,
-    delayMs: 1500,
+    delayMs: 5000,
   });
 
   const triggerCalcSave = (newRows: VolumeRow[], unitStr?: string) => {
@@ -332,6 +328,11 @@ export default function VolumeCalcPage() {
       wbsCode: selectedWbsCode,
       unit: unitStr !== undefined ? unitStr : selectedWbsUnit,
     });
+  };
+
+  const handleCommitCalcSave = (latestRows?: VolumeRow[]) => {
+    if (!selectedWbsCode) return;
+    triggerCalcSave(latestRows || calcRows);
   };
 
   const handleAddRow = () => {
@@ -368,9 +369,7 @@ export default function VolumeCalcPage() {
   };
 
   const handleUpdateRow = (id: string, updates: Partial<VolumeRow>) => {
-    const newRows = calcRows.map((r) => (r.id === id ? { ...r, ...updates } : r));
-    setCalcRows(newRows);
-    triggerCalcSave(newRows);
+    setCalcRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...updates } : r)));
   };
 
   const handleSaveAndApply = async () => {

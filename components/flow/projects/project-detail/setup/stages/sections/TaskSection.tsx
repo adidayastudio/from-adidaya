@@ -29,6 +29,18 @@ export default function TaskSection({
     return totalWeight;
   }, [totalWeight]);
 
+  const [localTitle, setLocalTitle] = React.useState(title);
+
+  React.useEffect(() => {
+    setLocalTitle(title);
+  }, [title]);
+
+  const handleTitleCommit = () => {
+    if (onTitleChange && localTitle !== title) {
+      onTitleChange(localTitle);
+    }
+  };
+
   return (
     <div className={clsx(
       "rounded-2xl border transition-all duration-200 shadow-sm",
@@ -56,9 +68,15 @@ export default function TaskSection({
           {/* Editable Title */}
           <input
             type="text"
-            value={title}
+            value={localTitle}
             onClick={(e) => e.stopPropagation()}
-            onChange={(e) => onTitleChange && onTitleChange(e.target.value)}
+            onChange={(e) => setLocalTitle(e.target.value)}
+            onBlur={handleTitleCommit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.currentTarget.blur();
+              }
+            }}
             className="font-bold text-sm text-neutral-900 dark:text-white bg-transparent focus:bg-white dark:focus:bg-neutral-800 focus:ring-1 focus:ring-brand-red/20 rounded-lg px-2.5 py-1 w-full max-w-md transition-all focus:outline-none placeholder-neutral-400"
             placeholder="Section Name..."
           />

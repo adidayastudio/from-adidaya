@@ -704,7 +704,7 @@ export default function ProjectSetupRABPage() {
 
   const { status: autoSaveStatus, errorMessage: autoSaveError, scheduleSave, triggerImmediateSave } = useAutoSave({
     onSave: saveRabStateToDb,
-    delayMs: 1500,
+    delayMs: 5000,
   });
 
   const triggerRabSave = (

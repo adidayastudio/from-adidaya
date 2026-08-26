@@ -9,7 +9,7 @@ interface UseAutoSaveOptions<T> {
   delayMs?: number;
 }
 
-export function useAutoSave<T>({ onSave, delayMs = 1500 }: UseAutoSaveOptions<T>) {
+export function useAutoSave<T>({ onSave, delayMs = 5000 }: UseAutoSaveOptions<T>) {
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -35,9 +35,10 @@ export function useAutoSave<T>({ onSave, delayMs = 1500 }: UseAutoSaveOptions<T>
 
         setStatus("saved");
       } catch (err: any) {
-        console.error("Auto-save error:", err);
+        const msg = err?.message || err?.details || err?.hint || (typeof err === "object" ? JSON.stringify(err) : String(err));
+        console.error("Auto-save error:", msg, err);
         setStatus("error");
-        setErrorMessage(err?.message || "Gagal menyimpan perubahan");
+        setErrorMessage(msg || "Gagal menyimpan perubahan");
       } finally {
         isSavingRef.current = false;
 

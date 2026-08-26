@@ -244,9 +244,17 @@ export default function RABBreakdownNode({
                       type="number"
                       className="w-20 rounded border border-neutral-300 px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                       value={estValues.volume}
-                      onChange={(e) => commitEstimate("volume", e.target.value)}
-                      onBlur={() => setEditingField(null)}
-                      onKeyDown={(e) => e.key === "Enter" && setEditingField(null)}
+                      onChange={(e) => setEstValues((prev) => ({ ...prev, volume: Number(e.target.value) || 0 }))}
+                      onBlur={() => {
+                        commitEstimate("volume", estValues.volume);
+                        setEditingField(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          commitEstimate("volume", estValues.volume);
+                          setEditingField(null);
+                        }
+                      }}
                       autoFocus
                     />
                   ) : (
@@ -283,9 +291,17 @@ export default function RABBreakdownNode({
                     type="text"
                     className="w-12 rounded border border-neutral-300 px-1 py-1 text-center text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={estValues.unit}
-                    onChange={(e) => commitEstimate("unit", e.target.value)}
-                    onBlur={() => setEditingField(null)}
-                    onKeyDown={(e) => e.key === "Enter" && setEditingField(null)}
+                    onChange={(e) => setEstValues((prev) => ({ ...prev, unit: e.target.value }))}
+                    onBlur={() => {
+                      commitEstimate("unit", estValues.unit);
+                      setEditingField(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        commitEstimate("unit", estValues.unit);
+                        setEditingField(null);
+                      }
+                    }}
                     autoFocus
                   />
                 ) : (
@@ -309,9 +325,17 @@ export default function RABBreakdownNode({
                     type="number"
                     className="w-28 rounded border border-neutral-300 px-2 py-1 text-right text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                     value={estValues.unitPrice}
-                    onChange={(e) => commitEstimate("unitPrice", e.target.value)}
-                    onBlur={() => setEditingField(null)}
-                    onKeyDown={(e) => e.key === "Enter" && setEditingField(null)}
+                    onChange={(e) => setEstValues((prev) => ({ ...prev, unitPrice: Number(e.target.value) || 0 }))}
+                    onBlur={() => {
+                      commitEstimate("unitPrice", estValues.unitPrice);
+                      setEditingField(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        commitEstimate("unitPrice", estValues.unitPrice);
+                        setEditingField(null);
+                      }
+                    }}
                     autoFocus
                   />
                 ) : (

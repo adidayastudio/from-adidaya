@@ -20,7 +20,7 @@ export function SaveStatusBadge({ status, errorMessage, onRetry, className }: Sa
       setShowSavedBadge(true);
       const timer = setTimeout(() => {
         setShowSavedBadge(false);
-      }, 3000);
+      }, 2500);
       return () => clearTimeout(timer);
     } else {
       setShowSavedBadge(false);
@@ -29,8 +29,8 @@ export function SaveStatusBadge({ status, errorMessage, onRetry, className }: Sa
 
   if (status === "saving") {
     return (
-      <div className={clsx("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-200/80 font-medium animate-pulse", className)}>
-        <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+      <div className={clsx("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 font-medium transition-all", className)}>
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-neutral-500" />
         <span>Menyimpan...</span>
       </div>
     );
@@ -38,9 +38,9 @@ export function SaveStatusBadge({ status, errorMessage, onRetry, className }: Sa
 
   if (status === "unsaved") {
     return (
-      <div className={clsx("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-orange-50 text-orange-700 border border-orange-200/80 font-medium", className)}>
-        <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
-        <span>Ada perubahan</span>
+      <div className={clsx("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700 font-medium transition-all", className)}>
+        <span className="w-2 h-2 rounded-full bg-amber-500" />
+        <span>Ada draf</span>
       </div>
     );
   }
@@ -78,7 +78,7 @@ export function SaveFloatingToast({ status, errorMessage, onRetry }: SaveStatusP
       setShowSavedToast(true);
       const timer = setTimeout(() => {
         setShowSavedToast(false);
-      }, 2500);
+      }, 2000);
       return () => clearTimeout(timer);
     } else {
       setShowSavedToast(false);
@@ -87,27 +87,9 @@ export function SaveFloatingToast({ status, errorMessage, onRetry }: SaveStatusP
 
   if (status === "saved" && showSavedToast) {
     return (
-      <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-neutral-900/90 text-white shadow-xl backdrop-blur-sm border border-neutral-700/50 text-xs font-medium animate-in fade-in slide-in-from-bottom-3 duration-300">
-        <CloudCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-        <span>Perubahan berhasil tersimpan</span>
-      </div>
-    );
-  }
-
-  if (status === "saving") {
-    return (
-      <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-amber-950/90 text-amber-200 shadow-xl backdrop-blur-sm border border-amber-800/50 text-xs font-medium animate-in fade-in slide-in-from-bottom-3 duration-300">
-        <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
-        <span>Menyimpan perubahan...</span>
-      </div>
-    );
-  }
-
-  if (status === "unsaved") {
-    return (
-      <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-neutral-900/90 text-orange-200 shadow-xl backdrop-blur-sm border border-orange-800/50 text-xs font-medium animate-in fade-in slide-in-from-bottom-3 duration-300">
-        <span className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-pulse shrink-0" />
-        <span>Ada perubahan draf</span>
+      <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-900/80 text-white shadow-md backdrop-blur-sm border border-neutral-700/40 text-xs font-medium animate-in fade-in duration-200">
+        <CloudCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+        <span>Tersimpan</span>
       </div>
     );
   }

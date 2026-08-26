@@ -885,9 +885,10 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
     if (!project?.id) return;
     
     // Assign consistent UUIDs so in-memory state matches DB IDs
+    // Assign consistent UUIDs so in-memory state matches DB IDs
     const prepareTreeWithUuids = (nodes: any[]): any[] => {
       return nodes.map(node => {
-        const isUuid = node.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(node.id);
+        const isUuid = node.id && typeof node.id === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(node.id);
         const validId = isUuid ? node.id : (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : uid("wbs"));
         node.id = validId;
         return {
@@ -897,7 +898,6 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
         };
       });
     };
-
 
     const treeWithUuids = prepareTreeWithUuids(treeToSave);
     const rowsToInsert: any[] = [];
@@ -976,7 +976,7 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
     // check if any existing item in DB has a code collision with a different ID
     const { data: existingDbRows } = await supabase
       .from("project_wbs_items")
-      .select("id, wbs_code")
+      .select("*")
       .eq("project_id", project.id);
 
     if (existingDbRows && existingDbRows.length > 0) {
@@ -989,8 +989,7 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
       if (hasCodeCollision) {
         // Temporarily set wbs_code to temporary strings to clear unique constraint conflicts
         const tempUpdates = existingDbRows.map(r => ({
-          id: r.id,
-          project_id: project.id,
+          ...r,
           wbs_code: `__TEMP_${r.id}`,
         }));
         await supabase.from("project_wbs_items").upsert(tempUpdates, { onConflict: "id" });
@@ -1056,7 +1055,7 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
 
   const { status: autoSaveStatus, errorMessage: autoSaveError, scheduleSave, triggerImmediateSave } = useAutoSave({
     onSave: saveTreeToDb,
-    delayMs: 1500,
+    delayMs: 5000,
   });
 
   // Save Draft
