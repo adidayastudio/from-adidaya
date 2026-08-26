@@ -281,8 +281,9 @@ export default function VolumeCalcPage() {
       }
 
       // 4. Update project metadata (sync into estimateValues)
-      const currentMeta = project.meta || {};
-      const currentEstValues = (currentMeta as any).estimateValues || {};
+      const { data: dbProj } = await supabase.from("projects").select("meta").eq("id", project.id).single();
+      const currentMeta = (dbProj?.meta || project?.meta || {}) as any;
+      const currentEstValues = currentMeta.estimateValues || {};
 
       const nodeVal = currentEstValues[wbsCode] || currentEstValues[strippedCode] || { unitPrice: 0 };
       const updatedVal = { ...nodeVal, volume: sumVol, unit };

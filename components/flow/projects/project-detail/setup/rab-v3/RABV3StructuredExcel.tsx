@@ -42,12 +42,14 @@ export interface RABRowData {
 }
 
 export interface ProjectV3Info {
+  projectId?: string;
   projectName?: string;
   projectCode?: string;
   buildingArea?: number;
   buildingClass?: "A" | "B" | "C" | "D";
   estimateValues?: Record<string, any>;
   wbsTree?: any[];
+  stage?: string;
 }
 
 export type RABV3Tab =
@@ -73,14 +75,35 @@ export default function RABV3StructuredExcel({
   mode?: "BALLPARK" | "ESTIMATES" | "DETAIL";
   onBackToOverview?: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState<RABV3Tab>("rekap_samil");
+  const [activeTab, setActiveTab] = useState<RABV3Tab>("detail_level2");
+  const [selectedCellRef, setSelectedCellRef] = useState<string | null>(null);
+  const [formulaBarInput, setFormulaBarInput] = useState<string>("");
+  const [editingCellId, setEditingCellId] = useState<string | null>(null);
+  const [editInputVal, setEditInputVal] = useState<string>("");
+  const [includePPN, setIncludePPN] = useState<boolean>(true);
 
   // MASTER REACTIVE STORE: Single Source of Truth for all detail items across all sheets
   const [masterRows, setMasterRows] = useState<RABRowData[]>(() => generateLevel2DetailRows(projectInfo));
 
-  // Sync masterRows when projectInfo changes
+  // Sync masterRows when projectInfo changes, preserving user edits
   useEffect(() => {
-    setMasterRows(generateLevel2DetailRows(projectInfo));
+    const generated = generateLevel2DetailRows(projectInfo);
+    setMasterRows((prevMaster) => {
+      if (!prevMaster || prevMaster.length === 0) return generated;
+      const prevMap = new Map(prevMaster.map((r) => [r.code, r]));
+      return generated.map((genRow) => {
+        const prev = prevMap.get(genRow.code);
+        if (prev) {
+          return {
+            ...genRow,
+            volume: prev.volume !== undefined && prev.volume !== 1 ? prev.volume : genRow.volume,
+            unitPrice: prev.unitPrice !== undefined && prev.unitPrice !== 0 ? prev.unitPrice : genRow.unitPrice,
+            title: prev.title || genRow.title,
+          };
+        }
+        return genRow;
+      });
+    });
   }, [projectInfo]);
 
   // Derived visible rows per activeTab (reactively computed from masterRows)
@@ -221,19 +244,96 @@ export default function RABV3StructuredExcel({
     }, 50);
   };
 
-  // Commit inline edit: updating masterRows guarantees reactive updates across ALL sheets!
-  const commitEdit = (rowId: string, field: "volume" | "unitPrice" | "title", val: string) => {
-    setMasterRows((prev) =>
-      prev.map((r) => {
-        if (r.id !== rowId && !rowId.includes(r.code)) return r;
-        if (field === "volume" || field === "unitPrice") {
-          const parsed = parseFloat(val.replace(/[^0-9.-]/g, ""));
-          return { ...r, [field]: isNaN(parsed) ? 0 : parsed };
-        }
-        return { ...r, title: val };
-      })
-    );
+  // Commit inline edit: updating masterRows guarantees reactive updates across ALL sheets & syncs DB!
+  const commitEdit = async (rowId: string, field: "volume" | "unitPrice" | "title", val: string) => {
+    let targetRowCode: string | null = null;
+
+    const updatedRows = masterRows.map((r) => {
+      if (r.id !== rowId && !rowId.includes(r.code)) return r;
+      targetRowCode = r.code;
+      if (field === "volume" || field === "unitPrice") {
+        const parsed = parseFloat(val.replace(/[^0-9.-]/g, ""));
+        const finalVal = isNaN(parsed) ? 0 : parsed;
+        return { ...r, [field]: finalVal };
+      }
+      return { ...r, title: val };
+    });
+
+    setMasterRows(updatedRows);
     setEditingCellId(null);
+
+    // Save to database (projects.meta, project_wbs_items, project_volume_calcs)
+    const pid = projectInfo?.projectId || projectInfo?.projectCode;
+    if (!pid || !targetRowCode) return;
+
+    try {
+      const { data: dbProj } = await supabase
+        .from("projects")
+        .select("meta")
+        .eq("id", pid)
+        .single();
+
+      const currentMeta = (dbProj?.meta || {}) as any;
+      const currentEstimateValues = { ...(currentMeta.estimateValues || {}) };
+      const currentPriceOverrides = { ...(currentMeta.priceOverrides || {}) };
+
+      const targetRow = updatedRows.find((r) => r.code === targetRowCode);
+      if (targetRow) {
+        const strippedCode = targetRow.code.replace(/^[A-Z]\./, "");
+        const existingVal = currentEstimateValues[targetRow.code] || currentEstimateValues[strippedCode] || {};
+        const valObj = {
+          ...existingVal,
+          volume: targetRow.volume,
+          unit: targetRow.unit || existingVal.unit || "ls",
+          unitPrice: targetRow.unitPrice,
+        };
+
+        currentEstimateValues[targetRow.code] = valObj;
+        currentEstimateValues[strippedCode] = valObj;
+        currentPriceOverrides[targetRow.code] = targetRow.unitPrice;
+        currentPriceOverrides[strippedCode] = targetRow.unitPrice;
+
+        await supabase
+          .from("projects")
+          .update({
+            meta: {
+              ...currentMeta,
+              estimateValues: currentEstimateValues,
+              priceOverrides: currentPriceOverrides,
+            },
+          })
+          .eq("id", pid);
+
+        await supabase
+          .from("project_wbs_items")
+          .update({
+            quantity: targetRow.volume,
+            unit: targetRow.unit || "ls",
+          })
+          .eq("project_id", pid)
+          .in("wbs_code", [targetRow.code, strippedCode]);
+
+        if (field === "volume") {
+          const { data: existingCalcs } = await supabase
+            .from("project_volume_calcs")
+            .select("id")
+            .eq("project_id", pid)
+            .in("wbs_code", [targetRow.code, strippedCode]);
+
+          if (existingCalcs && existingCalcs.length > 0) {
+            await supabase
+              .from("project_volume_calcs")
+              .update({
+                parameters: { manualVolume: targetRow.volume, count: 1 },
+              })
+              .eq("project_id", pid)
+              .in("wbs_code", [targetRow.code, strippedCode]);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error saving RAB V3 edit to DB:", err);
+    }
   };
 
   const handleFormulaBarSubmit = (e: React.FormEvent) => {
@@ -553,7 +653,12 @@ export default function RABV3StructuredExcel({
                         value={editInputVal}
                         onChange={(e) => setEditInputVal(e.target.value)}
                         onBlur={() => commitEdit(row.id, "title", editInputVal)}
-                        onKeyDown={(e) => e.key === "Enter" && commitEdit(row.id, "title", editInputVal)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitEdit(row.id, "title", editInputVal);
+                          }
+                        }}
                         className="w-full px-1 py-0.5 bg-white dark:bg-neutral-800 border-2 border-emerald-500 rounded focus:outline-none"
                       />
                     ) : (
@@ -577,7 +682,12 @@ export default function RABV3StructuredExcel({
                         value={editInputVal}
                         onChange={(e) => setEditInputVal(e.target.value)}
                         onBlur={() => commitEdit(row.id, "volume", editInputVal)}
-                        onKeyDown={(e) => e.key === "Enter" && commitEdit(row.id, "volume", editInputVal)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitEdit(row.id, "volume", editInputVal);
+                          }
+                        }}
                         className="w-full px-1 py-0.5 text-right font-mono bg-white dark:bg-neutral-800 border-2 border-emerald-500 rounded focus:outline-none"
                       />
                     ) : (
@@ -604,7 +714,12 @@ export default function RABV3StructuredExcel({
                         value={editInputVal}
                         onChange={(e) => setEditInputVal(e.target.value)}
                         onBlur={() => commitEdit(row.id, "unitPrice", editInputVal)}
-                        onKeyDown={(e) => e.key === "Enter" && commitEdit(row.id, "unitPrice", editInputVal)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitEdit(row.id, "unitPrice", editInputVal);
+                          }
+                        }}
                         className="w-full px-1 py-0.5 text-right font-mono bg-white dark:bg-neutral-800 border-2 border-emerald-500 rounded focus:outline-none"
                       />
                     ) : (

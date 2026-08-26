@@ -84,6 +84,7 @@ export default function RABV3Page() {
     const activeWbsTree = dbWbsItems.length > 0 ? dbWbsItems : (metaWbs || undefined);
 
     return {
+      projectId: project.id,
       projectName: (project as any).project_name || project.name || "Project",
       projectCode: (project as any).project_code || project.id,
       buildingArea: area,
