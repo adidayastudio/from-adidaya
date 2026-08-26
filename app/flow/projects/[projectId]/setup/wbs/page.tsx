@@ -1004,9 +1004,14 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
     if (upsertError) throw upsertError;
 
 
-    // Sync back estimateValues and priceOverrides into project.meta so RAB prices are NEVER lost
-    const updatedEstimateValues = { ...currentMetaEst };
-    const updatedPriceOverrides = { ...currentPriceOverrides };
+    // Fetch latest DB metadata to avoid overwriting RAB prices entered in other tabs
+    const { data: dbProj } = await supabase.from("projects").select("meta").eq("id", project.id).single();
+    const currentDbMeta = (dbProj?.meta || project?.meta || {}) as any;
+    const dbEstimateValues = currentDbMeta.estimateValues || {};
+    const dbPriceOverrides = currentDbMeta.priceOverrides || {};
+
+    const updatedEstimateValues = { ...dbEstimateValues, ...currentMetaEst };
+    const updatedPriceOverrides = { ...dbPriceOverrides, ...currentPriceOverrides };
 
     rowsToInsert.forEach((row) => {
       if (row.wbs_code) {
@@ -1023,9 +1028,6 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
         }
       }
     });
-
-    const { data: dbProj } = await supabase.from("projects").select("meta").eq("id", project.id).single();
-    const currentDbMeta = dbProj?.meta || project?.meta || {};
 
     await supabase
       .from("projects")

@@ -97,8 +97,12 @@ function processNode(node: any, values: EstimateValues, context: EstimateContext
         ? existingVal.volume
         : nodeDefaultVolume;
 
-    const baseUnitPrice = existingVal?.unitPrice ?? node.unitPrice ?? node.price ?? 0;
-    const resolvedUnitPrice = Math.round(baseUnitPrice * classFactor * rf * df * (adjustmentFactor / 100));
+    const baseUnitPrice = node.unitPrice ?? node.price ?? 0;
+    const computedDefaultPrice = Math.round(baseUnitPrice * classFactor * rf * df * (adjustmentFactor / 100));
+
+    const resolvedUnitPrice = (existingVal?.unitPrice !== undefined && existingVal?.unitPrice !== 0)
+        ? existingVal.unitPrice
+        : computedDefaultPrice;
 
     const resolvedUnit = existingVal?.unit || defaultUnit;
 

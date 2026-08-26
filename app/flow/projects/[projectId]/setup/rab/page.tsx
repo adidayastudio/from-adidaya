@@ -664,15 +664,17 @@ export default function ProjectSetupRABPage() {
       if (!project?.id) return;
       const { overrides, estimates, adjFactor, status } = payload;
 
+      const { data: dbProj } = await supabase.from("projects").select("meta").eq("id", project.id).single();
+      const currentDbMeta = (dbProj?.meta || project?.meta || {}) as any;
+
       const updatedMeta = {
-        ...(project.meta || {}),
+        ...currentDbMeta,
         priceOverrides: overrides,
         estimateValues: estimates,
         adjustmentFactor: adjFactor,
         rabStatus: status,
         rabVersions: versions,
       };
-
 
       const { error } = await supabase
         .from("projects")
