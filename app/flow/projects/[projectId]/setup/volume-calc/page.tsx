@@ -223,9 +223,19 @@ export default function VolumeCalcPage() {
     setSelectedWbsCode(code);
     setSelectedWbsName(name);
 
-    // Try to load any overridden unit from project.meta.estimateValues[code].unit first
-    const savedMetaUnit = (project?.meta as any)?.estimateValues?.[code]?.unit;
-    setSelectedWbsUnit(savedMetaUnit || unit || "m³");
+    const strippedCode = code.replace(/^[A-Z]\./, "");
+    const metaEst = (project?.meta as any)?.estimateValues || {};
+    const savedMetaUnit = metaEst[code]?.unit || metaEst[strippedCode]?.unit;
+    const dbItem = dbWbsItems.find((i: any) => i.wbs_code === code || i.code === code || i.wbs_code === strippedCode);
+
+    setSelectedWbsUnit(savedMetaUnit || dbItem?.unit || unit || "m³");
+  };
+
+  const handleUnitChange = (newUnit: string) => {
+    setSelectedWbsUnit(newUnit);
+    if (selectedWbsCode) {
+      triggerCalcSave(calcRows, newUnit);
+    }
   };
 
   const saveVolumeCalcToDb = useCallback(
@@ -580,7 +590,7 @@ export default function VolumeCalcPage() {
                       <span className="text-[11px] text-neutral-500 font-medium">Satuan Item:</span>
                       <select
                         value={selectedWbsUnit}
-                        onChange={(e) => setSelectedWbsUnit(e.target.value)}
+                        onChange={(e) => handleUnitChange(e.target.value)}
                         className="bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg px-2 py-0.5 text-[11px] text-neutral-700 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-brand-red font-semibold cursor-pointer"
                       >
                         {SUPPORTED_UNITS.map((unit) => (
