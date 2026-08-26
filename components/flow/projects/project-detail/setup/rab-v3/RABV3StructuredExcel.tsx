@@ -170,13 +170,6 @@ export default function RABV3StructuredExcel({
     }
   }, [masterRows, activeTab, projectInfo]);
 
-  const [includePPN, setIncludePPN] = useState<boolean>(true);
-
-  const [selectedCellRef, setSelectedCellRef] = useState<string>("C8");
-  const [editingCellId, setEditingCellId] = useState<string | null>(null);
-  const [editInputVal, setEditInputVal] = useState<string>("");
-  const [formulaBarInput, setFormulaBarInput] = useState<string>("");
-
   const inlineInputRef = useRef<HTMLInputElement>(null);
 
   const disciplineTabs = useMemo(() => {
