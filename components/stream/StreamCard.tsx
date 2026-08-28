@@ -53,7 +53,7 @@ export default function StreamCard({ item, onTap, isCompact }: StreamCardProps) 
 
                         {/* Submodule · Event Chip (Full Pill) */}
                         <span className={clsx(
-                            "px-2.5 py-0.5 rounded-full text-[10px] font-medium truncate border",
+                            "px-2.5 py-0.5 rounded-full text-[10px] font-medium truncate",
                             moduleToken.badgeBg
                         )}>
                             {submoduleLabel}{eventLabel}

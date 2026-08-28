@@ -51,7 +51,7 @@ export const MODULE_TOKENS: Record<ParentModule, ModuleToken> = {
         bgClass: "bg-blue-500/10 dark:bg-blue-500/20",
         textClass: "text-blue-600 dark:text-blue-400",
         borderClass: "border-blue-200/60 dark:border-blue-800/60",
-        badgeBg: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-300/40",
+        badgeBg: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/20 dark:border-blue-500/30",
         dotClass: "bg-blue-500",
     },
     finance: {
@@ -60,7 +60,7 @@ export const MODULE_TOKENS: Record<ParentModule, ModuleToken> = {
         bgClass: "bg-red-400/15 dark:bg-red-500/20",
         textClass: "text-red-600 dark:text-red-400",
         borderClass: "border-red-200/60 dark:border-red-800/60",
-        badgeBg: "bg-red-400/20 text-red-700 dark:text-red-300 border-red-300/40",
+        badgeBg: "bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/20 dark:border-red-500/30",
         dotClass: "bg-red-500",
     },
     resources: {
@@ -69,7 +69,7 @@ export const MODULE_TOKENS: Record<ParentModule, ModuleToken> = {
         bgClass: "bg-amber-400/15 dark:bg-amber-500/20",
         textClass: "text-amber-700 dark:text-amber-400",
         borderClass: "border-amber-200/60 dark:border-amber-800/60",
-        badgeBg: "bg-amber-400/20 text-amber-800 dark:text-amber-300 border-amber-300/40",
+        badgeBg: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/20 dark:border-amber-500/30",
         dotClass: "bg-amber-500",
     },
     reports: {
@@ -78,7 +78,7 @@ export const MODULE_TOKENS: Record<ParentModule, ModuleToken> = {
         bgClass: "bg-sky-400/15 dark:bg-sky-500/20",
         textClass: "text-sky-700 dark:text-sky-400",
         borderClass: "border-sky-200/60 dark:border-sky-800/60",
-        badgeBg: "bg-sky-400/20 text-sky-800 dark:text-sky-300 border-sky-300/40",
+        badgeBg: "bg-sky-500/15 text-sky-800 dark:text-sky-300 border border-sky-500/20 dark:border-sky-500/30",
         dotClass: "bg-sky-500",
     },
     people: {
@@ -87,7 +87,7 @@ export const MODULE_TOKENS: Record<ParentModule, ModuleToken> = {
         bgClass: "bg-emerald-400/15 dark:bg-emerald-500/20",
         textClass: "text-emerald-700 dark:text-emerald-400",
         borderClass: "border-emerald-200/60 dark:border-emerald-800/60",
-        badgeBg: "bg-emerald-400/20 text-emerald-800 dark:text-emerald-300 border-emerald-300/40",
+        badgeBg: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 dark:border-emerald-500/30",
         dotClass: "bg-emerald-500",
     },
     clock: {
@@ -96,7 +96,7 @@ export const MODULE_TOKENS: Record<ParentModule, ModuleToken> = {
         bgClass: "bg-cyan-400/15 dark:bg-cyan-500/20",
         textClass: "text-cyan-700 dark:text-cyan-400",
         borderClass: "border-cyan-200/60 dark:border-cyan-800/60",
-        badgeBg: "bg-cyan-400/20 text-cyan-800 dark:text-cyan-300 border-cyan-300/40",
+        badgeBg: "bg-cyan-500/15 text-cyan-800 dark:text-cyan-300 border border-cyan-500/20 dark:border-cyan-500/30",
         dotClass: "bg-cyan-500",
     },
     crew: {
@@ -105,7 +105,7 @@ export const MODULE_TOKENS: Record<ParentModule, ModuleToken> = {
         bgClass: "bg-purple-400/15 dark:bg-purple-500/20",
         textClass: "text-purple-700 dark:text-purple-400",
         borderClass: "border-purple-200/60 dark:border-purple-800/60",
-        badgeBg: "bg-purple-400/20 text-purple-800 dark:text-purple-300 border-purple-300/40",
+        badgeBg: "bg-purple-500/15 text-purple-800 dark:text-purple-300 border border-purple-500/20 dark:border-purple-500/30",
         dotClass: "bg-purple-500",
     },
 };

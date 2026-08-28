@@ -20,6 +20,8 @@ import {
     CreditCard,
     Upload,
     FolderKanban,
+    PanelLeft,
+    PanelRight,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -83,7 +85,7 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
         if (slug[0] === "ask-adidaya") return "ask_adidaya";
         if (slug[0] === "inbox") return "inbox";
         if (slug[0] === "tasks") return "tasks";
-        if (slug[0] === "channels") return "project_channels";
+        if (slug[0] === "channels") return "project_channel";
         if (["finance", "crew", "resources", "reports", "people", "clock"].includes(slug[0])) return "workspace_module";
         return "ask_adidaya";
     })();
@@ -120,42 +122,82 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
+    // Panel Collapse/Minimize States (macOS IDE Style)
+    const [isLeftOpen, setIsLeftOpen] = useState(true);
+    const [isRightOpen, setIsRightOpen] = useState(true);
+
+    useEffect(() => {
+        try {
+            const savedLeft = localStorage.getItem("stream_left_sidebar_open");
+            const savedRight = localStorage.getItem("stream_right_panel_open");
+            if (savedLeft !== null) setIsLeftOpen(savedLeft === "true");
+            if (savedRight !== null) setIsRightOpen(savedRight === "true");
+        } catch (e) {
+            // ignore localStorage errors
+        }
+    }, []);
+
+    const handleToggleLeft = useCallback(() => {
+        setIsLeftOpen(prev => {
+            const next = !prev;
+            try { localStorage.setItem("stream_left_sidebar_open", String(next)); } catch (e) {}
+            return next;
+        });
+    }, []);
+
+    const handleToggleRight = useCallback(() => {
+        setIsRightOpen(prev => {
+            const next = !prev;
+            try { localStorage.setItem("stream_right_panel_open", String(next)); } catch (e) {}
+            return next;
+        });
+    }, []);
+
+    // Global Keyboard Shortcuts: Cmd+B (Left Sidebar), Cmd+Shift+B (Right Panel)
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") {
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    handleToggleRight();
+                } else {
+                    e.preventDefault();
+                    handleToggleLeft();
+                }
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [handleToggleLeft, handleToggleRight]);
+
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    // Sync navigation state to URL query params
+    // Keep state in sync with pathname changes (e.g., user navigation, sidebar click, back/forward)
     useEffect(() => {
         if (!mounted) return;
         
-        let path = "/stream";
-        if (navMode === "ask_adidaya") {
-            path = "/stream/ask-adidaya";
-        } else if (navMode === "inbox") {
-            path = "/stream/inbox";
-        } else if (navMode === "tasks") {
-            path = "/stream/tasks";
-        } else if (navMode === "project_channels" && selectedChannelCode) {
-            path = `/stream/channels/${selectedChannelCode}`;
-        } else if (navMode === "workspace_module" && selectedModule) {
-            const parts = window.location.pathname.split("/");
-            const currentSubtab = (parts.length >= 4 && parts[1] === "stream" && parts[2] === selectedModule) ? parts[3] : "overview";
-            path = `/stream/${selectedModule}/${currentSubtab}`;
+        const parts = pathname.split("/").filter(Boolean);
+        if (parts.length > 0 && parts[0] === "stream") {
+            const firstSegment = parts[1] || "";
+            if (!firstSegment || firstSegment === "ask-adidaya") {
+                setNavMode("ask_adidaya");
+            } else if (firstSegment === "inbox") {
+                setNavMode("inbox");
+            } else if (firstSegment === "tasks") {
+                setNavMode("tasks");
+            } else if (firstSegment === "channels") {
+                setNavMode("project_channel");
+                if (parts[2]) {
+                    setSelectedChannelCode(parts[2]);
+                }
+            } else if (["finance", "crew", "resources", "reports", "people", "clock"].includes(firstSegment)) {
+                setNavMode("workspace_module");
+                setSelectedModule(firstSegment);
+            }
         }
-        
-        const params = new URLSearchParams(window.location.search);
-        params.delete("nav");
-        params.delete("module");
-        params.delete("channel");
-        params.delete("subtab");
-        
-        const search = params.toString();
-        const finalUrl = search ? `${path}?${search}` : path;
-        
-        if (window.location.pathname + window.location.search !== finalUrl) {
-            router.replace(finalUrl, { scroll: false });
-        }
-    }, [navMode, selectedModule, selectedChannelCode, pathname, mounted]);
+    }, [pathname, mounted]);
 
     // Handle channel content scroll for iOS/macOS dynamic header
     const handleChannelScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -525,6 +567,8 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                     pinnedChannels={pinnedChannels}
                     feedItems={feedItems}
                     mounted={mounted}
+                    isLeftOpen={isLeftOpen}
+                    onToggleLeft={handleToggleLeft}
                 />
 
                 {/* =========================================================
@@ -989,6 +1033,8 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                     hasNewActivity={hasNewActivity}
                     onRefreshFeed={handleRefreshFeed}
                     onSaveConversation={handleSaveConversation}
+                    isRightOpen={isRightOpen}
+                    onToggleRight={handleToggleRight}
                 />
 
             </div>

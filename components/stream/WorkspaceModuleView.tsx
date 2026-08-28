@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense, useMemo } from "react";
+import React, { useState, useEffect, useRef, Suspense, useMemo, useCallback } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import clsx from "clsx";
 import { useTheme } from "next-themes";
@@ -155,9 +155,38 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
 
     const { theme } = useTheme();
     const [isHeaderScrolled, setIsHeaderScrolled] = useState(false);
-    const [viewMode, setViewMode] = useState<"personal" | "team">("personal");
+    const [viewMode, setViewMode] = useState<"personal" | "team">(() => {
+        if (typeof window !== "undefined") {
+            const urlView = searchParams.get("view") as "personal" | "team" | null;
+            const stored = sessionStorage.getItem("finance_view_mode") as "personal" | "team" | null;
+            return urlView || stored || "personal";
+        }
+        return "personal";
+    });
     const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
     const [showMoreDropdown, setShowMoreDropdown] = useState(false);
+
+    // Sync viewMode changes with sessionStorage, custom event & URL searchParams
+    const handleViewModeChange = useCallback((mode: "personal" | "team") => {
+        setViewMode(mode);
+        try {
+            sessionStorage.setItem("finance_view_mode", mode);
+        } catch (e) {}
+        window.dispatchEvent(new CustomEvent("finance:set-view-mode", { detail: mode }));
+
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("view", mode);
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [pathname, router, searchParams]);
+
+    // Keep viewMode synced if URL searchParams changes externally
+    useEffect(() => {
+        const urlView = searchParams.get("view") as "personal" | "team" | null;
+        if (urlView && (urlView === "personal" || urlView === "team") && urlView !== viewMode) {
+            setViewMode(urlView);
+            window.dispatchEvent(new CustomEvent("finance:set-view-mode", { detail: urlView }));
+        }
+    }, [searchParams, viewMode]);
 
     const config = MODULE_CONFIGS[selectedModule] || {
         title: `${selectedModule.toUpperCase()} Workspace`,
@@ -166,56 +195,32 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
         moreTabs: []
     };
 
-    const [activeSubTab, setActiveSubTab] = useState(() => {
-        if (typeof window !== "undefined") {
-            const parts = window.location.pathname.split("/");
-            if (parts.length >= 4 && parts[1] === "stream" && parts[2] === selectedModule) {
-                const pathSubtab = parts[3];
-                const currentConfig = MODULE_CONFIGS[selectedModule] || config;
-                const isValid = [...(currentConfig.mainTabs || []), ...(currentConfig.moreTabs || [])].some(t => t.id === pathSubtab);
-                if (isValid) return pathSubtab;
-            }
-        }
-        const currentConfig = MODULE_CONFIGS[selectedModule] || config;
-        return currentConfig.mainTabs[0]?.id || "overview";
-    });
-
-    // Reset or update sub-tab when module changes
-    useEffect(() => {
-        const currentConfig = MODULE_CONFIGS[selectedModule] || config;
-        const parts = window.location.pathname.split("/");
-        
-        let subtab = currentConfig.mainTabs[0]?.id || "overview";
+    // Derive activeSubTab cleanly from pathname
+    const activeSubTab = useMemo(() => {
+        const parts = pathname.split("/");
         if (parts.length >= 4 && parts[1] === "stream" && parts[2] === selectedModule) {
             const pathSubtab = parts[3];
-            const isValid = [...(currentConfig.mainTabs || []), ...(currentConfig.moreTabs || [])].some(t => t.id === pathSubtab);
-            if (isValid) subtab = pathSubtab;
+            const isValid = [...(config.mainTabs || []), ...(config.moreTabs || [])].some(t => t.id === pathSubtab);
+            if (isValid) return pathSubtab;
         }
-        
-        setActiveSubTab(subtab);
+        return config.mainTabs[0]?.id || "overview";
+    }, [pathname, selectedModule, config]);
+
+    // Handle subtab navigation
+    const handleSubTabChange = (tabId: string) => {
         setShowMoreDropdown(false);
-    }, [selectedModule]);
+        const search = searchParams.toString();
+        const targetPath = `/stream/${selectedModule}/${tabId}`;
+        router.push(search ? `${targetPath}?${search}` : targetPath, { scroll: false });
+    };
 
-    // Sync subtab state to URL path
-    useEffect(() => {
-        const parts = window.location.pathname.split("/");
-        if (parts.length >= 3 && parts[1] === "stream" && parts[2] === selectedModule) {
-            const currentSubtab = parts[3] || "";
-            if (currentSubtab !== activeSubTab) {
-                const params = new URLSearchParams(window.location.search);
-                params.delete("subtab"); // Clean up old query param if present
-                const finalPath = `/stream/${selectedModule}/${activeSubTab}`;
-                const search = params.toString();
-                router.replace(search ? `${finalPath}?${search}` : finalPath, { scroll: false });
-            }
-        }
-    }, [activeSubTab, selectedModule, router]);
-
+    // Auto-fallback if subtab is invalid for personal view
     useEffect(() => {
         if (viewMode === "personal" && config.moreTabs.some(t => t.id === activeSubTab)) {
-            setActiveSubTab(config.mainTabs[0]?.id || "overview");
+            const fallbackTab = config.mainTabs[0]?.id || "overview";
+            router.replace(`/stream/${selectedModule}/${fallbackTab}`, { scroll: false });
         }
-    }, [viewMode, activeSubTab, config]);
+    }, [viewMode, activeSubTab, config, selectedModule, router]);
 
     const showPlusButton = useMemo(() => {
         if (selectedModule === "crew") {
@@ -273,25 +278,25 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
             if (href && (href.startsWith("/flow/") || href.startsWith("/feel/"))) {
                 e.preventDefault();
                 e.stopPropagation();
-                if (href.includes("purchasing")) setActiveSubTab("purchasing");
-                else if (href.includes("reimburse")) setActiveSubTab("reimburse");
+                if (href.includes("purchasing")) handleSubTabChange("purchasing");
+                else if (href.includes("reimburse")) handleSubTabChange("reimburse");
                 else if (href.includes("petty-cash")) {
                     setViewMode("team");
-                    setActiveSubTab("petty-cash");
+                    handleSubTabChange("petty-cash");
                 }
                 else if (href.includes("funding-sources")) {
                     setViewMode("team");
-                    setActiveSubTab("funding-sources");
+                    handleSubTabChange("funding-sources");
                 }
                 else if (href.includes("reports")) {
                     setViewMode("team");
-                    setActiveSubTab("reports");
+                    handleSubTabChange("reports");
                 }
-                else if (href.includes("materials")) setActiveSubTab("materials");
-                else if (href.includes("tools")) setActiveSubTab("tools");
-                else if (href.includes("assets")) setActiveSubTab("assets");
-                else if (href.includes("services")) setActiveSubTab("services");
-                else setActiveSubTab("overview");
+                else if (href.includes("materials")) handleSubTabChange("materials");
+                else if (href.includes("tools")) handleSubTabChange("tools");
+                else if (href.includes("assets")) handleSubTabChange("assets");
+                else if (href.includes("services")) handleSubTabChange("services");
+                else handleSubTabChange("overview");
             }
         }
     };
@@ -301,30 +306,27 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
     return (
         <HeaderProvider>
             <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-                {/* Top Dynamic Floating Liquid Glass Header */}
-                <div className="absolute top-2 left-4 right-4 z-30 pointer-events-auto">
+                {/* Top Dynamic Floating Liquid Glass Full Pill Header Card */}
+                <div className="absolute top-3 left-4 right-4 z-30 pointer-events-auto">
                     <div
-                        style={isHeaderScrolled ? {
+                        style={{
                             background: theme === "dark"
-                                ? "linear-gradient(180deg, rgba(24,24,27,0.88) 0%, rgba(15,15,18,0.78) 100%)"
-                                : "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(245,245,250,0.78) 100%)",
+                                ? "linear-gradient(180deg, rgba(24,24,27,0.92) 0%, rgba(15,15,18,0.85) 100%)"
+                                : "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(245,245,250,0.85) 100%)",
                             backdropFilter: "blur(32px) saturate(180%)",
                             WebkitBackdropFilter: "blur(32px) saturate(180%)",
                             border: theme === "dark"
-                                ? "1px solid rgba(255,255,255,0.1)"
-                                : "1px solid rgba(255,255,255,0.7)",
+                                ? "1px solid rgba(255,255,255,0.12)"
+                                : "1px solid rgba(255,255,255,0.8)",
                             boxShadow: theme === "dark"
                                 ? "0 12px 40px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.08)"
                                 : "0 12px 40px rgba(0,0,0,0.08), inset 0 1px 0.5px rgba(255,255,255,0.9)",
-                        } : undefined}
-                        className={clsx(
-                            "h-13 sm:h-14 px-3 sm:px-4 flex items-center justify-between transition-all duration-300 w-full rounded-2xl gap-2",
-                            !isHeaderScrolled && "bg-transparent border border-transparent shadow-none"
-                        )}
+                        }}
+                        className="h-13 sm:h-14 px-2.5 sm:px-3 flex items-center justify-between transition-all duration-300 w-full rounded-full gap-2 shadow-lg"
                     >
                         {/* Dynamic Module Title */}
-                        <div className="flex items-center gap-2 min-w-0 shrink-0">
-                            <div className="p-1.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 shrink-0">
+                        <div className="flex items-center gap-2.5 min-w-0 shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 flex items-center justify-center shrink-0">
                                 {config.icon}
                             </div>
                             <h2 className="hidden md:inline-block text-[13px] font-bold text-neutral-900 dark:text-white truncate">
@@ -338,7 +340,7 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
                                 <SubTabButton
                                     key={tab.id}
                                     active={activeSubTab === tab.id}
-                                    onClick={() => setActiveSubTab(tab.id)}
+                                    onClick={() => handleSubTabChange(tab.id)}
                                     icon={null}
                                     label={tab.label}
                                 />
@@ -371,8 +373,7 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
                                                 <button
                                                     key={tab.id}
                                                     onClick={() => {
-                                                        setActiveSubTab(tab.id);
-                                                        setShowMoreDropdown(false);
+                                                        handleSubTabChange(tab.id);
                                                     }}
                                                     className={clsx(
                                                         "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[12px] font-bold text-left transition-colors",
@@ -393,34 +394,34 @@ export default function WorkspaceModuleView({ selectedModule }: WorkspaceModuleV
 
                         {/* Top Right Toolbar Controls (ONLY Personal/Team Toggle + Blue + Button) */}
                         <div className="flex items-center gap-2 shrink-0">
-                            {/* Personal / Team Slider Toggle */}
+                            {/* Personal / Team Full Pill Slider Toggle */}
                             {selectedModule !== "crew" && (
-                                <div className="h-9 p-0.5 flex items-center rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 backdrop-blur-xl text-[12px] font-bold border border-neutral-300/40 dark:border-neutral-700/40">
+                                <div className="h-9 p-1 flex items-center gap-0.5 rounded-full bg-neutral-200/60 dark:bg-neutral-800/60 backdrop-blur-xl text-[12px] font-bold border border-neutral-300/40 dark:border-neutral-700/40">
                                     <button
-                                        onClick={() => setViewMode("personal")}
+                                        onClick={() => handleViewModeChange("personal")}
                                         title="Personal View"
                                         className={clsx(
-                                            "flex items-center justify-center gap-1.5 transition-all duration-200 rounded-full h-8",
+                                            "flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold transition-all duration-200 cursor-pointer",
                                             viewMode === "personal"
-                                                ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white px-3 shadow-xs font-bold"
-                                                : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white w-8"
+                                                ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-xs font-bold"
+                                                : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
                                         )}
                                     >
                                         <PersonalIcon className="w-3.5 h-3.5" />
-                                        {viewMode === "personal" && <span>Personal</span>}
+                                        <span>Personal</span>
                                     </button>
                                     <button
-                                        onClick={() => setViewMode("team")}
+                                        onClick={() => handleViewModeChange("team")}
                                         title="Team View"
                                         className={clsx(
-                                            "flex items-center justify-center gap-1.5 transition-all duration-200 rounded-full h-8",
+                                            "flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-semibold transition-all duration-200 cursor-pointer",
                                             viewMode === "team"
-                                                ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white px-3 shadow-xs font-bold"
-                                                : "text-neutral-500 hover:text-neutral-800 dark:hover:text-white w-8"
+                                                ? "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white shadow-xs font-bold"
+                                                : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
                                         )}
                                     >
                                         <TeamIcon className="w-3.5 h-3.5" />
-                                        {viewMode === "team" && <span>Team</span>}
+                                        <span>Team</span>
                                     </button>
                                 </div>
                             )}

@@ -228,20 +228,24 @@ export async function GET(request: NextRequest) {
             { name: 'pulseReimbursements', res: pulseReimbursements }
         ];
 
-        const failedQuery = queries.find(q => q.res.error);
-        if (failedQuery) {
-            console.error(`Dashboard query failed: ${failedQuery.name}`, failedQuery.res.error);
-            return serverErrorResponse(`Data fetch error: ${failedQuery.name}`);
-        }
+        // Log any failed subqueries without crashing the dashboard
+        queries.forEach(q => {
+            if (q.res.error) {
+                console.warn(`[Dashboard] Non-critical query error on ${q.name}:`, q.res.error);
+            }
+        });
+
+        // Safe helper getter for query data
+        const getQueryData = (res: any) => res?.data || [];
 
         // CALCULATIONS - TEAM
         const paidThisMonth =
-            (teamPaidPurchasesThisMonth.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0) +
-            (teamPaidReimburseThisMonth.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0);
+            (getQueryData(teamPaidPurchasesThisMonth).reduce((sum: number, item: any) => sum + (item.amount || 0), 0)) +
+            (getQueryData(teamPaidReimburseThisMonth).reduce((sum: number, item: any) => sum + (item.amount || 0), 0));
 
         const paidLastMonth =
-            (teamPaidPurchasesLastMonth.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0) +
-            (teamPaidReimburseLastMonth.data?.reduce((sum: number, item: any) => sum + (item.amount || 0), 0) || 0);
+            (getQueryData(teamPaidPurchasesLastMonth).reduce((sum: number, item: any) => sum + (item.amount || 0), 0)) +
+            (getQueryData(teamPaidReimburseLastMonth).reduce((sum: number, item: any) => sum + (item.amount || 0), 0));
 
         const trendPercent = paidLastMonth === 0 ? 0 : Math.round(((paidThisMonth - paidLastMonth) / paidLastMonth) * 100);
 

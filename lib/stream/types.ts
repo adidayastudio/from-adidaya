@@ -121,6 +121,7 @@ export interface FeedItem {
     event?: string;
     isRestricted?: boolean;
     isPersonalClock?: boolean;
+    isMe?: boolean;
 
     // Entity reference
     entityType?: StreamEntityType;

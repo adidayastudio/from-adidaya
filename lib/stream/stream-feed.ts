@@ -64,6 +64,7 @@ export async function fetchFeedItems(limit = 50): Promise<FeedItem[]> {
     if (!error && activities) {
         for (const act of activities) {
             const item = streamActivityToFeedItem(act);
+            item.isMe = Boolean(user?.id && act.user_id === user.id);
             if (act.user_id && profileMap.has(act.user_id)) {
                 item.userName = profileMap.get(act.user_id);
             }
@@ -96,6 +97,7 @@ export async function fetchFeedItems(limit = 50): Promise<FeedItem[]> {
                 const submitter = submitterNameVal || pr.submitted_by_name || pr.created_by_name || (pr as any).beneficiary_name || "";
                 const formattedAmount = pr.amount ? `Rp ${Number(pr.amount).toLocaleString("id-ID")}` : "";
                 const subtitleText = [formattedAmount, submitter].filter(Boolean).join(" · ");
+                const isMyItem = Boolean(user?.id && pr.created_by === user.id);
 
                 items.push({
                     id: `pr-${pr.id}`,
@@ -109,6 +111,7 @@ export async function fetchFeedItems(limit = 50): Promise<FeedItem[]> {
                     timestamp: pr.created_at || pr.date,
                     userId: pr.created_by || undefined,
                     userName: submitter,
+                    isMe: isMyItem,
                     entityType: "expense",
                     entityId: pr.id,
                     entityHref: `/flow/finance`,
@@ -116,6 +119,7 @@ export async function fetchFeedItems(limit = 50): Promise<FeedItem[]> {
                     status: pr.approval_status === "APPROVED" ? "confirmed" : "pending",
                     metadata: {
                         ...pr,
+                        isMe: isMyItem,
                         submitted_by_name: submitter,
                         created_by_name: submitter,
                         items: (pr as any).purchasing_items || (pr as any).items || [],
