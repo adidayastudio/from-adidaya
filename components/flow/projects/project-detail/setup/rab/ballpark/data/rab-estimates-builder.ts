@@ -67,13 +67,20 @@ function getEstimateValueForNode(code: string, values: EstimateValues): Estimate
     const withoutMass = code.replace(/^[A-Z]\./, "");
     if (values[withoutMass]) return values[withoutMass];
 
-    // Try stripping leading discipline letter: "S.1.1" -> "1.1"
-    const withoutDiscipline = code.replace(/^[A-Z]\./, "");
+    // Try stripping leading discipline letter if withoutMass didn't match
+    const withoutDiscipline = code.replace(/^([SAMIL])\./, "");
     if (values[withoutDiscipline]) return values[withoutDiscipline];
 
     // Try stripping both mass & discipline: "A.S.1.1" -> "1.1"
-    const strippedBoth = code.replace(/^[A-Z]\.([A-Z]\.)?/, "");
+    const strippedBoth = code.replace(/^[A-Z]\.([SAMIL]\.)?/, "");
     if (values[strippedBoth]) return values[strippedBoth];
+
+    // Reverse lookup: check if any key in `values` ends with `.${code}` or `.${withoutMass}`
+    for (const key of Object.keys(values)) {
+        if (key.endsWith(`.${code}`) || key.endsWith(`.${withoutMass}`)) {
+            return values[key];
+        }
+    }
 
     // Try matching numeric portion: "A.3.1.1.1.5.1" -> "3.1.1.1.5.1"
     const numMatch = code.match(/\d+(\.\d+)*/);

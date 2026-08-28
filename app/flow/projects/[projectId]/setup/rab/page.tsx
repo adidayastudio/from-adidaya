@@ -669,8 +669,8 @@ export default function ProjectSetupRABPage() {
 
       const updatedMeta = {
         ...currentDbMeta,
-        priceOverrides: overrides,
-        estimateValues: estimates,
+        priceOverrides: { ...(currentDbMeta.priceOverrides || {}), ...overrides },
+        estimateValues: { ...(currentDbMeta.estimateValues || {}), ...estimates },
         adjustmentFactor: adjFactor,
         rabStatus: status,
         rabVersions: versions,
@@ -686,6 +686,7 @@ export default function ProjectSetupRABPage() {
       for (const [code, val] of Object.entries(estimates)) {
         if (val && typeof val === "object" && (val.volume !== undefined || val.unit !== undefined)) {
           const stripped = code.replace(/^[A-Z]\./, "");
+          const strippedBoth = code.replace(/^[A-Z]\.([SAMIL]\.)?/, "");
           await supabase
             .from("project_wbs_items")
             .update({
@@ -693,20 +694,18 @@ export default function ProjectSetupRABPage() {
               unit: val.unit ?? null,
             })
             .eq("project_id", project.id)
-            .in("wbs_code", [code, stripped]);
+            .in("wbs_code", [code, stripped, strippedBoth]);
         }
       }
 
       setRabStatus(status);
-
-
     },
-    [project?.id, project?.meta]
+    [project?.id, project?.meta, versions]
   );
 
   const { status: autoSaveStatus, errorMessage: autoSaveError, scheduleSave, triggerImmediateSave } = useAutoSave({
     onSave: saveRabStateToDb,
-    delayMs: 5000,
+    delayMs: 1500,
   });
 
   const triggerRabSave = (
@@ -730,17 +729,26 @@ export default function ProjectSetupRABPage() {
 
   function onPriceCommit(code: string, value: number) {
     if (!Number.isFinite(value) || value < 0) return;
-    const next = { ...priceOverrides, [code]: value };
+    const strippedCode = code.replace(/^[A-Z]\./, "");
+    const strippedBoth = code.replace(/^[A-Z]\.([SAMIL]\.)?/, "");
+    const next = {
+      ...priceOverrides,
+      [code]: value,
+      [strippedCode]: value,
+      [strippedBoth]: value,
+    };
     setPriceOverrides(next);
     triggerRabSave(next, undefined, undefined);
   }
 
   function onEstimateCommit(code: string, value: { volume: number; unit: string; unitPrice: number }) {
     const strippedCode = code.replace(/^[A-Z]\./, "");
+    const strippedBoth = code.replace(/^[A-Z]\.([SAMIL]\.)?/, "");
     const next = {
       ...estimateValues,
       [code]: value,
       [strippedCode]: value,
+      [strippedBoth]: value,
     };
     setEstimateValues(next);
     triggerRabSave(undefined, next, undefined);

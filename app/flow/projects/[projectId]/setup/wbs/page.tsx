@@ -1010,21 +1010,30 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
     const dbEstimateValues = currentDbMeta.estimateValues || {};
     const dbPriceOverrides = currentDbMeta.priceOverrides || {};
 
-    const updatedEstimateValues = { ...dbEstimateValues, ...currentMetaEst };
-    const updatedPriceOverrides = { ...dbPriceOverrides, ...currentPriceOverrides };
+    const updatedEstimateValues = { ...dbEstimateValues };
+    const updatedPriceOverrides = { ...dbPriceOverrides };
 
     rowsToInsert.forEach((row) => {
       if (row.wbs_code) {
         const p = row._priceToSave;
         if (p !== undefined && p !== null && p > 0) {
           const existing = updatedEstimateValues[row.wbs_code] || {};
-          updatedEstimateValues[row.wbs_code] = {
+          const valObj = {
             ...existing,
             volume: row.quantity ?? existing.volume ?? 0,
             unit: row.unit ?? existing.unit ?? "ls",
             unitPrice: p,
           };
+          const strippedCode = row.wbs_code.replace(/^[A-Z]\./, "");
+          const strippedBoth = row.wbs_code.replace(/^[A-Z]\.([SAMIL]\.)?/, "");
+
+          updatedEstimateValues[row.wbs_code] = valObj;
+          updatedEstimateValues[strippedCode] = valObj;
+          updatedEstimateValues[strippedBoth] = valObj;
+
           updatedPriceOverrides[row.wbs_code] = p;
+          updatedPriceOverrides[strippedCode] = p;
+          updatedPriceOverrides[strippedBoth] = p;
         }
       }
     });
@@ -1033,10 +1042,6 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
       .from("projects")
       .update({ meta: { ...currentDbMeta, estimateValues: updatedEstimateValues, priceOverrides: updatedPriceOverrides, wbsVersions: versions } })
       .eq("id", project.id);
-
-
-
-
 
     // Remove deleted nodes
     const activeIds = rowsToInsert.map((r) => r.id);
@@ -1057,7 +1062,7 @@ function applyEstimateValuesToWBS(tree: any[], estimateValues: Record<string, an
 
   const { status: autoSaveStatus, errorMessage: autoSaveError, scheduleSave, triggerImmediateSave } = useAutoSave({
     onSave: saveTreeToDb,
-    delayMs: 5000,
+    delayMs: 1500,
   });
 
   // Save Draft

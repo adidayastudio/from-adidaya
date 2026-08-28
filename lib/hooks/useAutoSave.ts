@@ -9,7 +9,7 @@ interface UseAutoSaveOptions<T> {
   delayMs?: number;
 }
 
-export function useAutoSave<T>({ onSave, delayMs = 5000 }: UseAutoSaveOptions<T>) {
+export function useAutoSave<T>({ onSave, delayMs = 1500 }: UseAutoSaveOptions<T>) {
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -78,14 +78,27 @@ export function useAutoSave<T>({ onSave, delayMs = 5000 }: UseAutoSaveOptions<T>
     [executeSave]
   );
 
-  // Cleanup timeout on unmount
+  // Auto save on beforeunload / unmount if there are unsaved changes
   useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (isPendingSaveRef.current && latestDataRef.current !== null) {
+        // Fire immediate save
+        triggerImmediateSave();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
+      if (isPendingSaveRef.current && latestDataRef.current !== null) {
+        triggerImmediateSave();
+      }
     };
-  }, []);
+  }, [triggerImmediateSave]);
 
   return {
     status,
