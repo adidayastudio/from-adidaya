@@ -1,8 +1,7 @@
-"use client";
-
 import React from "react";
 import clsx from "clsx";
 import { File } from "lucide-react";
+import { motion } from "framer-motion";
 
 // ─── SidebarNavItem ──────────────────────────────────────────────
 export function SidebarNavItem({ active, onClick, icon, label, badge }: { active: boolean; onClick: () => void; icon: React.ReactElement<{ className?: string }>; label: string; badge?: number }) {
@@ -56,19 +55,40 @@ export function WorkspaceSubNavItem({ active, onClick, icon, label }: { active: 
 }
 
 // ─── SubTabButton ────────────────────────────────────────────────
-export function SubTabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
+export function SubTabButton({
+    active,
+    onClick,
+    icon,
+    label,
+    layoutId = "activeSubTabPill",
+}: {
+    active: boolean;
+    onClick: () => void;
+    icon: React.ReactNode;
+    label: string;
+    layoutId?: string;
+}) {
     return (
         <button
             onClick={onClick}
             className={clsx(
-                "h-9 flex items-center gap-1.5 px-3.5 rounded-full text-[12px] font-semibold transition-all whitespace-nowrap",
+                "relative h-9 flex items-center gap-1.5 px-3.5 rounded-full text-[12px] font-semibold transition-colors whitespace-nowrap cursor-pointer select-none",
                 active
-                    ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/20 shadow-sm"
+                    ? "text-blue-600 dark:text-blue-400 font-bold"
                     : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50"
             )}
         >
-            {icon}
-            <span>{label}</span>
+            {active && (
+                <motion.div
+                    layoutId={layoutId}
+                    className="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 rounded-full shadow-xs pointer-events-none z-0"
+                    transition={{ type: "spring", stiffness: 450, damping: 32 }}
+                />
+            )}
+            <span className="relative z-10 flex items-center gap-1.5">
+                {icon}
+                <span>{label}</span>
+            </span>
         </button>
     );
 }

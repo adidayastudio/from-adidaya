@@ -1114,111 +1114,78 @@ const TaskDetailModal = ({
 
 const TaskCard = ({ task, onClick }: { task: TaskItem; onClick?: () => void }) => {
   const tStyles = getThemeStyles(task.theme);
-  const { statusBadge, priorityBadge } = getStatusStyles(task.status, task.priority);
-
-  const IconComponent =
-    task.icon === "users" ? Users : task.icon === "fileText" ? FileText : CreditCard;
+  const { statusBadge } = getStatusStyles(task.status, task.priority);
 
   const completedSubtasks = task.subtasks ? task.subtasks.filter((st: any) => st.done).length : 0;
   const totalSubtasks = task.subtasks ? task.subtasks.length : 0;
   const subtaskIndicatorVal = totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks}` : task.subtaskIndicator;
 
   return (
-    <div className={`p-4 rounded-[20px] ${tStyles.bg} flex flex-col gap-3 relative shadow-sm mb-4`}>
-      {/* Top row: Icon + Rest */}
-      <div className="flex gap-3">
-        {/* Left Icon */}
-        <div
-          className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${tStyles.iconBg}`}
-        >
-          <IconComponent size={20} className={tStyles.iconColor} />
-        </div>
+    <div
+      onClick={onClick}
+      className={`p-4 rounded-[20px] ${tStyles.bg} shadow-xs hover:shadow-md transition-all flex flex-col gap-3 group cursor-pointer overflow-hidden`}
+    >
+      {/* Top row: Ref Number & Subtask Pill (Left) + Status Badge Only (Right) */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+          {task.taskNumber ? (
+            <span className="text-[10px] font-medium text-neutral-600 dark:text-neutral-400 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-[6px] font-mono tracking-wider">
+              {task.taskNumber}
+            </span>
+          ) : task.refId ? (
+            <span className="text-[10px] font-medium text-neutral-600 dark:text-neutral-400 font-mono tracking-wide">
+              {task.refId}
+            </span>
+          ) : null}
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 pt-0.5">
-          {/* Ref ID & Subtask Pill */}
-          {(task.taskNumber || task.refId || subtaskIndicatorVal) && (
-            <div className="flex items-center gap-2 mb-1">
-              {task.taskNumber ? (
-                <span className="text-[11px] font-extrabold text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200/50 dark:border-neutral-700/50 px-2 py-0.5 rounded-[6px] shadow-sm tracking-wider uppercase">
-                  {task.taskNumber}
-                </span>
-              ) : task.refId ? (
-                <span className="text-[11px] font-bold text-gray-500 tracking-wide uppercase">
-                  {task.refId}
-                </span>
-              ) : null}
-              {subtaskIndicatorVal && (
-                <div className="flex items-center gap-1 bg-black/5 px-1.5 py-0.5 rounded text-[10px] font-semibold text-gray-600">
-                  <ListTodo size={10} />
-                  <span>{subtaskIndicatorVal}</span>
-                </div>
-              )}
-            </div>
+          {subtaskIndicatorVal && (
+            <span className="flex items-center gap-1 bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded-[6px] text-[10px] font-medium text-neutral-600 dark:text-neutral-400 font-mono">
+              <ListTodo size={10} className="text-neutral-400" />
+              <span>{subtaskIndicatorVal}</span>
+            </span>
           )}
-
-          {/* Title */}
-          <h3 className="text-[17px] font-bold text-gray-900 leading-tight pr-[60px]">
-            {task.title}
-          </h3>
-
-          {/* Project */}
-          <div className="flex items-center gap-2 mt-2">
-            <span className="bg-black/5 text-gray-500 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
-              {task.projectCode}
-            </span>
-            <span className="text-[13px] text-gray-500 font-medium truncate">
-              {task.projectName}
-            </span>
-          </div>
-
-          {/* Date & Time */}
-          <div className="flex items-center gap-3 mt-2 text-[12px] font-semibold text-gray-500">
-            <div className="flex items-center gap-1">
-              <Calendar size={12} className="opacity-70" />
-              <span>{task.date}</span>
-            </div>
-            {task.time && (
-              <div className="flex items-center gap-1">
-                <Clock size={12} className="opacity-70" />
-                <span>{task.time}</span>
-              </div>
-            )}
-          </div>
         </div>
 
-        {/* Right Status Badges (Absolute positioned for top right corner style) */}
-        <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
-          <span className={`text-[9px] px-2 py-0.5 rounded-full tracking-wider uppercase ${statusBadge}`}>
+        {/* Right Status Badge ONLY */}
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`text-[8.5px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${statusBadge}`}>
             {task.status.replace("_", " ")}
-          </span>
-          <span className={`text-[9px] px-2 py-0.5 rounded-full tracking-wider uppercase ${priorityBadge}`}>
-            {task.priority}
           </span>
         </div>
       </div>
 
-      {/* Avatars */}
-      <div className="absolute bottom-4 right-4 flex items-center">
-        {task.avatars.map((av, idx) => (
-          <div
-            key={idx}
-            className={`w-[26px] h-[26px] rounded-full text-[10px] font-bold flex items-center justify-center border-2 shadow-sm ${av.includes("+")
-              ? "bg-gray-100 text-gray-600 border-white"
-              : "bg-white text-gray-800 border-white/50"
-              } ${idx > 0 ? "-ml-2" : ""}`}
-            style={
-              !av.includes("+")
-                ? {
-                  background:
-                    "linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%)",
-                }
-                : {}
-            }
-          >
-            {av}
+      {/* Title */}
+      <h3 className="text-[15px] font-bold text-neutral-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        {task.title}
+      </h3>
+
+      {/* Footer: Neutral Project Code + Date + Avatars */}
+      <div className="flex items-center justify-between gap-2 pt-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="bg-black/5 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 text-[10px] font-semibold px-2 py-0.5 rounded-[6px] uppercase font-mono tracking-wider">
+            {task.projectCode}
+          </span>
+          <span className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400 font-mono">
+            {task.date}
+          </span>
+        </div>
+
+        {/* Avatars */}
+        {task.avatars && task.avatars.length > 0 && (
+          <div className="flex items-center gap-1 shrink-0">
+            {task.avatars.map((av, idx) => (
+              <div
+                key={idx}
+                className={`w-[22px] h-[22px] rounded-full text-[9px] font-extrabold flex items-center justify-center ${av.includes("+")
+                  ? "bg-black/5 text-neutral-600 dark:bg-white/10 dark:text-neutral-400"
+                  : "bg-black/10 text-neutral-800 dark:bg-white/20 dark:text-white"
+                  }`}
+              >
+                {av}
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
@@ -1283,8 +1250,36 @@ const WBS_TEMPLATES = [
   },
 ];
 
-export default function TaskPage() {
+interface TaskPageProps {
+  forcedActiveTab?: string;
+  onTabChange?: (tab: string) => void;
+  hideSidebar?: boolean;
+  hideHeader?: boolean;
+  externalIsAddOpen?: boolean;
+  setExternalIsAddOpen?: (v: boolean) => void;
+  externalIsFilterOpen?: boolean;
+  setExternalIsFilterOpen?: (v: boolean) => void;
+  forcedViewMode?: "grid" | "kanban";
+  externalSearchQuery?: string;
+  setExternalSearchQuery?: (q: string) => void;
+}
+
+export default function TaskPage({
+  forcedActiveTab,
+  onTabChange,
+  hideSidebar = false,
+  hideHeader = false,
+  externalIsAddOpen,
+  setExternalIsAddOpen,
+  externalIsFilterOpen,
+  setExternalIsFilterOpen,
+  forcedViewMode,
+  externalSearchQuery,
+  setExternalSearchQuery,
+}: TaskPageProps = {}) {
   const { profile, loading: profileLoading } = useUserProfile();
+
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Add form state
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -1327,6 +1322,37 @@ export default function TaskPage() {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => { setIsMounted(true); }, []);
+
+  // Sync external props if provided
+  useEffect(() => {
+    if (forcedActiveTab && forcedActiveTab !== activeTab) {
+      setActiveTab(forcedActiveTab);
+    }
+  }, [forcedActiveTab]);
+
+  useEffect(() => {
+    if (externalIsAddOpen !== undefined && externalIsAddOpen !== isAddOpen) {
+      setIsAddOpen(externalIsAddOpen);
+    }
+  }, [externalIsAddOpen]);
+
+  useEffect(() => {
+    if (externalIsFilterOpen !== undefined && externalIsFilterOpen !== isFilterOpen) {
+      setIsFilterOpen(externalIsFilterOpen);
+    }
+  }, [externalIsFilterOpen]);
+
+  useEffect(() => {
+    if (setExternalIsAddOpen && isAddOpen !== externalIsAddOpen) {
+      setExternalIsAddOpen(isAddOpen);
+    }
+  }, [isAddOpen]);
+
+  useEffect(() => {
+    if (setExternalIsFilterOpen && isFilterOpen !== externalIsFilterOpen) {
+      setExternalIsFilterOpen(isFilterOpen);
+    }
+  }, [isFilterOpen]);
 
   // Memoized valid assignees for validation and UI
   const validAssignees = useMemo(() => {
@@ -1895,60 +1921,79 @@ export default function TaskPage() {
     // 3. Date Filter (Simplified mock logic)
     let dateMatch = filterDate === "All" || t.date === filterDate;
 
-    return tabMatch && projMatch && dateMatch;
+    // 4. Search Filter
+    let searchMatch = true;
+    const q = (externalSearchQuery !== undefined ? externalSearchQuery : searchQuery || "").toLowerCase().trim();
+    if (q) {
+      const titleMatch = t.title?.toLowerCase().includes(q);
+      const codeMatch = t.projectCode?.toLowerCase().includes(q);
+      const numMatch = t.taskNumber?.toLowerCase().includes(q) || t.refId?.toLowerCase().includes(q);
+      const projNameMatch = t.projectName?.toLowerCase().includes(q);
+      const avatarMatch = t.avatars?.some(av => av.toLowerCase().includes(q));
+      const assigneeMatch = t.assignees?.some(as => as.toLowerCase().includes(q));
+      searchMatch = !!(titleMatch || codeMatch || numMatch || projNameMatch || avatarMatch || assigneeMatch);
+    }
+
+    return tabMatch && projMatch && dateMatch && searchMatch;
   });
+
+  const sidebarNode = hideSidebar ? null : (
+    <TabSidebar
+      items={TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={16} /> }))}
+      activeTabId={activeTab}
+      onTabChange={(tab) => {
+        setActiveTab(tab);
+        onTabChange?.(tab);
+      }}
+    />
+  );
+
+  const headerNode = hideHeader ? null : (
+    <div className="hidden md:block mb-0">
+      <div className="flex items-center justify-between gap-4 pt-0">
+        <div className="flex flex-col gap-1 mb-0">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight leading-none">
+            Tasks
+          </h1>
+        </div>
+        <div className="flex items-center gap-2 font-medium">
+          {/* Global actions moved to useHeader */}
+        </div>
+      </div>
+      {/* Desktop/iPad Pill Tabs - Hidden on Desktop (lg+) as requested because sidebar is present */}
+      <div className="flex items-center gap-2 overflow-x-auto mt-6 pb-2 hide-scrollbar lg:hidden">
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={clsx(
+                "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all flex-shrink-0 text-[13px] group",
+                isActive
+                  ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.1] font-bold"
+                  : "text-neutral-500 dark:text-neutral-400 font-medium hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200"
+              )}
+            >
+              <span className="relative z-10">
+                <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
+              </span>
+              <span className="relative z-10">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <div className="bg-transparent p-0 transition-colors">
       <PageWrapper
         fullWidth
-        sidebar={
-          <TabSidebar
-            items={TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={16} /> }))}
-            activeTabId={activeTab}
-            onTabChange={setActiveTab}
-          />
-        }
+        sidebar={sidebarNode}
         isTransparent
-        header={
-          <div className="hidden md:block mb-0">
-            <div className="flex items-center justify-between gap-4 pt-0">
-              <div className="flex flex-col gap-1 mb-0">
-                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight leading-none">
-                  Tasks
-                </h1>
-              </div>
-              <div className="flex items-center gap-2 font-medium">
-                {/* Global actions moved to useHeader */}
-              </div>
-            </div>
-            {/* Desktop/iPad Pill Tabs - Hidden on Desktop (lg+) as requested because sidebar is present */}
-            <div className="flex items-center gap-2 overflow-x-auto mt-6 pb-2 hide-scrollbar lg:hidden">
-                {TABS.map((tab) => {
-                  const isActive = activeTab === tab.id;
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={clsx(
-                        "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all flex-shrink-0 text-[13px] group",
-                        isActive
-                          ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.1] font-bold"
-                          : "text-neutral-500 dark:text-neutral-400 font-medium hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200"
-                      )}
-                    >
-                      <span className="relative z-10">
-                        <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
-                      </span>
-                      <span className="relative z-10">{tab.label}</span>
-                    </button>
-                  );
-                })}
-            </div>
-          </div>
-        }
-
+        header={headerNode}
       >
         {/* Main Content Zone */}
         <div
@@ -1989,7 +2034,60 @@ export default function TaskPage() {
 
           {/* TASK LIST AREA */}
           <div className="relative z-0 px-5 lg:px-0">
-            {filteredTasks.length > 0 ? (
+            {forcedViewMode === "kanban" ? (
+              <div className="flex gap-4 overflow-x-auto pb-6 pt-1 min-h-[60vh] scrollbar-hide">
+                {[
+                  {
+                    id: "todo",
+                    title: "Revision / Todo",
+                    dotBg: "bg-amber-500",
+                    tasks: filteredTasks.filter(t => t.status.toLowerCase().includes("todo") || t.status.toLowerCase().includes("revision"))
+                  },
+                  {
+                    id: "in_progress",
+                    title: "Active / In Progress",
+                    dotBg: "bg-blue-500",
+                    tasks: filteredTasks.filter(t => t.status.toLowerCase().includes("progress") || t.status.toLowerCase().includes("active"))
+                  },
+                  {
+                    id: "done",
+                    title: "Done / Completed",
+                    dotBg: "bg-emerald-500",
+                    tasks: filteredTasks.filter(t => t.status.toLowerCase().includes("done") || t.status.toLowerCase().includes("approved") || t.status.toLowerCase().includes("completed"))
+                  }
+                ].map(col => (
+                  <div
+                    key={col.id}
+                    className="w-[300px] sm:w-[320px] shrink-0 bg-neutral-100/50 dark:bg-neutral-900/50 backdrop-blur-xl rounded-[24px] border border-black/[0.05] dark:border-white/[0.06] p-3.5 flex flex-col gap-3 h-fit max-h-[75vh]"
+                  >
+                    <div className="flex items-center justify-between px-1.5 py-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${col.dotBg}`} />
+                        <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider font-mono">
+                          {col.title}
+                        </h3>
+                      </div>
+                      <span className="text-[10px] font-extrabold text-neutral-600 dark:text-neutral-400 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full font-mono">
+                        {col.tasks.length}
+                      </span>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-3 pr-0.5 scrollbar-hide">
+                      {col.tasks.length > 0 ? (
+                        col.tasks.map(task => (
+                          <div key={task.id} onClick={() => setSelectedTask(task)} className="cursor-pointer active:scale-[0.98] transition-all hover:translate-y-[-2px]">
+                            <TaskCard task={task} />
+                          </div>
+                        ))
+                      ) : (
+                        <div className="py-8 text-center text-xs text-neutral-400 italic font-medium">
+                          No tasks in {col.title}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredTasks.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filteredTasks.map((task) => (
                   <div key={task.id} onClick={() => setSelectedTask(task)} className="cursor-pointer active:scale-[0.98] transition-all hover:translate-y-[-2px]">

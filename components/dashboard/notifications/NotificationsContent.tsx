@@ -20,12 +20,14 @@ export default function NotificationsContent({
     section, 
     isEmbedded = false,
     externalSearchQuery = "",
-    onSearchChange
+    onSearchChange,
+    hideSearchInput = false,
 }: { 
     section: NotificationSection; 
     isEmbedded?: boolean;
     externalSearchQuery?: string;
     onSearchChange?: (q: string) => void;
+    hideSearchInput?: boolean;
 }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -257,7 +259,7 @@ export default function NotificationsContent({
             {!isEmbedded && <div className="md:hidden h-20" />}
 
             {/* Embedded Search Bar (for drawer) */}
-            {isEmbedded && !loading && !error && hasAnyNotification && (
+            {isEmbedded && !hideSearchInput && !loading && !error && hasAnyNotification && (
                 <div className="flex items-center justify-between gap-4 mb-6 px-1">
                     <div className="relative flex-1 max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />

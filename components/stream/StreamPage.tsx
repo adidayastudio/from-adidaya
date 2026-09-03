@@ -22,6 +22,11 @@ import {
     FolderKanban,
     PanelLeft,
     PanelRight,
+    Search,
+    X,
+    ListFilter,
+    List,
+    ChevronDown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -29,11 +34,13 @@ import StreamInput from "./StreamInput";
 import StreamSidebar from "./StreamSidebar";
 import AskAdidayaView from "./AskAdidayaView";
 import TasksView from "./TasksView";
+import ActionsView from "./ActionsView";
 import InboxView from "./InboxView";
 import WorkspaceModuleView from "./WorkspaceModuleView";
 import OperationalActivityPanel from "./OperationalActivityPanel";
 import AllProjectsModal from "./AllProjectsModal";
 import ChannelMessageBubble from "./ChannelMessageBubble";
+import ProjectFilesTab, { ProjectFileItem } from "./ProjectFilesTab";
 import { SubTabButton, FileCard } from "./stream-nav-helpers";
 import type { SidebarNavMode, ProjectChannel } from "./StreamSidebar";
 import type { ThreadData } from "./PumbleThreadPanel";
@@ -85,6 +92,7 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
         if (slug[0] === "ask-adidaya") return "ask_adidaya";
         if (slug[0] === "inbox") return "inbox";
         if (slug[0] === "tasks") return "tasks";
+        if (slug[0] === "actions") return "actions";
         if (slug[0] === "channels") return "project_channel";
         if (["finance", "crew", "resources", "reports", "people", "clock"].includes(slug[0])) return "workspace_module";
         return "ask_adidaya";
@@ -97,6 +105,24 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
     const [navMode, setNavMode] = useState<SidebarNavMode>(initialNavMode);
     const [selectedChannelCode, setSelectedChannelCode] = useState<string>(initialChannelCode);
     const [selectedModule, setSelectedModule] = useState<string>(initialModule);
+
+    // Sync navMode when params.slug changes
+    useEffect(() => {
+        const currentSlug = params?.slug || [];
+        if (currentSlug.length === 0) return;
+        if (currentSlug[0] === "ask-adidaya") setNavMode("ask_adidaya");
+        else if (currentSlug[0] === "inbox") setNavMode("inbox");
+        else if (currentSlug[0] === "tasks") setNavMode("tasks");
+        else if (currentSlug[0] === "actions") setNavMode("actions");
+        else if (currentSlug[0] === "channels") {
+            setNavMode("project_channel");
+            if (currentSlug[1]) setSelectedChannelCode(currentSlug[1]);
+        }
+        else if (["finance", "crew", "resources", "reports", "people", "clock"].includes(currentSlug[0])) {
+            setNavMode("workspace_module");
+            setSelectedModule(currentSlug[0]);
+        }
+    }, [params?.slug]);
 
     // Accordion Collapse States (Workspace default expanded as requested)
     const [isProjectsExpanded, setIsProjectsExpanded] = useState(false);
@@ -118,6 +144,82 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
     const [channelMessageText, setChannelMessageText] = useState("");
     const [showSlashMenu, setShowSlashMenu] = useState(false);
     const [customChannelMessages, setCustomChannelMessages] = useState<Record<string, any[]>>({});
+    // Files Tab state
+    const [customChannelFiles, setCustomChannelFiles] = useState<Record<string, ProjectFileItem[]>>({});
+    const [fileSearchQuery, setFileSearchQuery] = useState("");
+    const [isFileSearchOpen, setIsFileSearchOpen] = useState(false);
+    const [fileViewMode, setFileViewMode] = useState<"grid" | "table">("grid");
+    const [selectedFileCategory, setSelectedFileCategory] = useState<string>("all");
+    const [isFileFilterOpen, setIsFileFilterOpen] = useState(false);
+    const [isMoreTabsOpen, setIsMoreTabsOpen] = useState(false);
+    const [isToolsPopoverOpen, setIsToolsPopoverOpen] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<ProjectFileItem | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Global Synced Files State across main tab & side detail panel
+    const [favoritedFileIds, setFavoritedFileIds] = useState<string[]>(["f-1", "f-4"]);
+    const [renamedFilesMap, setRenamedFilesMap] = useState<Record<string, string>>({});
+    const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
+
+    const handleToggleFavorite = useCallback((fileId: string) => {
+        setFavoritedFileIds(prev =>
+            prev.includes(fileId) ? prev.filter(id => id !== fileId) : [...prev, fileId]
+        );
+    }, []);
+
+    const handleGlobalRenameFile = useCallback((fileId: string, newName: string) => {
+        setRenamedFilesMap(prev => ({ ...prev, [fileId]: newName }));
+        setSelectedFile(prev => prev && prev.id === fileId ? { ...prev, name: newName } : prev);
+    }, []);
+
+    const handleGlobalDeleteFile = useCallback((fileId: string) => {
+        setDeletedFileIds(prev => [...prev, fileId]);
+        setSelectedFile(prev => prev && prev.id === fileId ? null : prev);
+    }, []);
+
+    const handleManualFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const newItems: ProjectFileItem[] = Array.from(files).map((f, i) => {
+            const ext = f.name.split('.').pop()?.toLowerCase() || '';
+            let type: ProjectFileItem['type'] = 'other';
+            let typeName = 'File';
+            if (['skp'].includes(ext)) { type = 'skp'; typeName = 'SketchUp 3D Model'; }
+            else if (['pln'].includes(ext)) { type = 'pln'; typeName = 'Archicad Model'; }
+            else if (['pdf'].includes(ext)) { type = 'pdf'; typeName = 'PDF Document'; }
+            else if (['dwg', 'dxf'].includes(ext)) { type = 'dwg'; typeName = 'AutoCAD Drawing'; }
+            else if (['xlsx', 'xls', 'csv'].includes(ext)) { type = 'excel'; typeName = 'Excel Spreadsheet'; }
+            else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) { type = 'image'; typeName = 'Image'; }
+
+            const formattedSize = (f.size / (1024 * 1024)).toFixed(1) + ' MB';
+
+            return {
+                id: `manual-${Date.now()}-${i}`,
+                name: f.name,
+                size: formattedSize,
+                type,
+                typeName,
+                uploadedBy: 'Zulfikar Adhitya',
+                uploadedAt: 'Just now',
+                source: 'manual',
+            };
+        });
+
+        setCustomChannelFiles(prev => ({
+            ...prev,
+            [selectedChannelCode]: [...newItems, ...(prev[selectedChannelCode] || [])]
+        }));
+
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleDeleteCustomFile = (fileId: string) => {
+        setCustomChannelFiles(prev => ({
+            ...prev,
+            [selectedChannelCode]: (prev[selectedChannelCode] || []).filter(f => f.id !== fileId)
+        }));
+    };
 
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
@@ -592,99 +694,114 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                     {/* VIEW B: Project Channel Workspace */}
                     {navMode === "project_channel" && (
                         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-                            {/* Top Dynamic Floating Liquid Glass Header */}
-                            <div className="absolute top-2 left-4 right-4 z-30 pointer-events-auto">
+                            {/* Top Dynamic Floating Liquid Glass Full Pill Header Card */}
+                            <div className="absolute top-3 left-4 right-4 z-30 pointer-events-none">
                                 <div
-                                    style={isChannelHeaderScrolled ? {
+                                    style={{
                                         background: theme === "dark"
-                                            ? "linear-gradient(180deg, rgba(24,24,27,0.88) 0%, rgba(15,15,18,0.78) 100%)"
-                                            : "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(245,245,250,0.78) 100%)",
+                                            ? "linear-gradient(180deg, rgba(24,24,27,0.92) 0%, rgba(15,15,18,0.85) 100%)"
+                                            : "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(245,245,250,0.85) 100%)",
                                         backdropFilter: "blur(32px) saturate(180%)",
                                         WebkitBackdropFilter: "blur(32px) saturate(180%)",
                                         border: theme === "dark"
-                                            ? "1px solid rgba(255,255,255,0.1)"
-                                            : "1px solid rgba(255,255,255,0.7)",
+                                            ? "1px solid rgba(255,255,255,0.12)"
+                                            : "1px solid rgba(255,255,255,0.8)",
                                         boxShadow: theme === "dark"
                                             ? "0 12px 40px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.08)"
                                             : "0 12px 40px rgba(0,0,0,0.08), inset 0 1px 0.5px rgba(255,255,255,0.9)",
-                                    } : undefined}
-                                    className={clsx(
-                                        "h-13 sm:h-14 px-5 flex items-center justify-between transition-all duration-300 w-full rounded-2xl",
-                                        !isChannelHeaderScrolled && "bg-transparent border border-transparent shadow-none"
-                                    )}
+                                    }}
+                                    className="h-13 sm:h-14 px-2.5 sm:px-3 flex items-center justify-between transition-all duration-300 w-full rounded-full gap-2 shadow-lg pointer-events-auto"
                                 >
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div className="flex items-center gap-1 text-[15px] font-bold text-neutral-900 dark:text-white font-mono shrink-0">
-                                            <Hash className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                    {/* Left Badge: Code ONLY (No project name on any tab) */}
+                                    <div className="flex items-center gap-2 min-w-0 shrink-0">
+                                        <div className="h-9 flex items-center gap-1.5 px-3 rounded-full bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs font-mono shrink-0">
+                                            <Hash className="w-3.5 h-3.5" />
                                             <span>{currentChannel.code}</span>
                                         </div>
-                                        <span className="text-neutral-300 dark:text-neutral-700 hidden sm:inline">|</span>
-                                        <span className="text-[13px] text-neutral-500 dark:text-neutral-400 font-medium truncate hidden sm:inline">
-                                            {currentChannel.name}
-                                        </span>
                                     </div>
 
-                                    {/* Sub-tabs Header Bar */}
-                                    <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-1 shrink-0">
+                                    {/* Sub-tabs Header Bar with h-9 Uniform Height */}
+                                    <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-1 min-w-0 shrink">
                                         <SubTabButton active={activeChannelSubTab === "overview"} onClick={() => setActiveChannelSubTab("overview")} icon={<LayoutGrid className="w-3.5 h-3.5" />} label="Overview" />
                                         <SubTabButton active={activeChannelSubTab === "chat"} onClick={() => setActiveChannelSubTab("chat")} icon={<MessageSquare className="w-3.5 h-3.5" />} label="Chat" />
                                         <SubTabButton active={activeChannelSubTab === "files"} onClick={() => setActiveChannelSubTab("files")} icon={<FileText className="w-3.5 h-3.5" />} label="Files" />
                                         <SubTabButton active={activeChannelSubTab === "activity"} onClick={() => setActiveChannelSubTab("activity")} icon={<Activity className="w-3.5 h-3.5" />} label="Activity" />
                                         <SubTabButton active={activeChannelSubTab === "tracking"} onClick={() => setActiveChannelSubTab("tracking")} icon={<TrendingUp className="w-3.5 h-3.5" />} label="Tracking" />
-                                        <SubTabButton active={activeChannelSubTab === "more"} onClick={() => setActiveChannelSubTab("more")} icon={<MoreHorizontal className="w-3.5 h-3.5" />} label="More" />
+                                    </div>
+
+                                    {/* Right Action Tools: Primary Plus Upload Button */}
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="h-9 w-9 rounded-full bg-[#0A84FF] hover:bg-blue-600 active:scale-90 text-white flex items-center justify-center shadow-md transition-all shrink-0 cursor-pointer"
+                                            title="Upload File to Project"
+                                        >
+                                            <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
+                                        </button>
                                     </div>
                                 </div>
                             </div>
 
+                            {/* Hidden File Input for Manual Uploads */}
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleManualFileUpload}
+                                multiple
+                                className="hidden"
+                            />
+
                             {/* Scrollable Content Body */}
                             <div
                                 onScroll={handleChannelScroll}
-                                className="flex-1 h-full overflow-y-auto px-6 pt-16 pb-20 scrollbar-hide space-y-5"
+                                className="flex-1 h-full overflow-y-auto px-6 pt-20 md:pt-22 pb-20 scrollbar-hide space-y-5"
                             >
-                                {/* Universal Project Summary & Progress Banner */}
-                                <div className="p-5 rounded-[24px] bg-white/40 dark:bg-neutral-900/40 backdrop-blur-2xl border border-white/60 dark:border-neutral-800/40 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
-                                    {/* LEFT SIDE: Project Code, Name, Location */}
-                                    <div className="space-y-1 min-w-0 flex-1">
-                                        <div className="flex items-center gap-2 font-mono text-[13px] font-bold text-blue-600 dark:text-blue-400">
-                                            <span># {currentChannel.code}</span>
+                                {/* Universal Project Summary & Progress Banner (Only shown in Overview tab) */}
+                                {activeChannelSubTab === "overview" && (
+                                    <div className="p-5 rounded-[24px] bg-white/40 dark:bg-neutral-900/40 backdrop-blur-2xl border border-white/60 dark:border-neutral-800/40 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-5">
+                                        {/* LEFT SIDE: Project Code, Name, Location */}
+                                        <div className="space-y-1 min-w-0 flex-1">
+                                            <div className="flex items-center gap-2 font-mono text-[13px] font-bold text-blue-600 dark:text-blue-400">
+                                                <span># {currentChannel.code}</span>
+                                            </div>
+                                            <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white tracking-tight truncate">
+                                                {currentChannel.name}
+                                            </h2>
+                                            <p className="text-[12px] text-neutral-500 dark:text-neutral-400 font-medium">
+                                                {currentChannel.code === "000-gen"
+                                                    ? "Company-wide workspace & general stream"
+                                                    : `${currentChannel.city || "Kota Jakarta Timur"} · ${currentChannel.stage || "Stage 06-CN (Construction)"}`}
+                                            </p>
                                         </div>
-                                        <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white tracking-tight truncate">
-                                            {currentChannel.name}
-                                        </h2>
-                                        <p className="text-[12px] text-neutral-500 dark:text-neutral-400 font-medium">
-                                            {currentChannel.code === "000-gen"
-                                                ? "Company-wide workspace & general stream"
-                                                : `${currentChannel.city || "Kota Jakarta Timur"} · ${currentChannel.stage || "Stage 06-CN (Construction)"}`}
-                                        </p>
-                                    </div>
 
-                                    {/* RIGHT SIDE: 4 Progress Items Card */}
-                                    <div className="md:w-80 p-3.5 rounded-2xl bg-white/50 dark:bg-neutral-800/50 border border-neutral-200/50 dark:border-neutral-700/50 space-y-2.5 shrink-0">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center justify-between text-[11px] font-bold">
-                                                <span className="text-neutral-600 dark:text-neutral-300 uppercase tracking-wider">Overall Progress</span>
-                                                <span className="font-mono text-blue-600 dark:text-blue-400 text-xs">85%</span>
+                                        {/* RIGHT SIDE: 4 Progress Items Card */}
+                                        <div className="md:w-80 p-3.5 rounded-2xl bg-white/50 dark:bg-neutral-800/50 border border-neutral-200/50 dark:border-neutral-700/50 space-y-2.5 shrink-0">
+                                            <div className="space-y-1">
+                                                <div className="flex items-center justify-between text-[11px] font-bold">
+                                                    <span className="text-neutral-600 dark:text-neutral-300 uppercase tracking-wider">Overall Progress</span>
+                                                    <span className="font-mono text-blue-600 dark:text-blue-400 text-xs">85%</span>
+                                                </div>
+                                                <div className="w-full h-2 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
+                                                    <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full transition-all duration-500" style={{ width: "85%" }} />
+                                                </div>
                                             </div>
-                                            <div className="w-full h-2 rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden">
-                                                <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full transition-all duration-500" style={{ width: "85%" }} />
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-3 gap-2 pt-1 border-t border-neutral-200/40 dark:border-neutral-700/40 text-[10px]">
-                                            <div className="space-y-0.5">
-                                                <div className="text-neutral-400 uppercase font-bold tracking-wider">Design</div>
-                                                <div className="font-mono font-bold text-neutral-800 dark:text-neutral-200">100%</div>
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <div className="text-neutral-400 uppercase font-bold tracking-wider">Build</div>
-                                                <div className="font-mono font-bold text-neutral-800 dark:text-neutral-200">70%</div>
-                                            </div>
-                                            <div className="space-y-0.5">
-                                                <div className="text-neutral-400 uppercase font-bold tracking-wider">Budget</div>
-                                                <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">80%</div>
+                                            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-neutral-200/40 dark:border-neutral-700/40 text-[10px]">
+                                                <div className="space-y-0.5">
+                                                    <div className="text-neutral-400 uppercase font-bold tracking-wider">Design</div>
+                                                    <div className="font-mono font-bold text-neutral-800 dark:text-neutral-200">100%</div>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <div className="text-neutral-400 uppercase font-bold tracking-wider">Build</div>
+                                                    <div className="font-mono font-bold text-neutral-800 dark:text-neutral-200">70%</div>
+                                                </div>
+                                                <div className="space-y-0.5">
+                                                    <div className="text-neutral-400 uppercase font-bold tracking-wider">Budget</div>
+                                                    <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">80%</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {/* TAB 1: Chat View */}
                                 {activeChannelSubTab === "chat" && (
@@ -853,17 +970,27 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                                     </div>
                                 )}
 
-                                {/* TAB 2: Files View */}
+                                 {/* TAB 2: Files View */}
                                 {activeChannelSubTab === "files" && (
-                                    <div className="space-y-3 pt-1">
-                                        <h3 className="text-[14px] font-bold text-neutral-900 dark:text-white">
-                                            Project Files &amp; 3D Models
-                                        </h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                            <FileCard name={`20250809_${currentChannel.projectCode}_LT 3.skp`} size="BIN / SketchUp" />
-                                            <FileCard name={`20250809_${currentChannel.projectCode}_LT 4.skp`} size="BIN / SketchUp" />
-                                        </div>
-                                    </div>
+                                    <ProjectFilesTab
+                                        channelCode={currentChannel.code}
+                                        channelName={currentChannel.name}
+                                        customFiles={customChannelFiles[selectedChannelCode] || []}
+                                        onDeleteFile={(id) => {
+                                            handleDeleteCustomFile(id);
+                                            handleGlobalDeleteFile(id);
+                                        }}
+                                        onSelectFile={(file) => {
+                                            setSelectedFile(file);
+                                            if (!isRightOpen && handleToggleRight) handleToggleRight();
+                                        }}
+                                        selectedFileId={selectedFile?.id}
+                                        favoritedFileIds={favoritedFileIds}
+                                        onToggleFavorite={handleToggleFavorite}
+                                        renamedFilesMap={renamedFilesMap}
+                                        onRenameFile={handleGlobalRenameFile}
+                                        deletedFileIds={deletedFileIds}
+                                    />
                                 )}
 
                                 {/* TAB 3: Overview View */}
@@ -1000,6 +1127,11 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                         <TasksView feedItems={feedItems} />
                     )}
 
+                    {/* VIEW C2: Actions */}
+                    {navMode === "actions" && (
+                        <ActionsView feedItems={feedItems} />
+                    )}
+
                     {/* VIEW D: Inbox */}
                     {navMode === "inbox" && (
                         <InboxView feedItems={feedItems} />
@@ -1020,6 +1152,8 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                     setActiveThreadMessage={setActiveThreadMessage}
                     selectedItem={selectedItem}
                     setSelectedItem={setSelectedItem}
+                    selectedFile={selectedFile}
+                    setSelectedFile={setSelectedFile}
                     currentChannel={currentChannel}
                     navMode={navMode}
                     selectedModule={selectedModule}
@@ -1035,6 +1169,10 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                     onSaveConversation={handleSaveConversation}
                     isRightOpen={isRightOpen}
                     onToggleRight={handleToggleRight}
+                    favoritedFileIds={favoritedFileIds}
+                    onToggleFavorite={handleToggleFavorite}
+                    onRenameFile={handleGlobalRenameFile}
+                    onDeleteFile={handleGlobalDeleteFile}
                 />
 
             </div>

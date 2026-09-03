@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import {
     Sparkles,
     CheckSquare,
+    Zap,
     Inbox,
     Hash,
     ChevronDown,
@@ -30,7 +31,7 @@ import { useRouter } from "next/navigation";
 import { SidebarNavItem, WorkspaceSubNavItem } from "./stream-nav-helpers";
 import type { FeedItem } from "@/lib/stream/types";
 
-export type SidebarNavMode = "ask_adidaya" | "tasks" | "inbox" | "project_channel" | "workspace_module";
+export type SidebarNavMode = "ask_adidaya" | "tasks" | "actions" | "inbox" | "project_channel" | "workspace_module";
 
 export interface ProjectChannel {
     id?: string;
@@ -139,6 +140,12 @@ export default function StreamSidebar({
                                 onClick={() => { setNavMode("tasks"); router.push("/stream/tasks"); }}
                                 icon={<CheckSquare className="w-4 h-4" />}
                                 label="Tasks"
+                            />
+                            <SidebarNavItem
+                                active={navMode === "actions"}
+                                onClick={() => { setNavMode("actions"); router.push("/stream/actions"); }}
+                                icon={<Zap className="w-4 h-4" />}
+                                label="Actions"
                             />
                             <SidebarNavItem
                                 active={navMode === "inbox"}
@@ -293,6 +300,19 @@ export default function StreamSidebar({
                             )}
                         >
                             <CheckSquare className="w-4 h-4" />
+                        </button>
+
+                        <button
+                            onClick={() => { setNavMode("actions"); router.push("/stream/actions"); }}
+                            title="Actions"
+                            className={clsx(
+                                "w-9 h-9 rounded-xl flex items-center justify-center transition-all",
+                                navMode === "actions"
+                                    ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/20 shadow-xs"
+                                    : "text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
+                            )}
+                        >
+                            <Zap className="w-4 h-4" />
                         </button>
 
                         <button

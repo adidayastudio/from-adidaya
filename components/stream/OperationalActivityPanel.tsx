@@ -9,6 +9,8 @@ import { useSearchParams } from "next/navigation";
 import StreamFeed from "./StreamFeed";
 import StreamDetailPanel from "./StreamDetailPanel";
 import PumbleThreadPanel from "./PumbleThreadPanel";
+import ProjectFileDetailPanel from "./ProjectFileDetailPanel";
+import type { ProjectFileItem } from "./ProjectFilesTab";
 import type { ThreadData } from "./PumbleThreadPanel";
 import type { ProjectChannel } from "./StreamSidebar";
 import type { SidebarNavMode } from "./StreamSidebar";
@@ -19,6 +21,8 @@ interface OperationalActivityPanelProps {
     setActiveThreadMessage: React.Dispatch<React.SetStateAction<ThreadData | null>>;
     selectedItem: FeedItem | null;
     setSelectedItem: (item: FeedItem | null) => void;
+    selectedFile?: ProjectFileItem | null;
+    setSelectedFile?: (file: ProjectFileItem | null) => void;
     currentChannel: ProjectChannel;
     navMode: SidebarNavMode;
     selectedModule?: string;
@@ -34,6 +38,10 @@ interface OperationalActivityPanelProps {
     onSaveConversation?: () => void;
     isRightOpen?: boolean;
     onToggleRight?: () => void;
+    favoritedFileIds?: string[];
+    onToggleFavorite?: (fileId: string) => void;
+    onRenameFile?: (fileId: string, newName: string) => void;
+    onDeleteFile?: (fileId: string) => void;
 }
 
 export default function OperationalActivityPanel({
@@ -41,6 +49,8 @@ export default function OperationalActivityPanel({
     setActiveThreadMessage,
     selectedItem,
     setSelectedItem,
+    selectedFile,
+    setSelectedFile,
     currentChannel,
     navMode,
     selectedModule = "finance",
@@ -56,6 +66,10 @@ export default function OperationalActivityPanel({
     onSaveConversation,
     isRightOpen = true,
     onToggleRight,
+    favoritedFileIds,
+    onToggleFavorite,
+    onRenameFile,
+    onDeleteFile,
 }: OperationalActivityPanelProps) {
     const { theme } = useTheme();
     const [promptText, setPromptText] = useState("");
@@ -172,15 +186,6 @@ export default function OperationalActivityPanel({
                     {/* VIEW A: Active Pumble Thread Panel */}
                     {activeThreadMessage ? (
                         <div className="p-4 h-full overflow-y-auto scrollbar-hide relative">
-                            {onToggleRight && (
-                                <button
-                                    onClick={onToggleRight}
-                                    className="absolute top-3 right-3 z-50 p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors"
-                                    title="Minimize Panel"
-                                >
-                                    <PanelRight className="w-4 h-4" />
-                                </button>
-                            )}
                             <PumbleThreadPanel
                                 thread={activeThreadMessage}
                                 onClose={() => setActiveThreadMessage(null)}
@@ -201,8 +206,27 @@ export default function OperationalActivityPanel({
                                 }}
                             />
                         </div>
+                    ) : selectedFile ? (
+                        /* VIEW B1: File Detail Panel */
+                        <div className="h-full overflow-y-auto scrollbar-hide relative">
+                            <ProjectFileDetailPanel
+                                file={selectedFile}
+                                onClose={() => setSelectedFile && setSelectedFile(null)}
+                                channelCode={currentChannel.code}
+                                onRenameFile={(fileId, newName) => {
+                                    if (onRenameFile) onRenameFile(fileId, newName);
+                                    else selectedFile.name = newName;
+                                }}
+                                onDeleteFile={(fileId) => {
+                                    if (onDeleteFile) onDeleteFile(fileId);
+                                    if (setSelectedFile) setSelectedFile(null);
+                                }}
+                                isFavorite={favoritedFileIds ? favoritedFileIds.includes(selectedFile.id) : selectedFile.isFavorite}
+                                onToggleFavorite={onToggleFavorite}
+                            />
+                        </div>
                     ) : selectedItem ? (
-                        /* VIEW B: Stream Activity Detail Panel */
+                        /* VIEW B2: Stream Activity Detail Panel */
                         <div className="p-4 h-full overflow-y-auto scrollbar-hide relative">
                             {onToggleRight && (
                                 <button

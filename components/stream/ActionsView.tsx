@@ -3,41 +3,29 @@
 import React, { useState, Suspense } from "react";
 import clsx from "clsx";
 import { useTheme } from "next-themes";
-import {
-    Inbox,
-    List,
-    Bell,
-    CreditCard,
-    FolderKanban,
-    Users,
-    Settings,
-    Search,
-    X,
-    ListFilter,
-    Plus,
-} from "lucide-react";
-import NotificationsContent, { NotificationSection } from "@/components/dashboard/notifications/NotificationsContent";
+import { Zap, List, Clock, RotateCcw, CheckSquare, ListFilter, Plus, LayoutGrid, Columns3, Search, X } from "lucide-react";
+import ActionPage from "@/app/action/page";
 import { HeaderProvider } from "@/components/providers/HeaderProvider";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 import { SubTabButton } from "./stream-nav-helpers";
 import type { FeedItem } from "@/lib/stream/types";
 
-interface InboxViewProps {
+interface ActionsViewProps {
     feedItems?: FeedItem[];
 }
 
-const INBOX_TABS = [
+const ACTION_TABS = [
     { id: "all", label: "All", icon: <List className="w-3.5 h-3.5" /> },
-    { id: "unread", label: "Unread", icon: <Bell className="w-3.5 h-3.5" /> },
-    { id: "finance", label: "Finance", icon: <CreditCard className="w-3.5 h-3.5" /> },
-    { id: "projects", label: "Projects", icon: <FolderKanban className="w-3.5 h-3.5" /> },
-    { id: "crew", label: "Crew", icon: <Users className="w-3.5 h-3.5" /> },
-    { id: "system", label: "System", icon: <Settings className="w-3.5 h-3.5" /> },
+    { id: "urgent", label: "Urgent", icon: <Zap className="w-3.5 h-3.5" /> },
+    { id: "pending", label: "Pending", icon: <Clock className="w-3.5 h-3.5" /> },
+    { id: "returned", label: "Returned", icon: <RotateCcw className="w-3.5 h-3.5" /> },
+    { id: "done", label: "Done", icon: <CheckSquare className="w-3.5 h-3.5" /> },
 ];
 
-export default function InboxView({ feedItems }: InboxViewProps) {
+export default function ActionsView({ feedItems }: ActionsViewProps) {
     const { theme } = useTheme();
-    const [activeTab, setActiveTab] = useState<NotificationSection>("all");
+    const [activeTab, setActiveTab] = useState("urgent");
+    const [viewMode, setViewMode] = useState<"grid" | "kanban">("kanban");
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isAddOpen, setIsAddOpen] = useState(false);
@@ -46,7 +34,7 @@ export default function InboxView({ feedItems }: InboxViewProps) {
     return (
         <HeaderProvider>
             <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-                {/* Top Dynamic Floating Liquid Glass Full Pill Header Card (Identical to Tasks & Actions) */}
+                {/* Top Dynamic Floating Liquid Glass Full Pill Header Card (Same as Finance Stream) */}
                 <div className="absolute top-3 left-4 right-4 z-30 pointer-events-none">
                     <div
                         style={{
@@ -66,28 +54,30 @@ export default function InboxView({ feedItems }: InboxViewProps) {
                     >
                         {/* Dynamic Title */}
                         <div className="flex items-center gap-2.5 min-w-0 shrink-0">
-                            <div className="w-8 h-8 rounded-full bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                                <Inbox className="w-4 h-4" />
+                            <div className="w-8 h-8 rounded-full bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                                <Zap className="w-4 h-4" />
                             </div>
                             <h2 className="hidden lg:inline-block text-[13px] font-bold text-neutral-900 dark:text-white truncate">
-                                Inbox
+                                Actions
                             </h2>
                         </div>
 
-                        {/* Top Tab Bar Pills (Same design & behavior as Tasks) */}
-                        <div className="hidden sm:flex items-center gap-1 shrink-0 overflow-x-auto scrollbar-hide py-1">
-                            {INBOX_TABS.map(tab => (
-                                <SubTabButton
-                                    key={tab.id}
-                                    active={activeTab === tab.id}
-                                    onClick={() => setActiveTab(tab.id as NotificationSection)}
-                                    icon={tab.icon}
-                                    label={tab.label}
-                                />
-                            ))}
-                        </div>
+                        {/* Top Tab Bar Pills (When in Grid Mode) */}
+                        {viewMode === "grid" && (
+                            <div className="hidden sm:flex items-center gap-1 shrink-0 overflow-x-auto scrollbar-hide py-1">
+                                {ACTION_TABS.map(tab => (
+                                    <SubTabButton
+                                        key={tab.id}
+                                        active={activeTab === tab.id}
+                                        onClick={() => setActiveTab(tab.id)}
+                                        icon={tab.icon}
+                                        label={tab.label}
+                                    />
+                                ))}
+                            </div>
+                        )}
 
-                        {/* Right Action Controls: Search Icon/Input + Filter + Plus */}
+                        {/* Right Action Controls: Search Icon/Input + View Switcher + Filter + Plus */}
                         <div className="flex items-center gap-2 shrink-0">
                             {/* Search Button / Input Pill */}
                             {isSearchOpen || searchQuery ? (
@@ -103,7 +93,7 @@ export default function InboxView({ feedItems }: InboxViewProps) {
                                     />
                                     <button
                                         onClick={() => { setSearchQuery(""); setIsSearchOpen(false); }}
-                                        className="absolute right-2 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer p-0.5"
+                                        className="absolute right-2.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer p-0.5"
                                         title="Close Search"
                                     >
                                         <X className="w-3.5 h-3.5" />
@@ -113,11 +103,39 @@ export default function InboxView({ feedItems }: InboxViewProps) {
                                 <button
                                     onClick={() => setIsSearchOpen(true)}
                                     className="h-9 w-9 rounded-full flex items-center justify-center transition-all border cursor-pointer bg-neutral-200/50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-300 border-neutral-300/40 dark:border-neutral-700/40 hover:bg-neutral-300/50 shrink-0"
-                                    title="Search Inbox"
+                                    title="Search Actions"
                                 >
                                     <Search className="w-4 h-4" />
                                 </button>
                             )}
+
+                            {/* View Switcher Toggle Pill */}
+                            <div className="flex items-center p-0.5 rounded-full bg-neutral-200/60 dark:bg-neutral-800/80 border border-neutral-300/40 dark:border-neutral-700/40">
+                                <button
+                                    onClick={() => setViewMode("grid")}
+                                    className={clsx(
+                                        "h-7 w-7 rounded-full flex items-center justify-center transition-all cursor-pointer",
+                                        viewMode === "grid"
+                                            ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-xs font-bold"
+                                            : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+                                    )}
+                                    title="Grid View"
+                                >
+                                    <LayoutGrid className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode("kanban")}
+                                    className={clsx(
+                                        "h-7 w-7 rounded-full flex items-center justify-center transition-all cursor-pointer",
+                                        viewMode === "kanban"
+                                            ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-xs font-bold"
+                                            : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+                                    )}
+                                    title="Kanban Board View"
+                                >
+                                    <Columns3 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
 
                             {/* Filter Button */}
                             <button
@@ -128,7 +146,7 @@ export default function InboxView({ feedItems }: InboxViewProps) {
                                         ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
                                         : "bg-neutral-200/50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-300 border-neutral-300/40 dark:border-neutral-700/40 hover:bg-neutral-300/50"
                                 )}
-                                title="Filter Inbox"
+                                title="Filter Actions"
                             >
                                 <ListFilter className="w-4 h-4" />
                             </button>
@@ -137,7 +155,7 @@ export default function InboxView({ feedItems }: InboxViewProps) {
                             <button
                                 onClick={() => setIsAddOpen(true)}
                                 className="h-9 w-9 rounded-full bg-[#0A84FF] hover:bg-blue-600 active:scale-90 text-white flex items-center justify-center shadow-md transition-all shrink-0 cursor-pointer"
-                                title="New Inbox Item"
+                                title="Add Action"
                             >
                                 <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
                             </button>
@@ -146,14 +164,19 @@ export default function InboxView({ feedItems }: InboxViewProps) {
                 </div>
 
                 {/* Content Container Body */}
-                <div className="flex-1 h-full overflow-y-auto pt-20 md:pt-24 pb-6 px-3 md:px-6 scrollbar-hide max-w-5xl mx-auto w-full">
+                <div className="flex-1 h-full overflow-y-auto pt-20 md:pt-24 pb-6 px-3 md:px-6 scrollbar-hide">
                     <Suspense fallback={<GlobalLoading />}>
-                        <NotificationsContent
-                            section={activeTab}
-                            isEmbedded={true}
-                            hideSearchInput={true}
+                        <ActionPage
+                            forcedActiveTab={activeTab}
+                            onTabChange={setActiveTab}
+                            hideSidebar={true}
+                            hideHeader={true}
+                            externalIsAddOpen={isAddOpen}
+                            setExternalIsAddOpen={setIsAddOpen}
+                            externalIsFilterOpen={isFilterOpen}
+                            setExternalIsFilterOpen={setIsFilterOpen}
+                            forcedViewMode={viewMode}
                             externalSearchQuery={searchQuery}
-                            onSearchChange={setSearchQuery}
                         />
                     </Suspense>
                 </div>

@@ -781,84 +781,56 @@ const ActionDetailModal = ({
 
 const ActionCard = ({ action }: { action: ActionItem }) => {
     const tStyles = getThemeStyles(action.theme);
-    const { statusBadge, priorityBadge } = getStatusStyles(action.status, action.priority);
-
-    const IconComponent =
-        action.icon === "target" ? Target : action.icon === "creditCard" ? CreditCard : Clock;
+    const { statusBadge } = getStatusStyles(action.status, action.priority);
 
     return (
-        <div className={`p-4 rounded-[20px] ${tStyles.bg} flex flex-col gap-3 relative shadow-sm mb-4`}>
-            {/* Top row: Icon + Rest */}
-            <div className="flex gap-4">
-                {/* Left Icon */}
-                <div
-                    className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center opacity-70 ${tStyles.iconBg}`}
-                >
-                    <IconComponent size={20} className={`opacity-100 ${tStyles.iconColor}`} />
-                </div>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0 pt-0.5">
-                    {/* Title */}
-                    <h3 className="text-[17px] font-bold text-gray-900 leading-tight pr-[65px]">
-                        {action.title}
-                    </h3>
-
-                    {/* Project */}
-                    <div className="flex items-center gap-2 mt-2">
-                        <span className="bg-black/5 text-gray-500 text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">
-                            {action.projectCode}
-                        </span>
-                        <span className="text-[13px] text-gray-500 font-medium truncate">
-                            {action.projectName}
-                        </span>
-                    </div>
-
-                    {/* Date & Bottom Info */}
-                    <div className="flex items-center justify-between mt-6">
-                        <div className="flex items-center gap-2 text-[12px] font-semibold text-gray-400">
-                            <span className="opacity-60 flex border border-gray-300 text-[10px] bg-transparent rounded-[4px] items-center justify-center p-[2px]">
-                                <Menu size={10} />
-                            </span>
-                            <span>{action.date}</span>
-                        </div>
-
-                        {action.customAction && (
-                            <div className="flex items-center gap-1.5 pr-[45px] text-[12px] font-bold text-gray-900">
-                                {action.customActionIcon}
-                                {action.customAction}
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Right Status Badges (Absolute positioned for top right corner style) */}
-                <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
-                    <span className={`text-[9px] px-2 py-0.5 rounded-md tracking-wider uppercase ${statusBadge}`}>
-                        {action.status}
+        <div
+            className={`p-4 rounded-[20px] ${tStyles.bg} shadow-xs hover:shadow-md transition-all flex flex-col gap-3 group cursor-pointer overflow-hidden`}
+        >
+            {/* Top row: Neutral Project Code (Left) + Status Badge Only (Right) */}
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                    <span className="bg-black/5 dark:bg-white/10 text-neutral-700 dark:text-neutral-300 text-[10px] font-semibold px-2 py-0.5 rounded-[6px] uppercase font-mono tracking-wider">
+                        {action.projectCode}
                     </span>
-                    <span className={`text-[9px] px-2 py-0.5 rounded-md tracking-wider uppercase ${priorityBadge}`}>
-                        {action.priority}
+                </div>
+
+                {/* Right Status Badge ONLY */}
+                <div className="flex items-center gap-1 shrink-0">
+                    <span className={`text-[8.5px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider ${statusBadge}`}>
+                        {action.status}
                     </span>
                 </div>
             </div>
 
-            {/* Avatars */}
-            <div className="absolute bottom-4 right-4 flex items-center">
+            {/* Title */}
+            <h3 className="text-[15px] font-bold text-neutral-900 dark:text-white leading-tight group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                {action.title}
+            </h3>
+
+            {/* Footer: Date & Avatars (No Divider) */}
+            <div className="flex items-center justify-between gap-2 pt-1">
+                <span className="text-[11px] font-normal text-neutral-500 dark:text-neutral-400 font-mono">
+                    {action.date}
+                </span>
+
+                {/* Avatars */}
                 {action.avatars && action.avatars.length > 0 ? (
-                    action.avatars.map((av, idx) => (
-                        <div
-                            key={idx}
-                            className={`w-[26px] h-[26px] rounded-full text-[10px] font-bold flex items-center justify-center border-2 shadow-sm ${av.includes("+")
-                                ? "bg-gray-100 text-gray-600 border-white"
-                                : "bg-black/10 text-gray-850 border-transparent backdrop-blur-sm bg-gray-250/20"
-                                } ${idx > 0 ? "-ml-2" : ""}`}
-                        >
-                            {av}
-                        </div>
-                    ))
+                    <div className="flex items-center gap-1 shrink-0">
+                        {action.avatars.map((av, idx) => (
+                            <div
+                                key={idx}
+                                className={`w-[22px] h-[22px] rounded-full text-[9px] font-extrabold flex items-center justify-center ${av.includes("+")
+                                    ? "bg-black/5 text-neutral-600 dark:bg-white/10 dark:text-neutral-400"
+                                    : "bg-black/10 text-neutral-800 dark:bg-white/20 dark:text-white"
+                                    }`}
+                            >
+                                {av}
+                            </div>
+                        ))}
+                    </div>
                 ) : (
-                    <span className="text-[10.5px] text-neutral-400 font-bold italic tracking-wide">
+                    <span className="text-[9.5px] text-neutral-400 font-medium italic">
                         Unassigned
                     </span>
                 )}
@@ -872,9 +844,37 @@ import TabSidebar, { TabItem } from "@/components/sidebar/TabSidebar";
 
 import ModuleMobileHeader from "@/components/layout/ModuleMobileHeader";
 
-export default function ActionPage() {
+interface ActionPageProps {
+    forcedActiveTab?: string;
+    onTabChange?: (tab: string) => void;
+    hideSidebar?: boolean;
+    hideHeader?: boolean;
+    externalIsAddOpen?: boolean;
+    setExternalIsAddOpen?: (v: boolean) => void;
+    externalIsFilterOpen?: boolean;
+    setExternalIsFilterOpen?: (v: boolean) => void;
+    forcedViewMode?: "grid" | "kanban";
+    externalSearchQuery?: string;
+    setExternalSearchQuery?: (q: string) => void;
+}
+
+export default function ActionPage({
+    forcedActiveTab,
+    onTabChange,
+    hideSidebar = false,
+    hideHeader = false,
+    externalIsAddOpen,
+    setExternalIsAddOpen,
+    externalIsFilterOpen,
+    setExternalIsFilterOpen,
+    forcedViewMode,
+    externalSearchQuery,
+    setExternalSearchQuery,
+}: ActionPageProps = {}) {
     const { profile } = useUserProfile();
     const router = useRouter();
+
+    const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         if (profile && profile.role === "staff") {
@@ -887,6 +887,39 @@ export default function ActionPage() {
     const [activeTab, setActiveTab] = useState("urgent");
     const [isScrolled, setIsScrolled] = useState(false);
     const [selectedAction, setSelectedAction] = useState<ActionItem | null>(null);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [isAddOpen, setIsAddOpen] = useState(false);
+
+    // Sync external props if provided
+    useEffect(() => {
+        if (forcedActiveTab && forcedActiveTab !== activeTab) {
+            setActiveTab(forcedActiveTab);
+        }
+    }, [forcedActiveTab]);
+
+    useEffect(() => {
+        if (externalIsAddOpen !== undefined && externalIsAddOpen !== isAddOpen) {
+            setIsAddOpen(externalIsAddOpen);
+        }
+    }, [externalIsAddOpen]);
+
+    useEffect(() => {
+        if (externalIsFilterOpen !== undefined && externalIsFilterOpen !== isFilterOpen) {
+            setIsFilterOpen(externalIsFilterOpen);
+        }
+    }, [externalIsFilterOpen]);
+
+    useEffect(() => {
+        if (setExternalIsAddOpen && isAddOpen !== externalIsAddOpen) {
+            setExternalIsAddOpen(isAddOpen);
+        }
+    }, [isAddOpen]);
+
+    useEffect(() => {
+        if (setExternalIsFilterOpen && isFilterOpen !== externalIsFilterOpen) {
+            setExternalIsFilterOpen(isFilterOpen);
+        }
+    }, [isFilterOpen]);
 
     interface ProfileItem {
         id: string;
@@ -951,10 +984,6 @@ export default function ActionPage() {
         }
         loadData();
     }, []);
-
-    // Filter & Add State
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [isAddOpen, setIsAddOpen] = useState(false);
 
     // Filter form state
     const [filterProject, setFilterProject] = useState<string>("All");
@@ -1155,7 +1184,20 @@ export default function ActionPage() {
         // 3. Date Filter (Simplified mock logic)
         let dateMatch = filterDate === "All" || a.date === filterDate;
 
-        return tabMatch && projMatch && dateMatch;
+        // 4. Search Filter
+        let searchMatch = true;
+        const q = (externalSearchQuery !== undefined ? externalSearchQuery : searchQuery || "").toLowerCase().trim();
+        if (q) {
+            const titleMatch = a.title?.toLowerCase().includes(q);
+            const codeMatch = a.projectCode?.toLowerCase().includes(q);
+            const numMatch = a.refId?.toLowerCase().includes(q);
+            const projNameMatch = a.projectName?.toLowerCase().includes(q);
+            const avatarMatch = a.avatars?.some((av: string) => av.toLowerCase().includes(q));
+            const assigneeMatch = a.assignees?.some((as: string) => as.toLowerCase().includes(q));
+            searchMatch = !!(titleMatch || codeMatch || numMatch || projNameMatch || avatarMatch || assigneeMatch);
+        }
+
+        return tabMatch && projMatch && dateMatch && searchMatch;
     });
 
     // HEADER INJECTION
@@ -1189,52 +1231,59 @@ export default function ActionPage() {
         )
     }, [filterProject, filterDate]);
 
+    const sidebarNode = hideSidebar ? null : (
+        <TabSidebar
+            items={TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={16} /> }))}
+            activeTabId={activeTab}
+            onTabChange={(tab) => {
+                setActiveTab(tab);
+                onTabChange?.(tab);
+            }}
+        />
+    );
+
+    const headerNode = hideHeader ? null : (
+        <div className="hidden md:block mb-0">
+            {/* Desktop Title Section */}
+            <div className="flex flex-col gap-1 mb-0">
+                <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight leading-none">
+                    Actions
+                </h1>
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto mt-6 pb-2 hide-scrollbar lg:hidden">
+                {TABS.map((tab) => {
+                    const isActive = activeTab === tab.id;
+                    const Icon = tab.icon;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={clsx(
+                                "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all flex-shrink-0 text-[13px] group",
+                                isActive
+                                    ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.1] font-bold"
+                                    : "text-neutral-500 dark:text-neutral-400 font-medium hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200"
+                            )}
+                        >
+                            <span className="relative z-10">
+                                <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
+                            </span>
+                            <span className="relative z-10">{tab.label}</span>
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+
     return (
         <div className="bg-transparent p-0 transition-colors">
             <FrostedGlassFilter />
             <PageWrapper
                 fullWidth
-                sidebar={
-                    <TabSidebar
-                        items={TABS.map(t => ({ id: t.id, label: t.label, icon: <t.icon size={16} /> }))}
-                        activeTabId={activeTab}
-                        onTabChange={setActiveTab}
-                    />
-                }
+                sidebar={sidebarNode}
                 isTransparent
-                header={
-                    <div className="hidden md:block mb-0">
-                        {/* Desktop Title Section */}
-                        <div className="flex flex-col gap-1 mb-0">
-                            <h1 className="text-2xl font-bold text-neutral-900 dark:text-white tracking-tight leading-none">
-                                Actions
-                            </h1>
-                        </div>
-                        <div className="flex items-center gap-2 overflow-x-auto mt-6 pb-2 hide-scrollbar lg:hidden">
-                            {TABS.map((tab) => {
-                                const isActive = activeTab === tab.id;
-                                const Icon = tab.icon;
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setActiveTab(tab.id)}
-                                        className={clsx(
-                                            "relative flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap transition-all flex-shrink-0 text-[13px] group",
-                                            isActive
-                                                ? "bg-white dark:bg-neutral-800 text-neutral-900 dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.1] font-bold"
-                                                : "text-neutral-500 dark:text-neutral-400 font-medium hover:bg-white/40 dark:hover:bg-neutral-800/40 hover:text-neutral-800 dark:hover:text-neutral-200"
-                                        )}
-                                    >
-                                        <span className="relative z-10">
-                                            <Icon size={14} strokeWidth={isActive ? 2.5 : 2} />
-                                        </span>
-                                        <span className="relative z-10">{tab.label}</span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                }
+                header={headerNode}
             >
                 {/* Main Content Zone */}
                 <div
@@ -1275,7 +1324,66 @@ export default function ActionPage() {
 
                     {/* ACTION LIST AREA */}
                     <div className="relative z-0 px-5 lg:px-0">
-                        {filteredActions.length > 0 ? (
+                        {forcedViewMode === "kanban" ? (
+                            <div className="flex gap-4 overflow-x-auto pb-6 pt-1 min-h-[60vh] scrollbar-hide">
+                                {[
+                                    {
+                                        id: "urgent",
+                                        title: "Urgent",
+                                        dotBg: "bg-rose-500",
+                                        actions: filteredActions.filter(a => a.priority?.toLowerCase() === "urgent" || a.status?.toLowerCase() === "urgent")
+                                    },
+                                    {
+                                        id: "pending",
+                                        title: "Pending",
+                                        dotBg: "bg-amber-500",
+                                        actions: filteredActions.filter(a => a.status?.toLowerCase() === "pending" || a.status?.toLowerCase() === "not_started")
+                                    },
+                                    {
+                                        id: "returned",
+                                        title: "Returned / Revision",
+                                        dotBg: "bg-purple-500",
+                                        actions: filteredActions.filter(a => a.status?.toLowerCase() === "returned" || a.status?.toLowerCase() === "revision" || a.status?.toLowerCase() === "rejected")
+                                    },
+                                    {
+                                        id: "done",
+                                        title: "Done / Approved",
+                                        dotBg: "bg-emerald-500",
+                                        actions: filteredActions.filter(a => a.status?.toLowerCase() === "approved" || a.status?.toLowerCase() === "done" || a.status?.toLowerCase() === "completed")
+                                    }
+                                ].map(col => (
+                                    <div
+                                        key={col.id}
+                                        className="w-[300px] sm:w-[320px] shrink-0 bg-neutral-100/50 dark:bg-neutral-900/50 backdrop-blur-xl rounded-[24px] border border-black/[0.05] dark:border-white/[0.06] p-3.5 flex flex-col gap-3 h-fit max-h-[75vh]"
+                                    >
+                                        <div className="flex items-center justify-between px-1.5 py-0.5">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`w-2 h-2 rounded-full ${col.dotBg}`} />
+                                                <h3 className="text-[12px] font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider font-mono">
+                                                    {col.title}
+                                                </h3>
+                                            </div>
+                                            <span className="text-[10px] font-extrabold text-neutral-600 dark:text-neutral-400 bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded-full font-mono">
+                                                {col.actions.length}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto space-y-3 pr-0.5 scrollbar-hide">
+                                            {col.actions.length > 0 ? (
+                                                col.actions.map(action => (
+                                                    <div key={action.id} onClick={() => setSelectedAction(action)} className="cursor-pointer active:scale-[0.98] transition-all hover:translate-y-[-2px]">
+                                                        <ActionCard action={action} />
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="py-8 text-center text-xs text-neutral-400 italic font-medium">
+                                                    No actions in {col.title}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : filteredActions.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                                 {filteredActions.map((action) => (
                                     <div key={action.id} onClick={() => setSelectedAction(action)} className="cursor-pointer active:scale-[0.98] transition-all hover:translate-y-[-2px]">

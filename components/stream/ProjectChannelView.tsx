@@ -18,8 +18,16 @@ import {
     Building2,
     Calendar,
     MapPin,
-    CheckCircle2
+    CheckCircle2,
+    Plus,
+    ListFilter,
+    List,
+    X,
+    ChevronDown,
 } from "lucide-react";
+import { useTheme } from "next-themes";
+import { SubTabButton } from "./stream-nav-helpers";
+import ProjectFilesTab, { ProjectFileItem } from "./ProjectFilesTab";
 import type { FeedItem } from "@/lib/stream/types";
 import { fetchAllProjects } from "@/lib/api/projects";
 import type { Project } from "@/types/project";
@@ -32,6 +40,7 @@ interface ProjectChannelViewProps {
 type ProjectSubTab = "overview" | "chat" | "files" | "activity" | "tracking" | "more";
 
 export default function ProjectChannelView({ feedItems, onSendProjectMessage }: ProjectChannelViewProps) {
+    const { theme } = useTheme();
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoadingProjects, setIsLoadingProjects] = useState(true);
     const [selectedChannelCode, setSelectedChannelCode] = useState<string>("000-general");
@@ -41,6 +50,62 @@ export default function ProjectChannelView({ feedItems, onSendProjectMessage }: 
 
     const [channelMessageText, setChannelMessageText] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
+
+    // Files Tab state
+    const [customChannelFiles, setCustomChannelFiles] = useState<Record<string, ProjectFileItem[]>>({});
+    const [fileSearchQuery, setFileSearchQuery] = useState("");
+    const [isFileSearchOpen, setIsFileSearchOpen] = useState(false);
+    const [fileViewMode, setFileViewMode] = useState<"grid" | "table">("grid");
+    const [selectedFileCategory, setSelectedFileCategory] = useState<string>("all");
+    const [isFileFilterOpen, setIsFileFilterOpen] = useState(false);
+    const [isMoreTabsOpen, setIsMoreTabsOpen] = useState(false);
+    const [isToolsPopoverOpen, setIsToolsPopoverOpen] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<ProjectFileItem | null>(null);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleManualFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const newItems: ProjectFileItem[] = Array.from(files).map((f, i) => {
+            const ext = f.name.split('.').pop()?.toLowerCase() || '';
+            let type: ProjectFileItem['type'] = 'other';
+            let typeName = 'File';
+            if (['skp'].includes(ext)) { type = 'skp'; typeName = 'SketchUp 3D Model'; }
+            else if (['pln'].includes(ext)) { type = 'pln'; typeName = 'Archicad Model'; }
+            else if (['pdf'].includes(ext)) { type = 'pdf'; typeName = 'PDF Document'; }
+            else if (['dwg', 'dxf'].includes(ext)) { type = 'dwg'; typeName = 'AutoCAD Drawing'; }
+            else if (['xlsx', 'xls', 'csv'].includes(ext)) { type = 'excel'; typeName = 'Excel Spreadsheet'; }
+            else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) { type = 'image'; typeName = 'Image'; }
+
+            const formattedSize = (f.size / (1024 * 1024)).toFixed(1) + ' MB';
+
+            return {
+                id: `manual-${Date.now()}-${i}`,
+                name: f.name,
+                size: formattedSize,
+                type,
+                typeName,
+                uploadedBy: 'Zulfikar Adhitya',
+                uploadedAt: 'Just now',
+                source: 'manual',
+            };
+        });
+
+        setCustomChannelFiles(prev => ({
+            ...prev,
+            [selectedChannelCode]: [...newItems, ...(prev[selectedChannelCode] || [])]
+        }));
+
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleDeleteCustomFile = (fileId: string) => {
+        setCustomChannelFiles(prev => ({
+            ...prev,
+            [selectedChannelCode]: (prev[selectedChannelCode] || []).filter(f => f.id !== fileId)
+        }));
+    };
 
     // Load real projects from Supabase database
     const loadProjects = useCallback(async () => {
@@ -179,22 +244,35 @@ export default function ProjectChannelView({ feedItems, onSendProjectMessage }: 
             {/* =========================================================
                 COLUMN 2: Center Channel Workspace (Independent Scroll)
             ========================================================= */}
-            <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent min-w-0">
+            <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent min-w-0 relative">
                 {/* Channel Header Bar (Channel Name + Requested Sub-tabs: Overview · Chat · Files · Activity · Tracking · More) */}
-                <div className="shrink-0 h-14 px-5 flex items-center justify-between border-b border-neutral-200/40 dark:border-neutral-800/40 bg-white/10 dark:bg-neutral-900/10 backdrop-blur-xl">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex items-center gap-1 text-[15px] font-bold text-neutral-900 dark:text-white font-mono shrink-0">
-                            <Hash className="w-4 h-4 text-blue-600" />
-                            <span>{currentChannel.code}</span>
+                <div className="absolute top-3 left-4 right-4 z-30 pointer-events-none">
+                    <div
+                        style={{
+                            background: theme === "dark"
+                                ? "linear-gradient(180deg, rgba(24,24,27,0.92) 0%, rgba(15,15,18,0.85) 100%)"
+                                : "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(245,245,250,0.85) 100%)",
+                            backdropFilter: "blur(32px) saturate(180%)",
+                            WebkitBackdropFilter: "blur(32px) saturate(180%)",
+                            border: theme === "dark"
+                                ? "1px solid rgba(255,255,255,0.12)"
+                                : "1px solid rgba(255,255,255,0.8)",
+                            boxShadow: theme === "dark"
+                                ? "0 12px 40px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.08)"
+                                : "0 12px 40px rgba(0,0,0,0.08), inset 0 1px 0.5px rgba(255,255,255,0.9)",
+                        }}
+                        className="h-13 sm:h-14 px-2.5 sm:px-3 flex items-center justify-between transition-all duration-300 w-full rounded-full gap-2 shadow-lg pointer-events-auto"
+                    >
+                        {/* Left Badge: Code ONLY (No project name on any tab) */}
+                        <div className="flex items-center gap-2 min-w-0 shrink-0">
+                            <div className="h-9 flex items-center gap-1.5 px-3 rounded-full bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs font-mono shrink-0">
+                                <Hash className="w-3.5 h-3.5" />
+                                <span>{currentChannel.code}</span>
+                            </div>
                         </div>
-                        <span className="text-neutral-300 dark:text-neutral-700 hidden sm:inline">|</span>
-                        <span className="text-[13px] text-neutral-500 dark:text-neutral-400 font-medium truncate hidden sm:inline">
-                            {currentChannel.name} ({currentChannel.city})
-                        </span>
-                    </div>
 
-                    {/* Sub-tabs Header Bar (Overview · Chat · Files · Activity · Tracking · More) */}
-                    <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-1 shrink-0">
+                    {/* Sub-tabs Header Bar with h-9 Uniform Height */}
+                    <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide py-1 min-w-0 shrink">
                         <SubTabButton
                             active={activeSubTab === "overview"}
                             onClick={() => setActiveSubTab("overview")}
@@ -225,17 +303,32 @@ export default function ProjectChannelView({ feedItems, onSendProjectMessage }: 
                             icon={<TrendingUp className="w-3.5 h-3.5" />}
                             label="Tracking"
                         />
-                        <SubTabButton
-                            active={activeSubTab === "more"}
-                            onClick={() => setActiveSubTab("more")}
-                            icon={<MoreHorizontal className="w-3.5 h-3.5" />}
-                            label="More"
-                        />
+                    </div>
+
+                    {/* Right Action Tools: Primary Plus Upload Button */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="h-9 w-9 rounded-full bg-[#0A84FF] hover:bg-blue-600 active:scale-90 text-white flex items-center justify-center shadow-md transition-all shrink-0 cursor-pointer"
+                            title="Upload File to Project"
+                        >
+                            <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
+                        </button>
                     </div>
                 </div>
+            </div>
+
+            {/* Hidden File Input for Manual Uploads */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleManualFileUpload}
+                multiple
+                className="hidden"
+            />
 
                 {/* Sub-tab Body Content */}
-                <div className="flex-1 h-full overflow-y-auto p-6 scrollbar-hide space-y-6">
+                <div className="flex-1 h-full overflow-y-auto pt-20 md:pt-24 px-6 pb-6 scrollbar-hide space-y-6">
 
                     {/* SUB-TAB: OVERVIEW */}
                     {activeSubTab === "overview" && (
@@ -329,17 +422,14 @@ export default function ProjectChannelView({ feedItems, onSendProjectMessage }: 
 
                     {/* SUB-TAB: FILES */}
                     {activeSubTab === "files" && (
-                        <div className="space-y-3">
-                            <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider px-1">
-                                All Project Documents & Models
-                            </span>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <FileCard name={`20250809_${currentChannel.projectCode}_LT 3.skp`} size="BIN / SketchUp" />
-                                <FileCard name={`20250809_${currentChannel.projectCode}_LT 4.skp`} size="BIN / SketchUp" />
-                                <FileCard name={`DCR_Daily_Report_${currentChannel.projectCode}.pdf`} size="PDF Document" />
-                                <FileCard name={`RAB_Final_Approved_${currentChannel.projectCode}.xlsx`} size="Excel Spreadsheet" />
-                            </div>
-                        </div>
+                        <ProjectFilesTab
+                            channelCode={currentChannel.code}
+                            channelName={currentChannel.name}
+                            customFiles={customChannelFiles[selectedChannelCode] || []}
+                            onDeleteFile={handleDeleteCustomFile}
+                            onSelectFile={(file) => setSelectedFile(file)}
+                            selectedFileId={selectedFile?.id}
+                        />
                     )}
 
                     {/* SUB-TAB: ACTIVITY */}
@@ -413,22 +503,7 @@ export default function ProjectChannelView({ feedItems, onSendProjectMessage }: 
     );
 }
 
-function SubTabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
-    return (
-        <button
-            onClick={onClick}
-            className={clsx(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-semibold transition-all whitespace-nowrap",
-                active
-                    ? "bg-blue-600 text-white font-bold shadow-sm shadow-blue-500/20"
-                    : "text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100/50 dark:hover:bg-neutral-800/50"
-            )}
-        >
-            {icon}
-            <span>{label}</span>
-        </button>
-    );
-}
+
 
 function FileCard({ name, size }: { name: string; size: string }) {
     return (
