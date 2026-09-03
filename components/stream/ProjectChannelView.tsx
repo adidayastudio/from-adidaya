@@ -246,7 +246,7 @@ export default function ProjectChannelView({ feedItems, onSendProjectMessage }: 
             ========================================================= */}
             <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent min-w-0 relative">
                 {/* Channel Header Bar (Channel Name + Requested Sub-tabs: Overview · Chat · Files · Activity · Tracking · More) */}
-                <div className="absolute top-3 left-4 right-4 z-30 pointer-events-none">
+                <div className="absolute top-3 left-4 right-4 z-50 pointer-events-none">
                     <div
                         style={{
                             background: theme === "dark"

@@ -8,6 +8,8 @@ import {
     Trash2,
     FileCode,
     FileSpreadsheet,
+    Presentation,
+    Video,
     Image as ImageIcon,
     Box,
     FileCheck,
@@ -38,7 +40,7 @@ export interface ProjectFileItem {
     id: string;
     name: string;
     size: string;
-    type: "skp" | "pln" | "pdf" | "dwg" | "excel" | "image" | "archive" | "other";
+    type: "skp" | "pln" | "pdf" | "dwg" | "excel" | "word" | "ppt" | "video" | "image" | "archive" | "other";
     typeName: string;
     uploadedBy: string;
     uploadedAt: string;
@@ -93,8 +95,8 @@ export const INITIAL_PROJECT_FILES: Record<string, ProjectFileItem[]> = {
     "000-gen": [
         {
             id: "f-1",
-            name: "Detail_Pondasi_Besi_TX15.dwg",
-            size: "8.5 MB",
+            name: "20250423_RWM_DETAIL_TANGGA.dwg",
+            size: "14.8 MB",
             type: "dwg",
             typeName: "AutoCAD Drawing",
             uploadedBy: "Eko Prasetyo",
@@ -123,16 +125,6 @@ export const INITIAL_PROJECT_FILES: Record<string, ProjectFileItem[]> = {
         },
         {
             id: "f-4",
-            name: "20250423_RWM_DETAIL_TANGGA(revisi).skp",
-            size: "14.8 MB",
-            type: "skp",
-            typeName: "SketchUp 3D Model",
-            uploadedBy: "Dian Rahma",
-            uploadedAt: "Today, 11:20 AM",
-            source: "chat",
-        },
-        {
-            id: "f-5",
             name: "20250809_GEN_LT 3.skp",
             size: "22.4 MB",
             type: "skp",
@@ -142,23 +134,53 @@ export const INITIAL_PROJECT_FILES: Record<string, ProjectFileItem[]> = {
             source: "chat",
         },
         {
-            id: "f-6",
-            name: "20250809_GEN_LT 4.skp",
-            size: "18.1 MB",
-            type: "skp",
-            typeName: "SketchUp 3D Model",
-            uploadedBy: "Budi Santoso",
-            uploadedAt: "Yesterday",
-            source: "chat",
-        },
-        {
-            id: "f-7",
+            id: "f-5",
             name: "20260830_RWM_MAIN_BUILDING.pln",
             size: "42.5 MB",
             type: "pln",
             typeName: "Archicad Model",
             uploadedBy: "Dian Rahma",
             uploadedAt: "Aug 30, 2026",
+            source: "chat",
+        },
+        {
+            id: "f-6",
+            name: "BoQ_Material_Beton_Struktur.xlsx",
+            size: "1.2 MB",
+            type: "excel",
+            typeName: "Excel Spreadsheet",
+            uploadedBy: "Reza Syahputra",
+            uploadedAt: "Aug 24, 2026",
+            source: "manual",
+        },
+        {
+            id: "f-7",
+            name: "Surat_Perjanjian_Kontrak_Kerja.docx",
+            size: "3.4 MB",
+            type: "word",
+            typeName: "Word Document",
+            uploadedBy: "Hendra Kusuma",
+            uploadedAt: "Jul 22, 2026",
+            source: "manual",
+        },
+        {
+            id: "f-8",
+            name: "Presentasi_Desain_Fasad_Utama.pptx",
+            size: "15.2 MB",
+            type: "ppt",
+            typeName: "PowerPoint Presentation",
+            uploadedBy: "Dian Rahma",
+            uploadedAt: "Jul 20, 2026",
+            source: "chat",
+        },
+        {
+            id: "f-9",
+            name: "Site_Progress_Drone_Flythrough.mp4",
+            size: "148.5 MB",
+            type: "video",
+            typeName: "MP4 Video",
+            uploadedBy: "Zulfikar Adhitya",
+            uploadedAt: "Jul 18, 2026",
             source: "chat",
         },
     ],
@@ -213,9 +235,31 @@ export default function ProjectFilesTab({
     } | null>(null);
     const [mounted, setMounted] = useState(false);
 
+    // Combine initial + custom files with renamed overrides and deletion filter
+    const allFiles = useMemo(() => {
+        const base = INITIAL_PROJECT_FILES[channelCode] || INITIAL_PROJECT_FILES["000-gen"] || [];
+        const combined = [...customFiles, ...base];
+        return combined
+            .filter(f => !deletedFileIds.includes(f.id))
+            .map(f => ({
+                ...f,
+                name: renamedFilesMap[f.id] || f.name,
+            }));
+    }, [channelCode, customFiles, renamedFilesMap, deletedFileIds]);
+
     useEffect(() => {
         setMounted(true);
-    }, []);
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const urlFileId = params.get("fileId");
+            if (urlFileId && onSelectFile) {
+                const target = allFiles.find(f => f.id === urlFileId);
+                if (target) {
+                    onSelectFile(target);
+                }
+            }
+        }
+    }, [allFiles, onSelectFile]);
 
     const handleOpenMenu = (file: ProjectFileItem, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -273,18 +317,6 @@ export default function ProjectFilesTab({
         }
     };
 
-    // Combine initial + custom files with renamed overrides and deletion filter
-    const allFiles = useMemo(() => {
-        const base = INITIAL_PROJECT_FILES[channelCode] || INITIAL_PROJECT_FILES["000-gen"] || [];
-        const combined = [...customFiles, ...base];
-        return combined
-            .filter(f => !deletedFileIds.includes(f.id))
-            .map(f => ({
-                ...f,
-                name: renamedFilesMap[f.id] || f.name,
-            }));
-    }, [channelCode, customFiles, renamedFilesMap, deletedFileIds]);
-
     // Live auto-detected category counts including Favorites
     const categoryCounts = useMemo(() => {
         return {
@@ -296,6 +328,9 @@ export default function ProjectFilesTab({
             dwg: allFiles.filter(f => f.type === "dwg").length,
             image: allFiles.filter(f => f.type === "image").length,
             excel: allFiles.filter(f => f.type === "excel").length,
+            word: allFiles.filter(f => f.type === "word").length,
+            ppt: allFiles.filter(f => f.type === "ppt").length,
+            video: allFiles.filter(f => f.type === "video").length,
         };
     }, [allFiles, favoritedFileIds]);
 
@@ -311,6 +346,10 @@ export default function ProjectFilesTab({
                 else if (selectedCategory === "pdf") catMatch = file.type === "pdf";
                 else if (selectedCategory === "dwg") catMatch = file.type === "dwg";
                 else if (selectedCategory === "image") catMatch = file.type === "image";
+                else if (selectedCategory === "excel") catMatch = file.type === "excel";
+                else if (selectedCategory === "word") catMatch = file.type === "word";
+                else if (selectedCategory === "ppt") catMatch = file.type === "ppt";
+                else if (selectedCategory === "video") catMatch = file.type === "video";
                 else if (selectedCategory === "manual") catMatch = file.source === "manual";
                 else if (selectedCategory === "chat") catMatch = file.source === "chat";
             }
@@ -429,6 +468,26 @@ export default function ProjectFilesTab({
                     icon: <ImageIcon className={`${iconSizeClass} text-amber-500 dark:text-amber-400`} />,
                     bgColor: "bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/20",
                 };
+            case "excel":
+                return {
+                    icon: <FileSpreadsheet className={`${iconSizeClass} text-emerald-600 dark:text-emerald-400`} />,
+                    bgColor: "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20",
+                };
+            case "word":
+                return {
+                    icon: <FileText className={`${iconSizeClass} text-blue-600 dark:text-blue-400`} />,
+                    bgColor: "bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/20",
+                };
+            case "ppt":
+                return {
+                    icon: <Presentation className={`${iconSizeClass} text-orange-600 dark:text-orange-400`} />,
+                    bgColor: "bg-orange-500/10 dark:bg-orange-500/20 border-orange-500/20",
+                };
+            case "video":
+                return {
+                    icon: <Video className={`${iconSizeClass} text-purple-600 dark:text-purple-400`} />,
+                    bgColor: "bg-purple-500/10 dark:bg-purple-500/20 border-purple-500/20",
+                };
             default:
                 return {
                     icon: <FileCheck className={`${iconSizeClass} text-neutral-500 dark:text-neutral-400`} />,
@@ -440,7 +499,7 @@ export default function ProjectFilesTab({
     return (
         <div className="space-y-4 animate-in fade-in duration-300">
             {/* UNIFIED FILES TOOLBAR (Select All, Batch Actions, Search, Filter, Sort, View Switcher) */}
-            <div className="relative z-[40] p-3 rounded-[24px] bg-white/60 dark:bg-neutral-900/60 backdrop-blur-2xl border border-white/80 dark:border-neutral-800/80 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+            <div className="relative z-10 p-3 rounded-[24px] bg-white/60 dark:bg-neutral-900/60 backdrop-blur-2xl border border-white/80 dark:border-neutral-800/80 flex flex-wrap items-center justify-between gap-3 shadow-sm">
                 
                 {/* LEFT SIDE: Select All Checkbox & Batch Actions */}
                 <div className="flex items-center gap-3">
@@ -616,8 +675,36 @@ export default function ProjectFilesTab({
                                         onClick={() => { setSelectedCategory("image"); setIsCategoryDropdownOpen(false); }}
                                         className={clsx("w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-colors", selectedCategory === "image" ? "bg-blue-500/10 text-blue-600 font-bold" : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800")}
                                     >
-                                        <span>Site Images (.png/.jpg)</span>
+                                        <span>Images (.png/.jpg)</span>
                                         <span className="text-[10px] font-mono font-bold opacity-60">({categoryCounts.image})</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setSelectedCategory("excel"); setIsCategoryDropdownOpen(false); }}
+                                        className={clsx("w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-colors", selectedCategory === "excel" ? "bg-blue-500/10 text-blue-600 font-bold" : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800")}
+                                    >
+                                        <span>Spreadsheets (.xlsx/.csv)</span>
+                                        <span className="text-[10px] font-mono font-bold opacity-60">({categoryCounts.excel})</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setSelectedCategory("word"); setIsCategoryDropdownOpen(false); }}
+                                        className={clsx("w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-colors", selectedCategory === "word" ? "bg-blue-500/10 text-blue-600 font-bold" : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800")}
+                                    >
+                                        <span>Documents (.docx/.doc)</span>
+                                        <span className="text-[10px] font-mono font-bold opacity-60">({categoryCounts.word})</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setSelectedCategory("ppt"); setIsCategoryDropdownOpen(false); }}
+                                        className={clsx("w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-colors", selectedCategory === "ppt" ? "bg-blue-500/10 text-blue-600 font-bold" : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800")}
+                                    >
+                                        <span>Presentations (.pptx/.ppt)</span>
+                                        <span className="text-[10px] font-mono font-bold opacity-60">({categoryCounts.ppt})</span>
+                                    </button>
+                                    <button
+                                        onClick={() => { setSelectedCategory("video"); setIsCategoryDropdownOpen(false); }}
+                                        className={clsx("w-full flex items-center justify-between px-2.5 py-2 rounded-xl transition-colors", selectedCategory === "video" ? "bg-blue-500/10 text-blue-600 font-bold" : "text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800")}
+                                    >
+                                        <span>Videos (.mp4/.mov)</span>
+                                        <span className="text-[10px] font-mono font-bold opacity-60">({categoryCounts.video})</span>
                                     </button>
                                 </div>
                             </>
@@ -855,11 +942,11 @@ export default function ProjectFilesTab({
 
             {/* TABLE VIEW MODE */}
             {viewMode === "table" && filteredFiles.length > 0 && (
-                <div className="rounded-[24px] bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 overflow-hidden shadow-xs">
+                <div className="rounded-[24px] bg-white dark:bg-neutral-900 overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-neutral-200/50 dark:border-neutral-800/50 text-[11px] font-bold text-neutral-400 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-900/50 select-none">
+                                <tr className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider bg-neutral-50/50 dark:bg-neutral-900/50 select-none">
                                     <th className="py-3 px-4 w-10 text-center">
                                         <button onClick={toggleSelectAll}>
                                             {isAllSelected ? (
@@ -947,7 +1034,7 @@ export default function ProjectFilesTab({
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-neutral-200/40 dark:divide-neutral-800/40 text-[12px]">
+                            <tbody className="text-[12px]">
                                 {filteredFiles.map((file, index) => {
                                     const badge = getFileBadge(file.type, "sm");
                                     const truncatedName = middleTruncate(file.name, 35);
