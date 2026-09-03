@@ -10,6 +10,7 @@ import StreamFeed from "./StreamFeed";
 import StreamDetailPanel from "./StreamDetailPanel";
 import PumbleThreadPanel from "./PumbleThreadPanel";
 import ProjectFileDetailPanel from "./ProjectFileDetailPanel";
+import UploadFilesDrawer from "./UploadFilesDrawer";
 import type { ProjectFileItem } from "./ProjectFilesTab";
 import type { ThreadData } from "./PumbleThreadPanel";
 import type { ProjectChannel } from "./StreamSidebar";
@@ -42,6 +43,9 @@ interface OperationalActivityPanelProps {
     onToggleFavorite?: (fileId: string) => void;
     onRenameFile?: (fileId: string, newName: string) => void;
     onDeleteFile?: (fileId: string) => void;
+    isUploadOpen?: boolean;
+    onCloseUpload?: () => void;
+    onUploadSuccess?: (newFiles: ProjectFileItem[]) => void;
 }
 
 export default function OperationalActivityPanel({
@@ -70,6 +74,9 @@ export default function OperationalActivityPanel({
     onToggleFavorite,
     onRenameFile,
     onDeleteFile,
+    isUploadOpen = false,
+    onCloseUpload,
+    onUploadSuccess,
 }: OperationalActivityPanelProps) {
     const { theme } = useTheme();
     const [promptText, setPromptText] = useState("");
@@ -203,6 +210,19 @@ export default function OperationalActivityPanel({
                                             }
                                         ]
                                     } : null);
+                                }}
+                            />
+                        </div>
+                    ) : isUploadOpen ? (
+                        /* VIEW B0: Upload Files Drawer Panel */
+                        <div className="h-full overflow-y-auto scrollbar-hide relative">
+                            <UploadFilesDrawer
+                                channelCode={currentChannel.code}
+                                channelName={currentChannel.name}
+                                onClose={() => onCloseUpload && onCloseUpload()}
+                                onUploadSuccess={(newFiles) => {
+                                    if (onUploadSuccess) onUploadSuccess(newFiles);
+                                    if (onCloseUpload) onCloseUpload();
                                 }}
                             />
                         </div>

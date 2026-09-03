@@ -61,6 +61,7 @@ import {
 
 import type {
     FeedItem,
+    FeedItemType,
     StreamMessage,
     StreamIntentType,
 } from "@/lib/stream/types";
@@ -144,8 +145,9 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
     const [channelMessageText, setChannelMessageText] = useState("");
     const [showSlashMenu, setShowSlashMenu] = useState(false);
     const [customChannelMessages, setCustomChannelMessages] = useState<Record<string, any[]>>({});
-    // Files Tab state
+    // Files Tab state & Upload Drawer state
     const [customChannelFiles, setCustomChannelFiles] = useState<Record<string, ProjectFileItem[]>>({});
+    const [isUploadDrawerOpen, setIsUploadDrawerOpen] = useState(false);
     const [fileSearchQuery, setFileSearchQuery] = useState("");
     const [isFileSearchOpen, setIsFileSearchOpen] = useState(false);
     const [fileViewMode, setFileViewMode] = useState<"grid" | "table">("grid");
@@ -157,62 +159,133 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Global Synced Files State across main tab & side detail panel
-    const [favoritedFileIds, setFavoritedFileIds] = useState<string[]>(["f-1", "f-4"]);
+    const [favoritedFileIds, setFavoritedFileIds] = useState<string[]>(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const stored = localStorage.getItem("adidaya_favorited_file_ids");
+                if (stored) return JSON.parse(stored);
+            } catch {}
+        }
+        return [];
+    });
     const [renamedFilesMap, setRenamedFilesMap] = useState<Record<string, string>>({});
     const [deletedFileIds, setDeletedFileIds] = useState<string[]>([]);
 
+    // Sync customChannelFiles from localStorage on mount & when channel changes
+    useEffect(() => {
+        if (typeof window !== "undefined" && selectedChannelCode) {
+            try {
+                const stored = localStorage.getItem(`adidaya_uploaded_files_${selectedChannelCode}`);
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (Array.isArray(parsed)) {
+                        setCustomChannelFiles(prev => ({
+                            ...prev,
+                            [selectedChannelCode]: parsed
+                        }));
+                    }
+                }
+            } catch (err) {
+                console.error("Error reading stored files from localStorage:", err);
+            }
+        }
+    }, [selectedChannelCode]);
+
+    const handleUploadSuccess = useCallback((newFiles: ProjectFileItem[]) => {
+        setCustomChannelFiles(prev => {
+            const currentList = prev[selectedChannelCode] || [];
+            const updated = [...newFiles, ...currentList];
+            if (typeof window !== "undefined") {
+                try {
+                    localStorage.setItem(`adidaya_uploaded_files_${selectedChannelCode}`, JSON.stringify(updated));
+                } catch (e) {
+                    console.error("Error saving uploaded files to localStorage:", e);
+                }
+            }
+            return {
+                ...prev,
+                [selectedChannelCode]: updated
+            };
+        });
+
+        // Inject file upload activities into the operational activity feed
+        const uploadFeedItems: FeedItem[] = newFiles.map((f, i) => ({
+            id: `file-upload-${Date.now()}-${i}`,
+            type: "system_event" as FeedItemType,
+            title: f.name,
+            subtitle: `${f.size} · ${f.typeName}`,
+            description: `File uploaded to #${selectedChannelCode}`,
+            timestamp: new Date().toISOString(),
+            userName: f.uploadedBy,
+            projectCode: selectedChannelCode.split("-")[1]?.toUpperCase() || selectedChannelCode.toUpperCase(),
+            parentModule: "stream" as const,
+            event: "File · Uploaded",
+            entityType: "general" as const,
+            metadata: {
+                project_code: selectedChannelCode.split("-")[1]?.toUpperCase() || selectedChannelCode.toUpperCase(),
+                fileId: f.id,
+                fileName: f.name,
+                fileSize: f.size,
+                fileType: f.type,
+            },
+        }));
+        setFeedItems(prev => [...uploadFeedItems, ...prev]);
+
+        if (newFiles.length > 0) {
+            setSelectedFile(newFiles[0]);
+        }
+    }, [selectedChannelCode]);
+
     const handleToggleFavorite = useCallback((fileId: string) => {
-        setFavoritedFileIds(prev =>
-            prev.includes(fileId) ? prev.filter(id => id !== fileId) : [...prev, fileId]
-        );
+        setFavoritedFileIds(prev => {
+            const updated = prev.includes(fileId) ? prev.filter(id => id !== fileId) : [...prev, fileId];
+            if (typeof window !== "undefined") {
+                try { localStorage.setItem("adidaya_favorited_file_ids", JSON.stringify(updated)); } catch {}
+            }
+            return updated;
+        });
     }, []);
 
     const handleGlobalRenameFile = useCallback((fileId: string, newName: string) => {
         setRenamedFilesMap(prev => ({ ...prev, [fileId]: newName }));
         setSelectedFile(prev => prev && prev.id === fileId ? { ...prev, name: newName } : prev);
-    }, []);
+        // Persist rename into customChannelFiles state + localStorage
+        setCustomChannelFiles(prev => {
+            const currentList = prev[selectedChannelCode] || [];
+            const updated = currentList.map(f => f.id === fileId ? { ...f, name: newName } : f);
+            if (typeof window !== "undefined") {
+                try {
+                    localStorage.setItem(`adidaya_uploaded_files_${selectedChannelCode}`, JSON.stringify(updated));
+                } catch (e) {
+                    console.error("Error persisting rename to localStorage:", e);
+                }
+            }
+            return {
+                ...prev,
+                [selectedChannelCode]: updated
+            };
+        });
+    }, [selectedChannelCode]);
 
     const handleGlobalDeleteFile = useCallback((fileId: string) => {
         setDeletedFileIds(prev => [...prev, fileId]);
         setSelectedFile(prev => prev && prev.id === fileId ? null : prev);
-    }, []);
-
-    const handleManualFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files || files.length === 0) return;
-
-        const newItems: ProjectFileItem[] = Array.from(files).map((f, i) => {
-            const ext = f.name.split('.').pop()?.toLowerCase() || '';
-            let type: ProjectFileItem['type'] = 'other';
-            let typeName = 'File';
-            if (['skp'].includes(ext)) { type = 'skp'; typeName = 'SketchUp 3D Model'; }
-            else if (['pln'].includes(ext)) { type = 'pln'; typeName = 'Archicad Model'; }
-            else if (['pdf'].includes(ext)) { type = 'pdf'; typeName = 'PDF Document'; }
-            else if (['dwg', 'dxf'].includes(ext)) { type = 'dwg'; typeName = 'AutoCAD Drawing'; }
-            else if (['xlsx', 'xls', 'csv'].includes(ext)) { type = 'excel'; typeName = 'Excel Spreadsheet'; }
-            else if (['png', 'jpg', 'jpeg', 'webp'].includes(ext)) { type = 'image'; typeName = 'Image'; }
-
-            const formattedSize = (f.size / (1024 * 1024)).toFixed(1) + ' MB';
-
+        setCustomChannelFiles(prev => {
+            const currentList = prev[selectedChannelCode] || [];
+            const updated = currentList.filter(f => f.id !== fileId);
+            if (typeof window !== "undefined") {
+                try {
+                    localStorage.setItem(`adidaya_uploaded_files_${selectedChannelCode}`, JSON.stringify(updated));
+                } catch (e) {
+                    console.error("Error updating files in localStorage:", e);
+                }
+            }
             return {
-                id: `manual-${Date.now()}-${i}`,
-                name: f.name,
-                size: formattedSize,
-                type,
-                typeName,
-                uploadedBy: 'Zulfikar Adhitya',
-                uploadedAt: 'Just now',
-                source: 'manual',
+                ...prev,
+                [selectedChannelCode]: updated
             };
         });
-
-        setCustomChannelFiles(prev => ({
-            ...prev,
-            [selectedChannelCode]: [...newItems, ...(prev[selectedChannelCode] || [])]
-        }));
-
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    };
+    }, [selectedChannelCode]);
 
     const handleDeleteCustomFile = (fileId: string) => {
         setCustomChannelFiles(prev => ({
@@ -732,9 +805,13 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                                     {/* Right Action Tools: Primary Plus Upload Button */}
                                     <div className="flex items-center gap-1.5 shrink-0">
                                         <button
-                                            onClick={() => fileInputRef.current?.click()}
+                                            onClick={() => {
+                                                setSelectedFile(null);
+                                                setIsUploadDrawerOpen(true);
+                                                if (!isRightOpen && handleToggleRight) handleToggleRight();
+                                            }}
                                             className="h-9 w-9 rounded-full bg-[#0A84FF] hover:bg-blue-600 active:scale-90 text-white flex items-center justify-center shadow-md transition-all shrink-0 cursor-pointer"
-                                            title="Upload File to Project"
+                                            title="Upload Files to Project"
                                         >
                                             <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
                                         </button>
@@ -742,14 +819,7 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                                 </div>
                             </div>
 
-                            {/* Hidden File Input for Manual Uploads */}
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleManualFileUpload}
-                                multiple
-                                className="hidden"
-                            />
+
 
                             {/* Scrollable Content Body */}
                             <div
@@ -970,7 +1040,7 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                                     </div>
                                 )}
 
-                                 {/* TAB 2: Files View */}
+                                {/* TAB 2: Files View */}
                                 {activeChannelSubTab === "files" && (
                                     <ProjectFilesTab
                                         channelCode={currentChannel.code}
@@ -981,6 +1051,7 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                                             handleGlobalDeleteFile(id);
                                         }}
                                         onSelectFile={(file) => {
+                                            setIsUploadDrawerOpen(false);
                                             setSelectedFile(file);
                                             if (!isRightOpen && handleToggleRight) handleToggleRight();
                                         }}
@@ -990,6 +1061,11 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                                         renamedFilesMap={renamedFilesMap}
                                         onRenameFile={handleGlobalRenameFile}
                                         deletedFileIds={deletedFileIds}
+                                        onOpenUploadDrawer={() => {
+                                            setSelectedFile(null);
+                                            setIsUploadDrawerOpen(true);
+                                            if (!isRightOpen && handleToggleRight) handleToggleRight();
+                                        }}
                                     />
                                 )}
 
@@ -1173,6 +1249,9 @@ export default function StreamPage({ params }: { params?: { slug?: string[] } })
                     onToggleFavorite={handleToggleFavorite}
                     onRenameFile={handleGlobalRenameFile}
                     onDeleteFile={handleGlobalDeleteFile}
+                    isUploadOpen={isUploadDrawerOpen}
+                    onCloseUpload={() => setIsUploadDrawerOpen(false)}
+                    onUploadSuccess={handleUploadSuccess}
                 />
 
             </div>

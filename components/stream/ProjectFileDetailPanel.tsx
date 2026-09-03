@@ -93,6 +93,24 @@ export default function ProjectFileDetailPanel({
         };
     };
 
+    const triggerDownload = async () => {
+        if (!file.url) return;
+        try {
+            const res = await fetch(file.url);
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = blobUrl;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        } catch {
+            window.open(file.url, "_blank");
+        }
+    };
+
     // Video Lightbox Modal State
     const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
@@ -297,12 +315,11 @@ export default function ProjectFileDetailPanel({
                     {/* =========================================================================
                         PREVIEW CONTAINER: IMAGE vs PDF vs STANDARD FILE BADGE
                     ========================================================================= */}
-
                     {/* 1. JPG / PNG IMAGE PREVIEW CARD (Only 1 Expand button in Top Right, No Text Badges) */}
                     {isImageFile ? (
                         <div className="group relative rounded-[20px] overflow-hidden border border-neutral-200/60 dark:border-neutral-700/60 bg-neutral-900 cursor-pointer shadow-xs">
                             <img
-                                src={sampleImageUrl}
+                                src={file.url || sampleImageUrl}
                                 alt={file.name}
                                 className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-500"
                                 onClick={() => setIsImageLightboxOpen(true)}
@@ -320,12 +337,12 @@ export default function ProjectFileDetailPanel({
                             </div>
                         </div>
                     ) : isPdfFile ? (
-                        /* 2. PDF PREVIEW CARD (Page count indicator left, Expand button right) */
+                        /* 2. PDF PREVIEW CARD */
                         <div className="rounded-[20px] bg-white/60 dark:bg-neutral-800/60 border border-neutral-200/60 dark:border-neutral-700/60 shadow-xs overflow-hidden flex flex-col">
-                            {/* PDF Header: Page Count Left, Expand Button Right */}
+                            {/* PDF Header: File Format Left, Expand Button Right */}
                             <div className="p-2.5 bg-neutral-100/70 dark:bg-neutral-800/70 border-b border-neutral-200/50 dark:border-neutral-700/50 flex items-center justify-between">
                                 <span className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-md bg-neutral-200/80 dark:bg-neutral-700/80">
-                                    3 pages
+                                    PDF Document
                                 </span>
                                 <button
                                     onClick={() => setIsPdfModalOpen(true)}
@@ -336,57 +353,26 @@ export default function ProjectFileDetailPanel({
                                 </button>
                             </div>
 
-                            {/* Scrollable PDF Document View with 3 Pages */}
-                            <div className="h-56 overflow-y-auto px-4 py-3 bg-neutral-50 dark:bg-neutral-950 font-mono text-[11px] space-y-3 text-neutral-800 dark:text-neutral-200 border-t border-neutral-200/40 dark:border-neutral-800/40">
-                                {/* Page 1 */}
-                                <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs space-y-2">
-                                    <div className="flex justify-between items-center text-[9px] text-neutral-500 dark:text-neutral-300 font-bold border-b border-neutral-100 dark:border-neutral-800 pb-1">
-                                        <span>ADIDAYA STUDIO · RAB SUMMARY</span>
-                                        <span>PAGE 01 / 03</span>
+                            {/* Real PDF View via iframe if file.url exists */}
+                            {file.url ? (
+                                <iframe
+                                    src={`${file.url}#toolbar=0`}
+                                    className="w-full h-56 border-0 bg-white"
+                                    title={file.name}
+                                />
+                            ) : (
+                                <div className="h-56 overflow-y-auto px-4 py-6 bg-neutral-50 dark:bg-neutral-950 font-mono text-[11px] space-y-3 text-neutral-800 dark:text-neutral-200 flex flex-col items-center justify-center text-center">
+                                    <div className="p-4 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 mb-1">
+                                        <FileText className="w-8 h-8" />
                                     </div>
-                                    <h5 className="font-bold text-neutral-900 dark:text-neutral-100 text-xs">
-                                        # PROJECT COST ESTIMATE & SCHEDULE
+                                    <h5 className="font-bold text-neutral-900 dark:text-neutral-100 text-xs max-w-[220px] truncate" title={file.name}>
+                                        {file.name}
                                     </h5>
-                                    <p className="text-[10px] text-neutral-600 dark:text-neutral-300 leading-normal">
-                                        Lokasi Pekerjaan: Rawamangun, Jakarta Timur.<br />
-                                        Sub-Struktur: Pengecoran Plat Lantai 3 Sisi Utara & Balok TX-12.
-                                    </p>
-                                    <div className="p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 space-y-1 text-[10px]">
-                                        <div className="flex justify-between"><span>Beton K-350</span><span className="font-bold">12 m³</span></div>
-                                        <div className="flex justify-between"><span>Besi 12mm</span><span className="font-bold">45 Sak</span></div>
-                                    </div>
-                                </div>
-
-                                {/* Page 2 */}
-                                <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs space-y-2">
-                                    <div className="flex justify-between items-center text-[9px] text-neutral-500 dark:text-neutral-300 font-bold border-b border-neutral-100 dark:border-neutral-800 pb-1">
-                                        <span>ADIDAYA STUDIO · STRUCTURAL SPEC</span>
-                                        <span>PAGE 02 / 03</span>
-                                    </div>
-                                    <h5 className="font-bold text-neutral-900 dark:text-neutral-100 text-xs">
-                                        # SPESIFIKASI TEKNIS PEMBESIAN
-                                    </h5>
-                                    <p className="text-[10px] text-neutral-600 dark:text-neutral-300 leading-normal">
-                                        1. Jarak sengkang balok induk 100mm.<br />
-                                        2. Ketebalan selimut beton pondasi min 40mm.<br />
-                                        3. Pemancangan tiang pancang mini pile 25x25cm.
+                                    <p className="text-[10px] text-neutral-400">
+                                        {file.size} · PDF Document
                                     </p>
                                 </div>
-
-                                {/* Page 3 */}
-                                <div className="p-3.5 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-xs space-y-2">
-                                    <div className="flex justify-between items-center text-[9px] text-neutral-500 dark:text-neutral-300 font-bold border-b border-neutral-100 dark:border-neutral-800 pb-1">
-                                        <span>ADIDAYA STUDIO · SIGNATURE & APPROVAL</span>
-                                        <span>PAGE 03 / 03</span>
-                                    </div>
-                                    <h5 className="font-bold text-neutral-900 dark:text-neutral-100 text-xs">
-                                        # PERSETUJUAN DIREKSI PEKERJAAN
-                                    </h5>
-                                    <p className="text-[10px] text-neutral-600 dark:text-neutral-300 leading-normal">
-                                        Disetujui oleh: Project Manager Dian Rahma & Site Engineer Hendra Kusuma.
-                                    </p>
-                                </div>
-                            </div>
+                            )}
                         </div>
                     ) : isVideoFile ? (
                         /* 2.5 VIDEO PREVIEW CARD (Play Video inline + Expand Lightbox button) */
@@ -598,7 +584,7 @@ export default function ProjectFileDetailPanel({
                 <div className="space-y-1.5 pt-2 border-t border-neutral-200/40 dark:border-neutral-800/40">
                     {/* 1. Download Original File */}
                     <button
-                        onClick={() => alert(`Downloading ${file.name} to local device...`)}
+                        onClick={triggerDownload}
                         className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-medium transition-colors cursor-pointer"
                     >
                         <span className="flex items-center gap-2">
@@ -827,7 +813,7 @@ export default function ProjectFileDetailPanel({
                             </div>
 
                             <button
-                                onClick={() => alert(`Downloading ${file.name} to local device...`)}
+                                onClick={triggerDownload}
                                 className="p-2 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-neutral-700"
                                 title="Download Image"
                             >
@@ -882,71 +868,10 @@ export default function ProjectFileDetailPanel({
                             </div>
                         </div>
 
-                        {/* Navigation & Controls */}
+                        {/* Controls */}
                         <div className="flex items-center gap-3 shrink-0">
-                            {/* Page Controls */}
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => {
-                                        const newPage = Math.max(1, pdfPage - 1);
-                                        setPdfPage(newPage);
-                                        const el = document.getElementById(`pdf-modal-page-${newPage}`);
-                                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                                    }}
-                                    disabled={pdfPage === 1}
-                                    className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 transition-colors cursor-pointer"
-                                    title="Previous Page"
-                                >
-                                    <ChevronLeft className="w-4 h-4" />
-                                </button>
-                                <span className="text-xs font-mono font-bold">
-                                    Page {pdfPage} of 3
-                                </span>
-                                <button
-                                    onClick={() => {
-                                        const newPage = Math.min(3, pdfPage + 1);
-                                        setPdfPage(newPage);
-                                        const el = document.getElementById(`pdf-modal-page-${newPage}`);
-                                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                                    }}
-                                    disabled={pdfPage === 3}
-                                    className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 transition-colors cursor-pointer"
-                                    title="Next Page"
-                                >
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-
-                            {/* PDF Zoom Controls Pill */}
-                            <div className="flex items-center gap-1 p-1 rounded-xl bg-neutral-800 border border-neutral-700">
-                                <button
-                                    onClick={() => setPdfZoom(prev => Math.max(50, prev - 25))}
-                                    className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer"
-                                    title="Zoom Out"
-                                >
-                                    <ZoomOut className="w-4 h-4" />
-                                </button>
-                                <span className="text-xs font-mono font-bold px-2 text-neutral-300 min-w-[48px] text-center">
-                                    {pdfZoom}%
-                                </span>
-                                <button
-                                    onClick={() => setPdfZoom(prev => Math.min(200, prev + 25))}
-                                    className="p-1.5 rounded-lg hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer"
-                                    title="Zoom In"
-                                >
-                                    <ZoomIn className="w-4 h-4" />
-                                </button>
-                                <button
-                                    onClick={() => setPdfZoom(100)}
-                                    className="p-1.5 px-2 rounded-lg hover:bg-neutral-700 text-neutral-300 text-xs font-bold font-mono transition-colors cursor-pointer"
-                                    title="Reset Zoom"
-                                >
-                                    Reset
-                                </button>
-                            </div>
-
                             <button
-                                onClick={() => alert(`Downloading ${file.name} to local device...`)}
+                                onClick={triggerDownload}
                                 className="p-2 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-neutral-700"
                                 title="Download PDF"
                             >
@@ -966,123 +891,29 @@ export default function ProjectFileDetailPanel({
                         </div>
                     </div>
 
-                    {/* PDF Full Workspace: Continuous Vertical Scroll for All Pages */}
+                    {/* PDF Full Workspace: Real PDF iframe or fallback */}
                     <div
-                        className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-8 bg-neutral-900/60 scrollbar-thin"
+                        className="flex-1 overflow-hidden p-4 md:p-8 flex flex-col items-center justify-center bg-neutral-900/60 min-h-0"
                         onClick={(e) => e.stopPropagation()}
-                        onScroll={(e) => {
-                            const target = e.currentTarget;
-                            const scrollRatio = target.scrollTop / (target.scrollHeight - target.clientHeight || 1);
-                            if (scrollRatio < 0.35) setPdfPage(1);
-                            else if (scrollRatio < 0.7) setPdfPage(2);
-                            else setPdfPage(3);
-                        }}
-                        style={{ transform: `scale(${pdfZoom / 100})`, transformOrigin: "top center" }}
                     >
-                        {/* Page 1 */}
-                        <div id="pdf-modal-page-1" className="w-full max-w-3xl p-10 rounded-2xl bg-white text-neutral-900 shadow-2xl border border-neutral-200 space-y-6 font-mono scroll-mt-6">
-                            <div className="flex justify-between items-center border-b border-neutral-200 pb-3 text-xs font-bold text-neutral-500">
-                                <span>ADIDAYA STUDIO ARCHITECTURE</span>
-                                <span>DOCUMENT #RAB-2026-08 · PAGE 01 / 03</span>
-                            </div>
-                            <div className="space-y-2">
-                                <h2 className="text-2xl font-bold text-neutral-900 tracking-tight">
-                                    LAPORAN ANGGARAN & SPESIFIKASI PROYEK RAWAMANGUN
-                                </h2>
-                                <p className="text-xs text-neutral-500">
-                                    Diterbitkan oleh: Team Finance & Site Engineer · Tanggal: 28 Agustus 2026
-                                </p>
-                            </div>
-
-                            <div className="p-5 rounded-xl bg-neutral-50 border border-neutral-200 space-y-4 text-xs">
-                                <h4 className="font-bold text-neutral-800 uppercase tracking-wider text-sm">
-                                    1. RINGKASAN STRUKTUR UTAMA
-                                </h4>
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-neutral-200 text-neutral-500 text-[11px]">
-                                            <th className="py-2">Item Pekerjaan</th>
-                                            <th className="py-2">Volume</th>
-                                            <th className="py-2">Harga Satuan</th>
-                                            <th className="py-2 text-right">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-neutral-100 text-[11px]">
-                                        <tr>
-                                            <td className="py-2">Pengecoran Plat Lt 3 Sisi Utara</td>
-                                            <td className="py-2">12 m³</td>
-                                            <td className="py-2">Rp 1.450.000</td>
-                                            <td className="py-2 text-right font-bold">Rp 17.400.000</td>
-                                        </tr>
-                                        <tr>
-                                            <td className="py-2">Pembesian Besi Ulir 12mm</td>
-                                            <td className="py-2">45 Sak</td>
-                                            <td className="py-2">Rp 85.000</td>
-                                            <td className="py-2 text-right font-bold">Rp 3.825.000</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        {/* Page 2 */}
-                        <div id="pdf-modal-page-2" className="w-full max-w-3xl p-10 rounded-2xl bg-white text-neutral-900 shadow-2xl border border-neutral-200 space-y-6 font-mono scroll-mt-6">
-                            <div className="flex justify-between items-center border-b border-neutral-200 pb-3 text-xs font-bold text-neutral-500">
-                                <span>ADIDAYA STUDIO ARCHITECTURE</span>
-                                <span>DOCUMENT #RAB-2026-08 · PAGE 02 / 03</span>
-                            </div>
-                            <div className="space-y-2">
-                                <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
-                                    SPESIFIKASI TEKNIS PEMBESIAN & PENGUJIAN MUTU
-                                </h2>
-                                <p className="text-xs text-neutral-500">
-                                    Standar Operasional Prosedur Lapangan
-                                </p>
-                            </div>
-
-                            <div className="p-5 rounded-xl bg-neutral-50 border border-neutral-200 space-y-3 text-xs leading-relaxed">
-                                <h4 className="font-bold text-neutral-800 uppercase tracking-wider text-sm">
-                                    2. METODE KERJA STRUCTURAL
-                                </h4>
-                                <ul className="list-disc pl-5 space-y-1.5 text-neutral-700">
-                                    <li>Jarak sengkang balok induk 100mm pada area tumpuan dan 150mm pada area lapangan.</li>
-                                    <li>Ketebalan selimut beton pondasi min 40mm untuk proteksi korosi lingkungan basah.</li>
-                                    <li>Pemancangan tiang pancang mini pile 25x25cm dengan kedalaman keras 12 meter.</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        {/* Page 3 */}
-                        <div id="pdf-modal-page-3" className="w-full max-w-3xl p-10 rounded-2xl bg-white text-neutral-900 shadow-2xl border border-neutral-200 space-y-6 font-mono scroll-mt-6">
-                            <div className="flex justify-between items-center border-b border-neutral-200 pb-3 text-xs font-bold text-neutral-500">
-                                <span>ADIDAYA STUDIO ARCHITECTURE</span>
-                                <span>DOCUMENT #RAB-2026-08 · PAGE 03 / 03</span>
-                            </div>
-                            <div className="space-y-2">
-                                <h2 className="text-xl font-bold text-neutral-900 tracking-tight">
-                                    PERSETUJUAN & OTORISASI SERTIFIKASI
-                                </h2>
-                            </div>
-
-                            <div className="p-5 rounded-xl bg-neutral-50 border border-neutral-200 space-y-3 text-xs">
-                                <h4 className="font-bold text-neutral-800 uppercase tracking-wider text-sm">
-                                    3. SERTIFIKASI HASIL UJI UTAK BETON
-                                </h4>
-                                <p className="text-neutral-700">
-                                    Seluruh sampel beton K-350 telah melalui pengujian kuat tekan 28 hari di laboratorium terakreditasi KAN dengan nilai rata-rata 368 kg/cm².
-                                </p>
-                                <div className="pt-4 flex justify-between items-end text-neutral-600 border-t border-neutral-200">
-                                    <div>
-                                        <p className="font-bold">Project Manager</p>
-                                        <p className="text-xs text-neutral-400 mt-8">Dian Rahma, S.T.</p>
-                                    </div>
-                                    <div>
-                                        <p className="font-bold">Site Engineer</p>
-                                        <p className="text-xs text-neutral-400 mt-8">Hendra Kusuma, S.T.</p>
-                                    </div>
+                        {file.url ? (
+                            <iframe
+                                src={file.url}
+                                className="w-full max-w-5xl h-full rounded-2xl bg-white border-0 shadow-2xl"
+                                title={file.name}
+                            />
+                        ) : (
+                            <div className="w-full max-w-3xl p-10 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6 text-center">
+                                <div className="mx-auto w-16 h-16 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center border border-rose-500/20">
+                                    <FileText className="w-8 h-8" />
                                 </div>
+                                <h2 className="text-xl font-bold font-mono text-neutral-800">{file.name}</h2>
+                                <p className="text-xs text-neutral-500 font-medium">
+                                    PDF Document · {file.size}<br />
+                                    Preview is not available for this file.
+                                </p>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>,
                 document.body
@@ -1109,7 +940,7 @@ export default function ProjectFileDetailPanel({
 
                         <div className="flex items-center gap-2 shrink-0">
                             <button
-                                onClick={() => alert(`Downloading ${file.name}...`)}
+                                onClick={triggerDownload}
                                 className="p-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer"
                                 title="Download Video"
                             >
@@ -1165,7 +996,7 @@ export default function ProjectFileDetailPanel({
 
                         <div className="flex items-center gap-2 shrink-0">
                             <button
-                                onClick={() => alert(`Downloading ${file.name}...`)}
+                                onClick={triggerDownload}
                                 className="p-2 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer"
                                 title="Download Spreadsheet"
                             >
@@ -1302,7 +1133,7 @@ export default function ProjectFileDetailPanel({
                             </div>
 
                             <button
-                                onClick={() => alert(`Downloading ${file.name}...`)}
+                                onClick={triggerDownload}
                                 className="p-2 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-neutral-700"
                                 title="Download Document"
                             >
@@ -1442,7 +1273,7 @@ export default function ProjectFileDetailPanel({
                             </div>
 
                             <button
-                                onClick={() => alert(`Downloading ${file.name}...`)}
+                                onClick={triggerDownload}
                                 className="p-2 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-neutral-700"
                                 title="Download Presentation"
                             >
@@ -1570,7 +1401,7 @@ export default function ProjectFileDetailPanel({
 
                         <div className="flex items-center gap-2 shrink-0">
                             <button
-                                onClick={() => alert(`Downloading ${file.name}...`)}
+                                onClick={triggerDownload}
                                 className="p-2 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-neutral-700"
                                 title="Download File"
                             >
@@ -1614,7 +1445,7 @@ export default function ProjectFileDetailPanel({
                             </div>
 
                             <button
-                                onClick={() => alert(`Downloading ${file.name}...`)}
+                                onClick={triggerDownload}
                                 className="w-full py-3.5 px-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
                             >
                                 <Download className="w-4 h-4" />
@@ -1678,12 +1509,13 @@ export default function ProjectFileDetailPanel({
                                 <input
                                     type="text"
                                     readOnly
-                                    value={`https://adidaya.studio/share/${file.id}?token=pub_${file.id}`}
+                                    value={`https://from.adidayastudio.id/share/${file.id}`}
                                     className="flex-1 px-2.5 text-xs font-mono bg-transparent text-neutral-800 dark:text-neutral-200 outline-none select-all truncate"
                                 />
                                 <button
                                     onClick={() => {
-                                        navigator.clipboard.writeText(`https://adidaya.studio/share/${file.id}?token=pub_${file.id}`);
+                                        const shareUrl = `https://from.adidayastudio.id/share/${file.id}`;
+                                        navigator.clipboard.writeText(shareUrl);
                                         setCopiedShareLink(true);
                                         setToastMessage("Link copied to clipboard!");
                                         setTimeout(() => setCopiedShareLink(false), 2000);
@@ -1736,7 +1568,7 @@ export default function ProjectFileDetailPanel({
                         {/* Top Download & Close */}
                         <div className="flex items-center gap-2 shrink-0">
                             <button
-                                onClick={() => alert(`Downloading ${file.name}...`)}
+                                onClick={triggerDownload}
                                 className="p-2 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-neutral-700"
                                 title="Download File"
                             >
@@ -1766,31 +1598,25 @@ export default function ProjectFileDetailPanel({
                         </div>
                     ) : file.type === "pdf" ? (
                         /* 2. PDF PREVIEW */
-                        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6 min-h-0">
-                            <div className="w-full max-w-3xl min-h-[650px] p-8 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6">
-                                <div className="border-b border-neutral-200 pb-4 flex justify-between items-center text-xs text-neutral-400 font-mono">
-                                    <span>DOCUMENT PREVIEW — PAGE 1 OF 2</span>
-                                    <span>CONFIDENTIAL</span>
-                                </div>
-                                <h2 className="text-xl font-bold font-mono text-neutral-800">{file.name}</h2>
-                                <div className="space-y-3 text-xs text-neutral-700 leading-relaxed font-sans">
-                                    <p className="font-bold text-neutral-900 uppercase">1. LINGKUP PEKERJAAN & STRUKTUR TEKNIS</p>
-                                    <p>Dokumen spesifikasi teknis dan estimasi biaya (RAB) untuk pelaksanaan pekerjaan proyek konstruksi. Seluruh item telah diverifikasi oleh tim engineer Adidaya Studio.</p>
-                                    <div className="p-4 rounded-xl bg-neutral-100 font-mono text-[11px] space-y-2 border border-neutral-200">
-                                        <div className="flex justify-between"><span>Pekerjaan Pondasi & Groundwork</span><span className="font-bold">Rp 450.000.000</span></div>
-                                        <div className="flex justify-between"><span>Pekerjaan Beton Bertulang Lt 1-3</span><span className="font-bold">Rp 1.250.000.000</span></div>
-                                        <div className="flex justify-between"><span>Pekerjaan MEP & Instalasi Air</span><span className="font-bold">Rp 380.000.000</span></div>
+                        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6 min-h-0 w-full">
+                            {file.url ? (
+                                <iframe
+                                    src={file.url}
+                                    className="w-full max-w-5xl h-[82vh] rounded-2xl bg-white border-0 shadow-2xl"
+                                    title={file.name}
+                                />
+                            ) : (
+                                <div className="w-full max-w-3xl p-8 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6">
+                                    <div className="border-b border-neutral-200 pb-4 flex justify-between items-center text-xs text-neutral-400 font-mono">
+                                        <span>DOCUMENT PREVIEW</span>
+                                        <span>ADIDAYA STUDIO</span>
                                     </div>
+                                    <h2 className="text-xl font-bold font-mono text-neutral-800">{file.name}</h2>
+                                    <p className="text-xs text-neutral-600 leading-relaxed font-sans font-medium">
+                                        Dokumen PDF proyek ({file.size}). Menggunakan file viewer resmi Adidaya Studio.
+                                    </p>
                                 </div>
-                            </div>
-                            <div className="w-full max-w-3xl min-h-[500px] p-8 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6">
-                                <div className="border-b border-neutral-200 pb-4 flex justify-between items-center text-xs text-neutral-400 font-mono">
-                                    <span>DOCUMENT PREVIEW — PAGE 2 OF 2</span>
-                                    <span>ADIDAYA STUDIO</span>
-                                </div>
-                                <h3 className="text-lg font-bold font-mono text-neutral-800">2. LEMBAR PERSETUJUAN & OTORISASI</h3>
-                                <p className="text-xs text-neutral-700 leading-relaxed">Persetujuan tahap pertama telah ditandatangani oleh Project Director dan Principal Architect pada tanggal 28 Agustus 2026.</p>
-                            </div>
+                            )}
                         </div>
                     ) : file.type === "video" ? (
                         /* 3. VIDEO PREVIEW */
@@ -1880,7 +1706,7 @@ export default function ProjectFileDetailPanel({
                                 </div>
 
                                 <button
-                                    onClick={() => alert(`Downloading ${file.name}...`)}
+                                    onClick={triggerDownload}
                                     className="w-full py-3.5 px-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
                                 >
                                     <Download className="w-4 h-4" />

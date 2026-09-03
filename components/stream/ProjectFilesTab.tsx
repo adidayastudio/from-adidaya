@@ -33,6 +33,8 @@ import {
     ExternalLink,
     Check,
     Pencil,
+    Upload,
+    Plus,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -61,6 +63,7 @@ interface ProjectFilesTabProps {
     renamedFilesMap?: Record<string, string>;
     onRenameFile?: (fileId: string, newName: string) => void;
     deletedFileIds?: string[];
+    onOpenUploadDrawer?: () => void;
 }
 
 export function middleTruncate(filename: string, maxLength: number = 26): string {
@@ -91,100 +94,7 @@ export function middleTruncate(filename: string, maxLength: number = 26): string
     return `${front}...${back}${extPart}`;
 }
 
-export const INITIAL_PROJECT_FILES: Record<string, ProjectFileItem[]> = {
-    "000-gen": [
-        {
-            id: "f-1",
-            name: "20250423_RWM_DETAIL_TANGGA.dwg",
-            size: "14.8 MB",
-            type: "dwg",
-            typeName: "AutoCAD Drawing",
-            uploadedBy: "Eko Prasetyo",
-            uploadedAt: "Aug 25, 2026",
-            source: "manual",
-        },
-        {
-            id: "f-2",
-            name: "RAB_Rawamangun_Structure_v3.pdf",
-            size: "4.2 MB",
-            type: "pdf",
-            typeName: "PDF Document",
-            uploadedBy: "Hendra Kusuma",
-            uploadedAt: "Aug 28, 2026",
-            source: "manual",
-        },
-        {
-            id: "f-3",
-            name: "Site_Pengecoran_Plat_Lt3.png",
-            size: "3.8 MB",
-            type: "image",
-            typeName: "Image",
-            uploadedBy: "Zulfikar Adhitya",
-            uploadedAt: "Aug 27, 2026",
-            source: "manual",
-        },
-        {
-            id: "f-4",
-            name: "20250809_GEN_LT 3.skp",
-            size: "22.4 MB",
-            type: "skp",
-            typeName: "SketchUp 3D Model",
-            uploadedBy: "Budi Santoso",
-            uploadedAt: "Yesterday",
-            source: "chat",
-        },
-        {
-            id: "f-5",
-            name: "20260830_RWM_MAIN_BUILDING.pln",
-            size: "42.5 MB",
-            type: "pln",
-            typeName: "Archicad Model",
-            uploadedBy: "Dian Rahma",
-            uploadedAt: "Aug 30, 2026",
-            source: "chat",
-        },
-        {
-            id: "f-6",
-            name: "BoQ_Material_Beton_Struktur.xlsx",
-            size: "1.2 MB",
-            type: "excel",
-            typeName: "Excel Spreadsheet",
-            uploadedBy: "Reza Syahputra",
-            uploadedAt: "Aug 24, 2026",
-            source: "manual",
-        },
-        {
-            id: "f-7",
-            name: "Surat_Perjanjian_Kontrak_Kerja.docx",
-            size: "3.4 MB",
-            type: "word",
-            typeName: "Word Document",
-            uploadedBy: "Hendra Kusuma",
-            uploadedAt: "Jul 22, 2026",
-            source: "manual",
-        },
-        {
-            id: "f-8",
-            name: "Presentasi_Desain_Fasad_Utama.pptx",
-            size: "15.2 MB",
-            type: "ppt",
-            typeName: "PowerPoint Presentation",
-            uploadedBy: "Dian Rahma",
-            uploadedAt: "Jul 20, 2026",
-            source: "chat",
-        },
-        {
-            id: "f-9",
-            name: "Site_Progress_Drone_Flythrough.mp4",
-            size: "148.5 MB",
-            type: "video",
-            typeName: "MP4 Video",
-            uploadedBy: "Zulfikar Adhitya",
-            uploadedAt: "Jul 18, 2026",
-            source: "chat",
-        },
-    ],
-};
+export const INITIAL_PROJECT_FILES: Record<string, ProjectFileItem[]> = {};
 
 export default function ProjectFilesTab({
     channelCode,
@@ -197,6 +107,7 @@ export default function ProjectFilesTab({
     renamedFilesMap: renamedFilesMapProp,
     onRenameFile: onRenameFileProp,
     deletedFileIds: deletedFileIdsProp,
+    onOpenUploadDrawer,
 }: ProjectFilesTabProps) {
     const [selectedFileIds, setSelectedFileIds] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -295,6 +206,25 @@ export default function ProjectFilesTab({
             onRenameFileProp(fileId, newName);
         } else {
             setInternalRenamedFilesMap(prev => ({ ...prev, [fileId]: newName }));
+        }
+    };
+
+    const triggerFileDownload = async (file: ProjectFileItem) => {
+        if (!file.url) return;
+        try {
+            const res = await fetch(file.url);
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = blobUrl;
+            a.download = file.name;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+        } catch {
+            // Fallback: open in new tab if fetch fails
+            window.open(file.url, "_blank");
         }
     };
 
@@ -524,7 +454,7 @@ export default function ProjectFilesTab({
                     {selectedFileIds.length > 0 && (
                         <div className="flex items-center gap-1 pl-3 border-l border-neutral-200/50 dark:border-neutral-700/50">
                             <button
-                                onClick={() => alert(`Downloading ${selectedFileIds.length} files...`)}
+                                onClick={() => { const selectedFiles = displayedFiles.filter(f => selectedFileIds.includes(f.id)); selectedFiles.forEach(f => triggerFileDownload(f)); }}
                                 className="p-1.5 rounded-lg hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
                                 title="Download Selected Files"
                             >
@@ -829,10 +759,25 @@ export default function ProjectFilesTab({
 
             {/* Empty State */}
             {filteredFiles.length === 0 && (
-                <div className="p-12 text-center rounded-[24px] bg-white/40 dark:bg-neutral-900/40 backdrop-blur-2xl border border-white/60 dark:border-neutral-800/40 space-y-3">
-                    <FileText className="w-10 h-10 mx-auto text-neutral-400" />
-                    <h4 className="text-sm font-bold text-neutral-800 dark:text-neutral-200">No matching files found</h4>
-                    <p className="text-xs text-neutral-400">Try adjusting your category filter or search query.</p>
+                <div className="py-14 px-6 text-center rounded-[28px] bg-white/40 dark:bg-neutral-900/40 backdrop-blur-2xl border border-white/60 dark:border-neutral-800/40 space-y-5">
+                    <div className="w-16 h-16 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center mx-auto border border-blue-500/20 shadow-xs">
+                        <Upload className="w-8 h-8" />
+                    </div>
+                    <div className="space-y-1.5 max-w-md mx-auto">
+                        <h4 className="text-base font-bold text-neutral-900 dark:text-white">No files in this project yet</h4>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                            Upload files to collaborate with your team.
+                        </p>
+                    </div>
+                    <div>
+                        <button
+                            onClick={() => onOpenUploadDrawer && onOpenUploadDrawer()}
+                            className="py-3 px-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs inline-flex items-center gap-2 shadow-lg shadow-blue-500/25 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                            <Plus className="w-4 h-4 stroke-[2.5]" />
+                            <span>Upload File</span>
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -893,7 +838,7 @@ export default function ProjectFilesTab({
                                         )}
                                     >
                                         <button
-                                            onClick={() => alert(`Downloading ${file.name} to local device...`)}
+                                            onClick={() => triggerFileDownload(file)}
                                             className="w-8 h-8 rounded-full bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700/80 shadow-xs flex items-center justify-center text-neutral-600 dark:text-neutral-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-500/30 transition-all cursor-pointer"
                                             title="Download File"
                                         >
@@ -1108,7 +1053,7 @@ export default function ProjectFilesTab({
                                                     )}
 
                                                     <button
-                                                        onClick={() => alert(`Downloading ${file.name} to local device...`)}
+                                                        onClick={() => triggerFileDownload(file)}
                                                         className="w-7 h-7 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:text-blue-600 transition-colors flex items-center justify-center cursor-pointer"
                                                         title="Download File"
                                                     >
@@ -1187,12 +1132,13 @@ export default function ProjectFilesTab({
                                 <input
                                     type="text"
                                     readOnly
-                                    value={`https://adidaya.studio/share/${shareModalFile.id}?token=pub_${shareModalFile.id}`}
+                                    value={`https://from.adidayastudio.id/share/${shareModalFile.id}`}
                                     className="flex-1 px-2.5 text-xs font-mono bg-transparent text-neutral-800 dark:text-neutral-200 outline-none select-all truncate"
                                 />
                                 <button
                                     onClick={() => {
-                                        navigator.clipboard.writeText(`https://adidaya.studio/share/${shareModalFile.id}?token=pub_${shareModalFile.id}`);
+                                        const shareUrl = `https://from.adidayastudio.id/share/${shareModalFile.id}`;
+                                        navigator.clipboard.writeText(shareUrl);
                                         setCopiedShareLink(true);
                                         setToastMessage("Link copied to clipboard!");
                                         setTimeout(() => setCopiedShareLink(false), 2000);
@@ -1243,7 +1189,7 @@ export default function ProjectFilesTab({
                         {/* Top Download & Close */}
                         <div className="flex items-center gap-2 shrink-0">
                             <button
-                                onClick={() => alert(`Downloading ${shareModalFile.name}...`)}
+                                onClick={() => triggerFileDownload(shareModalFile)}
                                 className="p-2 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-neutral-700"
                                 title="Download File"
                             >
@@ -1272,32 +1218,21 @@ export default function ProjectFilesTab({
                             />
                         </div>
                     ) : shareModalFile.type === "pdf" ? (
-                        /* 2. PDF PREVIEW */
-                        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6 min-h-0">
-                            <div className="w-full max-w-3xl min-h-[650px] p-8 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6">
-                                <div className="border-b border-neutral-200 pb-4 flex justify-between items-center text-xs text-neutral-400 font-mono">
-                                    <span>DOCUMENT PREVIEW — PAGE 1 OF 2</span>
-                                    <span>CONFIDENTIAL</span>
+                        /* 2. PDF PREVIEW - Real iframe */
+                        <div className="flex-1 overflow-hidden p-4 md:p-8 flex flex-col items-center justify-center min-h-0">
+                            {shareModalFile.url ? (
+                                <iframe
+                                    src={shareModalFile.url}
+                                    className="w-full max-w-5xl h-full rounded-2xl bg-white border-0 shadow-2xl"
+                                    title={shareModalFile.name}
+                                />
+                            ) : (
+                                <div className="w-full max-w-3xl p-10 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6 text-center">
+                                    <FileText className="w-12 h-12 mx-auto text-neutral-400" />
+                                    <h2 className="text-xl font-bold font-mono text-neutral-800">{shareModalFile.name}</h2>
+                                    <p className="text-xs text-neutral-500">Preview not available</p>
                                 </div>
-                                <h2 className="text-xl font-bold font-mono text-neutral-800">{shareModalFile.name}</h2>
-                                <div className="space-y-3 text-xs text-neutral-700 leading-relaxed font-sans">
-                                    <p className="font-bold text-neutral-900 uppercase">1. LINGKUP PEKERJAAN & STRUKTUR TEKNIS</p>
-                                    <p>Dokumen spesifikasi teknis dan estimasi biaya (RAB) untuk pelaksanaan pekerjaan proyek konstruksi. Seluruh item telah diverifikasi oleh tim engineer Adidaya Studio.</p>
-                                    <div className="p-4 rounded-xl bg-neutral-100 font-mono text-[11px] space-y-2 border border-neutral-200">
-                                        <div className="flex justify-between"><span>Pekerjaan Pondasi & Groundwork</span><span className="font-bold">Rp 450.000.000</span></div>
-                                        <div className="flex justify-between"><span>Pekerjaan Beton Bertulang Lt 1-3</span><span className="font-bold">Rp 1.250.000.000</span></div>
-                                        <div className="flex justify-between"><span>Pekerjaan MEP & Instalasi Air</span><span className="font-bold">Rp 380.000.000</span></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="w-full max-w-3xl min-h-[500px] p-8 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6">
-                                <div className="border-b border-neutral-200 pb-4 flex justify-between items-center text-xs text-neutral-400 font-mono">
-                                    <span>DOCUMENT PREVIEW — PAGE 2 OF 2</span>
-                                    <span>ADIDAYA STUDIO</span>
-                                </div>
-                                <h3 className="text-lg font-bold font-mono text-neutral-800">2. LEMBAR PERSETUJUAN & OTORISASI</h3>
-                                <p className="text-xs text-neutral-700 leading-relaxed">Persetujuan tahap pertama telah ditandatangani oleh Project Director dan Principal Architect pada tanggal 28 Agustus 2026.</p>
-                            </div>
+                            )}
                         </div>
                     ) : shareModalFile.type === "video" ? (
                         /* 3. VIDEO PREVIEW */
@@ -1387,7 +1322,7 @@ export default function ProjectFilesTab({
                                 </div>
 
                                 <button
-                                    onClick={() => alert(`Downloading ${shareModalFile.name}...`)}
+                                    onClick={() => triggerFileDownload(shareModalFile)}
                                     className="w-full py-3.5 px-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
                                 >
                                     <Download className="w-4 h-4" />

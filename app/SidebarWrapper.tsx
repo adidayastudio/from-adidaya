@@ -163,7 +163,7 @@ export default function SidebarWrapper({ children }: { children: React.ReactNode
   }, []);
 
   const pathname = usePathname();
-  const isStandalonePage = pathname === "/" || pathname === "/login" || pathname?.startsWith("/flow/finance/purchasing/share") || pathname === "/stream" || pathname?.startsWith("/stream");
+  const isStandalonePage = pathname === "/" || pathname === "/login" || pathname?.startsWith("/flow/finance/purchasing/share") || pathname === "/stream" || pathname?.startsWith("/stream") || pathname?.startsWith("/share");
 
 
   if (isStandalonePage) {
