@@ -25,6 +25,9 @@ import {
     Trash2,
     Pencil,
     Check,
+    Globe,
+    Copy,
+    ExternalLink,
 } from "lucide-react";
 import clsx from "clsx";
 import type { ProjectFileItem } from "./ProjectFilesTab";
@@ -37,6 +40,7 @@ interface ProjectFileDetailPanelProps {
     onRenameFile?: (fileId: string, newName: string) => void;
     isFavorite?: boolean;
     onToggleFavorite?: (fileId: string) => void;
+    onOpenShareModal?: (file: ProjectFileItem) => void;
 }
 
 export default function ProjectFileDetailPanel({
@@ -47,6 +51,7 @@ export default function ProjectFileDetailPanel({
     onRenameFile,
     isFavorite: isFavoriteProp,
     onToggleFavorite,
+    onOpenShareModal,
 }: ProjectFileDetailPanelProps) {
     const [copied, setCopied] = useState(false);
     const [isFavorite, setIsFavorite] = useState(isFavoriteProp ?? file.isFavorite ?? false);
@@ -101,11 +106,15 @@ export default function ProjectFileDetailPanel({
         setIsFavorite(file.isFavorite ?? false);
     }, [file]);
 
-    // Excel, Word, PPT, Generic Lightbox Modal States
+    // Excel, Word, PPT, Generic, Share Lightbox Modal States
     const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
     const [isWordModalOpen, setIsWordModalOpen] = useState(false);
     const [isPptModalOpen, setIsPptModalOpen] = useState(false);
     const [isGenericModalOpen, setIsGenericModalOpen] = useState(false);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [isPublicPortalOpen, setIsPublicPortalOpen] = useState(false);
+    const [copiedShareLink, setCopiedShareLink] = useState(false);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [currentPptSlide, setCurrentPptSlide] = useState(1);
     const [wordPage, setWordPage] = useState(1);
 
@@ -169,72 +178,72 @@ export default function ProjectFileDetailPanel({
         switch (type) {
             case "dwg":
                 return {
-                    icon: <FileCode className="w-8 h-8 text-rose-600 dark:text-rose-400" />,
+                    icon: <FileCode className="w-5 h-5 text-rose-600 dark:text-rose-400" />,
                     bgColor: "bg-rose-500/10 dark:bg-rose-500/20 border-rose-500/20",
                     label: "AutoCAD Drawing",
                     ext: ext || "DWG",
                 };
             case "pdf":
                 return {
-                    icon: <FileText className="w-8 h-8 text-rose-600 dark:text-rose-400" />,
+                    icon: <FileText className="w-5 h-5 text-rose-600 dark:text-rose-400" />,
                     bgColor: "bg-rose-500/10 dark:bg-rose-500/20 border-rose-500/20",
                     label: "PDF Document",
                     ext: ext || "PDF",
                 };
             case "skp":
                 return {
-                    icon: <Box className="w-8 h-8 text-blue-700 dark:text-blue-500" />,
+                    icon: <Box className="w-5 h-5 text-blue-700 dark:text-blue-500" />,
                     bgColor: "bg-blue-600/10 dark:bg-blue-600/20 border-blue-600/20",
                     label: "SketchUp 3D Model",
                     ext: ext || "SKP",
                 };
             case "pln":
                 return {
-                    icon: <Box className="w-8 h-8 text-sky-500 dark:text-sky-400" />,
+                    icon: <Box className="w-5 h-5 text-sky-500 dark:text-sky-400" />,
                     bgColor: "bg-sky-500/10 dark:bg-sky-500/20 border-sky-500/20",
                     label: "Archicad BIM Model",
                     ext: ext || "PLN",
                 };
             case "image":
                 return {
-                    icon: <ImageIcon className="w-8 h-8 text-amber-500 dark:text-amber-400" />,
+                    icon: <ImageIcon className="w-5 h-5 text-amber-500 dark:text-amber-400" />,
                     bgColor: "bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/20",
                     label: "Image File",
                     ext: ext || "IMG",
                 };
             case "excel":
                 return {
-                    icon: <FileSpreadsheet className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />,
+                    icon: <FileSpreadsheet className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />,
                     bgColor: "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/20",
                     label: ext === "CSV" ? "CSV Spreadsheet" : "Excel Spreadsheet",
                     ext: ext || "XLSX",
                 };
             case "word":
                 return {
-                    icon: <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />,
+                    icon: <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />,
                     bgColor: "bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/20",
                     label: "Word Document",
                     ext: ext || "DOCX",
                 };
             case "ppt":
                 return {
-                    icon: <Presentation className="w-8 h-8 text-orange-600 dark:text-orange-400" />,
+                    icon: <Presentation className="w-5 h-5 text-orange-600 dark:text-orange-400" />,
                     bgColor: "bg-orange-500/10 dark:bg-orange-500/20 border-orange-500/20",
                     label: "PowerPoint Presentation",
                     ext: ext || "PPTX",
                 };
             case "video":
                 return {
-                    icon: <Video className="w-8 h-8 text-purple-600 dark:text-purple-400" />,
+                    icon: <Video className="w-5 h-5 text-purple-600 dark:text-purple-400" />,
                     bgColor: "bg-purple-500/10 dark:bg-purple-500/20 border-purple-500/20",
                     label: "Video File",
                     ext: ext || "MP4",
                 };
             default:
                 return {
-                    icon: <FileCheck className="w-8 h-8 text-neutral-500 dark:text-neutral-400" />,
+                    icon: <FileCheck className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />,
                     bgColor: "bg-neutral-500/10 dark:bg-neutral-500/20 border-neutral-500/20",
-                    label: "Document",
+                    label: "Project File",
                     ext: ext || "FILE",
                 };
         }
@@ -602,14 +611,10 @@ export default function ProjectFileDetailPanel({
                     {/* 2. Share Link */}
                     <button
                         onClick={() => {
-                            if (typeof window !== "undefined") {
-                                const currentUrl = new URL(window.location.href);
-                                currentUrl.searchParams.set("fileId", file.id);
-                                currentUrl.searchParams.set("preview", "true");
-                                navigator.clipboard.writeText(currentUrl.toString());
-                                setCopied(true);
-                                setTimeout(() => setCopied(false), 2500);
+                            if (onOpenShareModal) {
+                                onOpenShareModal(file);
                             }
+                            setIsShareModalOpen(true);
                         }}
                         className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-medium transition-colors cursor-pointer"
                     >
@@ -617,12 +622,6 @@ export default function ProjectFileDetailPanel({
                             <Share2 className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
                             <span>Share Link</span>
                         </span>
-                        {copied && (
-                            <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 animate-in fade-in duration-150">
-                                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                                <span>Link Copied!</span>
-                            </span>
-                        )}
                     </button>
 
                     {/* 3. Add to Favorites / Remove Favorite */}
@@ -1596,8 +1595,14 @@ export default function ProjectFileDetailPanel({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="w-full max-w-lg p-8 rounded-[36px] bg-neutral-900 border border-neutral-800 flex flex-col items-center text-center space-y-6 shadow-2xl text-white">
-                            <div className={`w-20 h-20 rounded-[28px] flex items-center justify-center border shadow-xl ${badge.bgColor}`}>
-                                {badge.icon}
+                            <div className="w-20 h-20 rounded-[28px] bg-neutral-800/80 border border-neutral-700/80 flex items-center justify-center shadow-xl text-neutral-300">
+                                {file.type === "skp" || file.type === "pln" ? (
+                                    <Box className="w-9 h-9 text-neutral-300" />
+                                ) : file.type === "dwg" ? (
+                                    <FileCode className="w-9 h-9 text-neutral-300" />
+                                ) : (
+                                    <FileText className="w-9 h-9 text-neutral-300" />
+                                )}
                             </div>
 
                             <div className="space-y-2">
@@ -1617,6 +1622,282 @@ export default function ProjectFileDetailPanel({
                             </button>
                         </div>
                     </div>
+                </div>,
+                document.body
+            )}
+
+            {/* REACT PORTAL: SHARE FILE MODAL */}
+            {mounted && isShareModalOpen && createPortal(
+                <div
+                    className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 text-neutral-900 dark:text-white"
+                    onClick={() => setIsShareModalOpen(false)}
+                >
+                    <div
+                        className="w-full max-w-md rounded-[32px] bg-white/80 dark:bg-neutral-900/80 backdrop-blur-2xl border border-white/60 dark:border-neutral-700/50 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden p-6 space-y-5 animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header Bar */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 flex items-center justify-center border border-neutral-200/50 dark:border-neutral-700/50">
+                                    <Share2 className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Share File</h4>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setIsShareModalOpen(false)}
+                                className="p-1.5 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* File Card Box with Squircle Badge */}
+                        <div className="p-3.5 rounded-[22px] bg-neutral-100/70 dark:bg-neutral-800/50 border border-neutral-200/60 dark:border-neutral-700/60 flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center border shadow-xs ${badge.bgColor}`}>
+                                {badge.icon}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="text-xs font-bold font-mono text-neutral-900 dark:text-white truncate">
+                                    {file.name}
+                                </div>
+                                <div className="text-[11px] text-neutral-400 font-mono">
+                                    {file.size} · Uploaded by {file.uploadedBy}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Share Link Input Box */}
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
+                                Copy Public Link
+                            </label>
+                            <div className="flex items-center gap-2 p-1.5 rounded-[20px] bg-neutral-100/90 dark:bg-neutral-800/90 border border-neutral-200/80 dark:border-neutral-700/80">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={`https://adidaya.studio/share/${file.id}?token=pub_${file.id}`}
+                                    className="flex-1 px-2.5 text-xs font-mono bg-transparent text-neutral-800 dark:text-neutral-200 outline-none select-all truncate"
+                                />
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(`https://adidaya.studio/share/${file.id}?token=pub_${file.id}`);
+                                        setCopiedShareLink(true);
+                                        setToastMessage("Link copied to clipboard!");
+                                        setTimeout(() => setCopiedShareLink(false), 2000);
+                                        setTimeout(() => setToastMessage(null), 3000);
+                                    }}
+                                    className="px-3.5 py-1.5 rounded-[14px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 border border-blue-500/20"
+                                >
+                                    {copiedShareLink ? <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> : <Copy className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />}
+                                    <span>{copiedShareLink ? "Copied!" : "Copy"}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons: Test Public Portal View */}
+                        <div className="pt-2 flex flex-col gap-2">
+                            <button
+                                onClick={() => {
+                                    setIsShareModalOpen(false);
+                                    setIsPublicPortalOpen(true);
+                                }}
+                                className="w-full py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.98]"
+                            >
+                                <ExternalLink className="w-4 h-4" />
+                                <span>Preview Public Portal</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* REACT PORTAL: PUBLIC DRIVE PORTAL PREVIEW */}
+            {mounted && isPublicPortalOpen && createPortal(
+                <div className="fixed inset-0 z-[999999] bg-neutral-950/95 backdrop-blur-2xl flex flex-col justify-between animate-in fade-in duration-200 text-white">
+                    {/* Header Bar with Public View Badge & Neutral Icon */}
+                    <div className="p-4 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between shrink-0 shadow-md">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <FileCode className="w-5 h-5 text-neutral-400 shrink-0" />
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-bold font-mono text-white truncate">{file.name}</h4>
+                                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/30 shrink-0">
+                                        Public View
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-neutral-400 truncate">{file.uploadedBy} · {file.uploadedAt} · {file.size}</p>
+                            </div>
+                        </div>
+
+                        {/* Top Download & Close */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                onClick={() => alert(`Downloading ${file.name}...`)}
+                                className="p-2 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-neutral-700"
+                                title="Download File"
+                            >
+                                <Download className="w-4 h-4" />
+                                <span>Download</span>
+                            </button>
+                            <button
+                                onClick={() => setIsPublicPortalOpen(false)}
+                                className="px-3 py-1.5 rounded-full bg-neutral-800/80 hover:bg-neutral-700 text-neutral-200 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 border border-neutral-700/60 shadow-lg text-xs font-mono font-bold"
+                                title="Close Preview (Esc)"
+                            >
+                                <X className="w-4 h-4 text-neutral-300" />
+                                <span className="text-[10px] uppercase bg-neutral-700/80 px-1.5 py-0.5 rounded text-neutral-400">Esc</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* DYNAMIC WORKSPACE PREVIEW ACCORDING TO FILE TYPE */}
+                    {file.type === "image" ? (
+                        /* 1. IMAGE PREVIEW */
+                        <div className="flex-1 flex items-center justify-center p-8 overflow-hidden min-h-0">
+                            <img
+                                src={file.url || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80"}
+                                alt={file.name}
+                                className="max-h-[82vh] max-w-[90vw] object-contain rounded-2xl shadow-2xl border border-neutral-800"
+                            />
+                        </div>
+                    ) : file.type === "pdf" ? (
+                        /* 2. PDF PREVIEW */
+                        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6 min-h-0">
+                            <div className="w-full max-w-3xl min-h-[650px] p-8 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6">
+                                <div className="border-b border-neutral-200 pb-4 flex justify-between items-center text-xs text-neutral-400 font-mono">
+                                    <span>DOCUMENT PREVIEW — PAGE 1 OF 2</span>
+                                    <span>CONFIDENTIAL</span>
+                                </div>
+                                <h2 className="text-xl font-bold font-mono text-neutral-800">{file.name}</h2>
+                                <div className="space-y-3 text-xs text-neutral-700 leading-relaxed font-sans">
+                                    <p className="font-bold text-neutral-900 uppercase">1. LINGKUP PEKERJAAN & STRUKTUR TEKNIS</p>
+                                    <p>Dokumen spesifikasi teknis dan estimasi biaya (RAB) untuk pelaksanaan pekerjaan proyek konstruksi. Seluruh item telah diverifikasi oleh tim engineer Adidaya Studio.</p>
+                                    <div className="p-4 rounded-xl bg-neutral-100 font-mono text-[11px] space-y-2 border border-neutral-200">
+                                        <div className="flex justify-between"><span>Pekerjaan Pondasi & Groundwork</span><span className="font-bold">Rp 450.000.000</span></div>
+                                        <div className="flex justify-between"><span>Pekerjaan Beton Bertulang Lt 1-3</span><span className="font-bold">Rp 1.250.000.000</span></div>
+                                        <div className="flex justify-between"><span>Pekerjaan MEP & Instalasi Air</span><span className="font-bold">Rp 380.000.000</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="w-full max-w-3xl min-h-[500px] p-8 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6">
+                                <div className="border-b border-neutral-200 pb-4 flex justify-between items-center text-xs text-neutral-400 font-mono">
+                                    <span>DOCUMENT PREVIEW — PAGE 2 OF 2</span>
+                                    <span>ADIDAYA STUDIO</span>
+                                </div>
+                                <h3 className="text-lg font-bold font-mono text-neutral-800">2. LEMBAR PERSETUJUAN & OTORISASI</h3>
+                                <p className="text-xs text-neutral-700 leading-relaxed">Persetujuan tahap pertama telah ditandatangani oleh Project Director dan Principal Architect pada tanggal 28 Agustus 2026.</p>
+                            </div>
+                        </div>
+                    ) : file.type === "video" ? (
+                        /* 3. VIDEO PREVIEW */
+                        <div className="flex-1 flex items-center justify-center p-8 overflow-hidden min-h-0">
+                            <video
+                                controls
+                                autoPlay
+                                src={file.url || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"}
+                                className="max-h-[82vh] max-w-[90vw] rounded-2xl shadow-2xl border border-neutral-800"
+                            />
+                        </div>
+                    ) : file.type === "excel" ? (
+                        /* 4. EXCEL PREVIEW */
+                        <div className="flex-1 overflow-auto p-6 min-h-0 flex flex-col items-center">
+                            <div className="w-full max-w-5xl rounded-2xl bg-neutral-900 border border-neutral-800 shadow-2xl overflow-hidden text-xs font-mono">
+                                <div className="p-3 bg-neutral-800 border-b border-neutral-700 flex items-center justify-between font-bold text-neutral-300">
+                                    <span>WORKSHEET: RINGKASAN RAB & BOQ</span>
+                                    <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">3 SHEETS</span>
+                                </div>
+                                <div className="overflow-x-auto p-4">
+                                    <table className="w-full text-left border-collapse border border-neutral-800 text-[11px]">
+                                        <thead className="bg-neutral-800 text-neutral-400 font-bold">
+                                            <tr>
+                                                <th className="p-2.5 border border-neutral-700">NO</th>
+                                                <th className="p-2.5 border border-neutral-700">DESKRIPSI ITEM PEKERJAAN</th>
+                                                <th className="p-2.5 border border-neutral-700">VOL</th>
+                                                <th className="p-2.5 border border-neutral-700">SATUAN</th>
+                                                <th className="p-2.5 border border-neutral-700">HARGA SATUAN</th>
+                                                <th className="p-2.5 border border-neutral-700">TOTAL BIAYA</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-800 text-neutral-300">
+                                            <tr><td className="p-2.5 border border-neutral-800 font-bold">1</td><td className="p-2.5 border border-neutral-800">Pekerjaan Persiapan & Galian Groundwork</td><td className="p-2.5 border border-neutral-800">120</td><td className="p-2.5 border border-neutral-800">m³</td><td className="p-2.5 border border-neutral-800">Rp 250.000</td><td className="p-2.5 border border-neutral-800 font-bold text-emerald-400">Rp 30.000.000</td></tr>
+                                            <tr><td className="p-2.5 border border-neutral-800 font-bold">2</td><td className="p-2.5 border border-neutral-800">Pekerjaan Beton Struktur K-350 Slump 12</td><td className="p-2.5 border border-neutral-800">450</td><td className="p-2.5 border border-neutral-800">m³</td><td className="p-2.5 border border-neutral-800">Rp 1.450.000</td><td className="p-2.5 border border-neutral-800 font-bold text-emerald-400">Rp 652.500.000</td></tr>
+                                            <tr><td className="p-2.5 border border-neutral-800 font-bold">3</td><td className="p-2.5 border border-neutral-800">Pekerjaan Besi Ulir Ulir D16 & D13 High Tensile</td><td className="p-2.5 border border-neutral-800">18.500</td><td className="p-2.5 border border-neutral-800">kg</td><td className="p-2.5 border border-neutral-800">Rp 16.500</td><td className="p-2.5 border border-neutral-800 font-bold text-emerald-400">Rp 305.250.000</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    ) : file.type === "word" ? (
+                        /* 5. WORD PREVIEW */
+                        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6 min-h-0">
+                            <div className="w-full max-w-3xl min-h-[600px] p-10 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6 font-sans">
+                                <div className="border-b border-neutral-200 pb-3 flex justify-between text-xs text-neutral-400 font-mono">
+                                    <span>WORD DOCUMENT PREVIEW</span>
+                                    <span>ADIDAYA STUDIO</span>
+                                </div>
+                                <h2 className="text-2xl font-bold text-neutral-900">{file.name}</h2>
+                                <p className="text-xs text-neutral-600 leading-relaxed">Dokumen notulensi rapat dan spesifikasi desain arsitektur proyek. Seluruh pasal dan poin pertimbangan teknis disetujui bersama oleh tim pengawas dan kontraktor.</p>
+                            </div>
+                        </div>
+                    ) : file.type === "ppt" ? (
+                        /* 6. PPT PREVIEW */
+                        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6 min-h-0">
+                            <div className="w-full max-w-4xl aspect-video rounded-3xl overflow-hidden bg-gradient-to-br from-neutral-900 to-black shadow-2xl border border-neutral-800 p-8 flex flex-col justify-between text-white">
+                                <div className="flex justify-between items-center border-b border-neutral-800 pb-4">
+                                    <span className="text-xs font-bold text-orange-400 font-mono tracking-widest">ADIDAYA STUDIO PRESENTATION</span>
+                                    <span className="text-xs font-mono text-neutral-500">SLIDE 01 OF 04</span>
+                                </div>
+                                <div className="space-y-3 my-auto">
+                                    <h2 className="text-3xl font-extrabold text-white tracking-tight">{file.name}</h2>
+                                    <p className="text-sm text-neutral-400 max-w-xl leading-relaxed">Konsep Desain Fasad Utama & Rencana Implementasi Tahap Konstruksi Tahun 2026.</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        /* 7. CAD / 3D / GENERIC CARD CANVAS FOR NON-PREVIEWABLE FILES (.skp, .pln, .dwg) */
+                        <div className="flex-1 flex items-center justify-center p-8 min-h-0">
+                            <div className="w-full max-w-lg p-8 rounded-[36px] bg-neutral-900 border border-neutral-800 flex flex-col items-center text-center space-y-6 shadow-2xl text-white">
+                                <div className="w-20 h-20 rounded-[28px] bg-neutral-800/80 border border-neutral-700/80 flex items-center justify-center shadow-xl text-neutral-300">
+                                    {file.type === "skp" || file.type === "pln" ? (
+                                        <Box className="w-9 h-9 text-neutral-300" />
+                                    ) : file.type === "dwg" ? (
+                                        <FileCode className="w-9 h-9 text-neutral-300" />
+                                    ) : (
+                                        <FileText className="w-9 h-9 text-neutral-300" />
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="text-xs font-bold font-mono px-3 py-1 rounded-full bg-neutral-800 text-neutral-300 inline-block border border-neutral-700">
+                                        {file.type.toUpperCase()}
+                                    </div>
+                                    <h3 className="text-lg font-bold text-white font-mono break-all px-4">{file.name}</h3>
+                                    <p className="text-xs text-neutral-400 font-mono">{file.typeName} · {file.size}</p>
+                                </div>
+
+                                <button
+                                    onClick={() => alert(`Downloading ${file.name}...`)}
+                                    className="w-full py-3.5 px-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    <span>Download</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>,
+                document.body
+            )}
+
+            {/* REACT PORTAL: FLOATING TOAST NOTIFICATION */}
+            {mounted && toastMessage && createPortal(
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999999] px-4 py-2.5 rounded-full bg-neutral-900/90 dark:bg-white/90 backdrop-blur-xl border border-neutral-800 dark:border-neutral-200 text-white dark:text-neutral-900 font-bold text-xs flex items-center gap-2 shadow-2xl animate-in slide-in-from-bottom-3 duration-200 pointer-events-none">
+                    <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-600 stroke-[2.5]" />
+                    <span>{toastMessage}</span>
                 </div>,
                 document.body
             )}

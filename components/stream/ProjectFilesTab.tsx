@@ -214,6 +214,7 @@ export default function ProjectFilesTab({
     const [shareModalFile, setShareModalFile] = useState<ProjectFileItem | null>(null);
     const [isPublicPortalOpen, setIsPublicPortalOpen] = useState(false);
     const [copiedShareLink, setCopiedShareLink] = useState(false);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
 
     // Rename & Delete Modal States
     const [renameModalFile, setRenameModalFile] = useState<ProjectFileItem | null>(null);
@@ -837,10 +838,10 @@ export default function ProjectFilesTab({
 
             {/* CARD VIEW MODE */}
             {viewMode === "grid" && filteredFiles.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
                     {filteredFiles.map((file, index) => {
                         const badge = getFileBadge(file.type);
-                        const truncatedName = middleTruncate(file.name, 26);
+                        const truncatedName = middleTruncate(file.name, 22);
                         const isSelected = selectedFileIds.includes(file.id);
                         const isActiveDetail = selectedFileId === file.id;
                         const isFav = favoritedFileIds.includes(file.id);
@@ -851,7 +852,7 @@ export default function ProjectFilesTab({
                                 key={file.id}
                                 onClick={() => onSelectFile && onSelectFile(file)}
                                 className={clsx(
-                                    "group relative p-4 rounded-[22px] border transition-all duration-300 flex flex-col justify-between space-y-3 cursor-pointer select-none",
+                                    "group relative p-4 rounded-[22px] border transition-all duration-300 flex flex-col justify-between space-y-3 cursor-pointer select-none min-w-0 overflow-hidden",
                                     isActiveDetail || isSelected
                                         ? "border-blue-400/50 ring-2 ring-blue-400/20 shadow-xs bg-blue-50/80 dark:bg-blue-950/30 text-blue-900 dark:text-blue-100 font-medium"
                                         : "bg-white dark:bg-neutral-900 border-neutral-200/80 dark:border-neutral-800 shadow-xs hover:bg-neutral-50 dark:hover:bg-neutral-800/80 hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-md"
@@ -915,21 +916,21 @@ export default function ProjectFilesTab({
                                     <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 border ${badge.bgColor}`}>
                                         {badge.icon}
                                     </div>
-                                    <div className="min-w-0 flex-1">
+                                    <div className="min-w-0 flex-1 overflow-hidden">
                                         <h4
-                                            className="text-[13px] font-bold text-neutral-900 dark:text-white font-mono leading-tight whitespace-nowrap group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
+                                            className="text-[13px] font-bold text-neutral-900 dark:text-white font-mono leading-tight truncate block group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors"
                                             title={file.name}
                                         >
                                             {truncatedName}
                                         </h4>
-                                        <p className="text-[11px] font-mono font-semibold text-neutral-600 dark:text-neutral-300 mt-0.5">
+                                        <p className="text-[11px] font-mono font-semibold text-neutral-600 dark:text-neutral-300 mt-0.5 truncate">
                                             {file.size}
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* Footer: Uploaded By & Date */}
-                                <div className="pt-1.5 flex items-center justify-between gap-2 text-[11px]">
+                                <div className="pt-1.5 flex items-center justify-between gap-2 text-[11px] min-w-0">
                                     <span className="text-neutral-600 dark:text-neutral-300 font-medium truncate">
                                         {file.uploadedBy} · {file.uploadedAt}
                                     </span>
@@ -1133,26 +1134,25 @@ export default function ProjectFilesTab({
             )}
 
             {/* =========================================================================
-                PUBLIC LINK DRIVE SHARE SETTINGS MODAL (GOOGLE DRIVE STYLE)
+                PUBLIC LINK DRIVE SHARE SETTINGS MODAL (SHARE FILE)
             ========================================================================= */}
             {shareModalFile && (
                 <div
-                    className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 text-neutral-900 dark:text-white"
+                    className="fixed inset-0 z-[99999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 text-neutral-900 dark:text-white"
                     onClick={() => setShareModalFile(null)}
                 >
                     <div
-                        className="w-full max-w-md rounded-[28px] bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-neutral-800 shadow-2xl overflow-hidden p-6 space-y-5 animate-in zoom-in-95 duration-200"
+                        className="w-full max-w-md rounded-[32px] bg-white/80 dark:bg-neutral-900/80 backdrop-blur-2xl border border-white/60 dark:border-neutral-700/50 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] overflow-hidden p-6 space-y-5 animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header Bar */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                                    <Globe className="w-5 h-5" />
+                                <div className="w-9 h-9 rounded-2xl bg-neutral-100 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 flex items-center justify-center border border-neutral-200/50 dark:border-neutral-700/50">
+                                    <Share2 className="w-4 h-4 text-neutral-600 dark:text-neutral-300" />
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-bold">Public File Drive Portal</h4>
-                                    <p className="text-[11px] text-neutral-400">Shareable Cloud Link</p>
+                                    <h4 className="text-sm font-bold text-neutral-900 dark:text-white">Share File</h4>
                                 </div>
                             </div>
                             <button
@@ -1163,10 +1163,10 @@ export default function ProjectFilesTab({
                             </button>
                         </div>
 
-                        {/* File Card Box */}
-                        <div className="p-3.5 rounded-2xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-200/60 dark:border-neutral-700/60 flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-mono font-bold text-xs shrink-0">
-                                {shareModalFile.type.toUpperCase()}
+                        {/* File Card Box with Squircle Badge */}
+                        <div className="p-3.5 rounded-[22px] bg-neutral-100/70 dark:bg-neutral-800/50 border border-neutral-200/60 dark:border-neutral-700/60 flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center border shadow-xs ${getFileBadge(shareModalFile.type).bgColor}`}>
+                                {getFileBadge(shareModalFile.type).icon}
                             </div>
                             <div className="min-w-0 flex-1">
                                 <div className="text-xs font-bold font-mono text-neutral-900 dark:text-white truncate">
@@ -1178,30 +1178,12 @@ export default function ProjectFilesTab({
                             </div>
                         </div>
 
-                        {/* General Access Permission Pill */}
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                                General Access Permission
-                            </label>
-                            <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
-                                <Globe className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                <div className="min-w-0 flex-1">
-                                    <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
-                                        Anyone with the link can view & download
-                                    </div>
-                                    <div className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80">
-                                        No login required · Public guest preview mode
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Share Link Input Box */}
                         <div className="space-y-1.5">
                             <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">
-                                Copy Public Drive Link
+                                Copy Public Link
                             </label>
-                            <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700">
+                            <div className="flex items-center gap-2 p-1.5 rounded-[20px] bg-neutral-100/90 dark:bg-neutral-800/90 border border-neutral-200/80 dark:border-neutral-700/80">
                                 <input
                                     type="text"
                                     readOnly
@@ -1212,11 +1194,13 @@ export default function ProjectFilesTab({
                                     onClick={() => {
                                         navigator.clipboard.writeText(`https://adidaya.studio/share/${shareModalFile.id}?token=pub_${shareModalFile.id}`);
                                         setCopiedShareLink(true);
+                                        setToastMessage("Link copied to clipboard!");
                                         setTimeout(() => setCopiedShareLink(false), 2000);
+                                        setTimeout(() => setToastMessage(null), 3000);
                                     }}
-                                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                                    className="px-3.5 py-1.5 rounded-[14px] bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 border border-blue-500/20"
                                 >
-                                    {copiedShareLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                    {copiedShareLink ? <Check className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> : <Copy className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />}
                                     <span>{copiedShareLink ? "Copied!" : "Copy"}</span>
                                 </button>
                             </div>
@@ -1226,10 +1210,10 @@ export default function ProjectFilesTab({
                         <div className="pt-2 flex flex-col gap-2">
                             <button
                                 onClick={() => setIsPublicPortalOpen(true)}
-                                className="w-full py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all cursor-pointer"
+                                className="w-full py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.98]"
                             >
                                 <ExternalLink className="w-4 h-4" />
-                                <span>Preview Public Drive Portal (No Login View)</span>
+                                <span>Preview Public Portal</span>
                             </button>
                         </div>
                     </div>
@@ -1237,80 +1221,190 @@ export default function ProjectFilesTab({
             )}
 
             {/* =========================================================================
-                REACT PORTAL: PUBLIC DRIVE PORTAL PREVIEW (SIMULATES WHAT GUESTS SEE)
+                REACT PORTAL: PUBLIC DRIVE PORTAL PREVIEW (RICH PREVIEW FOR ALL SUPPORTED TYPES)
             ========================================================================= */}
             {mounted && isPublicPortalOpen && shareModalFile && createPortal(
-                <div className="fixed inset-0 z-[99999] bg-neutral-950/95 backdrop-blur-2xl flex flex-col justify-between animate-in fade-in duration-300 text-white">
-                    {/* Public Header Bar */}
-                    <div className="p-4 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between shrink-0 shadow-xl">
-                        <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-2xl bg-blue-600 text-white font-bold text-sm flex items-center justify-center font-mono shadow-md">
-                                AD
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-bold flex items-center gap-2">
-                                    <span>Adidaya Studio Cloud Drive</span>
-                                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                        Public Guest Access
+                <div className="fixed inset-0 z-[999999] bg-neutral-950/95 backdrop-blur-2xl flex flex-col justify-between animate-in fade-in duration-200 text-white">
+                    {/* Header Bar with Public View Badge & Neutral Icon */}
+                    <div className="p-4 bg-neutral-900 border-b border-neutral-800 flex items-center justify-between shrink-0 shadow-md">
+                        <div className="flex items-center gap-3 min-w-0">
+                            <FileCode className="w-5 h-5 text-neutral-400 shrink-0" />
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-bold font-mono text-white truncate">{shareModalFile.name}</h4>
+                                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 font-mono text-[10px] font-bold border border-emerald-500/30 shrink-0">
+                                        Public View
                                     </span>
-                                </h4>
-                                <p className="text-[11px] text-neutral-400">
-                                    File: {shareModalFile.name} ({shareModalFile.size}) · Uploaded by {shareModalFile.uploadedBy}
-                                </p>
+                                </div>
+                                <p className="text-[11px] text-neutral-400 truncate">{shareModalFile.uploadedBy} · {shareModalFile.uploadedAt} · {shareModalFile.size}</p>
                             </div>
                         </div>
 
                         {/* Top Download & Close */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                             <button
-                                onClick={() => alert(`Downloading ${shareModalFile.name} from Public Drive...`)}
-                                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 transition-colors cursor-pointer shadow-md"
+                                onClick={() => alert(`Downloading ${shareModalFile.name}...`)}
+                                className="p-2 px-3 rounded-full bg-neutral-800 hover:bg-neutral-700 text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-bold border border-neutral-700"
+                                title="Download File"
                             >
                                 <Download className="w-4 h-4" />
-                                <span>Download File ({shareModalFile.size})</span>
+                                <span>Download</span>
                             </button>
                             <button
                                 onClick={() => setIsPublicPortalOpen(false)}
-                                className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors cursor-pointer"
-                                title="Close Public Drive Preview"
+                                className="px-3 py-1.5 rounded-full bg-neutral-800/80 hover:bg-neutral-700 text-neutral-200 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 border border-neutral-700/60 shadow-lg text-xs font-mono font-bold"
+                                title="Close Preview (Esc)"
                             >
-                                <X className="w-5 h-5" />
+                                <X className="w-4 h-4 text-neutral-300" />
+                                <span className="text-[10px] uppercase bg-neutral-700/80 px-1.5 py-0.5 rounded text-neutral-400">Esc</span>
                             </button>
                         </div>
                     </div>
 
-                    {/* Guest Preview Workspace */}
-                    <div className="flex-1 overflow-auto p-8 flex flex-col items-center justify-center">
-                        <div className="w-full max-w-2xl p-8 rounded-3xl bg-neutral-900 border border-neutral-800 shadow-2xl flex flex-col items-center text-center space-y-6">
-                            <div className="w-20 h-20 rounded-3xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
-                                <FileText className="w-10 h-10" />
-                            </div>
-                            <div className="space-y-2">
-                                <h3 className="text-lg font-bold font-mono text-white leading-tight">
-                                    {shareModalFile.name}
-                                </h3>
-                                <p className="text-xs text-neutral-400">
-                                    Shared via Adidaya Studio Public Drive · No login required to download
-                                </p>
-                            </div>
-
-                            <div className="p-4 rounded-2xl bg-neutral-800/60 border border-neutral-700/60 w-full max-w-sm flex justify-around text-xs font-mono">
-                                <div><div className="text-neutral-500 text-[10px]">FILE SIZE</div><div className="font-bold">{shareModalFile.size}</div></div>
-                                <div className="border-r border-neutral-700" />
-                                <div><div className="text-neutral-500 text-[10px]">FORMAT</div><div className="font-bold">{shareModalFile.type.toUpperCase()}</div></div>
-                                <div className="border-r border-neutral-700" />
-                                <div><div className="text-neutral-500 text-[10px]">STATUS</div><div className="font-bold text-emerald-400">Public</div></div>
-                            </div>
-
-                            <button
-                                onClick={() => alert(`Downloading ${shareModalFile.name} from Public Drive...`)}
-                                className="px-8 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm flex items-center gap-2 shadow-xl transition-all cursor-pointer"
-                            >
-                                <Download className="w-4 h-4" />
-                                <span>Download Original File</span>
-                            </button>
+                    {/* DYNAMIC WORKSPACE PREVIEW ACCORDING TO FILE TYPE */}
+                    {shareModalFile.type === "image" ? (
+                        /* 1. IMAGE PREVIEW */
+                        <div className="flex-1 flex items-center justify-center p-8 overflow-hidden min-h-0">
+                            <img
+                                src={shareModalFile.url || "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80"}
+                                alt={shareModalFile.name}
+                                className="max-h-[82vh] max-w-[90vw] object-contain rounded-2xl shadow-2xl border border-neutral-800"
+                            />
                         </div>
-                    </div>
+                    ) : shareModalFile.type === "pdf" ? (
+                        /* 2. PDF PREVIEW */
+                        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6 min-h-0">
+                            <div className="w-full max-w-3xl min-h-[650px] p-8 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6">
+                                <div className="border-b border-neutral-200 pb-4 flex justify-between items-center text-xs text-neutral-400 font-mono">
+                                    <span>DOCUMENT PREVIEW — PAGE 1 OF 2</span>
+                                    <span>CONFIDENTIAL</span>
+                                </div>
+                                <h2 className="text-xl font-bold font-mono text-neutral-800">{shareModalFile.name}</h2>
+                                <div className="space-y-3 text-xs text-neutral-700 leading-relaxed font-sans">
+                                    <p className="font-bold text-neutral-900 uppercase">1. LINGKUP PEKERJAAN & STRUKTUR TEKNIS</p>
+                                    <p>Dokumen spesifikasi teknis dan estimasi biaya (RAB) untuk pelaksanaan pekerjaan proyek konstruksi. Seluruh item telah diverifikasi oleh tim engineer Adidaya Studio.</p>
+                                    <div className="p-4 rounded-xl bg-neutral-100 font-mono text-[11px] space-y-2 border border-neutral-200">
+                                        <div className="flex justify-between"><span>Pekerjaan Pondasi & Groundwork</span><span className="font-bold">Rp 450.000.000</span></div>
+                                        <div className="flex justify-between"><span>Pekerjaan Beton Bertulang Lt 1-3</span><span className="font-bold">Rp 1.250.000.000</span></div>
+                                        <div className="flex justify-between"><span>Pekerjaan MEP & Instalasi Air</span><span className="font-bold">Rp 380.000.000</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="w-full max-w-3xl min-h-[500px] p-8 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6">
+                                <div className="border-b border-neutral-200 pb-4 flex justify-between items-center text-xs text-neutral-400 font-mono">
+                                    <span>DOCUMENT PREVIEW — PAGE 2 OF 2</span>
+                                    <span>ADIDAYA STUDIO</span>
+                                </div>
+                                <h3 className="text-lg font-bold font-mono text-neutral-800">2. LEMBAR PERSETUJUAN & OTORISASI</h3>
+                                <p className="text-xs text-neutral-700 leading-relaxed">Persetujuan tahap pertama telah ditandatangani oleh Project Director dan Principal Architect pada tanggal 28 Agustus 2026.</p>
+                            </div>
+                        </div>
+                    ) : shareModalFile.type === "video" ? (
+                        /* 3. VIDEO PREVIEW */
+                        <div className="flex-1 flex items-center justify-center p-8 overflow-hidden min-h-0">
+                            <video
+                                controls
+                                autoPlay
+                                src={shareModalFile.url || "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"}
+                                className="max-h-[82vh] max-w-[90vw] rounded-2xl shadow-2xl border border-neutral-800"
+                            />
+                        </div>
+                    ) : shareModalFile.type === "excel" ? (
+                        /* 4. EXCEL PREVIEW */
+                        <div className="flex-1 overflow-auto p-6 min-h-0 flex flex-col items-center">
+                            <div className="w-full max-w-5xl rounded-2xl bg-neutral-900 border border-neutral-800 shadow-2xl overflow-hidden text-xs font-mono">
+                                <div className="p-3 bg-neutral-800 border-b border-neutral-700 flex items-center justify-between font-bold text-neutral-300">
+                                    <span>WORKSHEET: RINGKASAN RAB & BOQ</span>
+                                    <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">3 SHEETS</span>
+                                </div>
+                                <div className="overflow-x-auto p-4">
+                                    <table className="w-full text-left border-collapse border border-neutral-800 text-[11px]">
+                                        <thead className="bg-neutral-800 text-neutral-400 font-bold">
+                                            <tr>
+                                                <th className="p-2.5 border border-neutral-700">NO</th>
+                                                <th className="p-2.5 border border-neutral-700">DESKRIPSI ITEM PEKERJAAN</th>
+                                                <th className="p-2.5 border border-neutral-700">VOL</th>
+                                                <th className="p-2.5 border border-neutral-700">SATUAN</th>
+                                                <th className="p-2.5 border border-neutral-700">HARGA SATUAN</th>
+                                                <th className="p-2.5 border border-neutral-700">TOTAL BIAYA</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-800 text-neutral-300">
+                                            <tr><td className="p-2.5 border border-neutral-800 font-bold">1</td><td className="p-2.5 border border-neutral-800">Pekerjaan Persiapan & Galian Groundwork</td><td className="p-2.5 border border-neutral-800">120</td><td className="p-2.5 border border-neutral-800">m³</td><td className="p-2.5 border border-neutral-800">Rp 250.000</td><td className="p-2.5 border border-neutral-800 font-bold text-emerald-400">Rp 30.000.000</td></tr>
+                                            <tr><td className="p-2.5 border border-neutral-800 font-bold">2</td><td className="p-2.5 border border-neutral-800">Pekerjaan Beton Struktur K-350 Slump 12</td><td className="p-2.5 border border-neutral-800">450</td><td className="p-2.5 border border-neutral-800">m³</td><td className="p-2.5 border border-neutral-800">Rp 1.450.000</td><td className="p-2.5 border border-neutral-800 font-bold text-emerald-400">Rp 652.500.000</td></tr>
+                                            <tr><td className="p-2.5 border border-neutral-800 font-bold">3</td><td className="p-2.5 border border-neutral-800">Pekerjaan Besi Ulir Ulir D16 & D13 High Tensile</td><td className="p-2.5 border border-neutral-800">18.500</td><td className="p-2.5 border border-neutral-800">kg</td><td className="p-2.5 border border-neutral-800">Rp 16.500</td><td className="p-2.5 border border-neutral-800 font-bold text-emerald-400">Rp 305.250.000</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    ) : shareModalFile.type === "word" ? (
+                        /* 5. WORD PREVIEW */
+                        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6 min-h-0">
+                            <div className="w-full max-w-3xl min-h-[600px] p-10 rounded-2xl bg-white text-neutral-900 shadow-2xl space-y-6 font-sans">
+                                <div className="border-b border-neutral-200 pb-3 flex justify-between text-xs text-neutral-400 font-mono">
+                                    <span>WORD DOCUMENT PREVIEW</span>
+                                    <span>ADIDAYA STUDIO</span>
+                                </div>
+                                <h2 className="text-2xl font-bold text-neutral-900">{shareModalFile.name}</h2>
+                                <p className="text-xs text-neutral-600 leading-relaxed">Dokumen notulensi rapat dan spesifikasi desain arsitektur proyek. Seluruh pasal dan poin pertimbangan teknis disetujui bersama oleh tim pengawas dan kontraktor.</p>
+                            </div>
+                        </div>
+                    ) : shareModalFile.type === "ppt" ? (
+                        /* 6. PPT PREVIEW */
+                        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-6 min-h-0">
+                            <div className="w-full max-w-4xl aspect-video rounded-3xl overflow-hidden bg-gradient-to-br from-neutral-900 to-black shadow-2xl border border-neutral-800 p-8 flex flex-col justify-between text-white">
+                                <div className="flex justify-between items-center border-b border-neutral-800 pb-4">
+                                    <span className="text-xs font-bold text-orange-400 font-mono tracking-widest">ADIDAYA STUDIO PRESENTATION</span>
+                                    <span className="text-xs font-mono text-neutral-500">SLIDE 01 OF 04</span>
+                                </div>
+                                <div className="space-y-3 my-auto">
+                                    <h2 className="text-3xl font-extrabold text-white tracking-tight">{shareModalFile.name}</h2>
+                                    <p className="text-sm text-neutral-400 max-w-xl leading-relaxed">Konsep Desain Fasad Utama & Rencana Implementasi Tahap Konstruksi Tahun 2026.</p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        /* 7. CAD / 3D / GENERIC CARD CANVAS FOR NON-PREVIEWABLE FILES (.skp, .pln, .dwg) */
+                        <div className="flex-1 flex items-center justify-center p-8 min-h-0">
+                            <div className="w-full max-w-lg p-8 rounded-[36px] bg-neutral-900 border border-neutral-800 flex flex-col items-center text-center space-y-6 shadow-2xl text-white">
+                                <div className="w-20 h-20 rounded-[28px] bg-neutral-800/80 border border-neutral-700/80 flex items-center justify-center shadow-xl text-neutral-300">
+                                    {shareModalFile.type === "skp" || shareModalFile.type === "pln" ? (
+                                        <Box className="w-9 h-9 text-neutral-300" />
+                                    ) : shareModalFile.type === "dwg" ? (
+                                        <FileCode className="w-9 h-9 text-neutral-300" />
+                                    ) : (
+                                        <FileText className="w-9 h-9 text-neutral-300" />
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="text-xs font-bold font-mono px-3 py-1 rounded-full bg-neutral-800 text-neutral-300 inline-block border border-neutral-700">
+                                        {shareModalFile.type.toUpperCase()}
+                                    </div>
+                                    <h3 className="text-lg font-bold text-white font-mono break-all px-4">{shareModalFile.name}</h3>
+                                    <p className="text-xs text-neutral-400 font-mono">{shareModalFile.typeName} · {shareModalFile.size}</p>
+                                </div>
+
+                                <button
+                                    onClick={() => alert(`Downloading ${shareModalFile.name}...`)}
+                                    className="w-full py-3.5 px-6 rounded-full bg-blue-600 hover:bg-blue-500 text-white transition-all font-bold text-sm flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    <span>Download</span>
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>,
+                document.body
+            )}
+
+            {/* REACT PORTAL MODAL: FLOATING TOAST NOTIFICATION */}
+            {mounted && toastMessage && createPortal(
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999999] px-4 py-2.5 rounded-full bg-neutral-900/90 dark:bg-white/90 backdrop-blur-xl border border-neutral-800 dark:border-neutral-200 text-white dark:text-neutral-900 font-bold text-xs flex items-center gap-2 shadow-2xl animate-in slide-in-from-bottom-3 duration-200 pointer-events-none">
+                    <Check className="w-4 h-4 text-emerald-400 dark:text-emerald-600 stroke-[2.5]" />
+                    <span>{toastMessage}</span>
                 </div>,
                 document.body
             )}
