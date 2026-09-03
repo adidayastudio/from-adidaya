@@ -454,7 +454,7 @@ export default function ProjectFilesTab({
                     {selectedFileIds.length > 0 && (
                         <div className="flex items-center gap-1 pl-3 border-l border-neutral-200/50 dark:border-neutral-700/50">
                             <button
-                                onClick={() => { const selectedFiles = displayedFiles.filter(f => selectedFileIds.includes(f.id)); selectedFiles.forEach(f => triggerFileDownload(f)); }}
+                                onClick={() => { const selectedFiles = allFiles.filter(f => selectedFileIds.includes(f.id)); selectedFiles.forEach(f => triggerFileDownload(f)); }}
                                 className="p-1.5 rounded-lg hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60 text-neutral-600 dark:text-neutral-300 transition-colors cursor-pointer"
                                 title="Download Selected Files"
                             >
