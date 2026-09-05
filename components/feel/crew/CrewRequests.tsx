@@ -131,13 +131,25 @@ const FormInput = ({ label, type = "text", value, onChange, placeholder }: { lab
     </div>
 );
 
+const DetailItem = ({ label, value, accent = false, highlight = false }: { label: string; value: React.ReactNode; accent?: boolean; highlight?: boolean }) => (
+    <div className="bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/50 dark:border-neutral-700/50 rounded-2xl p-4">
+        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">{label}</span>
+        <div className={clsx(
+            "text-sm font-semibold tracking-tight",
+            accent ? "text-blue-600 dark:text-blue-400 font-bold" : highlight ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-neutral-900 dark:text-white"
+        )}>
+            {value}
+        </div>
+    </div>
+);
+
 export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const pathname = usePathname();
 
     // Check project context
-    const projectCtx = useContext(ProjectContext);
+    const projectCtx = useContext(ProjectContext) as any;
     const forceProjectCode = projectCtx?.project?.code || null;
     const forceProjectSuffix = forceProjectCode 
         ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
