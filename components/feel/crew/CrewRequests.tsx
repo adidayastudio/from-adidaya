@@ -698,7 +698,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                                         </div>
                                         <div>
                                             <h3 className="font-bold text-neutral-900 dark:text-white text-base leading-snug">{viewingRequest.crewName}</h3>
-                                            <p className="text-xs text-neutral-400 font-medium">{viewingRequest.crewRole ? CREW_ROLE_LABELS[viewingRequest.crewRole] : "Crew Member"}</p>
+                                            <p className="text-xs text-neutral-400 font-medium">{viewingRequest.crewRole ? (CREW_ROLE_LABELS[viewingRequest.crewRole]?.en || viewingRequest.crewRole) : "Crew Member"}</p>
                                         </div>
                                     </div>
                                     <span className={clsx(
