@@ -702,6 +702,7 @@ export async function fetchRequests(workspaceId: string, projectId?: string): Pr
             .from("crew_daily_logs")
             .select("crew_id, project_code, date")
             .eq("workspace_id", workspaceId)
+            .order("date", { ascending: false })
     ]);
 
     if (requestsRes.error) {
@@ -732,11 +733,19 @@ export async function fetchRequests(workspaceId: string, projectId?: string): Pr
             )
             : null;
 
-        // Resolve projectCode: Daily Log -> Assignment on Date -> Stored Request Project -> Crew's current project
+        // 3. Latest daily log for this crew member
+        const latestCrewLog = logsData.find((l: any) => l.crew_id === r.crew_id && l.project_code);
+
+        // 4. Latest assignment for this crew member
+        const latestCrewAssignment = historyData.find((h: any) => h.crew_member_id === r.crew_id && h.project_code);
+
+        // Resolve projectCode: Daily Log on Date -> Assignment on Date -> Stored Request Project -> Latest Daily Log -> Latest Assignment -> Crew master current_project_code
         const resolvedProjectCode = 
             matchedLog?.project_code || 
             matchedAssignment?.project_code || 
             r.project_code || 
+            latestCrewLog?.project_code || 
+            latestCrewAssignment?.project_code || 
             r.crew?.current_project_code || 
             undefined;
 
