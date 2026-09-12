@@ -5,6 +5,22 @@
  */
 
 import { supabase } from "@/lib/supabaseClient";
+import { 
+    normalizeProjectCode, 
+    getProjectSuffix, 
+    getProjectNumber, 
+    formatProjectCode, 
+    isMatchingProjectCode 
+} from "@/lib/flow/utils/project-code";
+
+export { 
+    normalizeProjectCode, 
+    getProjectSuffix, 
+    getProjectNumber, 
+    formatProjectCode, 
+    isMatchingProjectCode 
+};
+
 
 // ============================================
 // TYPES
@@ -273,11 +289,10 @@ export async function fetchCrewAssignments(status?: "ongoing" | "completed"): Pr
  * Fetch crew members assigned to a project on a specific date
  */
 export async function fetchCrewByAssignment(projectSuffix: string, date: string): Promise<CrewMember[]> {
-    // 1. Fetch history records matching project and date
+    // 1. Fetch history records active on date
     const { data: history, error: historyError } = await supabase
         .from("crew_project_history")
-        .select("crew_member_id")
-        .or(`project_code.eq.${projectSuffix},project_code.ilike.%-${projectSuffix}`)
+        .select("crew_member_id, project_code")
         .lte("start_date", date)
         .or(`end_date.gte.${date},end_date.is.null`);
 
@@ -286,7 +301,9 @@ export async function fetchCrewByAssignment(projectSuffix: string, date: string)
         return [];
     }
 
-    const memberIds = Array.from(new Set(history.map(h => h.crew_member_id)));
+    // Match project codes flexibly (e.g. "039-RBH", "039 RBH", "RBH", "039")
+    const matchingHistories = (history || []).filter(h => isMatchingProjectCode(h.project_code, projectSuffix));
+    const memberIds = Array.from(new Set(matchingHistories.map(h => h.crew_member_id)));
     if (memberIds.length === 0) return [];
 
     // 2. Fetch member details
@@ -302,6 +319,7 @@ export async function fetchCrewByAssignment(projectSuffix: string, date: string)
 
     return (members || []).map(mapDbToCrewMember);
 }
+
 
 /**
  * Get crew statistics
@@ -597,12 +615,16 @@ export async function unassignCrewFromProject(crewMemberId: string): Promise<boo
 export async function fetchDailyLogs(workspaceId: string, projectCode?: string, dateStr?: string): Promise<DailyLog[]> {
     let query = supabase.from("crew_daily_logs").select("*").eq("workspace_id", workspaceId);
 
-    if (projectCode) query = query.eq("project_code", projectCode);
     if (dateStr) query = query.eq("date", dateStr);
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []).map(mapDbToDailyLog);
+    
+    let mapped = (data || []).map(mapDbToDailyLog);
+    if (projectCode && projectCode !== "ALL") {
+        mapped = mapped.filter(log => isMatchingProjectCode(log.projectCode, projectCode));
+    }
+    return mapped;
 }
 
 export async function upsertDailyLog(entry: {
@@ -650,7 +672,7 @@ export interface CrewRequest {
     crewId: string;
     crewName?: string; // For joining
     crewRole?: CrewRole; // For joining
-    projectCode?: string; // Mapped from crew
+    projectCode?: string; // Resolved from daily log, assignment history, or crew
     type: RequestType;
     amount?: number;
     startDate: string;
@@ -663,43 +685,87 @@ export interface CrewRequest {
 }
 
 export async function fetchRequests(workspaceId: string, projectId?: string): Promise<CrewRequest[]> {
-    let query = supabase
-        .from("crew_requests")
-        .select(`
-            *,
-            crew:crew_id (name, role, current_project_code)
-        `)
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false });
+    const [requestsRes, historyRes, logsRes] = await Promise.all([
+        supabase
+            .from("crew_requests")
+            .select(`
+                *,
+                crew:crew_id (name, role, current_project_code)
+            `)
+            .eq("workspace_id", workspaceId)
+            .order("created_at", { ascending: false }),
+        supabase
+            .from("crew_project_history")
+            .select("crew_member_id, project_code, start_date, end_date")
+            .order("start_date", { ascending: false }),
+        supabase
+            .from("crew_daily_logs")
+            .select("crew_id, project_code, date")
+            .eq("workspace_id", workspaceId)
+    ]);
 
-    // Client-side filter for project if needed, or add to query if we join projects table
-    // For now, simpler to filter in memory or assume crew.current_project_code matches
-
-    const { data, error } = await query;
-    if (error) {
-        console.error("Error fetching requests:", error);
+    if (requestsRes.error) {
+        console.error("Error fetching requests:", requestsRes.error);
         return [];
     }
 
-    // Map result
-    return data.map((r: any) => ({
-        id: r.id,
-        workspaceId: r.workspace_id,
-        crewId: r.crew_id,
-        crewName: r.crew?.name || "Unknown",
-        crewRole: r.crew?.role,
-        projectCode: r.project_code || r.crew?.current_project_code,
-        type: r.type,
-        amount: r.amount != null && !isNaN(parseFloat(r.amount)) ? parseFloat(r.amount) : undefined,
-        startDate: r.start_date,
-        endDate: r.end_date,
-        reason: r.reason,
-        proofUrl: r.proof_url,
-        status: r.status,
-        createdAt: r.created_at,
-        createdBy: r.created_by
-    }));
+    const requestsData = requestsRes.data || [];
+    const historyData = historyRes.data || [];
+    const logsData = logsRes.data || [];
+
+    // Map result with dynamic time-based project resolution
+    const mapped: CrewRequest[] = requestsData.map((r: any) => {
+        const reqDate = r.start_date || (r.created_at ? r.created_at.split("T")[0] : "");
+        
+        // 1. Daily log check on request effective date
+        const matchedLog = reqDate 
+            ? logsData.find((l: any) => l.crew_id === r.crew_id && l.date === reqDate && l.project_code)
+            : null;
+        
+        // 2. Assignment history check on request effective date
+        const matchedAssignment = reqDate
+            ? historyData.find((h: any) => 
+                h.crew_member_id === r.crew_id && 
+                h.project_code &&
+                h.start_date <= reqDate && 
+                (!h.end_date || h.end_date >= reqDate)
+            )
+            : null;
+
+        // Resolve projectCode: Daily Log -> Assignment on Date -> Stored Request Project -> Crew's current project
+        const resolvedProjectCode = 
+            matchedLog?.project_code || 
+            matchedAssignment?.project_code || 
+            r.project_code || 
+            r.crew?.current_project_code || 
+            undefined;
+
+        return {
+            id: r.id,
+            workspaceId: r.workspace_id,
+            crewId: r.crew_id,
+            crewName: r.crew?.name || "Unknown",
+            crewRole: r.crew?.role,
+            projectCode: resolvedProjectCode,
+            type: r.type,
+            amount: r.amount != null && !isNaN(parseFloat(r.amount)) ? parseFloat(r.amount) : undefined,
+            startDate: r.start_date,
+            endDate: r.end_date,
+            reason: r.reason,
+            proofUrl: r.proof_url,
+            status: r.status,
+            createdAt: r.created_at,
+            createdBy: r.created_by
+        };
+    });
+
+    if (projectId && projectId !== "ALL") {
+        return mapped.filter(r => isMatchingProjectCode(r.projectCode, projectId));
+    }
+
+    return mapped;
 }
+
 
 export async function createRequest(request: Partial<CrewRequest>) {
     try {

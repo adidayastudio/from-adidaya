@@ -5,9 +5,11 @@ import { createPortal } from "react-dom";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
-import { Plus, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Check, X, Clock, Download, ArrowUpDown, FileText, Upload, Users, Edit, Trash, Trash2, Ban, Loader2, FileCheck, TrendingUp } from "lucide-react";
+
+import { Plus, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Check, X, Clock, Download, ArrowUpDown, FileText, Upload, Users, Edit, Trash, Trash2, Ban, Loader2, FileCheck, TrendingUp, RotateCw } from "lucide-react";
 import { Button } from "@/shared/ui/primitives/button/button";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
+
 import { Select } from "@/shared/ui/primitives/select/select";
 import {
     CREW_ROLE_LABELS,
@@ -23,7 +25,10 @@ import {
     upsertDailyLog,
     updateRequest,
     deleteRequest,
-    deleteDailyLogsForDate
+    deleteDailyLogsForDate,
+    formatProjectCode,
+    isMatchingProjectCode,
+    getProjectSuffix
 } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
@@ -36,11 +41,7 @@ type FilterCard = "ALL" | "PENDING" | "APPROVED" | "REJECTED";
 
 const getInitials = (n?: string) => { if (!n) return "??"; const w = n.trim().split(/\s+/); return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : w[0].substring(0, 2).toUpperCase(); };
 const formatNum = (n: number) => n.toLocaleString("id-ID");
-const formatProjectCode = (code?: string) => {
-    if (!code) return "-";
-    const parts = code.split("-");
-    return parts.length > 1 ? parts[1] : code;
-};
+
 
 type ViewMode = "weekly" | "monthly";
 
@@ -112,8 +113,8 @@ const getMonthlyPeriod = (anchorDate: Date) => {
     return { start, end };
 };
 
-const inputClass = "w-full px-6 py-4 text-sm border border-black/5 dark:border-white/10 rounded-full bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all";
-const labelClass = "block text-sm font-bold text-neutral-500 mb-1.5 tracking-tight text-[11px]";
+const inputClass = "w-full px-5 py-3.5 text-sm border border-black/5 dark:border-white/10 rounded-[22px] bg-white/60 dark:bg-neutral-800/60 backdrop-blur-md focus:bg-white dark:focus:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40 transition-all font-medium";
+const labelClass = "block text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 ml-1";
 const FormInput = ({ label, type = "text", value, onChange, placeholder }: { label: string; type?: string; value: string; onChange: (v: string) => void; placeholder?: string }) => (
     <div>
         <label className={labelClass}>{label}</label>
@@ -132,11 +133,11 @@ const FormInput = ({ label, type = "text", value, onChange, placeholder }: { lab
 );
 
 const DetailItem = ({ label, value, accent = false, highlight = false }: { label: string; value: React.ReactNode; accent?: boolean; highlight?: boolean }) => (
-    <div className="bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/50 dark:border-neutral-700/50 rounded-2xl p-4">
-        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">{label}</span>
+    <div className="p-5 rounded-[28px] bg-white/40 dark:bg-neutral-900/40 border border-white/60 dark:border-white/10 shadow-sm backdrop-blur-xl transition-all hover:bg-white/60">
+        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1 opacity-70">{label}</span>
         <div className={clsx(
-            "text-sm font-semibold tracking-tight",
-            accent ? "text-blue-600 dark:text-blue-400 font-bold" : highlight ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-neutral-900 dark:text-white"
+            "text-[15px] font-bold tracking-tight",
+            accent ? "text-blue-600 dark:text-blue-400 font-extrabold" : highlight ? "text-emerald-600 dark:text-emerald-400 font-extrabold" : "text-neutral-900 dark:text-white"
         )}>
             {value}
         </div>
@@ -242,7 +243,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
     const resetForm = () => { 
         setFormType("LEAVE"); 
         setFormCrew(""); 
-        setFormProject(""); 
+        setFormProject(forceProjectSuffix || ""); 
         setFormAmount(""); 
         setFormStartDate(""); 
         setFormEndDate(""); 
@@ -252,6 +253,38 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
         setViewingRequest(null);
         setIsEditing(false);
     };
+
+    const filteredCrewOptions = useMemo(() => {
+        if (!formProject || formProject === "") {
+            return crew.map(c => ({
+                value: c.id,
+                label: `${c.name}${c.projectCode ? ` [${formatProjectCode(c.projectCode)}]` : ""}`
+            }));
+        }
+
+        const matchingCrew = crew.filter(c => {
+            if (!c.projectCode) return false;
+            return isMatchingProjectCode(c.projectCode, formProject);
+        });
+
+        const otherCrew = crew.filter(c => !matchingCrew.some(m => m.id === c.id));
+
+        if (matchingCrew.length > 0) {
+            return [
+                ...matchingCrew.map(c => ({ value: c.id, label: c.name })),
+                ...(otherCrew.length > 0 ? [
+                    { value: "---", label: "── Other Crew Members ──", disabled: true },
+                    ...otherCrew.map(c => ({ value: c.id, label: `${c.name}${c.projectCode ? ` [${formatProjectCode(c.projectCode)}]` : " (Unassigned)"}` }))
+                ] : [])
+            ];
+        }
+
+        return crew.map(c => ({
+            value: c.id,
+            label: `${c.name}${c.projectCode ? ` [${formatProjectCode(c.projectCode)}]` : ""}`
+        }));
+    }, [crew, formProject]);
+
 
     const formatDateShort = (d: Date) => d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
 
@@ -458,6 +491,34 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
         setShowDrawer(true);
     };
 
+    const handleTransferToCurrentPeriod = async (req: CrewRequest) => {
+        if (!confirm("Transfer this request date to today (current period)?")) return;
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            let newEndDate = undefined;
+            if (req.type === "LEAVE" && req.startDate && req.endDate) {
+                const start = new Date(req.startDate).getTime();
+                const end = new Date(req.endDate).getTime();
+                const diffDays = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+                const newEnd = new Date();
+                newEnd.setDate(newEnd.getDate() + diffDays);
+                newEndDate = newEnd.toISOString().split('T')[0];
+            }
+            await updateRequest(req.id, {
+                startDate: today,
+                endDate: newEndDate
+            });
+            const wsId = await fetchDefaultWorkspaceId();
+            if (wsId) await loadRequests(wsId);
+            setViewingRequest(prev => prev ? { ...prev, startDate: today, endDate: newEndDate } : null);
+            alert("Request successfully transferred to current period!");
+        } catch (err: any) {
+            console.error("Failed to transfer period:", err);
+            alert("Failed to transfer period");
+        }
+    };
+
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -503,13 +564,15 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
             const selectedCrew = crew.find(c => c.id === formCrew);
             const crewName = selectedCrew?.name || "Unknown";
 
+            const finalEndDate = formType === "LEAVE" ? (formEndDate || undefined) : undefined;
+
             if (editingId) {
                 await updateRequest(editingId, {
                     projectCode: formProject || undefined,
                     type: formType,
                     amount: formAmount ? parseFloat(formAmount) : undefined,
                     startDate: finalStartDate,
-                    endDate: formEndDate || undefined,
+                    endDate: finalEndDate,
                     reason: formReason,
                     proofUrl: formProofUrl || undefined,
                     status: "PENDING",
@@ -523,7 +586,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                     projectCode: formProject || undefined,
                     type: formType,
                     startDate: finalStartDate,
-                    endDate: formEndDate || undefined,
+                    endDate: finalEndDate,
                     amount: formAmount ? parseFloat(formAmount) : undefined,
                     reason: formReason,
                     proofUrl: formProofUrl || undefined,
@@ -572,16 +635,16 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
         else if (activeCard === "APPROVED") d = d.filter(r => r.status === "APPROVED");
         else if (activeCard === "REJECTED") d = d.filter(r => r.status === "REJECTED");
         if (selectedType !== "ALL") d = d.filter(r => r.type === selectedType);
-        if (selectedProject !== "ALL") d = d.filter(r => {
-            if (!r.projectCode) return false;
-            const rCode = r.projectCode.toLowerCase();
-            const sCode = selectedProject.toLowerCase();
-            return rCode === sCode || rCode.endsWith(`-${sCode}`) || sCode.endsWith(`-${rCode}`) || rCode.includes(sCode) || sCode.includes(rCode);
-        });
+        if (selectedProject !== "ALL") {
+            d = d.filter(r => {
+                if (!r.projectCode) return false;
+                return isMatchingProjectCode(r.projectCode, selectedProject);
+            });
+        }
 
         // Filter by Period
         d = d.filter(r => {
-            const reqDate = new Date(r.createdAt);
+            const reqDate = new Date(r.startDate || r.createdAt);
             return reqDate >= period.start && reqDate <= period.end;
         });
 
@@ -599,12 +662,13 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
         if (filtered.length === 0) return;
         setExporting(true);
         try {
-            const project = projects.find(p => p.code === selectedProject);
+            const project = projects.find(p => isMatchingProjectCode(p.code, selectedProject));
             const projectCode = project
                 ? project.code.includes("-")
                     ? project.code.replace("-", " · ").toUpperCase()
                     : project.code.toUpperCase()
                 : selectedProject === "ALL" ? "ALL" : selectedProject;
+
 
             const projectName = selectedProject === "ALL" ? "All Projects" : (project ? project.name : "Selected Project");
 
@@ -672,336 +736,419 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
     const renderDrawer = () => {
         if (!showDrawer) return null;
 
-        const drawerContent = (
-            <div className="w-full h-full border border-neutral-200/80 dark:border-neutral-800/80 rounded-[24px] shadow-xl flex flex-col overflow-hidden bg-white dark:bg-neutral-900">
-                <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent md:px-5 md:pt-4 md:pb-3 md:bg-white md:dark:bg-neutral-900">
-                    <div className="flex items-center justify-between mb-4 md:mb-0">
-                        <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight md:text-sm md:font-extrabold">
-                            {(viewingRequest && !isEditing) ? "Request Details" : (editingId ? "Edit Request" : "New Request")}
-                        </h2>
-                        <button
-                            onClick={() => setShowDrawer(false)}
-                            className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform md:w-7 md:h-7 md:bg-transparent md:border-none md:hover:bg-neutral-100 md:dark:hover:bg-neutral-800 md:text-neutral-400"
-                        >
-                            <X size={20} className="text-neutral-500 dark:text-neutral-400 md:w-4 md:h-4" strokeWidth={1.5} />
-                        </button>
-                    </div>
-                </div>
-                {(viewingRequest && !isEditing) ? (
-                    <>
-                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 md:px-5 md:py-4">
-                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center font-bold text-lg shadow-inner">
-                                            {viewingRequest.crewInitials || viewingRequest.crewName?.substring(0, 2).toUpperCase() || "CR"}
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-neutral-900 dark:text-white text-base leading-snug">{viewingRequest.crewName}</h3>
-                                            <p className="text-xs text-neutral-400 font-medium">{viewingRequest.crewRole ? (CREW_ROLE_LABELS[viewingRequest.crewRole]?.en || viewingRequest.crewRole) : "Crew Member"}</p>
-                                        </div>
-                                    </div>
-                                    <span className={clsx(
-                                        "px-4 py-1.5 rounded-full text-xs font-bold shadow-xs",
-                                        viewingRequest.status === "APPROVED" && "bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-950/30",
-                                        viewingRequest.status === "REJECTED" && "bg-red-50 text-red-600 border border-red-200 dark:bg-red-950/30",
-                                        viewingRequest.status === "PENDING" && "bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-950/30",
-                                        viewingRequest.status === "CANCELLED" && "bg-neutral-50 text-neutral-500 border border-neutral-200 dark:bg-neutral-900/30"
-                                    )}>
-                                        {viewingRequest.status}
-                                    </span>
-                                </div>
+        return (
+            <div className="fixed inset-0 z-[100] isolate animate-in fade-in duration-300">
+                {/* iOS Glass Backdrop */}
+                <div 
+                    className="absolute inset-0 bg-neutral-900/30 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto"
+                    onClick={() => setShowDrawer(false)} 
+                />
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <DetailItem label="Request Type" value={viewingRequest.type} accent />
-                                    <DetailItem label="Project" value={viewingRequest.projectCode ? `[${formatProjectCode(viewingRequest.projectCode)}]` : "-"} />
-                                    {viewingRequest.amount && (
-                                        <DetailItem label="Amount Requested" value={`IDR ${Number(viewingRequest.amount).toLocaleString()}`} highlight />
-                                    )}
-                                    {viewingRequest.startDate && (
-                                        <DetailItem 
-                                            label="Period" 
-                                            value={viewingRequest.endDate && viewingRequest.startDate !== viewingRequest.endDate 
-                                                ? `${formatDateShort(new Date(viewingRequest.startDate))} - ${formatDateShort(new Date(viewingRequest.endDate))}`
-                                                : formatDateShort(new Date(viewingRequest.startDate))
-                                            } 
-                                        />
-                                    )}
-                                </div>
-
-                                {viewingRequest.reason && (
-                                    <div className="bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/50 rounded-2xl p-5 leading-relaxed">
-                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-2">Reason / Notes</span>
-                                        <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{viewingRequest.reason}</p>
-                                    </div>
-                                )}
-
-                                {viewingRequest.proofUrl && (
-                                    <div className="space-y-2">
-                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Attachment</span>
-                                        <a 
-                                            href={viewingRequest.proofUrl} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/50 rounded-2xl hover:border-blue-300 dark:hover:border-blue-800 hover:bg-white transition-all group"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center">
-                                                    <FileText size={20} />
-                                                </div>
-                                                <span className="text-sm font-bold text-neutral-700">View Proof of Transaction</span>
-                                            </div>
-                                            <ChevronRight className="w-5 h-5 text-neutral-300 group-hover:text-blue-500 transition-colors" />
-                                        </a>
-                                    </div>
-                                )}
-                            </div>
+                {/* iOS Liquid Glass Floating Panel */}
+                <div className="absolute z-50 bg-white/60 dark:bg-neutral-900/60 backdrop-blur-2xl backdrop-saturate-[1.8] border border-white/70 dark:border-white/10 shadow-2xl transition-all duration-500 rounded-[56px] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-300">
+                    {/* Header */}
+                    <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight">
+                                {(viewingRequest && !isEditing) ? "Request Details" : (editingId ? "Edit Request" : "New Request")}
+                            </h2>
+                            <button
+                                onClick={() => setShowDrawer(false)}
+                                className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform hover:bg-white/80 dark:hover:bg-neutral-700/80"
+                            >
+                                <X size={20} className="text-neutral-500 dark:text-neutral-400" strokeWidth={1.5} />
+                            </button>
                         </div>
 
-                        <div className="flex-none p-8 pt-4 bg-gradient-to-t from-white via-white to-transparent md:static md:p-5 md:bg-white md:dark:bg-neutral-900 flex-shrink-0">
-                            <div className="flex flex-col gap-3">
-                                <div className="flex items-center gap-2">
-                                    <button 
-                                        onClick={() => handleDelete(viewingRequest.id)}
-                                        className="w-12 h-12 flex items-center justify-center rounded-full bg-neutral-100 text-neutral-500 border border-neutral-200 active:scale-95 transition-all hover:bg-neutral-200 md:w-9 md:h-9 md:rounded-xl"
-                                        title="Delete Permanently"
+                        {/* Liquid Segmented Control (Form Mode) */}
+                        {(!viewingRequest || isEditing) && (
+                            <div className="bg-neutral-900/5 dark:bg-white/5 p-1 rounded-full flex items-center h-12 relative border border-white/40 dark:border-white/5 backdrop-blur-md">
+                                {(["LEAVE", "REIMBURSE", "KASBON"] as RequestType[]).map(t => (
+                                    <button
+                                        key={t}
+                                        type="button"
+                                        onClick={() => {
+                                            setFormType(t);
+                                            if (t === "LEAVE") setFormAmount("");
+                                        }}
+                                        className={clsx(
+                                            "flex-1 h-full px-3 rounded-full text-xs font-bold transition-all flex items-center justify-center relative z-10",
+                                            formType === t 
+                                                ? "bg-blue-600 text-white shadow-md shadow-blue-500/20" 
+                                                : "text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
+                                        )}
                                     >
-                                        <Trash2 size={20} className="md:w-4 md:h-4" />
+                                        {t === "LEAVE" ? "Leave" : t === "REIMBURSE" ? "Reimburse" : "Kasbon"}
                                     </button>
-                                    {viewingRequest.status === "PENDING" && (
-                                        <button 
-                                            onClick={() => handleCancel(viewingRequest.id)}
-                                            className="w-12 h-12 flex items-center justify-center rounded-full bg-amber-50 text-amber-600 border border-amber-200 active:scale-95 transition-all hover:bg-amber-100 md:w-9 md:h-9 md:rounded-xl"
-                                            title="Cancel Request"
-                                        >
-                                            <Ban size={20} className="md:w-4 md:h-4" />
-                                        </button>
-                                    )}
-                                    {viewingRequest.status === "PENDING" && (
-                                        <button 
-                                            onClick={() => handleEdit(viewingRequest)}
-                                            className="flex-1 h-12 flex items-center justify-center gap-2 rounded-full bg-blue-50 text-blue-600 border border-blue-200 font-bold text-sm active:scale-95 transition-all hover:bg-blue-100 md:h-9 md:rounded-xl md:text-[12.5px]"
-                                        >
-                                            <Edit className="w-4 h-4 md:w-3.5 md:h-3.5" /> Edit Request Details
-                                        </button>
-                                    )}
-                                </div>
-
-                                {(role && ["admin", "superadmin", "administrator", "supervisor"].includes(role)) && viewingRequest.status === "PENDING" && (
-                                    <div className="grid grid-cols-2 gap-3 mt-1">
-                                        <button 
-                                            onClick={() => handleReject(viewingRequest.id)}
-                                            className="py-4 rounded-full bg-red-500 text-white font-bold text-sm tracking-tight shadow-xl shadow-red-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-red-600 md:py-2 md:h-9 md:rounded-xl md:text-[12.5px] md:shadow-none"
-                                        >
-                                            <X className="w-5 h-5 md:w-4 md:h-4" /> Reject
-                                        </button>
-                                        <button 
-                                            onClick={() => handleApprove(viewingRequest)}
-                                            className="py-4 rounded-full bg-emerald-500 text-white font-bold text-sm tracking-tight shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-emerald-600 md:py-2 md:h-9 md:rounded-xl md:text-[12.5px] md:shadow-none"
-                                        >
-                                            <Check className="w-5 h-5 md:w-4 md:h-4" /> Approve
-                                        </button>
-                                    </div>
-                                )}
+                                ))}
                             </div>
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-10 md:px-5 md:py-4 md:pb-4">
-                            <div className="space-y-6">
-                                <div>
-                                    <label className={labelClass}>Request Type *</label>
-                                    <div className="grid grid-cols-3 gap-2 mt-2">
-                                        {(["LEAVE", "REIMBURSE", "KASBON"] as RequestType[]).map(t => (
-                                            <button
-                                                key={t}
-                                                type="button"
-                                                onClick={() => {
-                                                    setFormType(t);
-                                                    if (t === "LEAVE") setFormAmount("");
-                                                }}
-                                                className={clsx(
-                                                    "py-3 rounded-2xl text-xs font-bold border transition-all active:scale-[0.98]",
-                                                    formType === t 
-                                                        ? "bg-blue-600 text-white border-blue-600" 
-                                                        : "bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50"
-                                                )}
-                                            >
-                                                {t === "LEAVE" ? "Leave" : t === "REIMBURSE" ? "Reimburse" : "Kasbon"}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                        )}
+                    </div>
 
-                                <Select 
-                                    label="Crew Member *" 
-                                    value={formCrew} 
-                                    onChange={setFormCrew} 
-                                    options={crew.map(c => ({ value: c.id, label: c.name }))} 
-                                    placeholder="Select crew member"
-                                    accentColor="blue"
-                                />
-
-                                <Select 
-                                    label="Project" 
-                                    value={formProject} 
-                                    onChange={setFormProject} 
-                                    options={[
-                                        { value: "", label: "No Project (Unassigned)" },
-                                        ...projects.map(p => ({ value: p.code, label: `[${formatProjectCode(p.code)}] ${p.name}` }))
-                                    ]} 
-                                    placeholder="Select project code"
-                                    accentColor="blue"
-                                />
-
-                                {formType !== "LEAVE" && (
-                                    <div>
-                                        <label className={labelClass}>Amount Requested (IDR) *</label>
-                                        <input
-                                            type="number"
-                                            value={formAmount}
-                                            onChange={e => setFormAmount(e.target.value)}
-                                            placeholder="e.g. 150000"
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className={labelClass}>Start Date *</label>
-                                        <input
-                                            type="date"
-                                            value={formStartDate}
-                                            onChange={e => setFormStartDate(e.target.value)}
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className={labelClass}>End Date *</label>
-                                        <input
-                                            type="date"
-                                            value={formEndDate}
-                                            onChange={e => setFormEndDate(e.target.value)}
-                                            className={inputClass}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className={labelClass}>Reason / Notes *</label>
-                                    <textarea
-                                        value={formReason}
-                                        onChange={e => setFormReason(e.target.value)}
-                                        placeholder="Explain details of the request..."
-                                        rows={4}
-                                        className={clsx(inputClass, "resize-none py-3")}
-                                    />
-                                </div>
-
-                                {formType !== "LEAVE" && (
-                                    <div>
-                                        <label className={labelClass}>Receipt / Proof of Payment</label>
-                                        {formProofUrl ? (
-                                            <div className="mt-2 flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800/40 border border-neutral-200/50 rounded-2xl">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <FileCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-                                                    <span className="text-sm font-bold text-neutral-700 dark:text-neutral-300 truncate">Receipt uploaded successfully</span>
-                                                </div>
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => setFormProofUrl("")}
-                                                    className="text-xs text-red-500 font-bold hover:text-red-700 transition-colors"
-                                                >
-                                                    Remove
-                                                </button>
+                    {(viewingRequest && !isEditing) ? (
+                        <>
+                            <div className="flex-1 overflow-y-auto scrollbar-hide px-8 py-4 space-y-6">
+                                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    {/* Crew Profile Card */}
+                                    <div className="flex items-center justify-between p-5 rounded-[28px] bg-white/40 dark:bg-neutral-900/40 border border-white/60 dark:border-white/10 shadow-sm backdrop-blur-xl">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-full bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-lg shadow-inner border border-blue-500/20">
+                                                {viewingRequest.crewInitials || viewingRequest.crewName?.substring(0, 2).toUpperCase() || "CR"}
                                             </div>
-                                        ) : (
-                                            <div className="mt-2">
-                                                <input 
-                                                    type="file" 
-                                                    id="proof-upload" 
-                                                    accept="image/*,application/pdf"
-                                                    className="hidden" 
-                                                    onChange={handleFileUpload}
-                                                    disabled={uploading}
+                                            <div>
+                                                <h3 className="font-bold text-neutral-900 dark:text-white text-base leading-snug">{viewingRequest.crewName}</h3>
+                                                <p className="text-xs text-neutral-500 dark:text-neutral-400 font-medium">{viewingRequest.crewRole ? (CREW_ROLE_LABELS[viewingRequest.crewRole]?.en || viewingRequest.crewRole) : "Crew Member"}</p>
+                                            </div>
+                                        </div>
+                                        <span className={clsx(
+                                            "px-4 py-1.5 rounded-full text-xs font-bold shadow-xs backdrop-blur-md border",
+                                            viewingRequest.status === "APPROVED" && "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-950/40 dark:text-emerald-400",
+                                            viewingRequest.status === "REJECTED" && "bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-950/40 dark:text-red-400",
+                                            viewingRequest.status === "PENDING" && "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-950/40 dark:text-amber-400",
+                                            viewingRequest.status === "CANCELLED" && "bg-neutral-500/10 text-neutral-500 border-neutral-500/20 dark:bg-neutral-900/40 dark:text-neutral-400"
+                                        )}>
+                                            {viewingRequest.status}
+                                        </span>
+                                    </div>
+
+                                    {/* Grid of Details */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <DetailItem label="Request Type" value={viewingRequest.type} accent />
+                                        <DetailItem label="Project" value={viewingRequest.projectCode ? `[${formatProjectCode(viewingRequest.projectCode)}]` : "-"} />
+                                        {viewingRequest.amount && (
+                                            <DetailItem label="Amount Requested" value={`IDR ${Number(viewingRequest.amount).toLocaleString()}`} highlight />
+                                        )}
+                                        {viewingRequest.type === "LEAVE" ? (
+                                            viewingRequest.startDate && (
+                                                <DetailItem 
+                                                    label="Period" 
+                                                    value={viewingRequest.endDate && viewingRequest.startDate !== viewingRequest.endDate 
+                                                        ? `${formatDateShort(new Date(viewingRequest.startDate))} - ${formatDateShort(new Date(viewingRequest.endDate))}`
+                                                        : formatDateShort(new Date(viewingRequest.startDate))
+                                                    } 
                                                 />
-                                                <label 
-                                                    htmlFor="proof-upload"
-                                                    className={clsx(
-                                                        "flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-2xl cursor-pointer transition-all text-center group",
-                                                        uploading 
-                                                            ? "border-neutral-200 bg-neutral-50/50 pointer-events-none" 
-                                                            : "border-neutral-200 hover:border-blue-400 dark:border-neutral-700 hover:bg-neutral-50/30"
-                                                    )}
+                                            )
+                                        ) : (
+                                            viewingRequest.startDate && (
+                                                <DetailItem 
+                                                    label="Date" 
+                                                    value={formatDateShort(new Date(viewingRequest.startDate))} 
+                                                />
+                                            )
+                                        )}
+                                    </div>
+
+                                    {/* Reason Card */}
+                                    {viewingRequest.reason && (
+                                        <div className="p-5 rounded-[28px] bg-white/40 dark:bg-neutral-900/40 border border-white/60 dark:border-white/10 shadow-sm backdrop-blur-xl">
+                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5 opacity-70">Reason / Notes</span>
+                                            <p className="text-sm font-medium text-neutral-800 dark:text-neutral-200 leading-relaxed">{viewingRequest.reason}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Proof Attachment Card */}
+                                    {viewingRequest.proofUrl && (
+                                        <div className="space-y-2">
+                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block ml-1 opacity-70">Attachment</span>
+                                            <a 
+                                                href={viewingRequest.proofUrl} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="flex items-center justify-between p-5 rounded-[28px] bg-white/40 dark:bg-neutral-900/40 border border-white/60 dark:border-white/10 shadow-sm backdrop-blur-xl hover:bg-white/60 dark:hover:bg-neutral-800/60 transition-all group"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+                                                        <FileText size={20} />
+                                                    </div>
+                                                    <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200">View Proof of Transaction</span>
+                                                </div>
+                                                <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-blue-500 transition-colors" />
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Floating Bottom Bar */}
+                            <div className="flex-none p-6 pt-4 bg-white/40 dark:bg-neutral-950/40 backdrop-blur-3xl border-t border-white/60 dark:border-white/10 shrink-0">
+                                <div className="flex flex-col gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => handleDelete(viewingRequest.id)}
+                                            className="w-12 h-12 flex items-center justify-center rounded-full bg-white/60 dark:bg-neutral-800/60 text-neutral-500 border border-white/80 dark:border-white/10 active:scale-95 transition-all hover:bg-red-50 hover:text-red-500 hover:border-red-200 shadow-sm backdrop-blur-md"
+                                            title="Delete Permanently"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                        {viewingRequest.status === "PENDING" && (
+                                            <button 
+                                                onClick={() => handleCancel(viewingRequest.id)}
+                                                className="w-12 h-12 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 active:scale-95 transition-all hover:bg-amber-500/20 shadow-sm backdrop-blur-md"
+                                                title="Cancel Request"
+                                            >
+                                                <Ban size={18} />
+                                            </button>
+                                        )}
+                                        {viewingRequest.status === "PENDING" && (
+                                            <div className="flex items-center gap-2 flex-1">
+                                                <button 
+                                                    onClick={() => handleTransferToCurrentPeriod(viewingRequest)}
+                                                    className="flex-1 h-12 flex items-center justify-center gap-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-bold text-xs active:scale-95 transition-all hover:bg-blue-500/20 shadow-sm backdrop-blur-md"
+                                                    title="Transfer to current period (today)"
                                                 >
-                                                    {uploading ? (
-                                                        <div className="py-2">
-                                                            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
-                                                            <p className="text-sm font-bold text-neutral-700">Uploading...</p>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <Upload className="w-10 h-10 mx-auto text-neutral-400 group-hover:text-blue-500 mb-3 transition-colors" strokeWidth={1.5} />
-                                                            <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Click to upload receipt</p>
-                                                            <p className="text-xs text-neutral-400 mt-1 font-medium">JPG, PNG, PDF up to 5MB</p>
-                                                        </>
-                                                    )}
-                                                </label>
+                                                    <RotateCw className="w-3.5 h-3.5" /> Transfer to Current Period
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleEdit(viewingRequest)}
+                                                    className="flex-1 h-12 flex items-center justify-center gap-1.5 rounded-full bg-neutral-900/5 dark:bg-white/5 text-neutral-700 dark:text-neutral-200 border border-black/5 dark:border-white/10 font-bold text-xs active:scale-95 transition-all hover:bg-neutral-900/10 dark:hover:bg-white/10 shadow-sm backdrop-blur-md"
+                                                >
+                                                    <Edit className="w-3.5 h-3.5" /> Edit Details
+                                                </button>
                                             </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
-                        </div>
 
-                        <div className="flex-none p-8 pt-4 bg-gradient-to-t from-white via-white to-transparent md:static md:p-5 md:bg-white md:dark:bg-neutral-900 flex-shrink-0">
-                            <div className="flex gap-3">
-                                {(viewingRequest && isEditing) ? (
-                                    <>
-                                        <button 
-                                            onClick={() => setIsEditing(false)}
-                                            className="flex-1 h-16 rounded-full border border-neutral-200 bg-white text-neutral-600 font-bold text-sm hover:bg-neutral-50 transition-all active:scale-95 md:h-10 md:rounded-xl md:text-[13px]"
-                                        >
-                                            Cancel
-                                        </button>
+                                    {(role && ["admin", "superadmin", "administrator", "supervisor"].includes(role)) && viewingRequest.status === "PENDING" && (
+                                        <div className="grid grid-cols-2 gap-3 mt-1">
+                                            <button 
+                                                onClick={() => handleReject(viewingRequest.id)}
+                                                className="h-12 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 font-bold text-sm tracking-tight active:scale-95 transition-all flex items-center justify-center gap-2 backdrop-blur-md"
+                                            >
+                                                <X className="w-4 h-4" /> Reject
+                                            </button>
+                                            <button 
+                                                onClick={() => handleApprove(viewingRequest)}
+                                                className="h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm tracking-tight shadow-lg shadow-emerald-600/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <Check className="w-4 h-4" /> Approve
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="flex-1 overflow-y-auto scrollbar-hide px-8 py-4 space-y-6">
+                                <div className="space-y-6">
+                                    <Select 
+                                        label="Project" 
+                                        value={formProject} 
+                                        onChange={(p) => {
+                                            setFormProject(p);
+                                        }} 
+                                        options={[
+                                            { value: "", label: "No Project (Unassigned / General)" },
+                                            ...projects.map(p => ({ value: p.code, label: `[${formatProjectCode(p.code)}] ${p.name}` }))
+                                        ]} 
+                                        placeholder="Select project code"
+                                        accentColor="blue"
+                                        disabled={!!forceProjectSuffix}
+                                    />
+
+                                    <Select 
+                                        label="Crew Member *" 
+                                        value={formCrew} 
+                                        onChange={(cId) => {
+                                            if (cId === "---") return;
+                                            setFormCrew(cId);
+                                            if (!formProject) {
+                                                const foundCrew = crew.find(c => c.id === cId);
+                                                if (foundCrew?.projectCode) {
+                                                    setFormProject(foundCrew.projectCode);
+                                                }
+                                            }
+                                        }} 
+                                        options={filteredCrewOptions} 
+                                        placeholder="Select crew member"
+                                        accentColor="blue"
+                                    />
+
+                                    {formType !== "LEAVE" && (
+                                        <div>
+                                            <label className={labelClass}>Amount Requested (IDR) *</label>
+                                            <input
+                                                type="number"
+                                                value={formAmount}
+                                                onChange={e => setFormAmount(e.target.value)}
+                                                placeholder="e.g. 150000"
+                                                className={inputClass}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {formType === "LEAVE" ? (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1.5 ml-1">
+                                                    <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Start Date *</label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const today = new Date().toISOString().split('T')[0];
+                                                            if (formStartDate && formEndDate) {
+                                                                const start = new Date(formStartDate).getTime();
+                                                                const end = new Date(formEndDate).getTime();
+                                                                const diffDays = Math.max(0, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+                                                                const newEnd = new Date();
+                                                                newEnd.setDate(newEnd.getDate() + diffDays);
+                                                                setFormEndDate(newEnd.toISOString().split('T')[0]);
+                                                            }
+                                                            setFormStartDate(today);
+                                                        }}
+                                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-all bg-blue-500/10 hover:bg-blue-500/20 px-2 py-0.5 rounded-full active:scale-95"
+                                                        title="Transfer start date to today (current period)"
+                                                    >
+                                                        <RotateCw className="w-2.5 h-2.5" />
+                                                        Transfer to Current Period
+                                                    </button>
+                                                </div>
+                                                <input
+                                                    type="date"
+                                                    value={formStartDate}
+                                                    onChange={e => setFormStartDate(e.target.value)}
+                                                    className={inputClass}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className={labelClass}>End Date *</label>
+                                                <input
+                                                    type="date"
+                                                    value={formEndDate}
+                                                    onChange={e => setFormEndDate(e.target.value)}
+                                                    className={inputClass}
+                                                />
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <div className="flex items-center justify-between mb-1.5 ml-1">
+                                                <label className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider">Date *</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const today = new Date().toISOString().split('T')[0];
+                                                        setFormStartDate(today);
+                                                    }}
+                                                    className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-all bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-0.5 rounded-full active:scale-95"
+                                                    title="Transfer date to today (current period)"
+                                                >
+                                                    <RotateCw className="w-2.5 h-2.5" />
+                                                    Transfer to Current Period
+                                                </button>
+                                            </div>
+                                            <input
+                                                type="date"
+                                                value={formStartDate}
+                                                onChange={e => setFormStartDate(e.target.value)}
+                                                className={inputClass}
+                                            />
+                                        </div>
+                                    )}
+
+
+                                    <div>
+                                        <label className={labelClass}>Reason / Notes *</label>
+                                        <textarea
+                                            value={formReason}
+                                            onChange={e => setFormReason(e.target.value)}
+                                            placeholder="Explain details of the request..."
+                                            rows={4}
+                                            className={clsx(inputClass, "resize-none py-3.5")}
+                                        />
+                                    </div>
+
+                                    {formType !== "LEAVE" && (
+                                        <div>
+                                            <label className={labelClass}>Receipt / Proof of Payment</label>
+                                            {formProofUrl ? (
+                                                <div className="mt-2 flex items-center justify-between p-4 rounded-[24px] bg-white/40 dark:bg-neutral-900/40 border border-white/60 dark:border-white/10 shadow-sm backdrop-blur-xl">
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <FileCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                                                        <span className="text-sm font-bold text-neutral-800 dark:text-neutral-200 truncate">Receipt uploaded successfully</span>
+                                                    </div>
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setFormProofUrl("")}
+                                                        className="text-xs text-red-500 font-bold hover:text-red-700 transition-colors px-2 py-1"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="mt-2">
+                                                    <input 
+                                                        type="file" 
+                                                        id="proof-upload" 
+                                                        accept="image/*,application/pdf"
+                                                        className="hidden" 
+                                                        onChange={handleFileUpload}
+                                                        disabled={uploading}
+                                                    />
+                                                    <label 
+                                                        htmlFor="proof-upload"
+                                                        className={clsx(
+                                                            "flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-[28px] cursor-pointer transition-all text-center group",
+                                                            uploading 
+                                                                ? "border-white/40 bg-white/20 pointer-events-none" 
+                                                                : "border-white/70 dark:border-white/10 bg-white/30 dark:bg-neutral-800/30 backdrop-blur-md hover:bg-white/50 dark:hover:bg-neutral-800/50 hover:border-blue-400"
+                                                        )}
+                                                    >
+                                                        {uploading ? (
+                                                            <div className="py-2">
+                                                                <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
+                                                                <p className="text-sm font-bold text-neutral-700 dark:text-neutral-300">Uploading...</p>
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <Upload className="w-9 h-9 mx-auto text-neutral-400 group-hover:text-blue-500 mb-2 transition-colors" strokeWidth={1.5} />
+                                                                <p className="text-sm font-bold text-neutral-800 dark:text-neutral-200">Click to upload receipt</p>
+                                                                <p className="text-xs text-neutral-400 mt-0.5 font-medium">JPG, PNG, PDF up to 5MB</p>
+                                                            </>
+                                                        )}
+                                                    </label>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Floating Bottom Bar */}
+                            <div className="flex-none p-6 pt-4 bg-white/40 dark:bg-neutral-950/40 backdrop-blur-3xl border-t border-white/60 dark:border-white/10 shrink-0">
+                                <div className="flex gap-3">
+                                    {(viewingRequest && isEditing) ? (
+                                        <>
+                                            <button 
+                                                onClick={() => setIsEditing(false)}
+                                                className="flex-1 h-14 rounded-full border border-white/80 dark:border-white/10 bg-white/60 dark:bg-neutral-800/60 backdrop-blur-md text-neutral-700 dark:text-neutral-200 font-bold text-sm hover:bg-white/80 transition-all active:scale-95 shadow-sm"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <Button 
+                                                variant="primary" 
+                                                size="lg" 
+                                                className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white flex-[2] rounded-full h-14 text-sm font-bold shadow-xl shadow-blue-600/30 active:scale-95 transition-all"
+                                                onClick={handleSubmit}
+                                            >
+                                                Update Request
+                                            </Button>
+                                        </>
+                                    ) : (
                                         <Button 
                                             variant="primary" 
                                             size="lg" 
-                                            className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white flex-[2] rounded-full h-16 text-sm font-bold shadow-2xl shadow-blue-600/30 active:scale-95 transition-all md:h-10 md:rounded-xl md:text-[13px] md:shadow-none"
+                                            fullWidth 
+                                            className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white rounded-full h-14 text-sm font-bold shadow-xl shadow-blue-600/30 active:scale-95 transition-all"
                                             onClick={handleSubmit}
                                         >
-                                            Update Request
+                                            {editingId ? "Update Request" : "Submit Request"}
                                         </Button>
-                                    </>
-                                ) : (
-                                    <Button 
-                                        variant="primary" 
-                                        size="lg" 
-                                        fullWidth 
-                                        className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white rounded-full h-16 text-sm font-bold shadow-2xl shadow-blue-600/30 active:scale-95 transition-all md:h-10 md:rounded-xl md:text-[13px] md:shadow-none"
-                                        onClick={handleSubmit}
-                                    >
-                                        {editingId ? "Update Request" : "Submit Request"}
-                                    </Button>
-                                )}
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        );
-
-        if (isDesktop && portalTarget) {
-            return createPortal(drawerContent, portalTarget);
-        }
-
-        return (
-            <div className="fixed inset-0 z-[100] isolate">
-                <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto" onClick={() => setShowDrawer(false)} />
-                <div className="absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px] flex flex-col overflow-hidden">
-                    {drawerContent}
+                        </>
+                    )}
                 </div>
             </div>
         );
@@ -1108,6 +1255,7 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                             "p-2 rounded-full border transition-colors flex items-center justify-center w-9 h-9",
                             showSearch || searchQuery ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50"
                         )}
+                        title="Search"
                     >
                         <Search className="w-4 h-4" />
                     </button>
@@ -1120,6 +1268,15 @@ export function CrewRequests({ role, triggerOpen }: CrewRequestsProps) {
                         disabled={exporting || filtered.length === 0}
                     >
                         {exporting ? "..." : "Export"}
+                    </Button>
+
+                    <Button
+                        variant="primary"
+                        className="!rounded-full !py-1.5 !px-3.5 !bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white shadow-sm active:scale-95 transition-all flex-shrink-0 flex items-center gap-1.5"
+                        icon={<Plus className="w-4 h-4" />}
+                        onClick={() => { resetForm(); setShowDrawer(true); }}
+                    >
+                        <span className="hidden sm:inline text-xs font-semibold">New Request</span>
                     </Button>
                 </div>
             </div>

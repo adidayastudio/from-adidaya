@@ -21,9 +21,13 @@ import {
     CREW_ROLE_LABELS,
     CREW_ROLE_OPTIONS,
     SKILLED_ROLES,
+    formatProjectCode,
+    isMatchingProjectCode,
+    getProjectSuffix
 } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
+
 import { generateSmartInitials } from "@/lib/initials";
 import { GlobalLoading } from "@/components/shared/GlobalLoading";
 
@@ -227,15 +231,9 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
     const [formOtRate2, setFormOtRate2] = useState("0");
     const [formOtRate3, setFormOtRate3] = useState("0");
 
-    // Helper to format project code (get 3 letters after dash)
-    const formatProjectCode = (code?: string) => {
-        if (!code) return "-";
-        const parts = code.split("-");
-        return parts.length > 1 ? parts[1] : code;
-    };
-
     // Get unique project suffixes (e.g. "RBH" from "001-RBH")
     const uniqueProjectSuffixes = useMemo(() => {
+
         const suffixes = crewList
             .map(c => formatProjectCode(c.projectCode))
             .filter(Boolean) as string[];
@@ -321,12 +319,13 @@ export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectory
         if (selectedRoles.length > 0) data = data.filter(c => selectedRoles.includes(c.role));
         if (selectedStatuses.length > 0) data = data.filter(c => selectedStatuses.includes(c.status));
         if (selectedProjects.length > 0) {
-            // Filter by Suffix
+            // Filter by Project matching
             data = data.filter(c => {
-                const suffix = formatProjectCode(c.projectCode);
-                return suffix && selectedProjects.includes(suffix);
+                if (!c.projectCode) return false;
+                return selectedProjects.some(sp => isMatchingProjectCode(c.projectCode, sp));
             });
         }
+
         if (searchQuery) data = data.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
         return data;
     }, [crewList, searchQuery, selectedRoles, selectedStatuses, selectedProjects]);

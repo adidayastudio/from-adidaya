@@ -15,10 +15,14 @@ import {
     fetchDailyLogs,
     updateDailyRating,
     DailyLog,
-    CrewMember
+    CrewMember,
+    formatProjectCode,
+    isMatchingProjectCode,
+    getProjectSuffix
 } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
+
 
 interface CrewPerformanceProps { role?: string; }
 
@@ -53,15 +57,8 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 const EVALUATION_START_DATE = new Date("2026-01-11"); // Fixed start date
 const getInitials = (n?: string) => { if (!n) return "??"; const w = n.trim().split(/\s+/); return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : w[0].substring(0, 2).toUpperCase(); };
 
-// Helper to format project code
-const formatProjectCode = (code?: string) => {
-    if (!code) return "-";
-    const parts = code.split("-");
-    const suffix = parts.length > 1 ? parts[1] : code;
-    return suffix.toUpperCase();
-};
-
 const toTitleCase = (str: string) => {
+
     return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
 
@@ -300,7 +297,8 @@ export function CrewPerformance({ role }: CrewPerformanceProps) {
         // Let's stick to the requested filters first.
 
         if (activeCard !== "ALL") d = d.filter(p => p.status === activeCard);
-        if (selectedProject !== "ALL") d = d.filter(p => p.projectCode && p.projectCode.includes(selectedProject));
+        if (selectedProject !== "ALL") d = d.filter(p => p.projectCode && isMatchingProjectCode(p.projectCode, selectedProject));
+
         if (searchQuery) {
             const q = searchQuery.toLowerCase();
             d = d.filter(p => p.crewName.toLowerCase().includes(q));

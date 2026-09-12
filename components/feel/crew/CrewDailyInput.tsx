@@ -5,8 +5,22 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { ProjectContext } from "@/components/flow/project-context";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Save, Check, X, Download, ArrowUpDown, Edit2, Users, Loader2, AlertTriangle, Search } from "lucide-react";
-import { Button } from "@/shared/ui/primitives/button/button";
-import { CREW_ROLE_LABELS, CrewRole, fetchCrewMembers, fetchDailyLogs, upsertDailyLog, deleteDailyLogEntry, DailyLog, fetchCrewByAssignment, fetchFutureUnlock, unlockFutureDate, lockFutureDate } from "@/lib/api/crew";
+import { 
+    CREW_ROLE_LABELS, 
+    CrewRole, 
+    fetchCrewMembers, 
+    fetchDailyLogs, 
+    upsertDailyLog, 
+    deleteDailyLogEntry, 
+    DailyLog, 
+    fetchCrewByAssignment, 
+    fetchFutureUnlock, 
+    unlockFutureDate, 
+    lockFutureDate,
+    formatProjectCode,
+    isMatchingProjectCode,
+    getProjectSuffix
+} from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { isCrewPaidHolidayOrSunday } from "@/lib/holidays";
@@ -17,7 +31,6 @@ interface CrewDailyInputProps {
 }
 
 type AttendanceStatus = "PRESENT" | "ABSENT" | "HALF_DAY" | "CUTI" | "";
-// Helper to format project code (get 3 letters after dash)
 
 interface DailyEntry {
     id: string;
@@ -32,15 +45,6 @@ interface DailyEntry {
     saved: boolean;
 }
 
-// Removed local getInitials
-
-// Helper to format project code (get 3 letters after dash)
-const formatProjectCode = (code?: string) => {
-    if (!code) return "-";
-    const parts = code.split("-");
-    const suffix = parts.length > 1 ? parts[1] : code;
-    return suffix.toUpperCase();
-};
 
 const toTitleCase = (str: string) => {
     return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
@@ -444,7 +448,7 @@ export function CrewDailyInput({ role }: CrewDailyInputProps) {
 
         try {
             // 1. Prepare Meta
-            const project = projects.find(p => p.code === selectedProject);
+            const project = projects.find(p => isMatchingProjectCode(p.code, selectedProject));
             const projectCode = project
                 ? project.code.includes("-")
                     ? project.code.replace("-", " · ").toUpperCase()

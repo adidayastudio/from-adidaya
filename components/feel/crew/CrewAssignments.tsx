@@ -17,7 +17,10 @@ import {
     fetchCrewProjectHistory,
     fetchCrewMembers,
     fetchCrewMemberById,
-    fetchCrewAssignments
+    fetchCrewAssignments,
+    formatProjectCode,
+    isMatchingProjectCode,
+    getProjectSuffix
 } from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
@@ -62,12 +65,6 @@ const getInitials = (name: string): string => {
     return words[0].substring(0, 2).toUpperCase();
 };
 
-// Helper to format project code (get 3 letters after dash)
-const formatProjectCode = (code?: string) => {
-    if (!code) return "-";
-    const parts = code.split("-");
-    return parts.length > 1 ? parts[1] : code;
-};
 
 export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
     const searchParams = useSearchParams();
@@ -369,8 +366,9 @@ export function CrewAssignments({ role, triggerOpen }: CrewAssignmentsProps) {
         if (activeCard === "ACTIVE") data = data.filter(a => a.status === "ACTIVE");
         else if (activeCard === "COMPLETED") data = data.filter(a => a.status === "COMPLETED");
         if (selectedProjects.length > 0) {
-            data = data.filter(a => selectedProjects.some(sp => formatProjectCode(a.projectCode) === formatProjectCode(sp)));
+            data = data.filter(a => selectedProjects.some(sp => isMatchingProjectCode(a.projectCode, sp)));
         }
+
         if (selectedRoles.length > 0) {
             data = data.filter(a => selectedRoles.includes(a.crewRole));
         }

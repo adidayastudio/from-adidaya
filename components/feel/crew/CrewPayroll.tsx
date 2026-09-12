@@ -9,7 +9,19 @@ import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Download, ArrowUpDow
 import { Button } from "@/shared/ui/primitives/button/button";
 import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
 import { Select } from "@/shared/ui/primitives/select/select";
-import { CREW_ROLE_LABELS, CrewRole, CrewRequest, fetchCrewMembers, fetchDailyLogs, DailyLog, CrewMember, fetchRequests } from "@/lib/api/crew";
+import { 
+    CREW_ROLE_LABELS, 
+    CrewRole, 
+    CrewRequest, 
+    fetchCrewMembers, 
+    fetchDailyLogs, 
+    DailyLog, 
+    CrewMember, 
+    fetchRequests,
+    formatProjectCode,
+    isMatchingProjectCode,
+    getProjectSuffix
+} from "@/lib/api/crew";
 import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
 import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
 import { isCrewPaidHolidayOrSunday } from "@/lib/holidays";
@@ -33,13 +45,6 @@ interface PayrollEntry {
     total: number;
 }
 
-// Helper to format project code (get 3 letters after dash)
-const formatProjectCode = (code?: string) => {
-    if (!code) return "-";
-    const parts = code.split("-");
-    const suffix = parts.length > 1 ? parts[1] : code;
-    return suffix.toUpperCase(); // Ensure uppercase for consistent matching
-};
 
 const toTitleCase = (str: string) => {
     return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
@@ -282,12 +287,10 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                         if (r.status !== "APPROVED") return false;
                         if (r.type !== "KASBON" && r.type !== "REIMBURSE") return false;
 
-                        // Match project if projectSuffix is selected
-                        if (projectSuffix) {
-                            const reqProj = r.projectCode ? formatProjectCode(r.projectCode) : undefined;
-                            // If request has no project code, exclude it from project-specific payroll
-                            if (!reqProj) return false;
-                            if (reqProj !== projectSuffix) return false;
+                        // Match project if selectedProject is set
+                        if (selectedProject && selectedProject !== "ALL") {
+                            if (!r.projectCode) return false;
+                            if (!isMatchingProjectCode(r.projectCode, selectedProject)) return false;
                         }
 
                         // Match date range — use startDate (effective date) consistently
@@ -301,18 +304,16 @@ export function CrewPayroll({ role }: CrewPayrollProps) {
                 // 4. Identify relevant crew (those who have logs, approved requests, OR are currently assigned)
                 const crewIdsWithLogs = new Set(allLogs.map(l => l.crewId));
                 const crewIdsWithReqs = new Set(approvedReqs.map(r => r.crewId));
-                const currentlyAssigned = projectSuffix 
-                    ? allMembers.filter(m => m.currentProjectCode && (
-                        formatProjectCode(m.currentProjectCode) === projectSuffix ||
-                        m.currentProjectCode.includes(projectSuffix!)
-                    ))
+                const currentlyAssigned = (selectedProject && selectedProject !== "ALL")
+                    ? allMembers.filter(m => m.currentProjectCode && isMatchingProjectCode(m.currentProjectCode, selectedProject))
                     : allMembers;
 
                 const relevantCrew = allMembers.filter(m => 
                     crewIdsWithLogs.has(m.id) || 
                     crewIdsWithReqs.has(m.id) ||
-                    (projectSuffix ? currentlyAssigned.some(ca => ca.id === m.id) : true)
+                    ((selectedProject && selectedProject !== "ALL") ? currentlyAssigned.some(ca => ca.id === m.id) : true)
                 );
+
 
                 if (relevantCrew.length === 0) {
                     setPayrollData([]);
