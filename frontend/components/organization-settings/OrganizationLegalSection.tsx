@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     versionBadge: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#0036F8',
+        color: '#007AFF',
         marginBottom: 4,
     },
     bodyText: {

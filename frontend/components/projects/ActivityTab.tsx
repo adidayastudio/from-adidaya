@@ -87,8 +87,8 @@ export const getWorkItemVisuals = (
             return {
                 label: 'Milestone in Progress',
                 icon: 'play.fill',
-                color: '#0036F8',
-                bg: 'rgba(0, 54, 248, 0.12)',
+                color: '#007AFF',
+                bg: 'rgba(0, 122, 255, 0.12)',
             };
         }
         return {
@@ -125,8 +125,8 @@ export const getWorkItemVisuals = (
             return {
                 label: 'Task in Progress',
                 icon: 'play.fill',
-                color: '#0036F8',
-                bg: 'rgba(0, 54, 248, 0.12)',
+                color: '#007AFF',
+                bg: 'rgba(0, 122, 255, 0.12)',
             };
         }
         return {
@@ -154,8 +154,8 @@ export const getWorkItemVisuals = (
             return {
                 label: 'Action in Progress',
                 icon: 'play.fill',
-                color: '#0036F8',
-                bg: 'rgba(0, 54, 248, 0.12)',
+                color: '#007AFF',
+                bg: 'rgba(0, 122, 255, 0.12)',
             };
         }
         return {
@@ -169,8 +169,8 @@ export const getWorkItemVisuals = (
     return {
         label: 'Work Item',
         icon: 'checkmark.circle.fill',
-        color: '#0036F8',
-        bg: 'rgba(0, 54, 248, 0.12)',
+        color: '#007AFF',
+        bg: 'rgba(0, 122, 255, 0.12)',
     };
 };
 
@@ -191,7 +191,7 @@ export const getModuleTheme = (mod?: string) => {
         case 'ai':
             return { label: 'Forma AI', icon: 'sparkles', color: '#6847D9' };
         default:
-            return { label: 'Module', icon: 'square.grid.2x2.fill', color: '#0036F8' };
+            return { label: 'Module', icon: 'square.grid.2x2.fill', color: '#007AFF' };
     }
 };
 
@@ -232,7 +232,7 @@ export function ActivityTab({
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
     const compactBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
     const dividerColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
 
     const [activities, setActivities] = useState<ActivityFeedItem[]>([]);
     const [previewItem, setPreviewItem] = useState<FilePreviewItem | null>(null);
@@ -1324,7 +1324,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 14,
         paddingVertical: 7,
         borderRadius: 999,
-        backgroundColor: 'rgba(0, 54, 248, 0.08)',
+        backgroundColor: 'rgba(0, 122, 255, 0.08)',
         marginBottom: 4,
     },
     activeFilterRow: {
@@ -1630,7 +1630,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 10,
         borderRadius: 12,
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
     },
     emptyCtaText: {
         color: '#FFFFFF',

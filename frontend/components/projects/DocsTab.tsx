@@ -259,7 +259,7 @@ export function DocsTab({
     const router = useRouter();
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#636366';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
     const bubbleOtherBg = isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.88)';
 
     // Internal states fallback if not controlled by parent
@@ -636,7 +636,7 @@ export function DocsTab({
                                                             styles.filterCard,
                                                             { backgroundColor: bubbleOtherBg, borderRadius: 20 },
                                                             isDocSelectMode && isSelected && {
-                                                                backgroundColor: isDark ? 'rgba(0, 54, 248, 0.16)' : 'rgba(0, 54, 248, 0.08)',
+                                                                backgroundColor: isDark ? 'rgba(0, 122, 255, 0.16)' : 'rgba(0, 122, 255, 0.08)',
                                                             }
                                                         ]}
                                                     >
@@ -711,7 +711,7 @@ export function DocsTab({
                                                     styles.filterCard,
                                                     { backgroundColor: bubbleOtherBg, borderRadius: 20 },
                                                     isDocSelectMode && isSelected && {
-                                                        backgroundColor: isDark ? 'rgba(0, 54, 248, 0.16)' : 'rgba(0, 54, 248, 0.08)',
+                                                        backgroundColor: isDark ? 'rgba(0, 122, 255, 0.16)' : 'rgba(0, 122, 255, 0.08)',
                                                     }
                                                 ]}
                                             >
@@ -929,10 +929,10 @@ const styles = StyleSheet.create({
         height: 44,
         paddingHorizontal: 20,
         borderRadius: 22,
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#0036F8',
+        shadowColor: '#007AFF',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.25,
         shadowRadius: 8,

@@ -46,7 +46,7 @@ export default function ProjectTasksScreen() {
     const subtextColor = isDark ? '#8E8E93' : '#636366';
     const cardBgColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.92)';
     const dividerColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
 
     const [project, setProject] = useState<Project | null>(null);
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -182,7 +182,7 @@ export default function ProjectTasksScreen() {
         if (target === 'report') return { label: 'Report', icon: 'doc.text.fill', color: '#14B8A6' };
         if (target === 'crew') return { label: 'Crew', icon: 'person.3.fill', color: '#8B5CF6' };
         if (target === 'forma_ai') return { label: 'Forma AI', icon: 'sparkles', color: '#6366F1' };
-        if (target === 'project') return { label: 'Projects', icon: 'folder.fill', color: '#0036F8' };
+        if (target === 'project') return { label: 'Projects', icon: 'folder.fill', color: '#007AFF' };
         if (target === 'tracking') return { label: 'Tracking', icon: 'target', color: '#64748B' };
 
         const lower = (task.title || '').toLowerCase();
@@ -207,7 +207,7 @@ export default function ProjectTasksScreen() {
         if (lower.includes('ai') || lower.includes('forma ai')) {
             return { label: 'Forma AI', icon: 'sparkles', color: '#6366F1' };
         }
-        return { label: 'Projects', icon: 'folder.fill', color: '#0036F8' };
+        return { label: 'Projects', icon: 'folder.fill', color: '#007AFF' };
     };
 
     const filteredTasks = useMemo(() => {

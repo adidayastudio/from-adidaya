@@ -39,7 +39,7 @@ const getRoleColor = (roleStr?: string) => {
     if (r.includes('member') || r.includes('staff')) return '#10B981';
     if (r.includes('view')) return '#F59E0B';
     if (r.includes('system')) return '#64748B';
-    return '#0036F8';
+    return '#007AFF';
 };
 
 export interface SwiftUITeamMemberSheetProps {
@@ -385,7 +385,7 @@ export const SwiftUITeamMemberSheet: React.FC<SwiftUITeamMemberSheetProps> = (pr
                             disabled={isSubmitting}
                             style={[
                                 styles.submitButton,
-                                { backgroundColor: '#0036F8', opacity: isSubmitting ? 0.7 : 1 },
+                                { backgroundColor: '#007AFF', opacity: isSubmitting ? 0.7 : 1 },
                             ]}
                         >
                             {isSubmitting ? (

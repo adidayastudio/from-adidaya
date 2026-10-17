@@ -269,7 +269,7 @@ export const SwiftUIAddMilestoneSheet: React.FC<SwiftUIAddMilestoneSheetProps> =
                                     selectedIndex={statusIndex}
                                     onOptionSelected={(e) => setStatusIndex(e.nativeEvent.index)}
                                     variant="segmented"
-                                    modifiers={[tint(statusIndex === 2 ? '#34C759' : statusIndex === 1 ? '#0036F8' : '#8E8E93')]}
+                                    modifiers={[tint(statusIndex === 2 ? '#34C759' : statusIndex === 1 ? '#007AFF' : '#8E8E93')]}
                                 />
                             </VStack>
                         </Section>
@@ -318,7 +318,7 @@ export const SwiftUIAddMilestoneSheet: React.FC<SwiftUIAddMilestoneSheetProps> =
                     ]}>
                         <Button
                             variant="glassProminent"
-                            color="#0036F8"
+                            color="#007AFF"
                             onPress={handleSave}
                             modifiers={[
                                 frame({ maxWidth: Infinity }),

@@ -74,7 +74,7 @@ export default function ProjectSetupTeamScreen({
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#6E6E73';
     const dividerColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
 
     const [project, setProject] = useState<Project | null>(null);
     const [projectRoles, setProjectRoles] = useState<ProjectRoleItem[]>([]);
@@ -506,7 +506,7 @@ export default function ProjectSetupTeamScreen({
                                                         s.rolePill,
                                                         {
                                                             backgroundColor: isLead
-                                                                ? (isDark ? 'rgba(0, 54, 248, 0.2)' : 'rgba(0, 54, 248, 0.08)')
+                                                                ? (isDark ? 'rgba(0, 122, 255, 0.2)' : 'rgba(0, 122, 255, 0.08)')
                                                                 : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)'),
                                                         },
                                                     ]}

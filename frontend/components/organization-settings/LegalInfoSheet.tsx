@@ -134,7 +134,7 @@ export const LegalInfoSheet: React.FC<LegalInfoSheetProps> = (props) => {
                                     <Text style={[styles.sectionTitle, { color: textColor }]}>
                                         Forma Operational System
                                     </Text>
-                                    <Text style={[styles.versionText, { color: '#0036F8' }]}>
+                                    <Text style={[styles.versionText, { color: '#007AFF' }]}>
                                         Version 0.1.0 · Build 2026.10
                                     </Text>
                                     <Text style={[styles.bodyText, { color: subtextColor }]}>

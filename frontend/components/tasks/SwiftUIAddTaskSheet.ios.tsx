@@ -631,7 +631,7 @@ export const SwiftUIAddTaskSheet: React.FC<SwiftUIAddTaskSheetProps> = ({
                     ]}>
                         <Button
                             variant="glassProminent"
-                            color="#0036F8"
+                            color="#007AFF"
                             onPress={handleSave}
                             modifiers={[
                                 frame({ maxWidth: Infinity }), 

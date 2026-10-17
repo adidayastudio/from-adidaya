@@ -85,7 +85,7 @@ export const NotificationsMasterDetail: React.FC<NotificationsMasterDetailProps>
     const paneBgColor = isDark ? '#000000' : '#F2F2F7';
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
     const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
-    const formaBlue = isDark ? '#4D82FF' : '#0036F8';
+    const formaBlue = isDark ? '#4D82FF' : '#007AFF';
 
     const { teamPurchasing, teamReimbursement, refreshData } = useFinance();
     const { activeTenant } = useTenantContext();
@@ -376,9 +376,9 @@ export const NotificationsMasterDetail: React.FC<NotificationsMasterDetailProps>
                 return {
                     label: 'submitted:',
                     color: formaBlue,
-                    avatarBg: isDark ? 'rgba(0,54,248,0.18)' : '#EFF6FF',
+                    avatarBg: isDark ? 'rgba(0, 122, 255,0.18)' : '#EFF6FF',
                     avatarText: formaBlue,
-                    badgeBg: isDark ? 'rgba(0,54,248,0.2)' : '#EFF6FF',
+                    badgeBg: isDark ? 'rgba(0, 122, 255,0.2)' : '#EFF6FF',
                     badgeText: formaBlue,
                 };
         }
@@ -632,7 +632,7 @@ export const NotificationsMasterDetail: React.FC<NotificationsMasterDetailProps>
                                                     styles.notificationCard,
                                                     {
                                                         backgroundColor: isSelected
-                                                            ? (isDark ? 'rgba(0, 54, 248, 0.16)' : '#EFF6FF')
+                                                            ? (isDark ? 'rgba(0, 122, 255, 0.16)' : '#EFF6FF')
                                                             : cardBgColor,
                                                         borderColor: isSelected
                                                             ? formaBlue
@@ -1002,7 +1002,7 @@ const styles = StyleSheet.create({
         width: 7,
         height: 7,
         borderRadius: 3.5,
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
     },
     emptyContainer: {
         alignItems: 'center',

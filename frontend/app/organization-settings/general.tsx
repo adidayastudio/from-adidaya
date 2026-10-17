@@ -131,7 +131,7 @@ export default function OrganizationGeneralScreen() {
     const [companyCode, setCompanyCode] = useState('');
     const [joinCode, setJoinCode] = useState('');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const [primaryColor, setPrimaryColor] = useState('#0036F8');
+    const [primaryColor, setPrimaryColor] = useState('#007AFF');
     const [customHex, setCustomHex] = useState('0036F8');
     const [address, setAddress] = useState('');
     const [gmapsUrl, setGmapsUrl] = useState('');
@@ -153,7 +153,7 @@ export default function OrganizationGeneralScreen() {
             setCompanyCode(activeTenant.company_code || '');
             setJoinCode(activeTenant.join_code || '');
             setLogoUrl(activeTenant.branding_logo_url || activeTenant.logo_url || null);
-            const color = activeTenant.primary_color || '#0036F8';
+            const color = activeTenant.primary_color || '#007AFF';
             setPrimaryColor(color);
             setCustomHex(color.replace('#', ''));
             setAddress(activeTenant.address || '');
@@ -170,7 +170,7 @@ export default function OrganizationGeneralScreen() {
         name !== (activeTenant.branding_name || activeTenant.name || '') ||
         companyCode !== (activeTenant.company_code || '') ||
         logoUrl !== (activeTenant.branding_logo_url || activeTenant.logo_url || null) ||
-        primaryColor.toUpperCase() !== (activeTenant.primary_color || '#0036F8').toUpperCase() ||
+        primaryColor.toUpperCase() !== (activeTenant.primary_color || '#007AFF').toUpperCase() ||
         address !== (activeTenant.address || '') ||
         gmapsUrl !== (activeTenant.gmaps_url || '') ||
         latitudeInput !== String((activeTenant as any).latitude || '') ||
@@ -185,7 +185,7 @@ export default function OrganizationGeneralScreen() {
             setName(activeTenant.branding_name || activeTenant.name || '');
             setCompanyCode(activeTenant.company_code || '');
             setLogoUrl(activeTenant.branding_logo_url || activeTenant.logo_url || null);
-            const color = activeTenant.primary_color || '#0036F8';
+            const color = activeTenant.primary_color || '#007AFF';
             setPrimaryColor(color);
             setCustomHex(color.replace('#', ''));
             setAddress(activeTenant.address || '');

@@ -164,7 +164,7 @@ export const SwiftUIAddMilestoneSheet: React.FC<SwiftUIAddMilestoneSheetProps> =
                                     onPress={() => setStatus(s)}
                                     style={[
                                         styles.statusOption,
-                                        status === s && { backgroundColor: '#0036F8' }
+                                        status === s && { backgroundColor: '#007AFF' }
                                     ]}
                                 >
                                     <Text style={[styles.statusOptionText, status === s && { color: '#FFFFFF', fontWeight: '700' }]}>
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
         color: '#8E8E93',
     },
     saveBtn: {
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         borderRadius: 12,
         paddingVertical: 14,
         alignItems: 'center',

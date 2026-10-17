@@ -418,7 +418,7 @@ export const SwiftUIActionDetailSheet: React.FC<SwiftUIActionDetailSheetProps> =
             case 'clock': return { label: 'CLK', color: '#0284C7', icon: 'clock.fill' };
             case 'report': return { label: 'RPT', color: '#14B8A6', icon: 'doc.text.fill' };
             case 'crew': return { label: 'CREW', color: '#8B5CF6', icon: 'person.3.fill' };
-            case 'project': return { label: 'PRJ', color: '#0036F8', icon: 'folder.fill' };
+            case 'project': return { label: 'PRJ', color: '#007AFF', icon: 'folder.fill' };
             case 'forma_ai': return { label: 'AI', color: '#6366F1', icon: 'sparkles' };
             case 'tracking': return { label: 'TRK', color: '#64748B', icon: 'target' };
             default: return { label: 'OTH', color: '#8E8E93', icon: 'bolt.fill' };

@@ -85,7 +85,7 @@ function ChannelAvatar({
     }
 
     return (
-        <View style={[styles.channelAvatarWrapper, { backgroundColor: isDark ? 'rgba(86,151,255,0.14)' : 'rgba(0,54,248,0.08)' }]}>
+        <View style={[styles.channelAvatarWrapper, { backgroundColor: isDark ? 'rgba(10, 132, 255,0.14)' : 'rgba(0, 122, 255,0.08)' }]}>
             <PlatformIcon
                 name="bubble.left.and.bubble.right.fill"
                 size={18}
@@ -917,10 +917,10 @@ export default function ChatScreen() {
                                                             styles.channelCard,
                                                             {
                                                                 backgroundColor: isSelected
-                                                                    ? (isDark ? 'rgba(86, 151, 255, 0.22)' : FormaBlue[100])
+                                                                    ? (isDark ? 'rgba(10, 132, 255, 0.22)' : FormaBlue[100])
                                                                     : (isDark ? '#1C1C1E' : '#FFFFFF'),
                                                                 borderWidth: 1,
-                                                                borderColor: isSelected ? (isDark ? 'rgba(86, 151, 255, 0.4)' : FormaBlue[400]) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
+                                                                borderColor: isSelected ? (isDark ? 'rgba(10, 132, 255, 0.4)' : FormaBlue[400]) : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
                                                             },
                                                         ]}
                                                     >
@@ -1005,7 +1005,7 @@ export default function ChatScreen() {
                             />
                         ) : (
                             <View style={styles.desktopEmptyPane}>
-                                <View style={[styles.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 54, 248, 0.08)' }]}>
+                                <View style={[styles.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 122, 255, 0.08)' }]}>
                                     <PlatformIcon
                                         name="bubble.left.and.bubble.right.fill"
                                         size={44}

@@ -5,22 +5,23 @@
 
 import { Platform } from 'react-native';
 
+// Adidaya uses iOS system blue; retain the exported token name for existing components.
 export const FormaBlue = {
-  50: '#E8F4FF',
-  100: '#D5EBFF',
-  200: '#B3D8FF',
-  300: '#85BEFF',
-  400: '#5697FF',
-  500: '#2F70FF',
-  600: '#0C45FF',
-  700: '#0036F8', // Primary
-  800: '#0634CD',
-  900: '#10359F',
-  950: '#0A1D5C',
+  50: '#EAF4FF',
+  100: '#D6E9FF',
+  200: '#ADD3FF',
+  300: '#7AB8FF',
+  400: '#0A84FF',
+  500: '#268EFF',
+  600: '#0A84FF',
+  700: '#007AFF', // Primary
+  800: '#0062CC',
+  900: '#004A99',
+  950: '#002E66',
 } as const;
 
 const tintColorLight = FormaBlue[700];
-const tintColorDark = FormaBlue[700];
+const tintColorDark = FormaBlue[600];
 
 export const Colors = {
   light: {

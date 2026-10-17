@@ -126,7 +126,7 @@ export default function LoginScreen() {
                         variant="solid"
                         color="blue"
                         icon={<PlatformIcon name="rectangle.portrait.and.arrow.right" size={16} tintColor="#FFFFFF" />}
-                        style={{ width: '100%', backgroundColor: '#0036F8' }}
+                        style={{ width: '100%', backgroundColor: '#007AFF' }}
                     />
 
                     {/* Secondary Action Pills */}
@@ -230,7 +230,7 @@ export default function LoginScreen() {
                     color="blue"
                     disabled={loading}
                     icon={<PlatformIcon name="rectangle.portrait.and.arrow.right" size={16} tintColor="#FFFFFF" />}
-                    style={{ width: '100%', backgroundColor: '#0036F8' }}
+                    style={{ width: '100%', backgroundColor: '#007AFF' }}
                 />
 
                 {/* Toggle Auth Mode */}
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     footerActionLink: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#0036F8',
+        color: '#007AFF',
         textDecorationLine: 'underline',
     },
     footerActionLinkDark: {

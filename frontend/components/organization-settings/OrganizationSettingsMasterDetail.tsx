@@ -216,7 +216,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
     const [companyCode, setCompanyCode] = useState('');
     const [joinCode, setJoinCode] = useState('');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
-    const [primaryColor, setPrimaryColor] = useState('#0036F8');
+    const [primaryColor, setPrimaryColor] = useState('#007AFF');
     const [customHex, setCustomHex] = useState('0036F8');
     const [address, setAddress] = useState('');
     const [gmapsUrl, setGmapsUrl] = useState('');
@@ -234,7 +234,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
             setCompanyCode(activeTenant.company_code || '');
             setJoinCode(activeTenant.join_code || '');
             setLogoUrl(activeTenant.branding_logo_url || activeTenant.logo_url || null);
-            const color = activeTenant.primary_color || '#0036F8';
+            const color = activeTenant.primary_color || '#007AFF';
             setPrimaryColor(color);
             setCustomHex(color.replace('#', ''));
             setAddress(activeTenant.address || '');
@@ -251,7 +251,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
         name !== (activeTenant.branding_name || activeTenant.name || '') ||
         companyCode !== (activeTenant.company_code || '') ||
         logoUrl !== (activeTenant.branding_logo_url || activeTenant.logo_url || null) ||
-        primaryColor.toUpperCase() !== (activeTenant.primary_color || '#0036F8').toUpperCase() ||
+        primaryColor.toUpperCase() !== (activeTenant.primary_color || '#007AFF').toUpperCase() ||
         address !== (activeTenant.address || '') ||
         gmapsUrl !== (activeTenant.gmaps_url || '') ||
         latitudeInput !== String((activeTenant as any).latitude || '') ||
@@ -266,7 +266,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
             setName(activeTenant.branding_name || activeTenant.name || '');
             setCompanyCode(activeTenant.company_code || '');
             setLogoUrl(activeTenant.branding_logo_url || activeTenant.logo_url || null);
-            const color = activeTenant.primary_color || '#0036F8';
+            const color = activeTenant.primary_color || '#007AFF';
             setPrimaryColor(color);
             setCustomHex(color.replace('#', ''));
             setAddress(activeTenant.address || '');
@@ -840,8 +840,8 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                 subtitle: 'Enterprise operational OS architecture & version',
                 description: 'Enterprise operational OS architecture & version',
                 icon: 'info.circle',
-                color: '#0036F8',
-                gradientColors: ['#0036F8', '#0026B8'],
+                color: '#007AFF',
+                gradientColors: ['#007AFF', '#0026B8'],
                 badges: ['Version', 'Architecture'],
             };
         }
@@ -853,8 +853,8 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                 subtitle: 'Enterprise service agreement & policies',
                 description: 'Enterprise service agreement & policies',
                 icon: 'doc.text',
-                color: '#0036F8',
-                gradientColors: ['#0036F8', '#0026B8'],
+                color: '#007AFF',
+                gradientColors: ['#007AFF', '#0026B8'],
                 badges: ['Terms', 'Policies'],
             };
         }
@@ -866,8 +866,8 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                 subtitle: 'Data sovereignty, telemetry & global compliance',
                 description: 'Data sovereignty, telemetry & global compliance',
                 icon: 'hand.raised',
-                color: '#0036F8',
-                gradientColors: ['#0036F8', '#0026B8'],
+                color: '#007AFF',
+                gradientColors: ['#007AFF', '#0026B8'],
                 badges: ['Privacy', 'GDPR', 'Compliance'],
             };
         }
@@ -884,7 +884,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                         title: savingGeneral ? 'Saving...' : 'Save Changes',
                         icon: 'checkmark-circle',
                         image: 'checkmark.circle.fill',
-                        tintColor: '#0036F8',
+                        tintColor: '#007AFF',
                         isPrimary: true,
                         onPress: handleSaveGeneralChanges,
                     },
@@ -946,7 +946,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                     title: 'Add Member',
                     icon: 'add',
                     image: 'plus',
-                    tintColor: '#0036F8',
+                    tintColor: '#007AFF',
                     isPrimary: true,
                     onPress: () => {
                         Haptics.selectionAsync();
@@ -964,7 +964,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                         title: savingRoles ? 'Saving...' : 'Save Permissions',
                         icon: 'checkmark-circle',
                         image: 'checkmark.circle.fill',
-                        tintColor: '#0036F8',
+                        tintColor: '#007AFF',
                         isPrimary: true,
                         onPress: handleSaveRoleChanges,
                     },
@@ -978,7 +978,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                         title: savingNotifs ? 'Saving...' : 'Save Preferences',
                         icon: 'checkmark-circle',
                         image: 'checkmark.circle.fill',
-                        tintColor: '#0036F8',
+                        tintColor: '#007AFF',
                         isPrimary: true,
                         onPress: handleSaveNotifChanges,
                     },
@@ -992,7 +992,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                         title: savingSecurity ? 'Saving...' : 'Save Security',
                         icon: 'checkmark-circle',
                         image: 'checkmark.circle.fill',
-                        tintColor: '#0036F8',
+                        tintColor: '#007AFF',
                         isPrimary: true,
                         onPress: handleSaveSecurityChanges,
                     },
@@ -1020,7 +1020,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
     const subtextColor = isDark ? '#8E8E93' : '#64748B';
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
     const borderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-    const formaBlue = isDark ? '#4D82FF' : '#0036F8';
+    const formaBlue = isDark ? '#4D82FF' : '#007AFF';
 
     const renderActiveSection = () => {
         switch (activeCategory) {
@@ -1258,8 +1258,8 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                                                             styles.menuRow,
                                                             isSelected && {
                                                                 backgroundColor: isDark
-                                                                    ? 'rgba(0, 54, 248, 0.16)'
-                                                                    : 'rgba(0, 54, 248, 0.08)',
+                                                                    ? 'rgba(0, 122, 255, 0.16)'
+                                                                    : 'rgba(0, 122, 255, 0.08)',
                                                             },
                                                         ]}
                                                         onPress={() => handleSelectCategory(item.id)}
@@ -1293,7 +1293,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                                                             size={14}
                                                             tintColor={
                                                                 isSelected
-                                                                    ? '#0036F8'
+                                                                    ? '#007AFF'
                                                                     : isDark
                                                                     ? 'rgba(255,255,255,0.25)'
                                                                     : 'rgba(0,0,0,0.25)'
@@ -1406,7 +1406,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                             isDark={isDark}
                             textColor={textColor}
                             maxDirectActions={3}
-                            primaryActionTextColor="#0036F8"
+                            primaryActionTextColor="#007AFF"
                         />
                     )}
                 </View>

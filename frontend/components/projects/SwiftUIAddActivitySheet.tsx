@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     },
     saveBtn: {
         flex: 1,
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         borderRadius: 999,
         paddingVertical: 13,
         alignItems: 'center',

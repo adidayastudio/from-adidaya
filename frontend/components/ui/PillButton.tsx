@@ -30,7 +30,7 @@ interface PillButtonProps {
 }
 
 const COLOR_MAP: Record<Exclude<ButtonColor, 'neutral'>, { light: string; dark: string }> = {
-    blue: { light: FormaBlue[700], dark: '#5697FF' },
+    blue: { light: FormaBlue[700], dark: '#0A84FF' },
     red: { light: '#FF3B30', dark: '#FF453A' },
     green: { light: '#34C759', dark: '#30D158' },
     orange: { light: '#FF9500', dark: '#FF9F0A' },
@@ -57,7 +57,7 @@ export function PillButton({
     const themeColors = Colors[isDark ? 'dark' : 'light'];
     const activeColorConfig = color !== 'neutral' ? COLOR_MAP[color] : null;
     const baseColor = color === 'blue'
-        ? (isDark ? '#5697FF' : FormaBlue[700])
+        ? (isDark ? '#0A84FF' : FormaBlue[700])
         : (color === 'neutral' ? themeColors.text : (isDark ? activeColorConfig?.dark || '#FF453A' : activeColorConfig?.light || '#FF3B30'));
 
     const handlePressIn = () => {

@@ -125,7 +125,7 @@ export function HeaderToolbar({
     const isSingleStandard = isWeb && (standardActions.length + (menuActions.length > 0 ? 1 : 0) === 1);
 
     const renderActionItem = (action: HeaderToolbarAction, index: number, isStandalonePrimary: boolean = false) => {
-        const primaryBg = primaryActionBgColor || primaryActionColor || '#0036F8';
+        const primaryBg = primaryActionBgColor || primaryActionColor || '#007AFF';
         const actionTextColor = isStandalonePrimary 
             ? (primaryActionTextColor || '#FFFFFF')
             : (action.tintColor || (textColor !== '#FFFFFF' ? textColor : (isDark ? '#FFFFFF' : '#000000')));
@@ -364,11 +364,11 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         ...Platform.select({
             web: {
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0, 54, 248, 0.25)',
+                boxShadow: '0 2px 8px rgba(0, 122, 255, 0.25)',
             },
             default: {},
         }),
@@ -383,7 +383,7 @@ const badgeStyles = StyleSheet.create({
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         zIndex: 10,
     },
     badgeText: {

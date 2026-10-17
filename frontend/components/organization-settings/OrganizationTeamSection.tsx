@@ -218,7 +218,7 @@ export const OrganizationTeamSection: React.FC<OrganizationTeamSectionProps> = (
                                 <View
                                     style={[
                                         styles.memberAvatar,
-                                        { backgroundColor: activeTenant?.primary_color || primaryColor || '#0036F8' },
+                                        { backgroundColor: activeTenant?.primary_color || primaryColor || '#007AFF' },
                                     ]}
                                 >
                                     <Text style={styles.memberAvatarText}>{initials}</Text>
@@ -286,7 +286,7 @@ export const OrganizationTeamSection: React.FC<OrganizationTeamSectionProps> = (
             {/* Members Cards List */}
             {loadingMembers ? (
                 <View style={[styles.memberEmptyCard, { backgroundColor: cardBgColor }]}>
-                    <ActivityIndicator size="small" color="#0036F8" />
+                    <ActivityIndicator size="small" color="#007AFF" />
                     <Text style={[styles.emptyText, { color: subtextColor, marginTop: 8 }]}>Loading team members...</Text>
                 </View>
             ) : sortedMembers.length === 0 ? (

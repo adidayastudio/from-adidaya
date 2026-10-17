@@ -1256,10 +1256,10 @@ export function ClockTimesheets({
                                             s.recordCard,
                                             {
                                                 backgroundColor: isSelectedInDesktop
-                                                    ? (isDark ? 'rgba(10, 132, 255, 0.12)' : 'rgba(0, 54, 248, 0.05)')
+                                                    ? (isDark ? 'rgba(10, 132, 255, 0.12)' : 'rgba(0, 122, 255, 0.05)')
                                                     : (isDark ? '#1C1C1E' : '#FFF'),
                                                 borderColor: isSelectedInDesktop 
-                                                    ? (isDark ? '#0A84FF' : '#0036F8') 
+                                                    ? (isDark ? '#0A84FF' : '#007AFF') 
                                                     : cardBorderColor,
                                                 borderWidth: isSelectedInDesktop ? 1.5 : (isDark ? 0.5 : 1),
                                             }

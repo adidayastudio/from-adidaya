@@ -63,7 +63,7 @@ export function WebFinderHeader({
                 id: 'filter',
                 icon: 'filter-outline',
                 image: 'line.3.horizontal.decrease',
-                tintColor: filterActive ? '#0036F8' : undefined,
+                tintColor: filterActive ? '#007AFF' : undefined,
                 onPress: onFilter,
             });
         }

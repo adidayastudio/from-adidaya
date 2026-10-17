@@ -26,7 +26,7 @@ export const OrganizationIntegrationsSection: React.FC<OrganizationIntegrationsS
             <View style={[styles.formCard, { backgroundColor: cardBgColor, borderColor }]}>
                 {/* Supabase Bucket */}
                 <View style={styles.integrationItem}>
-                    <View style={[styles.integrationIconWrap, { backgroundColor: 'rgba(0, 54, 248, 0.1)' }]}>
+                    <View style={[styles.integrationIconWrap, { backgroundColor: 'rgba(0, 122, 255, 0.1)' }]}>
                         <Ionicons name="cloud-done-outline" size={24} color={primaryColor} />
                     </View>
                     <View style={{ marginLeft: 16, flex: 1 }}>

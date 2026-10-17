@@ -58,7 +58,7 @@ export const OrganizationAccountSection: React.FC<OrganizationAccountSectionProp
                             style={styles.accountAvatar}
                         />
                     ) : (
-                        <View style={[styles.accountAvatar, { backgroundColor: activeTenant?.primary_color || primaryColor || '#0036F8' }]}>
+                        <View style={[styles.accountAvatar, { backgroundColor: activeTenant?.primary_color || primaryColor || '#007AFF' }]}>
                             <Text style={styles.accountAvatarText}>
                                 {(profile?.full_name || user?.email || 'U').slice(0, 2).toUpperCase()}
                             </Text>

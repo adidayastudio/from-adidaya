@@ -449,7 +449,7 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
 
                         <View style={[styles.progressBarTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
                             {progressPercent > 0 && (
-                                <View style={[styles.progressBarFill, { width: `${Math.min(100, Math.max(0, progressPercent))}%`, backgroundColor: '#0036F8' }]} />
+                                <View style={[styles.progressBarFill, { width: `${Math.min(100, Math.max(0, progressPercent))}%`, backgroundColor: '#007AFF' }]} />
                             )}
                         </View>
 
@@ -534,10 +534,10 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
                                 activeOpacity={0.7}
                                 style={[styles.viewAllButton, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: dividerColor }]}
                             >
-                                <Text style={[styles.viewAllText, { color: '#0036F8' }]}>
+                                <Text style={[styles.viewAllText, { color: '#007AFF' }]}>
                                     View All ({remainingTeamCount} more)
                                 </Text>
-                                <Ionicons name="arrow-forward" size={14} color="#0036F8" />
+                                <Ionicons name="arrow-forward" size={14} color="#007AFF" />
                             </TouchableOpacity>
                         )}
                     </View>

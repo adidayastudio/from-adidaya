@@ -44,7 +44,7 @@ export default function AllProjectsExplorer() {
     const [isAddProjectVisible, setIsAddProjectVisible] = useState(false);
 
     const tenantLogoUrl = activeTenant?.branding_logo_url || activeTenant?.logo_url;
-    const primaryColor = activeTenant?.primary_color || '#0036F8';
+    const primaryColor = activeTenant?.primary_color || '#007AFF';
     const tenantInitial = (activeTenant?.branding_name || activeTenant?.name || 'T').charAt(0).toUpperCase();
 
     const [activeFilter, setActiveFilter] = useState('all');
@@ -218,7 +218,7 @@ export default function AllProjectsExplorer() {
 
                     {isLoading ? (
                         <View style={{ paddingVertical: 100, alignItems: 'center', justifyContent: 'center' }}>
-                            <ActivityIndicator size="large" color="#0036F8" />
+                            <ActivityIndicator size="large" color="#007AFF" />
                         </View>
                     ) : (
                         <View style={styles.listContainer}>
@@ -273,8 +273,8 @@ export default function AllProjectsExplorer() {
 
                             {filteredProjects.length === 0 && (
                                 <Animated.View entering={FadeIn.delay(200)} style={styles.emptyContainer}>
-                                    <View style={[styles.emptyIconBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,54,248,0.06)' }]}>
-                                        <Ionicons name="search" size={42} color={isDark ? 'rgba(255,255,255,0.3)' : '#0036F8'} />
+                                    <View style={[styles.emptyIconBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0, 122, 255,0.06)' }]}>
+                                        <Ionicons name="search" size={42} color={isDark ? 'rgba(255,255,255,0.3)' : '#007AFF'} />
                                     </View>
                                     <Text style={[styles.emptyTitle, { color: textColor }]}>No projects found</Text>
                                     <Text style={[styles.emptyText, { color: subtextColor }]}>

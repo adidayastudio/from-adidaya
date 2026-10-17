@@ -45,7 +45,7 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
     const cardBorderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)';
     const dividerColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
 
     // Tracking mode determination
     const rawTrackingMethod = project.meta?.trackingMethod || project.meta?.progressTracking || (project as any).progressTracking || 'tasks';
@@ -516,7 +516,7 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
                                 const statusBg = isDone
                                     ? 'rgba(52, 199, 89, 0.12)'
                                     : isInProgress
-                                    ? 'rgba(0, 54, 248, 0.12)'
+                                    ? 'rgba(0, 122, 255, 0.12)'
                                     : 'rgba(142, 142, 147, 0.12)';
 
                                 return (
@@ -647,7 +647,7 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
                                     : isRevision
                                     ? 'rgba(255, 149, 0, 0.12)'
                                     : (isInProgress || isSubmitted)
-                                    ? 'rgba(0, 54, 248, 0.12)'
+                                    ? 'rgba(0, 122, 255, 0.12)'
                                     : 'rgba(142, 142, 147, 0.12)';
 
                                 const statusLabel = isDone ? 'Done' : isRevision ? 'Revision' : isSubmitted ? 'Submitted' : isInProgress ? 'In Progress' : 'To-Do';
@@ -774,7 +774,7 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
                                     ? 'rgba(255, 69, 58, 0.12)'
                                     : isUrgent
                                     ? 'rgba(255, 149, 0, 0.12)'
-                                    : 'rgba(0, 54, 248, 0.12)';
+                                    : 'rgba(0, 122, 255, 0.12)';
 
                                 const statusLabel = isResolved ? 'Done' : isReturned ? 'Returned' : isUrgent ? 'Urgent' : 'Pending';
 

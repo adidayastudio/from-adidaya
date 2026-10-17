@@ -171,7 +171,7 @@ export const SwiftUIDateRangeSheet: React.FC<SwiftUIDateRangeSheetProps> = ({
 
                         <Section>
                             <Button
-                                color="#0036F8"
+                                color="#007AFF"
                                 modifiers={[buttonStyle('borderedProminent')]}
                                 onPress={handleApply}
                             >

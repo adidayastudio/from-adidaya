@@ -47,7 +47,7 @@ export default function ProjectActivityDetailsScreen() {
     const isDark = resolvedTheme === 'dark';
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#636366';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
     const cardBgColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.9)';
     const dividerColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
 

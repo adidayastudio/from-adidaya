@@ -85,7 +85,7 @@ export default function ResourcesScreen() {
     const { resolvedTheme } = useTheme();
     const currentTheme = (resolvedTheme === 'dark' ? 'dark' : 'light') as 'light' | 'dark';
     const isDark = currentTheme === 'dark';
-    const tintColor = Colors[currentTheme]?.tint || '#0036F8';
+    const tintColor = Colors[currentTheme]?.tint || '#007AFF';
     const textColor = Colors[currentTheme]?.text || (isDark ? '#ECEDEE' : '#11181C');
     const subtextColor = isDark ? '#A1A1A6' : '#8E8E93';
     const insets = useSafeAreaInsets();

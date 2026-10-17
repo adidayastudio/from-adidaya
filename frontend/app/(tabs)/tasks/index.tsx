@@ -479,10 +479,10 @@ export default function TaskScreen() {
         if (target === 'report') return { label: 'Report', icon: 'doc.text.fill', color: '#14B8A6' };
         if (target === 'crew') return { label: 'Crew', icon: 'hardhat.fill', color: '#8B5CF6' };
         if (target === 'forma_ai') return { label: 'Forma AI', icon: 'sparkles.fill', color: '#6366F1' };
-        if (target === 'project') return { label: 'Projects', icon: 'folder.fill', color: '#0036F8' };
+        if (target === 'project') return { label: 'Projects', icon: 'folder.fill', color: '#007AFF' };
         if (target === 'tracking') return { label: 'Tracking', icon: 'target', color: '#64748B' };
 
-        return { label: 'Projects', icon: 'folder.fill', color: '#0036F8' };
+        return { label: 'Projects', icon: 'folder.fill', color: '#007AFF' };
     };
 
     const renderTaskCard = ({
@@ -507,7 +507,7 @@ export default function TaskScreen() {
 
         // Solid white card without border or shadow, highlighted if active
         const cardBg = isSelected
-            ? (isDark ? 'rgba(86, 151, 255, 0.22)' : FormaBlue[100])
+            ? (isDark ? 'rgba(10, 132, 255, 0.22)' : FormaBlue[100])
             : (isDark ? '#1C1C1E' : '#FFFFFF');
         const mod = getTaskModuleInfo(task);
         const iconBg = isDark ? hexToRgba(mod.color, 0.18) : hexToRgba(mod.color, 0.12);
@@ -525,7 +525,7 @@ export default function TaskScreen() {
                                 borderColor: 'transparent',
                             },
                             isSelected && {
-                                borderColor: isDark ? 'rgba(86, 151, 255, 0.4)' : FormaBlue[400],
+                                borderColor: isDark ? 'rgba(10, 132, 255, 0.4)' : FormaBlue[400],
                                 borderWidth: 1,
                             }
                         ]}
@@ -835,7 +835,7 @@ export default function TaskScreen() {
                             />
                         ) : (
                             <View style={styles.desktopEmptyPane}>
-                                <View style={[styles.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 54, 248, 0.08)' }]}>
+                                <View style={[styles.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 122, 255, 0.08)' }]}>
                                     <PlatformIcon
                                         name="checkmark.circle.fill"
                                         size={44}
@@ -939,7 +939,7 @@ export default function TaskScreen() {
 
                                     {filteredTasks.length === 0 && (
                                         <Animated.View entering={FadeIn.delay(200)} style={styles.emptyContainer}>
-                                            <View style={[styles.emptyIconBg, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 54, 248, 0.08)' }]}>
+                                            <View style={[styles.emptyIconBg, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 122, 255, 0.08)' }]}>
                                                 <PlatformIcon name="checkmark.circle.fill" size={42} tintColor={isDark ? FormaBlue[400] : FormaBlue[700]} weight="bold" />
                                             </View>
                                             <Text style={[styles.emptyTitle, { color: textColor }]}>

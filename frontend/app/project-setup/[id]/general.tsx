@@ -73,7 +73,7 @@ export default function ProjectSetupGeneralScreen({
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#6E6E73';
     const dividerColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
 
     // State
     const [project, setProject] = useState<Project | null>(null);
@@ -879,7 +879,7 @@ const s = StyleSheet.create({
         flex: 1,
     },
     headerSaveBtn: {
-        color: '#0036F8',
+        color: '#007AFF',
         fontSize: 17,
         fontWeight: '600',
     },

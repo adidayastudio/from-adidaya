@@ -140,7 +140,7 @@ export function QuickActionClock({ isClockedIn, clockInTime, locationCode, onTog
                     style={[
                         styles.actionButton,
                         styles.webActionButton,
-                        { backgroundColor: isClockedIn ? '#FF3B30' : '#0036F8' }
+                        { backgroundColor: isClockedIn ? '#FF3B30' : '#007AFF' }
                     ]}
                 >
                     <Text style={styles.webActionText}>

@@ -227,7 +227,7 @@ export function LiquidDatePicker({
                                         <Text style={[
                                             styles.dayText,
                                             { color: isSelected ? '#FFFFFF' : textColor },
-                                            isToday && !isSelected && { color: '#0036F8', fontWeight: 'bold' }
+                                            isToday && !isSelected && { color: '#007AFF', fontWeight: 'bold' }
                                         ]}>
                                             {date.getDate()}
                                         </Text>
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
         marginVertical: 1,
     },
     selectedDayCell: {
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
     },
     dayText: {
         fontSize: 13.5,
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 42,
         borderRadius: 21,
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         alignItems: 'center',
         justifyContent: 'center',
     },

@@ -604,7 +604,7 @@ export function CreateAnnouncementSheet({
                                     ]}
                                     activeOpacity={0.7}
                                 >
-                                    <PlatformIcon name="doc.text" size={13} tintColor="#0036F8" />
+                                    <PlatformIcon name="doc.text" size={13} tintColor="#007AFF" />
                                     <Text style={styles.draftsPillText}>
                                         Drafts ({draftsList.length})
                                     </Text>
@@ -643,12 +643,12 @@ export function CreateAnnouncementSheet({
                                         <PlatformIcon
                                             name={ANNOUNCEMENT_TEMPLATES[selectedTemplate]?.icon as any || "doc.text.fill"}
                                             size={17}
-                                            tintColor={ANNOUNCEMENT_TEMPLATES[selectedTemplate]?.accent || "#0036F8"}
+                                            tintColor={ANNOUNCEMENT_TEMPLATES[selectedTemplate]?.accent || "#007AFF"}
                                         />
                                         <Text style={[styles.rowLabel, { color: textColor }]}>Category</Text>
                                     </View>
                                     <View style={styles.rowRight}>
-                                        <Text style={[styles.rowValueText, { color: ANNOUNCEMENT_TEMPLATES[selectedTemplate]?.accent || '#0036F8', fontWeight: '600' }]}>
+                                        <Text style={[styles.rowValueText, { color: ANNOUNCEMENT_TEMPLATES[selectedTemplate]?.accent || '#007AFF', fontWeight: '600' }]}>
                                             {ANNOUNCEMENT_TEMPLATES[selectedTemplate]?.label || 'General'}
                                         </Text>
                                         <PlatformIcon name="chevron.down" size={13} tintColor="#8E8E93" />
@@ -672,7 +672,7 @@ export function CreateAnnouncementSheet({
                                         <Text style={[styles.rowLabel, { color: textColor }]}>Department</Text>
                                     </View>
                                     <View style={styles.rowRight}>
-                                        <Text style={[styles.rowValueText, { color: '#0036F8', fontWeight: '500' }]}>
+                                        <Text style={[styles.rowValueText, { color: '#007AFF', fontWeight: '500' }]}>
                                             {selectedDept}
                                         </Text>
                                         <PlatformIcon name="chevron.down" size={13} tintColor="#8E8E93" />
@@ -719,7 +719,7 @@ export function CreateAnnouncementSheet({
                                         <Text style={[styles.rowLabel, { color: textColor }]}>Schedule Type</Text>
                                     </View>
                                     <View style={styles.rowRight}>
-                                        <Text style={[styles.rowValueText, { color: '#0036F8', fontWeight: '600' }]}>
+                                        <Text style={[styles.rowValueText, { color: '#007AFF', fontWeight: '600' }]}>
                                             {SCHEDULE_TYPES[scheduleTypeIndex]}
                                         </Text>
                                         <PlatformIcon name="chevron.down" size={13} tintColor="#8E8E93" />
@@ -748,7 +748,7 @@ export function CreateAnnouncementSheet({
                                         <Text style={[styles.rowLabel, { color: textColor }]}>Date & Time</Text>
                                     </View>
                                     <View style={styles.rowRight}>
-                                        <Text style={[styles.rowValueText, { color: '#0036F8', fontWeight: '600' }]}>
+                                        <Text style={[styles.rowValueText, { color: '#007AFF', fontWeight: '600' }]}>
                                             {formatScheduleDuration(selectedDateObj)}
                                         </Text>
                                         <PlatformIcon name="chevron.right" size={14} tintColor="#8E8E93" />
@@ -792,7 +792,7 @@ export function CreateAnnouncementSheet({
                                     <View style={styles.bannerActionsRow}>
                                         <TouchableOpacity
                                             onPress={handlePickBanner}
-                                            style={[styles.bannerActionBtn, { backgroundColor: '#0036F8' }]}
+                                            style={[styles.bannerActionBtn, { backgroundColor: '#007AFF' }]}
                                         >
                                             <PlatformIcon name="photo" size={13} tintColor="#FFFFFF" />
                                             <Text style={styles.bannerActionBtnText}>Change Banner</Text>
@@ -813,7 +813,7 @@ export function CreateAnnouncementSheet({
                                     activeOpacity={0.7}
                                 >
                                     <View style={[styles.uploadIconCircle, isDark ? styles.pillDark : styles.pillLight]}>
-                                        <PlatformIcon name="photo.badge.plus" size={20} tintColor="#0036F8" />
+                                        <PlatformIcon name="photo.badge.plus" size={20} tintColor="#007AFF" />
                                     </View>
                                     <View style={{ gap: 2 }}>
                                         <Text style={[styles.uploadBannerTitle, { color: textColor }]}>
@@ -869,12 +869,12 @@ export function CreateAnnouncementSheet({
                             >
                                 <View style={styles.attachBtnRow}>
                                     <View style={styles.rowLeft}>
-                                        <PlatformIcon name="paperclip" size={17} tintColor="#0036F8" />
-                                        <Text style={[styles.attachBtnText, { color: '#0036F8' }]}>
+                                        <PlatformIcon name="paperclip" size={17} tintColor="#007AFF" />
+                                        <Text style={[styles.attachBtnText, { color: '#007AFF' }]}>
                                             Attach Documents (PDF / Photos)
                                         </Text>
                                     </View>
-                                    <PlatformIcon name="plus" size={17} tintColor="#0036F8" />
+                                    <PlatformIcon name="plus" size={17} tintColor="#007AFF" />
                                 </View>
                             </ContextMenu>
 
@@ -931,7 +931,7 @@ export function CreateAnnouncementSheet({
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={[styles.submitBtn, { backgroundColor: '#0036F8' }]}
+                                style={[styles.submitBtn, { backgroundColor: '#007AFF' }]}
                                 onPress={handleSubmit}
                                 activeOpacity={0.8}
                                 disabled={isSubmitting}
@@ -1093,7 +1093,7 @@ const styles = StyleSheet.create({
     draftsPillText: {
         fontSize: 12.5,
         fontWeight: '700',
-        color: '#0036F8',
+        color: '#007AFF',
     },
     closeCircleBtn: {
         width: 34,

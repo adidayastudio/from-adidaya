@@ -430,11 +430,11 @@ export default function ProjectSetupDetailScreen() {
                                                         s.compactMenuCard,
                                                         {
                                                             backgroundColor: isSelected
-                                                                ? (isDark ? 'rgba(86, 151, 255, 0.22)' : FormaBlue[100])
+                                                                ? (isDark ? 'rgba(10, 132, 255, 0.22)' : FormaBlue[100])
                                                                 : (isDark ? '#1C1C1E' : '#FFFFFF'),
                                                             borderWidth: 1,
                                                             borderColor: isSelected
-                                                                ? (isDark ? 'rgba(86, 151, 255, 0.4)' : FormaBlue[400])
+                                                                ? (isDark ? 'rgba(10, 132, 255, 0.4)' : FormaBlue[400])
                                                                 : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
                                                         },
                                                     ]}

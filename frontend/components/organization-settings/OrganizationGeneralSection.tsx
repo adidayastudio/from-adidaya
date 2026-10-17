@@ -20,7 +20,7 @@ import { PillButton } from '@/components/ui/PillButton';
 import { LinearRangeSlider } from '@/components/ui/LinearRangeSlider';
 
 const PRESET_COLORS = [
-    '#0036F8', // Forma Blue
+    '#007AFF', // Forma Blue
     '#10B981', // Emerald Green
     '#F59E0B', // Amber
     '#EF4444', // Crimson Red

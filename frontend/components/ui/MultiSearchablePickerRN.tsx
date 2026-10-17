@@ -64,8 +64,8 @@ export function MultiSearchablePicker({
     const subtextColor = isDark ? '#8E8E93' : '#6e6e73';
     const cardBg = isDark ? '#1C1C1E' : '#FFFFFF';
 
-    const activeColor = tintColor || '#0036F8';
-    const activeBg = isDark ? 'rgba(0,54,248,0.18)' : 'rgba(0,54,248,0.08)';
+    const activeColor = tintColor || '#007AFF';
+    const activeBg = isDark ? 'rgba(0, 122, 255,0.18)' : 'rgba(0, 122, 255,0.08)';
 
     useEffect(() => {
         if (visible) {

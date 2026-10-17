@@ -78,7 +78,7 @@ export function generateDocHeader(tenant: ExportTenantInfo | undefined, reportTi
         logoHtml = `<svg class="brand-logo-svg" viewBox="0 0 1080 1080"><path fill="#d91011" d="${ADIDAYA_SVG_PATH}"/></svg>`;
     } else {
         const initials = (tenant?.companyCode || companyName.split(' ').map(w => w[0]).join('').slice(0, 3) || 'ORG').toUpperCase();
-        const primaryColor = tenant?.primaryColor || '#0036F8';
+        const primaryColor = tenant?.primaryColor || '#007AFF';
         logoHtml = `<div class="brand-avatar-badge" style="background: ${primaryColor};">${initials}</div>`;
     }
 

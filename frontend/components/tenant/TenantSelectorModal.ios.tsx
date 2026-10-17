@@ -58,9 +58,9 @@ export const TenantSelectorModal: React.FC<TenantSelectorModalProps> = memo(({
     const chevronColor = isDark ? '#8E8E93' : '#AEAEB2';
     const cardBg = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(120, 120, 128, 0.08)';
 
-    const primaryBlue = '#0036F8';
-    const accentBlue = isDark ? '#38BDF8' : '#0036F8';
-    const blueBadgeBg = isDark ? 'rgba(56, 189, 248, 0.18)' : 'rgba(0, 54, 248, 0.12)';
+    const primaryBlue = '#007AFF';
+    const accentBlue = isDark ? '#38BDF8' : '#007AFF';
+    const blueBadgeBg = isDark ? 'rgba(56, 189, 248, 0.18)' : 'rgba(0, 122, 255, 0.12)';
 
     // Dynamic height based on tenant count
     const detentHeight = tenants.length === 0 ? 0.35 : Math.min(0.68, 0.38 + tenants.length * 0.11);
@@ -296,7 +296,7 @@ export const TenantSelectorModal: React.FC<TenantSelectorModalProps> = memo(({
                                     systemName="building.2.fill" 
                                     size={18} 
                                     color={primaryBlue} 
-                                    modifiers={circleIconModifiers('rgba(0, 54, 248, 0.14)')} 
+                                    modifiers={circleIconModifiers('rgba(0, 122, 255, 0.14)')} 
                                 />
                                 <VStack alignment="leading" spacing={2}>
                                     <SwiftUIText size={16} weight="semibold" color={textColor}>

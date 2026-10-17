@@ -847,10 +847,10 @@ export const SwiftUIAddActivitySheet: React.FC<SwiftUIAddActivitySheetProps> = (
                             </HStack>
                         </Button>
 
-                        {/* Right: Post Activity Log (Forma Blue #0036F8) */}
+                        {/* Right: Post Activity Log (Forma Blue #007AFF) */}
                         <Button
                             variant="glassProminent"
-                            color="#0036F8"
+                            color="#007AFF"
                             onPress={() => handleSave(false)}
                             disabled={isSaving || isSavingDraft}
                             modifiers={[frame({ maxWidth: Infinity }), cornerRadius(999)]}

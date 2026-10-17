@@ -65,8 +65,8 @@ export const SwiftUIAddActionSheet: React.FC<SwiftUIAddActionSheetProps> = ({
     const fieldBorderColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'transparent';
     const fieldBorderWidth = isDark ? 1 : 0;
     const formaColor = FormaBlue[400];
-    const formaTintBg = isDark ? 'rgba(86, 151, 255, 0.15)' : 'rgba(86, 151, 255, 0.1)';
-    const formaTintBorder = isDark ? 'rgba(86, 151, 255, 0.3)' : 'rgba(86, 151, 255, 0.25)';
+    const formaTintBg = isDark ? 'rgba(10, 132, 255, 0.15)' : 'rgba(10, 132, 255, 0.1)';
+    const formaTintBorder = isDark ? 'rgba(10, 132, 255, 0.3)' : 'rgba(10, 132, 255, 0.25)';
 
     const isAdidayaTenant = !!activeTenant && (
         (activeTenant.name || '').toLowerCase().includes('adidaya') ||
@@ -374,7 +374,7 @@ export const SwiftUIAddActionSheet: React.FC<SwiftUIAddActionSheetProps> = ({
 
                         {isLoading ? (
                             <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color="#0036F8" />
+                                <ActivityIndicator size="large" color="#007AFF" />
                                 <Text style={{ color: subtextColor, marginTop: 8, fontWeight: '500' }}>Fetching action configuration...</Text>
                             </View>
                         ) : (
@@ -412,7 +412,7 @@ export const SwiftUIAddActionSheet: React.FC<SwiftUIAddActionSheetProps> = ({
                                             }]}
                                         >
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                                <View style={[styles.projectBadge, { backgroundColor: '#0036F8', marginRight: 0 }]}>
+                                                <View style={[styles.projectBadge, { backgroundColor: '#007AFF', marginRight: 0 }]}>
                                                     <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
                                                         {projectCode || 'GEN'}
                                                     </Text>
@@ -441,8 +441,8 @@ export const SwiftUIAddActionSheet: React.FC<SwiftUIAddActionSheetProps> = ({
                                                         style={[
                                                             styles.typePill,
                                                             {
-                                                                backgroundColor: isSelected ? '#0036F8' : fieldBg,
-                                                                borderColor: isSelected ? '#0036F8' : fieldBorderColor,
+                                                                backgroundColor: isSelected ? '#007AFF' : fieldBg,
+                                                                borderColor: isSelected ? '#007AFF' : fieldBorderColor,
                                                                 borderWidth: isSelected ? 1 : fieldBorderWidth,
                                                             }
                                                         ]}
@@ -531,10 +531,10 @@ export const SwiftUIAddActionSheet: React.FC<SwiftUIAddActionSheetProps> = ({
                                                             setSelectedReviewers(prev => prev.filter(r => r.id !== reviewer.id));
                                                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                                         }}
-                                                        style={[styles.avatarChip, { backgroundColor: '#0036F8', borderColor: 'transparent' }]}
+                                                        style={[styles.avatarChip, { backgroundColor: '#007AFF', borderColor: 'transparent' }]}
                                                     >
                                                         <View style={[styles.miniAvatar, { backgroundColor: '#FFFFFF', borderColor: 'transparent', width: 20, height: 20 }]}>
-                                                            <Text style={[styles.miniAvatarText, { color: '#0036F8', fontSize: 7 }]}>
+                                                            <Text style={[styles.miniAvatarText, { color: '#007AFF', fontSize: 7 }]}>
                                                                 {((reviewer.name || 'Staff').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase())}
                                                             </Text>
                                                         </View>
@@ -569,8 +569,8 @@ export const SwiftUIAddActionSheet: React.FC<SwiftUIAddActionSheetProps> = ({
                                                         style={[
                                                             styles.modulePill,
                                                             {
-                                                                backgroundColor: isSelected ? '#0036F8' : fieldBg,
-                                                                borderColor: isSelected ? '#0036F8' : fieldBorderColor,
+                                                                backgroundColor: isSelected ? '#007AFF' : fieldBg,
+                                                                borderColor: isSelected ? '#007AFF' : fieldBorderColor,
                                                                 borderWidth: isSelected ? 1 : fieldBorderWidth,
                                                             }
                                                         ]}
@@ -684,7 +684,7 @@ export const SwiftUIAddActionSheet: React.FC<SwiftUIAddActionSheetProps> = ({
 
                                         {isUploading && (
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                                                <ActivityIndicator size="small" color="#0036F8" />
+                                                <ActivityIndicator size="small" color="#007AFF" />
                                                 <Text style={{ color: subtextColor, fontSize: 12, fontWeight: '500' }}>Uploading attachment...</Text>
                                             </View>
                                         )}

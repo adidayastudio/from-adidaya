@@ -137,7 +137,7 @@ export default function ProjectSetupManagementScreen({
     if (isLoading) {
         return (
             <View style={[s.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color="#0036F8" />
+                <ActivityIndicator size="large" color="#007AFF" />
             </View>
         );
     }

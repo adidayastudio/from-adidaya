@@ -194,7 +194,7 @@ export async function getProjects(workspaceOrTenantId?: string) {
             phase: formattedPhase,
             status: p.status || 'planning',
             progress: (p.meta?.progress !== undefined) ? Number(p.meta.progress) : ((localMeta.progress !== undefined) ? Number(localMeta.progress) : (Number(getField(p, ['progress', 'percentage', 'completion', 'completion_percentage', 'progress_percentage'])) || 0)),
-            themeColor: toString(getField(p, ['theme_color', 'color', 'accent_color'])) || '#0036F8',
+            themeColor: toString(getField(p, ['theme_color', 'color', 'accent_color'])) || '#007AFF',
             heroImage: heroImg ? (typeof heroImg === 'string' ? { uri: heroImg } : heroImg) : null,
             isArchived: getField(p, ['is_archived', 'archived', 'deleted']) || p.status === 'archived' || localMeta.isArchived || false,
             isPinned: getField(p, ['is_pinned', 'pinned', 'favorite', 'is_favorite']) || localMeta.isFavorite || false,
@@ -268,7 +268,7 @@ export async function getProjectById(id: string) {
         phase: formattedPhase,
         status: data.status || 'planning',
         progress: (data.meta?.progress !== undefined) ? Number(data.meta.progress) : ((localMeta.progress !== undefined) ? Number(localMeta.progress) : (Number(getField(data, ['progress', 'percentage', 'completion', 'completion_percentage', 'progress_percentage'])) || 0)),
-        themeColor: toString(getField(data, ['theme_color', 'color', 'accent_color'])) || '#0036F8',
+        themeColor: toString(getField(data, ['theme_color', 'color', 'accent_color'])) || '#007AFF',
         heroImage: heroImgUrl ? (typeof heroImgUrl === 'string' ? { uri: heroImgUrl } : heroImgUrl) : null,
         isArchived: getField(data, ['is_archived', 'archived', 'deleted']) || data.status === 'archived' || localMeta.isArchived || false,
         isPinned: getField(data, ['is_pinned', 'pinned', 'favorite', 'is_favorite']) || localMeta.isFavorite || false,
@@ -488,7 +488,7 @@ export async function createProjectApi(project: {
             location: data.location?.city || '',
             phase: data.status || 'Planning',
             progress: 0,
-            themeColor: '#0036F8', // Forma Blue
+            themeColor: '#007AFF', // Forma Blue
             heroImage: null,
             isArchived: false,
             isPinned: false,

@@ -52,11 +52,11 @@ function Material3TabItem({
     iconName = (isFocused ? contextAction.iconFocused || contextAction.icon : contextAction.icon) as any;
   }
 
-  // Brand Color (#0036f8)
-  const brandBlue = isDark ? '#3D6BFF' : '#0036f8';
+  // Brand Color (#007AFF)
+  const brandBlue = isDark ? '#3D6BFF' : '#007AFF';
 
   const pillBgColor = isFocused
-    ? (isDark ? 'rgba(0, 54, 248, 0.22)' : 'rgba(0, 54, 248, 0.12)')
+    ? (isDark ? 'rgba(0, 122, 255, 0.22)' : 'rgba(0, 122, 255, 0.12)')
     : 'transparent';
 
   const iconColor = isFocused

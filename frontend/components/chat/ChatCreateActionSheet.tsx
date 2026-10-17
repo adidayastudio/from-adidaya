@@ -251,7 +251,7 @@ export function ChatCreateActionSheet({
                                                 styles.destCard,
                                                 {
                                                     backgroundColor: isSelected
-                                                        ? (isDark ? 'rgba(86,151,255,0.18)' : 'rgba(0,54,248,0.08)')
+                                                        ? (isDark ? 'rgba(10, 132, 255,0.18)' : 'rgba(0, 122, 255,0.08)')
                                                         : cardBg,
                                                     borderColor: isSelected ? FormaBlue[700] : borderColor,
                                                     borderWidth: isSelected ? 1.5 : 1,

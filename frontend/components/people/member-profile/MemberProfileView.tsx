@@ -216,7 +216,7 @@ export function MemberProfileView({ params, isEmbedded = false, controlledTab, o
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <TouchableOpacity
                             onPress={handlePrintFromPanel}
-                            style={[styles.closeButton, { backgroundColor: '#0036F8', width: 'auto', paddingHorizontal: 12, height: 30, borderRadius: 15, flexDirection: 'row', gap: 6 }]}
+                            style={[styles.closeButton, { backgroundColor: '#007AFF', width: 'auto', paddingHorizontal: 12, height: 30, borderRadius: 15, flexDirection: 'row', gap: 6 }]}
                             activeOpacity={0.8}
                         >
                             <PlatformIcon name="arrow.down.doc" size={13} tintColor="#FFFFFF" />

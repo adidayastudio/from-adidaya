@@ -21,7 +21,7 @@ import {
 } from '@/lib/announcements';
 
 const VIBRANT_GRADIENTS: Record<AnnouncementTemplateKey, [string, string, string]> = {
-    general: ['#0036F8', '#1A56FF', '#437BFF'],
+    general: ['#007AFF', '#1A56FF', '#437BFF'],
     holiday: ['#0D9488', '#0EA5C6', '#22D3EE'],
     site_visit: ['#C2410C', '#EA580C', '#F59E0B'],
     system_update: ['#1E40AF', '#2563EB', '#3B82F6'],
@@ -49,8 +49,8 @@ function getContextualBriefEmptyState(hour: number, attendanceStatus?: string | 
             icon: 'sun.min.fill',
             title: 'Your day is just getting started',
             subtitle: 'Brief will update as activity comes in.',
-            iconTint: '#0036F8',
-            iconBg: 'rgba(0, 54, 248, 0.08)',
+            iconTint: '#007AFF',
+            iconBg: 'rgba(0, 122, 255, 0.08)',
         };
     }
 
@@ -59,8 +59,8 @@ function getContextualBriefEmptyState(hour: number, attendanceStatus?: string | 
             icon: 'checkmark.circle.fill',
             title: 'Nothing carried over',
             subtitle: 'Today wrapped up cleanly.',
-            iconTint: '#0036F8',
-            iconBg: 'rgba(0, 54, 248, 0.08)',
+            iconTint: '#007AFF',
+            iconBg: 'rgba(0, 122, 255, 0.08)',
         };
     }
 
@@ -69,8 +69,8 @@ function getContextualBriefEmptyState(hour: number, attendanceStatus?: string | 
         icon: 'checkmark.circle.fill',
         title: 'All clear for now',
         subtitle: 'Nothing unusual across your workday.',
-        iconTint: '#0036F8',
-        iconBg: 'rgba(0, 54, 248, 0.08)',
+        iconTint: '#007AFF',
+        iconBg: 'rgba(0, 122, 255, 0.08)',
     };
 }
 
@@ -504,14 +504,14 @@ const styles = StyleSheet.create({
         minWidth: 22,
         height: 22,
         borderRadius: 11,
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         alignItems: 'center',
         justifyContent: 'center',
         paddingHorizontal: 5,
         borderWidth: Platform.OS === 'android' ? 0 : 2,
         ...Platform.select({
             ios: {
-                shadowColor: '#0036F8',
+                shadowColor: '#007AFF',
                 shadowOffset: { width: 0, height: 2 },
                 shadowOpacity: 0.35,
                 shadowRadius: 5,

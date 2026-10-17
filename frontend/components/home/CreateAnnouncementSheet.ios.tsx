@@ -407,7 +407,7 @@ export function CreateAnnouncementSheet({
                                 <Button
                                     systemImage={showDraftsView ? "square.and.pencil" : "folder"}
                                     variant="plain"
-                                    color="#0036F8"
+                                    color="#007AFF"
                                     onPress={() => setShowDraftsView(prev => !prev)}
                                 >
                                     {showDraftsView ? 'Form' : `Drafts (${draftsList.length})`}
@@ -434,7 +434,7 @@ export function CreateAnnouncementSheet({
                                 ) : (
                                     draftsList.map((draft) => (
                                         <HStack key={draft.id} alignment="center" modifiers={[padding({ vertical: 4 })]}>
-                                            <SwiftUIImage systemName="doc.text" size={18} color="#0036F8" />
+                                            <SwiftUIImage systemName="doc.text" size={18} color="#007AFF" />
                                             <VStack alignment="leading" spacing={2} modifiers={[padding({ leading: 6 })]}>
                                                 <SwiftUIText size={15} weight="semibold" color={textColor}>
                                                     {draft.title || 'Untitled Draft'}
@@ -447,7 +447,7 @@ export function CreateAnnouncementSheet({
                                             <HStack spacing={16} alignment="center">
                                                 <Button
                                                     variant="plain"
-                                                    color="#0036F8"
+                                                    color="#007AFF"
                                                     onPress={() => applyDraft(draft)}
                                                 >
                                                     Load
@@ -475,7 +475,7 @@ export function CreateAnnouncementSheet({
                                         <SwiftUIImage
                                             systemName={ANNOUNCEMENT_TEMPLATES[selectedTemplateKey]?.icon || 'megaphone.fill'}
                                             size={20}
-                                            color={ANNOUNCEMENT_TEMPLATES[selectedTemplateKey]?.accent || '#0036F8'}
+                                            color={ANNOUNCEMENT_TEMPLATES[selectedTemplateKey]?.accent || '#007AFF'}
                                         />
                                         <Picker
                                             label="Template Category"
@@ -505,14 +505,14 @@ export function CreateAnnouncementSheet({
                                         placeholder="Headline Title"
                                         defaultValue={title}
                                         onChangeText={setTitle}
-                                        modifiers={[tint('#0036F8')]}
+                                        modifiers={[tint('#007AFF')]}
                                     />
                                     <TextField
                                         placeholder="Subtitle / Short Summary"
                                         defaultValue={subtitle}
                                         onChangeText={setSubtitle}
                                         multiline
-                                        modifiers={[tint('#0036F8')]}
+                                        modifiers={[tint('#007AFF')]}
                                     />
                                 </Section>
 
@@ -533,7 +533,7 @@ export function CreateAnnouncementSheet({
                                             placeholder="Custom Schedule (e.g. Every Monday, 09:00 AM)"
                                             defaultValue={customScheduleText}
                                             onChangeText={setCustomScheduleText}
-                                            modifiers={[tint('#0036F8')]}
+                                            modifiers={[tint('#007AFF')]}
                                         />
                                     ) : (
                                         <DateTimePicker
@@ -554,7 +554,7 @@ export function CreateAnnouncementSheet({
                                         defaultValue={bodyContent}
                                         onChangeText={setBodyContent}
                                         multiline
-                                        modifiers={[tint('#0036F8')]}
+                                        modifiers={[tint('#007AFF')]}
                                     />
                                 </Section>
 
@@ -563,7 +563,7 @@ export function CreateAnnouncementSheet({
                                     <Button
                                         systemImage={coverImageUrl ? "photo" : "photo.badge.plus"}
                                         variant="plain"
-                                        color="#0036F8"
+                                        color="#007AFF"
                                         onPress={handlePickBanner}
                                     >
                                         {coverImageUrl ? "Change Custom Banner (16:9)" : "Upload Banner"}
@@ -590,20 +590,20 @@ export function CreateAnnouncementSheet({
                                         label="Broadcast Push Notification"
                                         value={broadcastPush}
                                         onValueChange={setBroadcastPush}
-                                        color="#0036F8"
+                                        color="#007AFF"
                                     />
 
                                     <Switch
                                         label="Pin on Home Brief"
                                         value={isFeatured}
                                         onValueChange={setIsFeatured}
-                                        color="#0036F8"
+                                        color="#007AFF"
                                     />
 
                                     <Button
                                         systemImage="paperclip"
                                         variant="plain"
-                                        color="#0036F8"
+                                        color="#007AFF"
                                         onPress={handleAttachOptions}
                                     >
                                         {documents.length > 0 ? "Attach More (Files / Photos)" : "Attach Documents (PDF / Photos)"}
@@ -661,7 +661,7 @@ export function CreateAnnouncementSheet({
 
                             <Button
                                 variant="glassProminent"
-                                color="#0036F8"
+                                color="#007AFF"
                                 disabled={isSubmitting}
                                 onPress={handleSubmit}
                             >

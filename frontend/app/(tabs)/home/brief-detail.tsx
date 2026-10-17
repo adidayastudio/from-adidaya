@@ -43,7 +43,7 @@ export default function BriefDetailScreen() {
     const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
     const paneBgColor = isDark ? '#000000' : '#F2F2F7';
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
-    const formaBlue = isDark ? '#4D82FF' : '#0036F8';
+    const formaBlue = isDark ? '#4D82FF' : '#007AFF';
 
     const { attendanceStatus, todaySessions, refreshAttendance } = useUserContext();
     const { tenantRole, isSuperAdmin, activeTenant } = useTenantContext();
@@ -133,8 +133,8 @@ export default function BriefDetailScreen() {
                 icon: 'sun.min.fill',
                 title: 'Your day is just getting started',
                 subtitle: 'Brief will update as activity comes in.',
-                iconTint: '#0036F8',
-                iconBg: 'rgba(0, 54, 248, 0.08)',
+                iconTint: '#007AFF',
+                iconBg: 'rgba(0, 122, 255, 0.08)',
             };
         }
 
@@ -143,8 +143,8 @@ export default function BriefDetailScreen() {
                 icon: 'checkmark.circle.fill',
                 title: 'Nothing carried over',
                 subtitle: 'Today wrapped up cleanly.',
-                iconTint: '#0036F8',
-                iconBg: 'rgba(0, 54, 248, 0.08)',
+                iconTint: '#007AFF',
+                iconBg: 'rgba(0, 122, 255, 0.08)',
             };
         }
 
@@ -152,8 +152,8 @@ export default function BriefDetailScreen() {
             icon: 'checkmark.circle.fill',
             title: 'All clear for now',
             subtitle: 'Nothing unusual across your workday.',
-            iconTint: '#0036F8',
-            iconBg: 'rgba(0, 54, 248, 0.08)',
+            iconTint: '#007AFF',
+            iconBg: 'rgba(0, 122, 255, 0.08)',
         };
     }, [currentHour, attendanceStatus]);
 
@@ -321,7 +321,7 @@ export default function BriefDetailScreen() {
                                     isDark ? styles.historyCardDark : styles.historyCardLight,
                                     isSelected && {
                                         borderColor: formaBlue,
-                                        backgroundColor: isDark ? 'rgba(0, 54, 248, 0.16)' : '#EFF6FF',
+                                        backgroundColor: isDark ? 'rgba(0, 122, 255, 0.16)' : '#EFF6FF',
                                     },
                                 ]}
                             >
@@ -378,11 +378,11 @@ export default function BriefDetailScreen() {
             ) : (
                 <View style={styles.emptyAnnouncementsWrapper}>
                     <View style={[styles.emptyStateCard, isDark ? styles.cardDark : styles.cardLight]}>
-                        <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(0, 54, 248, 0.08)' }]}>
+                        <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(0, 122, 255, 0.08)' }]}>
                             <PlatformIcon
                                 name="megaphone.fill"
                                 size={22}
-                                tintColor="#0036F8"
+                                tintColor="#007AFF"
                             />
                         </View>
                         <Text style={[styles.emptyStateTitle, { color: textColor }]}>
@@ -425,7 +425,7 @@ export default function BriefDetailScreen() {
                                 type="custom"
                                 iconName="plus"
                                 tintColor="#FFFFFF"
-                                style={{ backgroundColor: '#0036F8' }}
+                                style={{ backgroundColor: '#007AFF' }}
                                 onPress={() => {
                                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                     setShowCreateModal(true);
@@ -637,11 +637,11 @@ export default function BriefDetailScreen() {
                         ) : (
                             <View style={styles.emptyAnnouncementsWrapper}>
                                 <View style={[styles.emptyStateCard, isDark ? styles.cardDark : styles.cardLight]}>
-                                    <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(0, 54, 248, 0.08)' }]}>
+                                    <View style={[styles.emptyIconCircle, { backgroundColor: 'rgba(0, 122, 255, 0.08)' }]}>
                                         <PlatformIcon
                                             name="megaphone.fill"
                                             size={22}
-                                            tintColor="#0036F8"
+                                            tintColor="#007AFF"
                                         />
                                     </View>
                                     <Text style={[styles.emptyStateTitle, { color: textColor }]}>

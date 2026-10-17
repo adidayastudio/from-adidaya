@@ -63,7 +63,7 @@ export function SwiftUIAddMemberSheet({
 
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#6E6E73';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
 
     const groupedPeople = useMemo(() => {
         let list = peopleDirectory;

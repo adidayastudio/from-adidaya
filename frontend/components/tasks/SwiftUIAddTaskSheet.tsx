@@ -61,8 +61,8 @@ export const SwiftUIAddTaskSheet: React.FC<SwiftUIAddTaskSheetProps> = ({
     const fieldBorderColor = isDark ? 'rgba(255, 255, 255, 0.15)' : 'transparent';
     const fieldBorderWidth = isDark ? 1 : 0;
     const formaColor = FormaBlue[400];
-    const formaTintBg = isDark ? 'rgba(86, 151, 255, 0.15)' : 'rgba(86, 151, 255, 0.1)';
-    const formaTintBorder = isDark ? 'rgba(86, 151, 255, 0.3)' : 'rgba(86, 151, 255, 0.25)';
+    const formaTintBg = isDark ? 'rgba(10, 132, 255, 0.15)' : 'rgba(10, 132, 255, 0.1)';
+    const formaTintBorder = isDark ? 'rgba(10, 132, 255, 0.3)' : 'rgba(10, 132, 255, 0.25)';
 
     const isAdidayaTenant = !!activeTenant && (
         (activeTenant.name || '').toLowerCase().includes('adidaya') ||
@@ -540,7 +540,7 @@ export const SwiftUIAddTaskSheet: React.FC<SwiftUIAddTaskSheetProps> = ({
 
                         {isLoading ? (
                             <View style={styles.loadingContainer}>
-                                <ActivityIndicator size="large" color="#0036F8" />
+                                <ActivityIndicator size="large" color="#007AFF" />
                                 <Text style={{ color: subtextColor, marginTop: 8, fontWeight: '500' }}>Fetching setup options...</Text>
                             </View>
                         ) : (
@@ -594,7 +594,7 @@ export const SwiftUIAddTaskSheet: React.FC<SwiftUIAddTaskSheetProps> = ({
                                                 } as any]}
                                             >
                                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                                                    <View style={[styles.projectBadge, { backgroundColor: '#0036F8', marginRight: 0 }]}>
+                                                    <View style={[styles.projectBadge, { backgroundColor: '#007AFF', marginRight: 0 }]}>
                                                         <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '700' }}>
                                                             {newTask.projectCode || 'GEN'}
                                                         </Text>
@@ -718,13 +718,13 @@ export const SwiftUIAddTaskSheet: React.FC<SwiftUIAddTaskSheetProps> = ({
                                                         style={[
                                                             styles.avatarChip,
                                                             {
-                                                                backgroundColor: '#0036F8',
+                                                                backgroundColor: '#007AFF',
                                                                 borderColor: 'transparent'
                                                             }
                                                         ]}
                                                     >
                                                         <View style={[styles.miniAvatar, { backgroundColor: '#FFFFFF', borderColor: 'transparent', width: 20, height: 20 }]}>
-                                                            <Text style={[styles.miniAvatarText, { color: '#0036F8', fontSize: 7 }]}>
+                                                            <Text style={[styles.miniAvatarText, { color: '#007AFF', fontSize: 7 }]}>
                                                                 {((member.name || 'Staff').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase())}
                                                             </Text>
                                                         </View>
@@ -852,8 +852,8 @@ export const SwiftUIAddTaskSheet: React.FC<SwiftUIAddTaskSheetProps> = ({
                                                         style={[
                                                             styles.modulePill,
                                                             {
-                                                                backgroundColor: isSelected ? '#0036F8' : fieldBg,
-                                                                borderColor: isSelected ? '#0036F8' : fieldBorderColor,
+                                                                backgroundColor: isSelected ? '#007AFF' : fieldBg,
+                                                                borderColor: isSelected ? '#007AFF' : fieldBorderColor,
                                                                 borderWidth: isSelected ? 1 : fieldBorderWidth,
                                                             }
                                                         ]}
@@ -967,7 +967,7 @@ export const SwiftUIAddTaskSheet: React.FC<SwiftUIAddTaskSheetProps> = ({
 
                                         {isUploading && (
                                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                                                <ActivityIndicator size="small" color="#0036F8" />
+                                                <ActivityIndicator size="small" color="#007AFF" />
                                                 <Text style={{ color: subtextColor, fontSize: 12, fontWeight: '500' }}>Uploading attachment...</Text>
                                             </View>
                                         )}

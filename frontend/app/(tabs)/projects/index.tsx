@@ -56,7 +56,7 @@ export const PER_PROJECT_SETUP_MENU_ITEMS = [
 ];
 
 const PROJECT_WORKSPACE_NAV_ITEMS = [
-    { id: 'overview', title: 'Overview', subtitle: 'Summary & key health', icon: 'doc.text.fill', color: '#0036F8', gradientColors: ['#0036F8', '#5697FF'] },
+    { id: 'overview', title: 'Overview', subtitle: 'Summary & key health', icon: 'doc.text.fill', color: '#007AFF', gradientColors: ['#007AFF', '#0A84FF'] },
     { id: 'work', title: 'Work & Tracking', subtitle: 'Milestones, tasks, actions', icon: 'checklist', color: '#34C759', gradientColors: ['#34C759', '#30D158'] },
     { id: 'activity', title: 'Activity Feed', subtitle: 'Team updates & logs', icon: 'bolt.horizontal.fill', color: '#FF9500', gradientColors: ['#FF9500', '#FFCC00'] },
     { id: 'docs', title: 'Documents', subtitle: 'Blueprints, files & folders', icon: 'folder.fill', color: '#AF52DE', gradientColors: ['#AF52DE', '#BF5AF2'] },
@@ -141,7 +141,7 @@ export default function ProjectScreen() {
     }, [projects, isDesktopWeb]);
 
     const tenantLogoUrl = activeTenant?.branding_logo_url || activeTenant?.logo_url;
-    const primaryColor = activeTenant?.primary_color || '#0036F8';
+    const primaryColor = activeTenant?.primary_color || '#007AFF';
     const tenantInitial = (activeTenant?.branding_name || activeTenant?.name || 'T').charAt(0).toUpperCase();
 
     const isAdidaya = isAdidayaTenant(activeTenant);
@@ -479,11 +479,11 @@ export default function ProjectScreen() {
                                                     styles.compactMenuCard,
                                                     {
                                                         backgroundColor: isSelected
-                                                            ? (isDark ? 'rgba(86, 151, 255, 0.22)' : FormaBlue[100])
+                                                            ? (isDark ? 'rgba(10, 132, 255, 0.22)' : FormaBlue[100])
                                                             : (isDark ? '#1C1C1E' : '#FFFFFF'),
                                                         borderWidth: 1,
                                                         borderColor: isSelected
-                                                            ? (isDark ? 'rgba(86, 151, 255, 0.4)' : FormaBlue[400])
+                                                            ? (isDark ? 'rgba(10, 132, 255, 0.4)' : FormaBlue[400])
                                                             : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
                                                         marginBottom: 6,
                                                     },
@@ -586,11 +586,11 @@ export default function ProjectScreen() {
                                                                     styles.compactMenuCard,
                                                                     {
                                                                         backgroundColor: isSelected
-                                                                            ? (isDark ? 'rgba(86, 151, 255, 0.22)' : FormaBlue[100])
+                                                                            ? (isDark ? 'rgba(10, 132, 255, 0.22)' : FormaBlue[100])
                                                                             : (isDark ? '#1C1C1E' : '#FFFFFF'),
                                                                         borderWidth: 1,
                                                                         borderColor: isSelected
-                                                                            ? (isDark ? 'rgba(86, 151, 255, 0.4)' : FormaBlue[400])
+                                                                            ? (isDark ? 'rgba(10, 132, 255, 0.4)' : FormaBlue[400])
                                                                             : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
                                                                     },
                                                                 ]}
@@ -746,11 +746,11 @@ export default function ProjectScreen() {
                                                                 styles.compactCard,
                                                                 {
                                                                     backgroundColor: isSelected
-                                                                        ? (isDark ? 'rgba(86, 151, 255, 0.22)' : FormaBlue[100])
+                                                                        ? (isDark ? 'rgba(10, 132, 255, 0.22)' : FormaBlue[100])
                                                                         : (isDark ? '#1C1C1E' : '#FFFFFF'),
                                                                     borderWidth: 1,
                                                                     borderColor: isSelected
-                                                                        ? (isDark ? 'rgba(86, 151, 255, 0.4)' : FormaBlue[400])
+                                                                        ? (isDark ? 'rgba(10, 132, 255, 0.4)' : FormaBlue[400])
                                                                         : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'),
                                                                 }
                                                             ]}
@@ -919,7 +919,7 @@ export default function ProjectScreen() {
                             </Animated.View>
                         ) : (
                             <View style={styles.desktopEmptyPane}>
-                                <View style={[styles.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 54, 248, 0.08)' }]}>
+                                <View style={[styles.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 122, 255, 0.08)' }]}>
                                     <PlatformIcon
                                         name="folder.fill"
                                         size={44}

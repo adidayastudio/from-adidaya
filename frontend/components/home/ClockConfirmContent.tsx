@@ -712,7 +712,7 @@ export function ClockConfirmContent({ isClockedIn, userName, onConfirm, onCancel
                                 onPress={onRefresh}
                                 style={[
                                     styles.formActionRow,
-                                    { backgroundColor: isDark ? 'rgba(86,151,255,0.18)' : 'rgba(86,151,255,0.12)' }
+                                    { backgroundColor: isDark ? 'rgba(10, 132, 255,0.18)' : 'rgba(10, 132, 255,0.12)' }
                                 ]}
                             >
                                 <PlatformIcon name="location.fill" size={17} tintColor={FormaBlue[400]} />
@@ -808,7 +808,7 @@ export function ClockConfirmContent({ isClockedIn, userName, onConfirm, onCancel
                                                 </Text>
                                                 <TouchableOpacity
                                                     onPress={startWebCamera}
-                                                    style={{ marginTop: 12, paddingHorizontal: 18, paddingVertical: 8, backgroundColor: '#0036F8', borderRadius: 999 }}
+                                                    style={{ marginTop: 12, paddingHorizontal: 18, paddingVertical: 8, backgroundColor: '#007AFF', borderRadius: 999 }}
                                                 >
                                                     <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Allow Camera</Text>
                                                 </TouchableOpacity>
@@ -868,8 +868,8 @@ export function ClockConfirmContent({ isClockedIn, userName, onConfirm, onCancel
                             disabled={isCapturing}
                             noBorder={true}
                             noShadow={true}
-                            textColor={isDark ? '#93C5FD' : '#0036F8'}
-                            icon={<PlatformIcon name="camera.fill" size={18} tintColor={isDark ? '#93C5FD' : '#0036F8'} />}
+                            textColor={isDark ? '#93C5FD' : '#007AFF'}
+                            icon={<PlatformIcon name="camera.fill" size={18} tintColor={isDark ? '#93C5FD' : '#007AFF'} />}
                             style={{ marginTop: 12 }}
                         />
                     </View>
@@ -893,7 +893,7 @@ export function ClockConfirmContent({ isClockedIn, userName, onConfirm, onCancel
                     onPress={() => { void handleConfirm(); }}
                     disabled={isSubmitting || isCapturing}
                     activeOpacity={0.8}
-                    style={{ width: '100%', height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', backgroundColor: isClockIn ? '#0036F8' : '#FF3B30', opacity: isSubmitting || isCapturing ? 0.6 : 1 }}
+                    style={{ width: '100%', height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', backgroundColor: isClockIn ? '#007AFF' : '#FF3B30', opacity: isSubmitting || isCapturing ? 0.6 : 1 }}
                 >
                     <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '700' }}>{isSubmitting ? 'Saving…' : actionLabel}</Text>
                 </TouchableOpacity>

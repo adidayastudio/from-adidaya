@@ -380,7 +380,7 @@ export default function AnnouncementDetailScreen() {
                 icon: 'add-outline',
                 image: 'plus',
                 title: 'New Announcement',
-                tintColor: '#0036F8',
+                tintColor: '#007AFF',
                 onPress: () => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setShowCreateModal(true);
@@ -436,7 +436,7 @@ export default function AnnouncementDetailScreen() {
             >
                 {isLoading && !activeAnnouncement ? (
                     <View style={{ paddingVertical: 60, alignItems: 'center', justifyContent: 'center' }}>
-                        <ActivityIndicator size="large" color="#0036F8" />
+                        <ActivityIndicator size="large" color="#007AFF" />
                     </View>
                 ) : !activeAnnouncement ? (
                     <View style={{ paddingVertical: 60, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}>
@@ -540,7 +540,7 @@ export default function AnnouncementDetailScreen() {
 
                                         return (
                                             <LinearGradient
-                                                colors={['#0036F8', '#3872FF']}
+                                                colors={['#007AFF', '#3872FF']}
                                                 style={styles.authorAvatar}
                                                 start={{ x: 0, y: 0 }}
                                                 end={{ x: 1, y: 1 }}
@@ -657,7 +657,7 @@ export default function AnnouncementDetailScreen() {
                                 activeOpacity={0.75}
                                 style={[styles.actionBtn, isDark ? styles.cardDark : styles.cardLight]}
                             >
-                                <PlatformIcon name="paperplane" size={15} tintColor="#0036F8" />
+                                <PlatformIcon name="paperplane" size={15} tintColor="#007AFF" />
                                 <Text style={[styles.actionBtnText, { color: textColor }]}>Share to Chat</Text>
                             </TouchableOpacity>
 
@@ -666,7 +666,7 @@ export default function AnnouncementDetailScreen() {
                                 activeOpacity={0.75}
                                 style={[styles.actionBtn, isDark ? styles.cardDark : styles.cardLight]}
                             >
-                                <PlatformIcon name="doc.on.doc" size={15} tintColor="#0036F8" />
+                                <PlatformIcon name="doc.on.doc" size={15} tintColor="#007AFF" />
                                 <Text style={[styles.actionBtnText, { color: textColor }]}>Copy Text</Text>
                             </TouchableOpacity>
 
@@ -675,7 +675,7 @@ export default function AnnouncementDetailScreen() {
                                 activeOpacity={0.75}
                                 style={[styles.actionBtn, isDark ? styles.cardDark : styles.cardLight]}
                             >
-                                <PlatformIcon name="square.and.arrow.up" size={15} tintColor="#0036F8" />
+                                <PlatformIcon name="square.and.arrow.up" size={15} tintColor="#007AFF" />
                                 <Text style={[styles.actionBtnText, { color: textColor }]}>Share...</Text>
                             </TouchableOpacity>
 
@@ -686,7 +686,7 @@ export default function AnnouncementDetailScreen() {
                                         activeOpacity={0.75}
                                         style={[styles.actionBtn, isDark ? styles.cardDark : styles.cardLight]}
                                     >
-                                        <PlatformIcon name={activeAnnouncement.isFeatured ? 'pin.slash' : 'pin'} size={15} tintColor="#0036F8" />
+                                        <PlatformIcon name={activeAnnouncement.isFeatured ? 'pin.slash' : 'pin'} size={15} tintColor="#007AFF" />
                                         <Text style={[styles.actionBtnText, { color: textColor }]}>
                                             {activeAnnouncement.isFeatured ? 'Unpin' : 'Pin'}
                                         </Text>
@@ -697,7 +697,7 @@ export default function AnnouncementDetailScreen() {
                                         activeOpacity={0.75}
                                         style={[styles.actionBtn, isDark ? styles.cardDark : styles.cardLight]}
                                     >
-                                        <PlatformIcon name={activeAnnouncement.isWithdrawn ? 'arrow.uturn.backward' : 'xmark.circle'} size={15} tintColor={activeAnnouncement.isWithdrawn ? '#0036F8' : '#DC2626'} />
+                                        <PlatformIcon name={activeAnnouncement.isWithdrawn ? 'arrow.uturn.backward' : 'xmark.circle'} size={15} tintColor={activeAnnouncement.isWithdrawn ? '#007AFF' : '#DC2626'} />
                                         <Text style={[styles.actionBtnText, { color: activeAnnouncement.isWithdrawn ? textColor : '#DC2626' }]}>
                                             {activeAnnouncement.isWithdrawn ? 'Restore' : 'Withdraw'}
                                         </Text>
@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         ...Platform.select({
             ios: {
-                shadowColor: '#0036F8',
+                shadowColor: '#007AFF',
                 shadowOffset: { width: 0, height: 6 },
                 shadowOpacity: 0.18,
                 shadowRadius: 14,

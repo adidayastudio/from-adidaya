@@ -148,7 +148,7 @@ export default function AnnouncementHistoryScreen() {
     const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
     const paneBgColor = isDark ? '#000000' : '#F2F2F7';
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
 
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [selectedAnnouncementId, setSelectedAnnouncementId] = useState<string | null>(null);
@@ -414,7 +414,7 @@ export default function AnnouncementHistoryScreen() {
                                     type="custom"
                                     iconName="plus"
                                     tintColor="#FFFFFF"
-                                    style={{ backgroundColor: '#0036F8' }}
+                                    style={{ backgroundColor: '#007AFF' }}
                                     onPress={() => {
                                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                         setShowCreateSheet(true);
@@ -453,7 +453,7 @@ export default function AnnouncementHistoryScreen() {
                             {filteredAnnouncements.length === 0 ? (
                                 <View style={[styles.emptyContainer, isDark ? styles.cardDark : styles.cardLight]}>
                                     <View style={styles.emptyIconCircle}>
-                                        <PlatformIcon name="clock.arrow.circlepath" size={28} tintColor="#0036F8" />
+                                        <PlatformIcon name="clock.arrow.circlepath" size={28} tintColor="#007AFF" />
                                     </View>
                                     <Text style={[styles.emptyTitle, { color: textColor }]}>
                                         No Announcements
@@ -480,7 +480,7 @@ export default function AnnouncementHistoryScreen() {
                                                 isDark ? styles.cardDark : styles.cardLight,
                                                 isSelected && {
                                                     borderColor: formaBlue,
-                                                    backgroundColor: isDark ? 'rgba(0, 54, 248, 0.16)' : '#EFF6FF',
+                                                    backgroundColor: isDark ? 'rgba(0, 122, 255, 0.16)' : '#EFF6FF',
                                                 },
                                             ]}
                                         >
@@ -496,7 +496,7 @@ export default function AnnouncementHistoryScreen() {
                                                     </View>
                                                     {item.isFeatured && (
                                                         <View style={styles.featuredBadge}>
-                                                            <PlatformIcon name="pin.fill" size={11} tintColor="#0036F8" />
+                                                            <PlatformIcon name="pin.fill" size={11} tintColor="#007AFF" />
                                                             <Text style={styles.featuredBadgeText}>PINNED</Text>
                                                         </View>
                                                     )}
@@ -589,7 +589,7 @@ export default function AnnouncementHistoryScreen() {
                                         icon: 'add-outline',
                                         image: 'plus',
                                         title: 'New Announcement',
-                                        tintColor: '#0036F8',
+                                        tintColor: '#007AFF',
                                         onPress: () => {
                                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                             setShowCreateSheet(true);
@@ -627,7 +627,7 @@ export default function AnnouncementHistoryScreen() {
                 {filteredAnnouncements.length === 0 ? (
                     <View style={[styles.emptyContainer, isDark ? styles.cardDark : styles.cardLight]}>
                         <View style={styles.emptyIconCircle}>
-                            <PlatformIcon name="clock.arrow.circlepath" size={30} tintColor="#0036F8" />
+                            <PlatformIcon name="clock.arrow.circlepath" size={30} tintColor="#007AFF" />
                         </View>
                         <Text style={[styles.emptyTitle, { color: textColor }]}>
                             No Announcements Found
@@ -888,7 +888,7 @@ export default function AnnouncementHistoryScreen() {
                                         <PlatformIcon
                                             name="arrow.up.arrow.down"
                                             size={15}
-                                            tintColor={timeSortIndex !== 0 ? (isDark ? '#0A84FF' : '#0036F8') : textColor}
+                                            tintColor={timeSortIndex !== 0 ? (isDark ? '#0A84FF' : '#007AFF') : textColor}
                                         />
                                     </View>
                                 </View>
@@ -903,7 +903,7 @@ export default function AnnouncementHistoryScreen() {
                                         <PlatformIcon
                                             name="arrow.up.arrow.down"
                                             size={15}
-                                            tintColor={timeSortIndex !== 0 ? (isDark ? '#0A84FF' : '#0036F8') : textColor}
+                                            tintColor={timeSortIndex !== 0 ? (isDark ? '#0A84FF' : '#007AFF') : textColor}
                                         />
                                     </View>
                                 </GlassEffectContainer>
@@ -939,7 +939,7 @@ export default function AnnouncementHistoryScreen() {
                                         <PlatformIcon
                                             name="line.3.horizontal.decrease"
                                             size={15}
-                                            tintColor={statusFilter !== 'ALL' ? (isDark ? '#0A84FF' : '#0036F8') : textColor}
+                                            tintColor={statusFilter !== 'ALL' ? (isDark ? '#0A84FF' : '#007AFF') : textColor}
                                         />
                                     </View>
                                 </View>
@@ -954,7 +954,7 @@ export default function AnnouncementHistoryScreen() {
                                         <PlatformIcon
                                             name="line.3.horizontal.decrease"
                                             size={15}
-                                            tintColor={statusFilter !== 'ALL' ? (isDark ? '#0A84FF' : '#0036F8') : textColor}
+                                            tintColor={statusFilter !== 'ALL' ? (isDark ? '#0A84FF' : '#007AFF') : textColor}
                                         />
                                     </View>
                                 </GlassEffectContainer>
@@ -1124,7 +1124,7 @@ const styles = StyleSheet.create({
     itemDurationText: {
         fontSize: 11.5,
         fontWeight: '600',
-        color: '#0036F8',
+        color: '#007AFF',
     },
     itemDeptText: {
         fontSize: 11.5,
@@ -1174,7 +1174,7 @@ const styles = StyleSheet.create({
         width: 54,
         height: 54,
         borderRadius: 27,
-        backgroundColor: 'rgba(0,54,248,0.1)',
+        backgroundColor: 'rgba(0, 122, 255,0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 2,
@@ -1220,7 +1220,7 @@ const styles = StyleSheet.create({
         }),
     },
     bouncyGlassBtn: {
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         borderRadius: 22,
         overflow: 'hidden',
         borderWidth: StyleSheet.hairlineWidth,

@@ -3676,7 +3676,7 @@ export function ChatDetailContent({
                                                                               { backgroundColor: bubbleOtherBg },
                                                                           ],
                                                                     highlightedMessageId === item.id && {
-                                                                        backgroundColor: isDark ? 'rgba(86, 151, 255, 0.32)' : 'rgba(0, 54, 248, 0.14)',
+                                                                        backgroundColor: isDark ? 'rgba(10, 132, 255, 0.32)' : 'rgba(0, 122, 255, 0.14)',
                                                                     },
                                                                 ]}
                                                             >
@@ -3780,24 +3780,24 @@ export function ChatDetailContent({
                                                                                     marginTop: 8,
                                                                                     backgroundColor: (item.isSelf || isAnnouncementMsg)
                                                                                         ? 'rgba(0, 0, 0, 0.18)'
-                                                                                        : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 54, 248, 0.06)'),
+                                                                                        : (isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 122, 255, 0.06)'),
                                                                                     borderWidth: 1,
                                                                                     borderColor: (item.isSelf || isAnnouncementMsg)
                                                                                         ? 'rgba(255, 255, 255, 0.2)'
-                                                                                        : (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 54, 248, 0.12)'),
+                                                                                        : (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 122, 255, 0.12)'),
                                                                                 }}
                                                                             >
                                                                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
                                                                                     <PlatformIcon
                                                                                         name="megaphone.fill"
                                                                                         size={13}
-                                                                                        tintColor={(item.isSelf || isAnnouncementMsg) ? '#FFFFFF' : '#0036F8'}
+                                                                                        tintColor={(item.isSelf || isAnnouncementMsg) ? '#FFFFFF' : '#007AFF'}
                                                                                     />
                                                                                     <Text
                                                                                         style={{
                                                                                             fontSize: 12.5,
                                                                                             fontWeight: '600',
-                                                                                            color: (item.isSelf || isAnnouncementMsg) ? '#FFFFFF' : (isDark ? '#FFFFFF' : '#0036F8'),
+                                                                                            color: (item.isSelf || isAnnouncementMsg) ? '#FFFFFF' : (isDark ? '#FFFFFF' : '#007AFF'),
                                                                                         }}
                                                                                         numberOfLines={1}
                                                                                     >
@@ -4068,7 +4068,7 @@ export function ChatDetailContent({
                                                                         ? styles.docBubbleSelf
                                                                         : [styles.docBubbleOther, { backgroundColor: bubbleOtherBg }],
                                                                     highlightedMessageId === item.id && {
-                                                                        backgroundColor: isDark ? 'rgba(86, 151, 255, 0.32)' : 'rgba(0, 54, 248, 0.14)',
+                                                                        backgroundColor: isDark ? 'rgba(10, 132, 255, 0.32)' : 'rgba(0, 122, 255, 0.14)',
                                                                     },
                                                                 ]}
                                                             >
@@ -4743,14 +4743,14 @@ export function ChatDetailContent({
                                                      onPress={() => handleActionCardPress(action, "Open Detail")}
                                                  >
                                                      <GlassView intensity={isDark ? 20 : 50} tint={isDark ? "dark" : "light"} style={[styles.filterCard, { backgroundColor: bubbleOtherBg, borderColor: borderTint }]}>
-                                                         <View style={[styles.filterIconBadge, { backgroundColor: isDark ? "rgba(86,151,255,0.18)" : "rgba(0,54,248,0.1)" }]}>
+                                                         <View style={[styles.filterIconBadge, { backgroundColor: isDark ? "rgba(10, 132, 255,0.18)" : "rgba(0, 122, 255,0.1)" }]}>
                                                              <Ionicons name="checkbox-outline" size={22} color={isDark ? FormaBlue[400] : FormaBlue[700]} />
                                                          </View>
                                                          <View style={{ flex: 1 }}>
                                                              <Text style={[styles.filterCardTitle, { color: textColor }]} numberOfLines={1}>{action.title}</Text>
                                                              <Text style={[styles.filterCardSubtitle, { color: subtextColor }]}>Assignee: {action.assignee} • Priority: {action.priority}</Text>
                                                          </View>
-                                                         <View style={[styles.statusBadge, { backgroundColor: action.status === "Completed" ? "rgba(52,199,89,0.15)" : (isDark ? "rgba(86,151,255,0.18)" : "rgba(0,54,248,0.1)") }]}>
+                                                         <View style={[styles.statusBadge, { backgroundColor: action.status === "Completed" ? "rgba(52,199,89,0.15)" : (isDark ? "rgba(10, 132, 255,0.18)" : "rgba(0, 122, 255,0.1)") }]}>
                                                              <Text style={[styles.statusBadgeText, { color: action.status === "Completed" ? "#34C759" : (isDark ? FormaBlue[400] : FormaBlue[700]) }]}>{action.status}</Text>
                                                          </View>
                                                      </GlassView>
@@ -6973,7 +6973,7 @@ const styles = StyleSheet.create({
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: 'rgba(0,54,248,0.1)',
+        backgroundColor: 'rgba(0, 122, 255,0.1)',
         alignItems: 'center',
         justifyContent: 'center',
     },

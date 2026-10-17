@@ -19,7 +19,7 @@ export function LinearRangeSlider({
     step = 5,
     value,
     onChange,
-    activeColor = '#0036F8',
+    activeColor = '#007AFF',
     isDark = false,
 }: LinearRangeSliderProps) {
     const trackRef = useRef<View>(null);

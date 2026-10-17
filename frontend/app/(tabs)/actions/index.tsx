@@ -507,7 +507,7 @@ export default function ActionsScreen() {
             case 'clock': return { label: 'CLK', color: '#0284C7', icon: 'clock.fill' };
             case 'report': return { label: 'RPT', color: '#14B8A6', icon: 'doc.text.fill' };
             case 'crew': return { label: 'CREW', color: '#8B5CF6', icon: 'hardhat.fill' };
-            case 'project': return { label: 'PRJ', color: '#0036F8', icon: 'folder.fill' };
+            case 'project': return { label: 'PRJ', color: '#007AFF', icon: 'folder.fill' };
             case 'forma_ai': return { label: 'AI', color: '#6366F1', icon: 'sparkles.fill' };
             case 'tracking': return { label: 'TRK', color: '#64748B', icon: 'target' };
             default: return { label: 'OTH', color: '#8E8E93', icon: 'bolt.fill' };
@@ -546,7 +546,7 @@ export default function ActionsScreen() {
 
         // Solid card with active selection highlight
         const cardBg = isSelected
-            ? (isDark ? 'rgba(86, 151, 255, 0.22)' : FormaBlue[100])
+            ? (isDark ? 'rgba(10, 132, 255, 0.22)' : FormaBlue[100])
             : (isDark ? '#1C1C1E' : '#FFFFFF');
         const mod = getModuleBadgeInfo(action.module === 'other' && action.relatedTaskId ? 'project' : action.module);
         const iconBg = isDark ? hexToRgba(mod.color, 0.18) : hexToRgba(mod.color, 0.12);
@@ -564,7 +564,7 @@ export default function ActionsScreen() {
                                 borderColor: 'transparent',
                             },
                             isSelected && {
-                                borderColor: isDark ? 'rgba(86, 151, 255, 0.4)' : FormaBlue[400],
+                                borderColor: isDark ? 'rgba(10, 132, 255, 0.4)' : FormaBlue[400],
                                 borderWidth: 1,
                             }
                         ]}
@@ -812,7 +812,7 @@ export default function ActionsScreen() {
                             />
                         ) : (
                             <View style={styles.desktopEmptyPane}>
-                                <View style={[styles.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 54, 248, 0.08)' }]}>
+                                <View style={[styles.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(77, 130, 255, 0.12)' : 'rgba(0, 122, 255, 0.08)' }]}>
                                     <PlatformIcon
                                         name="bolt.fill"
                                         size={44}

@@ -381,7 +381,7 @@ export function ProjectTemplateConfigSection({
                         : `Location Factors (${count})`}
                 </Text>
                 <TouchableOpacity style={s.addBtn} onPress={handleOpenAdd}>
-                    <PlatformIcon name="plus" size={14} tintColor="#0036F8" />
+                    <PlatformIcon name="plus" size={14} tintColor="#007AFF" />
                     <Text style={s.addBtnText}>Add {label}</Text>
                 </TouchableOpacity>
             </View>
@@ -389,7 +389,7 @@ export function ProjectTemplateConfigSection({
             {/* Cards List */}
             {isLoading ? (
                 <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color="#0036F8" />
+                    <ActivityIndicator size="small" color="#007AFF" />
                 </View>
             ) : count === 0 ? (
                 <View style={[s.cardItem, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', alignItems: 'center', paddingVertical: 32 }]}>
@@ -614,8 +614,8 @@ export function ProjectTemplateConfigSection({
                                         {item.province}{item.city ? ` • ${item.city}` : ''}
                                     </Text>
                                     <View style={{ flexDirection: 'row', gap: 6 }}>
-                                        <View style={[s.pillBadge, { backgroundColor: isDark ? 'rgba(0, 54, 248, 0.12)' : '#EFF6FF' }]}>
-                                            <Text style={[s.pillText, { color: '#0036F8' }]}>
+                                        <View style={[s.pillBadge, { backgroundColor: isDark ? 'rgba(0, 122, 255, 0.12)' : '#EFF6FF' }]}>
+                                            <Text style={[s.pillText, { color: '#007AFF' }]}>
                                                 Regional: {item.regionalFactor}x
                                             </Text>
                                         </View>
@@ -824,12 +824,12 @@ const s = StyleSheet.create({
         paddingVertical: 6,
         paddingHorizontal: 12,
         borderRadius: 20,
-        backgroundColor: 'rgba(0, 54, 248, 0.08)',
+        backgroundColor: 'rgba(0, 122, 255, 0.08)',
     },
     addBtnText: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#0036F8',
+        color: '#007AFF',
     },
     infoBanner: {
         flexDirection: 'row',
@@ -865,14 +865,14 @@ const s = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 10,
-        backgroundColor: 'rgba(0, 54, 248, 0.12)',
+        backgroundColor: 'rgba(0, 122, 255, 0.12)',
         alignItems: 'center',
         justifyContent: 'center',
     },
     codeBadgeText: {
         fontSize: 13,
         fontWeight: '700',
-        color: '#0036F8',
+        color: '#007AFF',
         letterSpacing: 0.5,
     },
     seqBadge: {
@@ -977,7 +977,7 @@ const s = StyleSheet.create({
         fontWeight: '600',
     },
     modalSaveBtn: {
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 12,

@@ -224,7 +224,7 @@ export function SwiftUIDocumentPreviewSheet({
                             </View>
                         ) : (
                             <View style={styles.genericPreviewBox}>
-                                <PlatformIcon name="doc.text.fill" size={44} tintColor="#0036F8" />
+                                <PlatformIcon name="doc.text.fill" size={44} tintColor="#007AFF" />
                                 <Text style={[styles.pdfTitle, { color: textColor, marginTop: 12 }]}>
                                     {document.name}
                                 </Text>
@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 7,
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         paddingHorizontal: 18,
         paddingVertical: 10,
         borderRadius: 12,

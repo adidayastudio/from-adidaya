@@ -298,8 +298,8 @@ export default function HomeScreen() {
                                                 onPress={() => router.push('/login')}
                                                 activeOpacity={0.75}
                                             >
-                                                <View style={[styles.actionIconCircle, { backgroundColor: 'rgba(0, 54, 248, 0.12)' }]}>
-                                                    <PlatformIcon name="person.crop.circle.fill" size={22} tintColor="#0036F8" />
+                                                <View style={[styles.actionIconCircle, { backgroundColor: 'rgba(0, 122, 255, 0.12)' }]}>
+                                                    <PlatformIcon name="person.crop.circle.fill" size={22} tintColor="#007AFF" />
                                                 </View>
                                                 <View style={{ flex: 1, gap: 2 }}>
                                                     <Text style={[styles.actionTitle, isDark && styles.actionTitleDark]}>
@@ -339,8 +339,8 @@ export default function HomeScreen() {
                                             onPress={() => router.push('/login')}
                                             activeOpacity={0.75}
                                         >
-                                            <View style={[styles.actionIconCircle, { backgroundColor: 'rgba(0, 54, 248, 0.12)' }]}>
-                                                <PlatformIcon name="person.crop.circle.fill" size={22} tintColor="#0036F8" />
+                                            <View style={[styles.actionIconCircle, { backgroundColor: 'rgba(0, 122, 255, 0.12)' }]}>
+                                                <PlatformIcon name="person.crop.circle.fill" size={22} tintColor="#007AFF" />
                                             </View>
                                             <View style={{ flex: 1, gap: 2 }}>
                                                 <Text style={[styles.actionTitle, isDark && styles.actionTitleDark]}>

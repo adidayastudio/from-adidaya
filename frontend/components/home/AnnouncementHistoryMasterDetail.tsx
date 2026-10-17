@@ -44,7 +44,7 @@ export function AnnouncementHistoryMasterDetail() {
     const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
     const paneBgColor = isDark ? '#000000' : '#F2F2F7';
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
 
     const { activeTenant, tenantRole, isSuperAdmin } = useTenantContext();
     const { permissions, can } = useAccessControl();
@@ -135,7 +135,7 @@ export function AnnouncementHistoryMasterDetail() {
                             tintColor={(isSearchVisible || !!searchQuery) ? formaBlue : textColor}
                             style={[
                                 (isSearchVisible || !!searchQuery) && {
-                                    backgroundColor: isDark ? 'rgba(0, 54, 248, 0.2)' : '#EFF6FF',
+                                    backgroundColor: isDark ? 'rgba(0, 122, 255, 0.2)' : '#EFF6FF',
                                 }
                             ]}
                             onPress={() => {
@@ -216,7 +216,7 @@ export function AnnouncementHistoryMasterDetail() {
                                         styles.itemCard,
                                         {
                                             backgroundColor: isSelected
-                                                ? (isDark ? 'rgba(0, 54, 248, 0.16)' : '#EFF6FF')
+                                                ? (isDark ? 'rgba(0, 122, 255, 0.16)' : '#EFF6FF')
                                                 : cardBgColor,
                                             borderColor: isSelected ? formaBlue : borderColor,
                                         },
@@ -232,7 +232,7 @@ export function AnnouncementHistoryMasterDetail() {
                                             </Text>
                                         </View>
                                         {item.isFeatured && (
-                                            <View style={[styles.pillBadge, { backgroundColor: 'rgba(0,54,248,0.12)' }]}>
+                                            <View style={[styles.pillBadge, { backgroundColor: 'rgba(0, 122, 255,0.12)' }]}>
                                                 <PlatformIcon name="pin.fill" size={10} tintColor={formaBlue} />
                                                 <Text style={[styles.pillBadgeText, { color: formaBlue }]}>Pinned</Text>
                                             </View>

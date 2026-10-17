@@ -326,7 +326,7 @@ export default function OrganizationTeamScreen() {
                                             icon: 'add',
                                             image: 'plus',
                                             isPrimary: true,
-                                            tintColor: '#0036F8',
+                                            tintColor: '#007AFF',
                                             onPress: () => {
                                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                                 setEditingMember(null);
@@ -336,7 +336,7 @@ export default function OrganizationTeamScreen() {
                                     ]}
                                     isDark={isDark}
                                     textColor={textColor}
-                                    primaryActionTextColor="#0036F8"
+                                    primaryActionTextColor="#007AFF"
                                 />
                             </View>
                         )

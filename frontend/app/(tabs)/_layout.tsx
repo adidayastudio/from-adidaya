@@ -47,7 +47,7 @@ function FloatingPillItem({
   isDark: boolean;
 }) {
   const progress = useSharedValue(isFocused ? 1 : 0);
-  const activeTint = '#0036f8';
+  const activeTint = '#007AFF';
   const inactiveTint = isDark ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.38)';
 
   React.useEffect(() => {
@@ -58,7 +58,7 @@ function FloatingPillItem({
     backgroundColor: interpolateColor(
       progress.value,
       [0, 1],
-      ['transparent', isDark ? 'rgba(0,54,248,0.22)' : 'rgba(0,54,248,0.12)']
+      ['transparent', isDark ? 'rgba(0, 122, 255,0.22)' : 'rgba(0, 122, 255,0.12)']
     ),
     transform: [{ scale: 0.95 + progress.value * 0.05 }],
   }));
@@ -426,8 +426,8 @@ export default function TabLayout() {
   }
 
   // iOS: Standard original NativeTabs layout
-  const iosActiveTintColor = isDark ? '#FFFFFF' : '#0036f8';
-  const iosSelectedIconColor = isDark ? '#FFFFFF' : '#0036f8';
+  const iosActiveTintColor = isDark ? '#FFFFFF' : '#007AFF';
+  const iosSelectedIconColor = isDark ? '#FFFFFF' : '#007AFF';
 
   return (
     <NativeTabs

@@ -2086,7 +2086,7 @@ export function AdidayaBrief({ refreshTrigger = 0 }: { refreshTrigger?: number }
                                 variant="solid"
                                 color="blue"
                                 icon={<PlatformIcon name="rectangle.portrait.and.arrow.right" size={16} tintColor="#FFFFFF" />}
-                                style={{ alignSelf: 'flex-start', backgroundColor: '#0036F8' }}
+                                style={{ alignSelf: 'flex-start', backgroundColor: '#007AFF' }}
                             />
                         </LinearGradient>
                     </Animated.View>

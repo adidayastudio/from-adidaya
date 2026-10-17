@@ -228,7 +228,7 @@ export function ForwardToChatModal({
                     {/* Channel List */}
                     {isLoading ? (
                         <View style={styles.loadingBox}>
-                            <ActivityIndicator size="small" color="#0036F8" />
+                            <ActivityIndicator size="small" color="#007AFF" />
                         </View>
                     ) : (
                         <ScrollView
@@ -270,7 +270,7 @@ export function ForwardToChatModal({
                                                     <PlatformIcon
                                                         name={ch.category === 'department' ? 'person.2' : ch.category === 'project' ? 'folder' : 'number'}
                                                         size={16}
-                                                        tintColor={isDark ? '#FFFFFF' : '#0036F8'}
+                                                        tintColor={isDark ? '#FFFFFF' : '#007AFF'}
                                                     />
                                                 </View>
                                             )}
@@ -284,7 +284,7 @@ export function ForwardToChatModal({
                                                     </Text>
                                                 ) : null}
                                             </View>
-                                            <PlatformIcon name="paperplane" size={17} tintColor="#0036F8" />
+                                            <PlatformIcon name="paperplane" size={17} tintColor="#007AFF" />
                                         </TouchableOpacity>
                                     );
                                 })

@@ -60,9 +60,9 @@ export const TenantSelectorModal: React.FC<TenantSelectorModalProps> = (props) =
     const subtextColor = isDark ? '#8E8E93' : '#6E6E73';
     const cardBg = isDark ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF';
     const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
-    const primaryBlue = '#0036F8';
-    const accentBlue = isDark ? '#38BDF8' : '#0036F8';
-    const blueBadgeBg = isDark ? 'rgba(56, 189, 248, 0.18)' : 'rgba(0, 54, 248, 0.12)';
+    const primaryBlue = '#007AFF';
+    const accentBlue = isDark ? '#38BDF8' : '#007AFF';
+    const blueBadgeBg = isDark ? 'rgba(56, 189, 248, 0.18)' : 'rgba(0, 122, 255, 0.12)';
 
     const handleSelect = async (t: Tenant) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -256,7 +256,7 @@ export const TenantSelectorModal: React.FC<TenantSelectorModalProps> = (props) =
                             onPress={handleCreateNew}
                             activeOpacity={0.7}
                         >
-                            <View style={[styles.actionIconWrap, { backgroundColor: 'rgba(0, 54, 248, 0.12)' }]}>
+                            <View style={[styles.actionIconWrap, { backgroundColor: 'rgba(0, 122, 255, 0.12)' }]}>
                                 <PlatformIcon name="building.2.fill" size={18} tintColor={primaryBlue} />
                             </View>
                             <View style={styles.actionTextCol}>

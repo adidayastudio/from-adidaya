@@ -45,7 +45,7 @@ export function UnauthenticatedView({
 
                 {icon && !showLogo && (
                     <View style={[styles.iconBadge, isDark ? styles.iconBadgeDark : styles.iconBadgeLight]}>
-                        <PlatformIcon name={icon as any} size={28} tintColor={isDark ? '#93C5FD' : '#0036F8'} />
+                        <PlatformIcon name={icon as any} size={28} tintColor={isDark ? '#93C5FD' : '#007AFF'} />
                     </View>
                 )}
 
@@ -71,7 +71,7 @@ export function UnauthenticatedView({
                     variant="solid"
                     color="blue"
                     icon={<PlatformIcon name="rectangle.portrait.and.arrow.right" size={15} tintColor="#FFFFFF" />}
-                    style={{ backgroundColor: '#0036F8', minWidth: 200 }}
+                    style={{ backgroundColor: '#007AFF', minWidth: 200 }}
                 />
             </View>
         </View>
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     iconBadgeLight: {
-        backgroundColor: 'rgba(0, 54, 248, 0.08)',
+        backgroundColor: 'rgba(0, 122, 255, 0.08)',
     },
     iconBadgeDark: {
         backgroundColor: 'rgba(147, 197, 253, 0.12)',

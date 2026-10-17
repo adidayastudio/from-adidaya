@@ -89,7 +89,7 @@ export const SwiftUIAddProjectSheet: React.FC<SwiftUIAddProjectSheetProps> = ({
 
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#A1A1A6' : '#8E8E93';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
     const warningColor = '#FF9500';
     const errorColor = '#FF3B30';
 

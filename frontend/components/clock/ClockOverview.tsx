@@ -852,7 +852,7 @@ export function ClockOverview({ renderPart = 'all' }: ClockOverviewProps = {}) {
                             disabled={isProcessing}
                             style={[
                                 styles.bouncyPillButton, 
-                                { backgroundColor: isCheckedIn ? '#FF3B30' : '#0036F8' }
+                                { backgroundColor: isCheckedIn ? '#FF3B30' : '#007AFF' }
                             ]}
                         >
                             {isProcessing ? (

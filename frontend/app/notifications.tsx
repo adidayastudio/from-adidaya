@@ -237,12 +237,12 @@ function MobileNotificationsScreen() {
                 return { bg: isDark ? 'rgba(255,59,48,0.18)' : '#FEE2E2', text: '#B91C1C' };
             case 'revision':
                 return { bg: isDark ? 'rgba(255,149,0,0.18)' : '#FEF3C7', text: '#B45309' };
-            case 'info': return { label: '', color: '#0036F8' };
+            case 'info': return { label: '', color: '#007AFF' };
             case 'submitted':
             default:
                 return { 
-                    bg: isDark ? 'rgba(0,54,248,0.18)' : '#EFF6FF', 
-                    text: '#0036F8' 
+                    bg: isDark ? 'rgba(0, 122, 255,0.18)' : '#EFF6FF', 
+                    text: '#007AFF' 
                 };
         }
     };
@@ -259,7 +259,7 @@ function MobileNotificationsScreen() {
                 return { label: 'requested revision for:', color: '#D97706' };
             case 'submitted':
             default:
-                return { label: 'submitted:', color: '#0036F8' };
+                return { label: 'submitted:', color: '#007AFF' };
         }
     };
 

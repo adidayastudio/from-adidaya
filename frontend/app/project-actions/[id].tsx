@@ -44,7 +44,7 @@ export default function ProjectActionsScreen() {
     const subtextColor = isDark ? '#8E8E93' : '#636366';
     const cardBgColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.92)';
     const dividerColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-    const formaBlue = '#0036F8';
+    const formaBlue = '#007AFF';
 
     const [project, setProject] = useState<Project | null>(null);
     const [actions, setActions] = useState<Action[]>([]);

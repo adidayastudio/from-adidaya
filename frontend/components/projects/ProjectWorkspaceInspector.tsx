@@ -71,7 +71,7 @@ export function ProjectWorkspaceInspector({
             {/* Inspector Header */}
             <View style={[styles.header, { borderBottomColor: dividerColor, backgroundColor: isDark ? '#121214' : '#FFFFFF' }]}>
                 <View style={styles.headerLeft}>
-                    <View style={[styles.headerIconCircle, { backgroundColor: isDark ? 'rgba(86, 151, 255, 0.15)' : FormaBlue[100] }]}>
+                    <View style={[styles.headerIconCircle, { backgroundColor: isDark ? 'rgba(10, 132, 255, 0.15)' : FormaBlue[100] }]}>
                         <PlatformIcon
                             name={
                                 activeTab === 'work' ? 'checklist' :
@@ -110,7 +110,7 @@ export function ProjectWorkspaceInspector({
                             <View style={styles.healthRow}>
                                 <View style={styles.healthItem}>
                                     <Text style={[styles.healthLabel, { color: subtextColor }]}>Progress</Text>
-                                    <Text style={[styles.healthValue, { color: '#0036F8' }]}>{project.progress || 0}%</Text>
+                                    <Text style={[styles.healthValue, { color: '#007AFF' }]}>{project.progress || 0}%</Text>
                                 </View>
                                 <View style={[styles.verticalDivider, { backgroundColor: dividerColor }]} />
                                 <View style={styles.healthItem}>
@@ -178,7 +178,7 @@ export function ProjectWorkspaceInspector({
                                 onChangeText={setQuickTaskTitle}
                             />
                             <TouchableOpacity
-                                style={[styles.actionBtn, { backgroundColor: '#0036F8', opacity: quickTaskTitle.trim() ? 1 : 0.6 }]}
+                                style={[styles.actionBtn, { backgroundColor: '#007AFF', opacity: quickTaskTitle.trim() ? 1 : 0.6 }]}
                                 disabled={!quickTaskTitle.trim()}
                                 onPress={() => {
                                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -261,7 +261,7 @@ export function ProjectWorkspaceInspector({
                     <TouchableOpacity
                         onPress={handleSendComment}
                         disabled={!newComment.trim()}
-                        style={[styles.sendBtn, { backgroundColor: newComment.trim() ? '#0036F8' : (isDark ? '#2C2C2E' : '#E5E5EA') }]}
+                        style={[styles.sendBtn, { backgroundColor: newComment.trim() ? '#007AFF' : (isDark ? '#2C2C2E' : '#E5E5EA') }]}
                     >
                         <Ionicons name="arrow-up" size={16} color={newComment.trim() ? '#FFFFFF' : subtextColor} />
                     </TouchableOpacity>

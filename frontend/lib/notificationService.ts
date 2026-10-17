@@ -51,7 +51,7 @@ function getNotificationsModule(): NotificationsModule | null {
                 name: 'Default',
                 importance: notificationsModule.AndroidImportance.MAX,
                 vibrationPattern: [0, 250, 250, 250],
-                lightColor: '#0036F8',
+                lightColor: '#007AFF',
             }).catch(() => {});
         }
 

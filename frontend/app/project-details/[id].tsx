@@ -266,7 +266,7 @@ export function ProjectDetailContent({
     };
 
     const tenantLogoUrl = activeTenant?.branding_logo_url || activeTenant?.logo_url;
-    const primaryColor = activeTenant?.primary_color || '#0036F8';
+    const primaryColor = activeTenant?.primary_color || '#007AFF';
     const tenantInitial = (activeTenant?.branding_name || activeTenant?.name || 'T').charAt(0).toUpperCase();
 
     const loadProject = useCallback(async (silent = true) => {
@@ -975,7 +975,7 @@ export function ProjectDetailContent({
                                         justifyContent: 'center',
                                         flexDirection: 'row',
                                         gap: 6,
-                                        backgroundColor: '#0036F8',
+                                        backgroundColor: '#007AFF',
                                         borderWidth: 0,
                                         ...Platform.select({
                                             web: {
@@ -1204,7 +1204,7 @@ export function ProjectDetailContent({
                                         resizeMode="contain"
                                     />
                                 ) : (
-                                    <View style={{ width: 120, height: 120, borderRadius: 28, backgroundColor: primaryColor || '#0036F8', justifyContent: 'center', alignItems: 'center' }}>
+                                    <View style={{ width: 120, height: 120, borderRadius: 28, backgroundColor: primaryColor || '#007AFF', justifyContent: 'center', alignItems: 'center' }}>
                                         <Text style={{ color: '#FFFFFF', fontSize: 44, fontWeight: '700' }}>{tenantInitial}</Text>
                                     </View>
                                 )}
@@ -1414,7 +1414,7 @@ export function ProjectDetailContent({
                                                         <SwiftUIImage
                                                             systemName="line.3.horizontal.decrease"
                                                             size={18}
-                                                            color={activityFilter !== 'all' || activityDateRange.startDate ? '#0036F8' : (isDark ? '#FFFFFF' : '#000000')}
+                                                            color={activityFilter !== 'all' || activityDateRange.startDate ? '#007AFF' : (isDark ? '#FFFFFF' : '#000000')}
                                                         />
                                                     </HStack>
                                                 </GlassEffectContainer>
@@ -1424,7 +1424,7 @@ export function ProjectDetailContent({
                                                 <Ionicons
                                                     name="options-outline"
                                                     size={20}
-                                                    color={activityFilter !== 'all' || activityDateRange.startDate ? '#0036F8' : (isDark ? '#FFFFFF' : '#000000')}
+                                                    color={activityFilter !== 'all' || activityDateRange.startDate ? '#007AFF' : (isDark ? '#FFFFFF' : '#000000')}
                                                 />
                                             </View>
                                         )}
@@ -1493,7 +1493,7 @@ export function ProjectDetailContent({
                                                                 <SwiftUIImage
                                                                     systemName={draftActivities.length > 0 ? "tray.full.fill" : "tray"}
                                                                     size={18}
-                                                                    color={draftActivities.length > 0 ? '#0036F8' : (isDark ? '#FFFFFF' : '#000000')}
+                                                                    color={draftActivities.length > 0 ? '#007AFF' : (isDark ? '#FFFFFF' : '#000000')}
                                                                 />
                                                             </HStack>
                                                         </GlassEffectContainer>
@@ -1503,7 +1503,7 @@ export function ProjectDetailContent({
                                                         <Ionicons
                                                             name={draftActivities.length > 0 ? "file-tray-full" : "file-tray-outline"}
                                                             size={20}
-                                                            color={draftActivities.length > 0 ? '#0036F8' : (isDark ? '#FFFFFF' : '#000000')}
+                                                            color={draftActivities.length > 0 ? '#007AFF' : (isDark ? '#FFFFFF' : '#000000')}
                                                         />
                                                     </View>
                                                 )}
@@ -1512,7 +1512,7 @@ export function ProjectDetailContent({
                                                         position: 'absolute',
                                                         top: -2,
                                                         right: -2,
-                                                        backgroundColor: '#0036F8',
+                                                        backgroundColor: '#007AFF',
                                                         borderRadius: 10,
                                                         minWidth: 18,
                                                         height: 18,
@@ -1799,7 +1799,7 @@ export function ProjectDetailContent({
                                                             <SwiftUIImage
                                                                 systemName={docsFilterType !== 'all' ? 'line.3.horizontal.decrease.circle.fill' : 'line.3.horizontal.decrease'}
                                                                 size={18}
-                                                                color={docsFilterType !== 'all' ? '#0036F8' : (isDark ? '#FFFFFF' : '#000000')}
+                                                                color={docsFilterType !== 'all' ? '#007AFF' : (isDark ? '#FFFFFF' : '#000000')}
                                                             />
                                                         </HStack>
                                                     </GlassEffectContainer>
@@ -1809,7 +1809,7 @@ export function ProjectDetailContent({
                                                     <Ionicons
                                                         name="options-outline"
                                                         size={20}
-                                                        color={docsFilterType !== 'all' ? '#0036F8' : (isDark ? '#FFFFFF' : '#000000')}
+                                                        color={docsFilterType !== 'all' ? '#007AFF' : (isDark ? '#FFFFFF' : '#000000')}
                                                     />
                                                 </View>
                                             )}
@@ -1834,7 +1834,7 @@ export function ProjectDetailContent({
                                                             <SwiftUIImage
                                                                 systemName="arrow.up.arrow.down"
                                                                 size={18}
-                                                                color={docsSortMode !== 'date-desc' ? '#0036F8' : (isDark ? '#FFFFFF' : '#000000')}
+                                                                color={docsSortMode !== 'date-desc' ? '#007AFF' : (isDark ? '#FFFFFF' : '#000000')}
                                                             />
                                                         </HStack>
                                                     </GlassEffectContainer>
@@ -1844,7 +1844,7 @@ export function ProjectDetailContent({
                                                     <Ionicons
                                                         name="swap-vertical"
                                                         size={20}
-                                                        color={docsSortMode !== 'date-desc' ? '#0036F8' : (isDark ? '#FFFFFF' : '#000000')}
+                                                        color={docsSortMode !== 'date-desc' ? '#007AFF' : (isDark ? '#FFFFFF' : '#000000')}
                                                     />
                                                 </View>
                                             )}
@@ -2254,7 +2254,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#0036F8',
+        backgroundColor: '#007AFF',
         justifyContent: 'center',
         alignItems: 'center',
         shadowColor: '#000000',
@@ -2473,7 +2473,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     selectDoneBtnText: {
-        color: '#0036F8',
+        color: '#007AFF',
         fontSize: 15,
         fontWeight: '600',
     },

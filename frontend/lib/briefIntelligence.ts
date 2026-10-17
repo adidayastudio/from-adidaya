@@ -19,7 +19,7 @@ export const MODULE_META: Record<BriefModule, { name: string; icon: string; colo
     clock: { name: 'Clock', icon: 'clock.fill', color: '#0EA5C6', gradient: ['#12B3D6', '#0885A1'], route: '/(tabs)/home/clock-module' },
     people: { name: 'People', icon: 'person.2.fill', color: '#2467B2', gradient: ['#2F7AE0', '#1B5291'], route: '/(tabs)/home/people' },
     resources: { name: 'Resources', icon: 'archivebox.fill', color: '#D97A32', gradient: ['#E6853C', '#C56824'], route: '/(tabs)/home/resources' },
-    projects: { name: 'Projects', icon: 'folder.fill', color: '#0036F8', gradient: ['#1A56FF', '#0036F8'], route: '/(tabs)/projects' },
+    projects: { name: 'Projects', icon: 'folder.fill', color: '#007AFF', gradient: ['#1A56FF', '#007AFF'], route: '/(tabs)/projects' },
     reports: { name: 'Reports', icon: 'doc.text.fill', color: '#168C7A', gradient: ['#1CA38F', '#107263'], route: '/(tabs)/home/reports' },
     crew: { name: 'Crew', icon: 'hardhat.fill', color: '#C0448F', gradient: ['#D64FA1', '#9F3375'], route: '/(tabs)/home/crew-module' },
 };

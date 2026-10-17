@@ -142,7 +142,7 @@ export default function ProjectSetupIndexScreen() {
     if (isLoading) {
         return (
             <View style={[s.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color="#0036F8" />
+                <ActivityIndicator size="large" color="#007AFF" />
             </View>
         );
     }
@@ -231,7 +231,7 @@ export default function ProjectSetupIndexScreen() {
                         >
                             <View style={[s.projectAvatarContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF' }]}>
                                 {isUploadingAvatar ? (
-                                    <ActivityIndicator size="small" color="#0036F8" />
+                                    <ActivityIndicator size="small" color="#007AFF" />
                                 ) : projectLogo ? (
                                     <Image
                                         source={typeof projectLogo === 'string' ? { uri: projectLogo } : projectLogo}

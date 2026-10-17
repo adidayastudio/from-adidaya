@@ -218,7 +218,7 @@ export function generateMemberProfileHtml(profile: MemberProfileData | any, tena
             width: 48px;
             height: 48px;
             border-radius: 24px;
-            background: #0036F8;
+            background: #007AFF;
             color: #FFFFFF;
             display: flex;
             align-items: center;
@@ -438,7 +438,7 @@ export function generateMemberProfileHtml(profile: MemberProfileData | any, tena
                     </svg>
                 ` : `
                     <svg class="brand-logo-svg" viewBox="0 0 100 100">
-                        <rect width="100" height="100" rx="22" fill="#0036F8"/>
+                        <rect width="100" height="100" rx="22" fill="#007AFF"/>
                         <path d="M28 26 h44 v12 h-28 v14 h24 v12 h-24 v20 h-16 Z" fill="#FFFFFF"/>
                     </svg>
                 `)}

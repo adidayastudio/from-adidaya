@@ -181,7 +181,7 @@ export default function ResponsiveWebLayout() {
 
   const borderCol = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
   const finderActivePillBg = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)';
-  const formaBlue = isDark ? '#4D82FF' : '#0036F8';
+  const formaBlue = isDark ? '#4D82FF' : '#007AFF';
   const normalItemText = isDark ? '#EDEDED' : '#1C1D21';
   const normalIconColor = isDark ? '#D1D5DB' : '#1C1D21';
   const groupLabelText = isDark ? '#8A8F98' : '#8E8E93';
@@ -608,7 +608,7 @@ export default function ResponsiveWebLayout() {
                           styles.tabletPillLabel,
                           {
                             color: isSelected
-                              ? (isDark ? '#4D82FF' : '#0036F8')
+                              ? (isDark ? '#4D82FF' : '#007AFF')
                               : (isDark ? '#9CA3AF' : '#6B7280'),
                             fontWeight: isSelected ? '700' : '500',
                           },
@@ -669,7 +669,7 @@ export default function ResponsiveWebLayout() {
               {BOTTOM_TAB_ITEMS.map((item) => {
                 const isSelected = activeTab === item.id;
                 const tabColor = isSelected
-                  ? (isDark ? '#FFFFFF' : '#0036F8')
+                  ? (isDark ? '#FFFFFF' : '#007AFF')
                   : (isDark ? '#FFFFFF' : '#1C1C1E');
 
                 return (
@@ -1002,7 +1002,7 @@ const styles: any = StyleSheet.create({
     cursor: 'pointer' as any,
   },
   tabletSignInBtn: {
-    backgroundColor: '#0036F8',
+    backgroundColor: '#007AFF',
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 999,

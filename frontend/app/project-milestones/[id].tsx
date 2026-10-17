@@ -64,7 +64,7 @@ export default function ProjectMilestonesScreen() {
     const isDark = resolvedTheme === 'dark';
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#8E8E93';
-    const formaBlue = isDark ? '#3B82F6' : '#0036F8';
+    const formaBlue = isDark ? '#3B82F6' : '#007AFF';
     const cardBgColor = isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF';
     const dividerColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
 
@@ -411,7 +411,7 @@ export default function ProjectMilestonesScreen() {
     // Predecessor dependency arrow paths and arrowheads for Gantt
     const dependencyArrows = useMemo(() => {
         const arrows: Array<{ pathD: string; polygonPoints: string; color: string }> = [];
-        const arrowColor = isDark ? '#3B82F6' : '#0036F8';
+        const arrowColor = isDark ? '#3B82F6' : '#007AFF';
 
         filteredMilestones.forEach((m, curIdx) => {
             if (!m.predecessorId) return;
@@ -531,7 +531,7 @@ export default function ProjectMilestonesScreen() {
     // Dynamic Card-to-Card SVG Dependency Arrow overlay for List View (staggered lanes to prevent overlapping)
     const listDependencyArrows = useMemo(() => {
         const arrows: Array<{ pathD: string; polygonPoints: string; color: string }> = [];
-        const arrowColor = isDark ? '#3B82F6' : '#0036F8';
+        const arrowColor = isDark ? '#3B82F6' : '#007AFF';
 
         const pairs: Array<{ predId: string; curId: string; m: ProjectMilestone }> = [];
         filteredMilestones.forEach(m => {
@@ -667,7 +667,7 @@ export default function ProjectMilestonesScreen() {
 
                                 <View style={[
                                     styles.statusBadge,
-                                    { backgroundColor: isDone ? 'rgba(52, 199, 89, 0.12)' : isInProgress ? 'rgba(0, 54, 248, 0.12)' : 'rgba(142, 142, 147, 0.12)' }
+                                    { backgroundColor: isDone ? 'rgba(52, 199, 89, 0.12)' : isInProgress ? 'rgba(0, 122, 255, 0.12)' : 'rgba(142, 142, 147, 0.12)' }
                                 ]}>
                                     <Text style={[
                                         styles.statusBadgeText,
@@ -997,7 +997,7 @@ export default function ProjectMilestonesScreen() {
                                                 Critical Point
                                             </Text>
                                         </View>
-                                        <View style={[styles.criticalPathBadge, { backgroundColor: isDark ? 'rgba(0, 54, 248, 0.15)' : 'rgba(0, 54, 248, 0.08)' }]}>
+                                        <View style={[styles.criticalPathBadge, { backgroundColor: isDark ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.08)' }]}>
                                             <Text style={[styles.criticalPathBadgeText, { color: formaBlue }]}>
                                                 {criticalPath.length} {criticalPath.length === 1 ? 'Milestone' : 'Milestones'}
                                             </Text>

@@ -50,7 +50,7 @@ export function AnnouncementDetailPane({
     const subtextColor = isDark ? '#8E8E93' : '#64748B';
     const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
-    const formaBlue = isDark ? '#4D82FF' : '#0036F8';
+    const formaBlue = isDark ? '#4D82FF' : '#007AFF';
 
     const { tenantRole, isSuperAdmin, activeTenant } = useTenantContext();
     const isAuthorized = isSuperAdmin || !!(tenantRole && (
@@ -289,7 +289,7 @@ export function AnnouncementDetailPane({
                             {avatarSource ? (
                                 <Image source={{ uri: avatarSource }} style={styles.authorAvatar} contentFit="cover" />
                             ) : (
-                                <View style={[styles.avatarFallback, { backgroundColor: isDark ? 'rgba(0,54,248,0.2)' : '#EFF6FF' }]}>
+                                <View style={[styles.avatarFallback, { backgroundColor: isDark ? 'rgba(0, 122, 255,0.2)' : '#EFF6FF' }]}>
                                     <Text style={[styles.avatarFallbackText, { color: formaBlue }]}>
                                         {getInitials(announcement.authorName)}
                                     </Text>
