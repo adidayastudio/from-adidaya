@@ -15,8 +15,6 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'expo-router';
-import { useTenantContext } from '@/context/TenantContext';
 import { PillButton } from '@/components/ui/PillButton';
 import { IOSSwitch } from '@/components/ui/IOSSwitch';
 
@@ -50,7 +48,6 @@ interface OrganizationSecuritySectionProps {
     subtextColor: string;
     cardBgColor: string;
     borderColor: string;
-    canDeleteOrg?: boolean;
 }
 
 const ROTATION_OPTIONS = ['30 Days', '60 Days', '90 Days', '1 Year'];
@@ -65,10 +62,7 @@ export const OrganizationSecuritySection: React.FC<OrganizationSecuritySectionPr
     textColor,
     subtextColor,
     cardBgColor,
-    canDeleteOrg = true,
 }) => {
-    const router = useRouter();
-    const { activeTenant, refreshTenants, switchTenant } = useTenantContext();
 
     const [isSendingReset, setIsSendingReset] = useState(false);
     const [pickerModalVisible, setPickerModalVisible] = useState(false);
@@ -137,61 +131,6 @@ export const OrganizationSecuritySection: React.FC<OrganizationSecuritySectionPr
         } finally {
             setIsSendingReset(false);
         }
-    };
-
-    const handleDeleteOrganization = () => {
-        if (!canDeleteOrg) {
-            Alert.alert('Access Denied', 'Only Super Admin can delete or deactivate this organization.');
-            return;
-        }
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-
-        Alert.alert(
-            'Delete This Organization?',
-            `Are you sure you want to remove access to "${activeTenant?.name || 'this organization'}"?\n\nAccess will be deactivated for all members. All workspace data will be archived.`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Deactivate & Remove',
-                    style: 'destructive',
-                    onPress: async () => {
-                        if (!activeTenant?.id) return;
-                        try {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
-                            // Soft delete / revoke access: Remove membership records so it disappears from app UI
-                            // Tenant records, workspaces, projects, and files remain safely preserved in the database for backend recovery
-                            const { error } = await supabase
-                                .from('tenant_members')
-                                .delete()
-                                .eq('tenant_id', activeTenant.id);
-
-                            if (error) throw error;
-
-                            // Clear profile tenant_id pointer if pointing to this tenant
-                            if (user?.id) {
-                                await supabase
-                                    .from('profiles')
-                                    .update({ tenant_id: null })
-                                    .eq('id', user.id)
-                                    .eq('tenant_id', activeTenant.id);
-                            }
-
-                            const remaining = await refreshTenants();
-                            if (remaining && remaining.length > 0) {
-                                await switchTenant(remaining[0].id);
-                                router.replace('/(tabs)/home');
-                            } else {
-                                router.replace('/tenant-setup');
-                            }
-                            Alert.alert('Success', 'Organization access has been removed.');
-                        } catch (err: any) {
-                            Alert.alert('Action Failed', err.message || 'Could not remove organization access.');
-                        }
-                    },
-                },
-            ]
-        );
     };
 
     const separatorColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
@@ -505,56 +444,6 @@ export const OrganizationSecuritySection: React.FC<OrganizationSecuritySectionPr
                     </View>
                 </View>
             </View>
-
-            {/* 4. DANGER ZONE (Super Admin / Admin Only - No border, clean card) */}
-            {canDeleteOrg && (
-                <View style={styles.section}>
-                    {renderHeader('Danger Zone')}
-                    <View
-                        style={[
-                            styles.card,
-                            {
-                                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.08)' : '#FEF2F2',
-                                paddingVertical: 16,
-                                gap: 14,
-                            },
-                        ]}
-                    >
-                        <View style={styles.dangerInfoRow}>
-                            <Ionicons
-                                name="warning-outline"
-                                size={20}
-                                color="#EF4444"
-                                style={styles.rowIcon}
-                            />
-                            <View style={styles.rowTextContainer}>
-                                <Text style={[styles.rowLabel, { color: '#EF4444' }]}>
-                                    Delete Organization
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.rowSubtitle,
-                                        { color: isDark ? '#FCA5A5' : '#991B1B' },
-                                    ]}
-                                >
-                                    Permanently erase "{activeTenant?.name || 'this organization'}" with all workspaces, members, projects, and files. This action cannot be undone.
-                                </Text>
-                            </View>
-                        </View>
-
-                        <View style={{ alignItems: 'flex-start', paddingLeft: 34 }}>
-                            <PillButton
-                                label="Delete Organization"
-                                onPress={handleDeleteOrganization}
-                                size="md"
-                                variant="solid"
-                                color="red"
-                                icon={<Ionicons name="trash-outline" size={16} color="#FFFFFF" />}
-                            />
-                        </View>
-                    </View>
-                </View>
-            )}
 
             {/* Android / Web Picker Modal */}
             {pickerModalVisible && (

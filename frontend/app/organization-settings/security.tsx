@@ -180,7 +180,6 @@ export default function OrganizationSecurityScreen() {
                     subtextColor={subtextColor}
                     cardBgColor={cardBgColor}
                     borderColor={borderColor}
-                    canDeleteOrg={canDeleteOrg}
                 />
             </ScrollView>
 

@@ -1079,7 +1079,6 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                         subtextColor={subtextColor}
                         cardBgColor={cardBgColor}
                         borderColor={borderColor}
-                        canDeleteOrg={isSuperAdmin}
                     />
                 );
 
