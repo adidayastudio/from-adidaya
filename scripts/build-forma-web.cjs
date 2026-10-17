@@ -12,7 +12,7 @@ if (!env.EXPO_PUBLIC_ADIDAYA_SUPABASE_URL || !env.EXPO_PUBLIC_ADIDAYA_SUPABASE_A
 }
 if (!env.EXPO_PUBLIC_ADIDAYA_SUPABASE_URL || !env.EXPO_PUBLIC_ADIDAYA_SUPABASE_ANON_KEY) throw new Error('Existing Adidaya public configuration is missing.');
 if (!fs.existsSync(path.join(frontend, 'node_modules'))) {
-    const install = spawnSync('npm', ['ci', '--prefix', frontend, '--no-audit', '--no-fund'], { stdio: 'inherit', env });
+    const install = spawnSync('npm', ['ci', '--prefix', frontend, '--include=dev', '--no-audit', '--no-fund'], { stdio: 'inherit', env });
     if (install.status !== 0) process.exit(install.status || 1);
 }
 const build = spawnSync('npm', ['run', 'build'], { cwd: frontend, stdio: 'inherit', env });
