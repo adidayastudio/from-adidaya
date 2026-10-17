@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-16T06:16:45.866Z",
+  "tests": 25,
+  "build": "passed",
+  "typecheck": {
+    "status": "inherited errors remain",
+    "baseline": 403,
+    "lastCheck": 397,
+    "newDiagnosticsComparedWithBaseline": 0
+  },
+  "backend": {
+    "origin": "https://from-adidaya.vercel.app",
+    "rootGet": 200,
+    "resourcesMergeGet": 405,
+    "backendAuthPatchDeployed": false
+  },
+  "database": {
+    "mutationsPerformed": false,
+    "migrationsApplied": false
+  },
+  "deployment": {
+    "previewProjectCreated": false,
+    "liveDomainChanged": false
+  },
+  "notes": [
+    "Backend auth helper patch requires deployment to retained Next project.",
+    "Authenticated write, role/RLS and device acceptance remains required.",
+    "Announcement table is absent in the latest schema probe."
+  ]
+}

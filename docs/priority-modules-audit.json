@@ -1,0 +1,109 @@
+{
+  "checkedAt": "2026-10-18",
+  "mode": "Read-only schema probes and local code/tests; no production mutations",
+  "tests": {
+    "passed": 26,
+    "command": "node --test tests/adidaya-mode.test.cjs tests/release-readiness.test.cjs"
+  },
+  "build": "passed",
+  "schema": [
+    {
+      "table": "crew_members",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "crew_daily_logs",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "crew_requests",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "crew_project_history",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "purchasing_requests",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "purchasing_items",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "reimbursement_requests",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "reimbursement_items",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "attendance_logs",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "attendance_sessions",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "attendance_records",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "notifications",
+      "status": 200,
+      "error": null
+    },
+    {
+      "table": "push_subscriptions",
+      "status": 200,
+      "error": null
+    }
+  ],
+  "additionalSchema": [
+    {
+      "table": "purchasing_consolidations",
+      "status": 404,
+      "error": {
+        "code": "PGRST205",
+        "details": null,
+        "hint": "Perhaps you meant the table 'public.purchasing_invoices'",
+        "message": "Could not find the table 'public.purchasing_consolidations' in the schema cache"
+      }
+    },
+    {
+      "table": "purchasing_consolidation_requests",
+      "status": 404,
+      "error": {
+        "code": "PGRST205",
+        "details": null,
+        "hint": "Perhaps you meant the table 'public.purchasing_requests'",
+        "message": "Could not find the table 'public.purchasing_consolidation_requests' in the schema cache"
+      }
+    },
+    {
+      "table": "crew_payroll_adjustments",
+      "status": 404,
+      "error": {
+        "code": "PGRST205",
+        "details": null,
+        "hint": "Perhaps you meant the table 'public.crew_requests'",
+        "message": "Could not find the table 'public.crew_payroll_adjustments' in the schema cache"
+      }
+    }
+  ],
+  "productionTransactionsTested": false
+}

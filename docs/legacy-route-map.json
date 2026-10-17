@@ -1,0 +1,15 @@
+{
+  "dashboard/index": "/(tabs)/home",
+  "dashboard/tasks": "/(tabs)/tasks",
+  "dashboard/projects": "/(tabs)/projects",
+  "dashboard/notifications": "/(tabs)/home/notifications",
+  "task": "/(tabs)/tasks",
+  "action": "/(tabs)/actions",
+  "project/index": "/(tabs)/projects",
+  "flow/finance": "/(tabs)/home/finance",
+  "flow/resources": "/(tabs)/home/resources",
+  "flow/reports": "/(tabs)/home/reports",
+  "feel/people": "/(tabs)/home/people",
+  "feel/clock": "/(tabs)/home/clock-module",
+  "feel/crew": "/(tabs)/home/crew-module"
+}

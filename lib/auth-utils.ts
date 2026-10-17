@@ -1,4 +1,4 @@
-import { UserRole } from "@/hooks/useUserProfile";
+import { UserRole } from "@/context/UserProvider";
 
 export const TEAM_VIEW_ROLES: (UserRole | string)[] = ["superadmin", "admin", "administrator", "supervisor", "pm", "management", "manager", "ceo", "owner", "finance"];
 

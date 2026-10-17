@@ -1,0 +1,11 @@
+{
+  "name": "adidaya-dynamic-island",
+  "version": "1.0.0",
+  "description": "Native Apple Dynamic Island and ActivityKit integration for Adidaya",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {},
+  "keywords": ["expo", "dynamic-island", "activitykit", "live-activities"],
+  "author": "Adidaya",
+  "license": "MIT"
+}

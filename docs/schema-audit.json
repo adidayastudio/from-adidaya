@@ -1,0 +1,189 @@
+{
+  "checkedAt": "2026-10-16T06:16:06.287Z",
+  "mode": "read-only anonymous schema probe; RLS may hide rows",
+  "results": [
+    {
+      "table": "profiles",
+      "columns": "id,department",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 495
+    },
+    {
+      "table": "user_roles",
+      "columns": "user_id,role",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 468
+    },
+    {
+      "table": "tenants",
+      "columns": "id,name,company_code",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 466
+    },
+    {
+      "table": "workspaces",
+      "columns": "id,tenant_id,name",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 1047
+    },
+    {
+      "table": "tenant_members",
+      "columns": "tenant_id,user_id,role",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 421
+    },
+    {
+      "table": "projects",
+      "columns": "id,project_code,project_name",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 409
+    },
+    {
+      "table": "project_wbs_items",
+      "columns": "id,project_id,parent_id,wbs_code,title,is_leaf,level",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 392
+    },
+    {
+      "table": "tasks",
+      "columns": "id,title,status",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 416
+    },
+    {
+      "table": "actions",
+      "columns": "id,title,status",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 469
+    },
+    {
+      "table": "attendance_sessions",
+      "columns": "id,user_id,clock_in,clock_out",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 330
+    },
+    {
+      "table": "attendance_records",
+      "columns": "id,user_id,date",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 365
+    },
+    {
+      "table": "purchasing_requests",
+      "columns": "id,paid_amount,approval_status,financial_status",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 362
+    },
+    {
+      "table": "reimbursement_requests",
+      "columns": "id,status",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 395
+    },
+    {
+      "table": "resource_inventory",
+      "columns": "id",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 378
+    },
+    {
+      "table": "chat_channels",
+      "columns": "id",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 376
+    },
+    {
+      "table": "chat_messages",
+      "columns": "id",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 347
+    },
+    {
+      "table": "announcements",
+      "columns": "id",
+      "status": 404,
+      "accessibleSchema": false,
+      "errorCode": "PGRST205",
+      "milliseconds": 485
+    },
+    {
+      "table": "notifications",
+      "columns": "id,user_id,title,description,category,is_read,link,metadata",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 381
+    },
+    {
+      "table": "project_reports",
+      "columns": "id,report_type,content",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 374
+    },
+    {
+      "table": "reimbursement_invoices",
+      "columns": "id,request_id,invoice_url",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 368
+    },
+    {
+      "table": "funding_sources",
+      "columns": "id,provider,account_number,name",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 375
+    },
+    {
+      "table": "funding_source_transactions",
+      "columns": "id,reference_id",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 388
+    },
+    {
+      "table": "organization_role_permissions",
+      "columns": "id,can_manage_people",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 383
+    },
+    {
+      "table": "organization_system_roles",
+      "columns": "id,code",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 351
+    },
+    {
+      "table": "attendance_logs",
+      "columns": "id,user_id,type",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 374
+    },
+    {
+      "table": "work_schedules",
+      "columns": "id,start_time,end_time",
+      "status": 200,
+      "accessibleSchema": true,
+      "milliseconds": 332
+    }
+  ]
+}

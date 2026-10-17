@@ -65,7 +65,7 @@ function getWorkDaysInMonth(date: Date): number {
     }).length;
 }
 
-// Calculate Total Work Hours in Month
+// Calculate Total Work Hours in Month (8 hours per standard workday)
 function getTotalWorkHoursInMonth(date: Date): number {
     const start = startOfMonth(date);
     const end = endOfMonth(date);
@@ -81,9 +81,9 @@ function getTotalWorkHoursInMonth(date: Date): number {
         if (HOLIDAYS_2026.some(h => h.date === dateStr)) return acc;
 
         if (d >= newScheduleStartDate) {
-            // New Schedule: Mon-Fri = 9 hours, Sat = 0
+            // Standard Schedule: Mon-Fri = 8 hours, Sat = 0
             if (isSaturday(d)) return acc;
-            return acc + 9;
+            return acc + 8;
         } else {
             // Old Schedule: Mon-Fri = 8 hours, Sat = 5 hours
             if (isSaturday(d)) return acc + 5;
@@ -188,7 +188,7 @@ export function calculateMonthlySummaryMetrics(records: AttendanceRecord[], refe
             if (HOLIDAYS_2026.some(h => h.date === dateStr)) continue;
 
             if (d >= newScheduleStartDate) {
-                if (!isSaturday(d)) passedMinutes += (9 * 60);
+                if (!isSaturday(d)) passedMinutes += (8 * 60);
             } else {
                 passedMinutes += (isSaturday(d) ? 5 : 8) * 60;
             }

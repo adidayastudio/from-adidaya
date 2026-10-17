@@ -1,0 +1,13 @@
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const fs = require('node:fs');
+const ts = require('typescript');
+const context = { exports: {} };
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/clockConfirmation.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, context);
+const issue = context.exports.clockConfirmationIssue;
+const remote = { insideArea: false, remoteMode: 'WFH', note: 'Working remotely', coords: { latitude: -6.2, longitude: 106.8 }, photoUri: 'data:image/jpeg;base64,test', capturing: false };
+test('outside attendance is allowed with remote mode, note, valid location and photo', () => { assert.equal(issue(remote), null); });
+test('remote attendance requires a note and mode', () => { assert.match(issue({ ...remote, note: ' ' }), /activity note/); assert.match(issue({ ...remote, remoteMode: null }), /remote mode/); });
+test('registered area attendance does not require remote details', () => { assert.equal(issue({ ...remote, insideArea: true, remoteMode: null, note: '' }), null); });
+test('location and photo evidence remain mandatory', () => { assert.match(issue({ ...remote, coords: null }), /location/); assert.match(issue({ ...remote, photoUri: '' }), /photo/); assert.match(issue({ ...remote, coords: { latitude: NaN, longitude: 106 } }), /location/); });

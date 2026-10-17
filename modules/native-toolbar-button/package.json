@@ -1,0 +1,11 @@
+{
+  "name": "native-toolbar-button",
+  "version": "1.0.0",
+  "description": "Native SwiftUI Liquid Glass Toolbar Button for Forma",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {},
+  "keywords": ["expo", "toolbar", "swiftui", "button"],
+  "author": "Adidaya",
+  "license": "MIT"
+}

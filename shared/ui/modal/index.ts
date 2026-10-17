@@ -1,6 +1,0 @@
-export * from "./modal-confirm"
-export * from "./modal-detail"
-export * from "./modal-root"
-export * from "./modal-header"
-export * from "./modal-footer"
-export * from "./modal.types"

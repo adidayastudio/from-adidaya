@@ -1,0 +1,176 @@
+import React from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Modal,
+    TouchableOpacity,
+    ScrollView,
+    Pressable,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { useTheme } from '@/context/ThemeContext';
+import { GlassView } from '@/components/ui/GlassView';
+
+export interface ActivitiesGuideSheetProps {
+    visible: boolean;
+    onClose: () => void;
+}
+
+export function ActivitiesGuideSheet({
+    visible,
+    onClose,
+}: ActivitiesGuideSheetProps) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === 'dark';
+    const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
+    const subtextColor = isDark ? '#8E8E93' : '#6E6E73';
+    const insets = useSafeAreaInsets();
+
+    if (!visible) return null;
+
+    return (
+        <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+            <View style={styles.overlay}>
+                <Pressable style={styles.backdrop} onPress={onClose} />
+                <View style={[styles.sheetContainer, { backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', paddingBottom: Math.max(insets.bottom, 20) }]}>
+                    <View style={styles.header}>
+                        <Text style={[styles.title, { color: textColor }]}>About Activities & Forms</Text>
+                        <TouchableOpacity
+                            onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                onClose();
+                            }}
+                        >
+                            <Text style={styles.doneBtn}>Done</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: subtextColor }]}>ACTIVITY STRUCTURE</Text>
+                            <GlassView intensity={isDark ? 15 : 40} style={[styles.card, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF' }]}>
+                                <View style={styles.itemBlock}>
+                                    <Text style={[styles.itemTitle, { color: textColor }]}>What is an Activity?</Text>
+                                    <Text style={[styles.itemText, { color: subtextColor }]}>
+                                        An Activity defines a specific operational check, task, or inspection performed within a Report Type.
+                                    </Text>
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]} />
+                                <View style={styles.itemBlock}>
+                                    <Text style={[styles.itemTitle, { color: textColor }]}>Relationship to Report Types</Text>
+                                    <Text style={[styles.itemText, { color: subtextColor }]}>
+                                        Each Activity belongs to a Report Type and represents the actual work or inspection recorded during reporting.
+                                    </Text>
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]} />
+                                <View style={styles.itemBlock}>
+                                    <Text style={[styles.itemTitle, { color: textColor }]}>Forms & Fields</Text>
+                                    <Text style={[styles.itemText, { color: subtextColor }]}>
+                                        Each Activity can contain its own form fields, such as checklist items, text input, numbers, photos, measurements, or other required evidence.
+                                    </Text>
+                                </View>
+                            </GlassView>
+                        </View>
+
+                        <View style={styles.section}>
+                            <Text style={[styles.sectionTitle, { color: subtextColor }]}>SCHEDULING & USAGE</Text>
+                            <GlassView intensity={isDark ? 15 : 40} style={[styles.card, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#FFFFFF' }]}>
+                                <View style={styles.itemBlock}>
+                                    <Text style={[styles.itemTitle, { color: textColor }]}>Frequency</Text>
+                                    <Text style={[styles.itemText, { color: subtextColor }]}>
+                                        Activities can have a recurring frequency such as Daily, Weekly, Biweekly, or Monthly to define how often they are expected to be performed.
+                                    </Text>
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]} />
+                                <View style={styles.itemBlock}>
+                                    <Text style={[styles.itemTitle, { color: textColor }]}>Report Entry</Text>
+                                    <Text style={[styles.itemText, { color: subtextColor }]}>
+                                        When a report is created, its Activities become the forms users complete as operational evidence.
+                                    </Text>
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]} />
+                                <View style={styles.itemBlock}>
+                                    <Text style={[styles.itemTitle, { color: textColor }]}>Structure</Text>
+                                    <Text style={[styles.itemText, { color: '#007AFF', fontWeight: '500' }]}>Category → Report Type → Activity → Fields</Text>
+                                </View>
+                                <View style={[styles.divider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]} />
+                                <View style={styles.itemBlock}>
+                                    <Text style={[styles.itemTitle, { color: textColor }]}>Example</Text>
+                                    <Text style={[styles.itemText, { color: textColor, fontWeight: '500' }]}>Facility & Operations → Maintenance → Electric Panel Inspection → Voltage / Condition / Photo</Text>
+                                </View>
+                            </GlassView>
+                        </View>
+                    </ScrollView>
+                </View>
+            </View>
+        </Modal>
+    );
+}
+
+const styles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
+    backdrop: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+    },
+    sheetContainer: {
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: '85%',
+        paddingTop: 16,
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingBottom: 16,
+    },
+    title: {
+        fontSize: 17,
+        fontWeight: '700',
+    },
+    doneBtn: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#007AFF',
+    },
+    content: {
+        paddingHorizontal: 16,
+    },
+    section: {
+        marginBottom: 20,
+    },
+    sectionTitle: {
+        fontSize: 12,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+        marginBottom: 8,
+        marginLeft: 12,
+    },
+    card: {
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    itemBlock: {
+        padding: 14,
+        gap: 4,
+    },
+    itemTitle: {
+        fontSize: 15,
+        fontWeight: '600',
+    },
+    itemText: {
+        fontSize: 13,
+        lineHeight: 18,
+    },
+    divider: {
+        height: StyleSheet.hairlineWidth,
+        marginLeft: 14,
+    },
+});

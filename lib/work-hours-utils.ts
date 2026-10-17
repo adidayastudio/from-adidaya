@@ -112,50 +112,71 @@ export function getWorkHoursConfig(date: Date | string): WorkHoursConfig {
     };
 }
 
+export type EndTimeBehavior = 'fixed_schedule' | 'extend_duration' | 'flexible_duration';
+
 /**
- * Calculate target clock-out time based on clock-in time and date
- * Returns MAX(clockIn + workHours, standardEndTime)
+ * Calculate target clock-out time based on clock-in time, date, and EndTimeBehavior
+ * Note: Break duration does NOT count as working hours.
  * 
- * Examples for weekdays (8h, end 17:00):
- * - Clock in 08:00 → Target 17:00 (08:00 + 8h = 16:00, but min is 17:00)
- * - Clock in 09:30 → Target 17:30 (09:30 + 8h = 17:30)
- * - Clock in 10:00 → Target 18:00 (10:00 + 8h = 18:00)
- * 
- * Examples for Saturday (5h, end 14:00):
- * - Clock in 09:00 → Target 14:00 (09:00 + 5h = 14:00)
- * - Clock in 10:00 → Target 15:00 (10:00 + 5h = 15:00)
+ * Behaviors:
+ * - 'fixed_schedule': Always follows scheduled end time (e.g. 17:00)
+ * - 'extend_duration': Moves based on actual clock-in to complete required duration
+ * - 'flexible_duration': Completes when required work duration is finished (no fixed end)
  */
-export function calculateTargetTime(clockInTime: Date | string, date?: Date | string): Date {
+export function calculateTargetTime(
+    clockInTime: Date | string,
+    date?: Date | string,
+    behavior: EndTimeBehavior = 'fixed_schedule',
+    breakMinutes: number = 60
+): Date {
     const clockIn = typeof clockInTime === 'string' ? new Date(clockInTime) : clockInTime;
     const dateForConfig = date || clockIn;
     const config = getWorkHoursConfig(dateForConfig);
 
-    // Calculate clockIn + workHours
-    const clockInPlusWork = new Date(clockIn.getTime() + config.workMinutes * 60 * 1000);
-
-    // Create standard end time for that day
+    // Standard schedule end time for the day
     const standardEnd = new Date(clockIn);
     standardEnd.setHours(config.endHour, 0, 0, 0);
 
-    // Return MAX of the two
-    return clockInPlusWork > standardEnd ? clockInPlusWork : standardEnd;
+    // Total required elapsed time = working minutes + break duration
+    // For 8 working hrs + 1 hr break = 9 hrs total
+    const requiredElapsedMs = (config.workMinutes + breakMinutes) * 60 * 1000;
+    const durationTarget = new Date(clockIn.getTime() + requiredElapsedMs);
+
+    if (behavior === 'fixed_schedule') {
+        return standardEnd;
+    } else if (behavior === 'extend_duration') {
+        return durationTarget > standardEnd ? durationTarget : standardEnd;
+    } else {
+        // flexible_duration
+        return durationTarget;
+    }
 }
 
 /**
  * Format target time as HH:MM string
  */
-export function formatTargetTime(clockInTime: Date | string | null, date?: Date | string): string {
+export function formatTargetTime(
+    clockInTime: Date | string | null,
+    date?: Date | string,
+    behavior: EndTimeBehavior = 'fixed_schedule',
+    breakMinutes: number = 60
+): string {
     if (!clockInTime) return "--:--";
-    const target = calculateTargetTime(clockInTime, date);
+    const target = calculateTargetTime(clockInTime, date, behavior, breakMinutes);
     return target.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 /**
  * Check if current time is in overtime period
  */
-export function isOvertime(currentTime: Date, startTime: Date | null): boolean {
+export function isOvertime(
+    currentTime: Date,
+    startTime: Date | null,
+    behavior: EndTimeBehavior = 'fixed_schedule',
+    breakMinutes: number = 60
+): boolean {
     if (!startTime) return false;
-    const target = calculateTargetTime(startTime, currentTime);
+    const target = calculateTargetTime(startTime, currentTime, behavior, breakMinutes);
     return currentTime > target;
 }
 
@@ -163,15 +184,25 @@ export function isOvertime(currentTime: Date, startTime: Date | null): boolean {
  * Calculate overtime start time (when overtime begins)
  * This is the same as target time
  */
-export function getOvertimeStart(clockInTime: Date | string, date?: Date | string): Date {
-    return calculateTargetTime(clockInTime, date);
+export function getOvertimeStart(
+    clockInTime: Date | string,
+    date?: Date | string,
+    behavior: EndTimeBehavior = 'fixed_schedule',
+    breakMinutes: number = 60
+): Date {
+    return calculateTargetTime(clockInTime, date, behavior, breakMinutes);
 }
 
 /**
  * Format overtime start time as HH:MM string
  */
-export function formatOvertimeStart(clockInTime: Date | string | null, date?: Date | string): string {
-    return formatTargetTime(clockInTime, date);
+export function formatOvertimeStart(
+    clockInTime: Date | string | null,
+    date?: Date | string,
+    behavior: EndTimeBehavior = 'fixed_schedule',
+    breakMinutes: number = 60
+): string {
+    return formatTargetTime(clockInTime, date, behavior, breakMinutes);
 }
 
 /**
@@ -218,4 +249,35 @@ export function getShiftSchedule(date?: Date | string): string {
 
     const schedule = `09:00 - ${config.endHour.toString().padStart(2, '0')}:00`;
     return config.isRamadan ? `${schedule} (Ramadan)` : schedule;
+}
+
+/**
+ * Safely parse any date input (ISO string, PostgreSQL timestamp, Date object)
+ * into a valid Date object across Android Hermes, iOS JSC, and Web.
+ */
+export function parseIsoDate(dateInput: Date | string | number | null | undefined): Date | null {
+    if (!dateInput) return null;
+    if (typeof dateInput === 'number') {
+        const d = new Date(dateInput);
+        return isNaN(d.getTime()) ? null : d;
+    }
+    if (dateInput instanceof Date) {
+        return isNaN(dateInput.getTime()) ? null : dateInput;
+    }
+    
+    let str = String(dateInput).trim();
+    if (!str) return null;
+
+    // Fix PostgreSQL "YYYY-MM-DD HH:mm:ss" space separator for Hermes
+    if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/.test(str)) {
+        str = str.replace(' ', 'T');
+    }
+
+    // If ISO string has no timezone offset or Z, append 'Z' for UTC ISO
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(str)) {
+        str += 'Z';
+    }
+
+    const d = new Date(str);
+    return isNaN(d.getTime()) ? null : d;
 }
