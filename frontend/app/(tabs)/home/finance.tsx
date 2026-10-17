@@ -505,6 +505,26 @@ export default function FinanceScreen() {
     const [isFinanceSelectorVisible, setIsFinanceSelectorVisible] = useState<boolean>(false);
     const [selectedSetupModule, setSelectedSetupModule] = useState<FinanceSetupModule>('general_settings');
 
+    useEffect(() => {
+        setSelectedRequest(null);
+        setSelectedPool(null);
+        setSelectedSource(null);
+        setSelectedReport(null);
+        setShowRequestDetail(false);
+        setShowCreateRequest(false);
+        setShowSwiftUICreateRequest(false);
+        setShowAddFunding(false);
+        setEditingSource(null);
+        setShowTopUp(false);
+        setShowGenerateReport(false);
+        setShowReportDetail(false);
+        setActionModalType(null);
+        setActionTarget(null);
+        setEditRequest(null);
+        setShowPayModal(false);
+        setPayTarget(null);
+    }, [user?.id]);
+
     const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
     const [selectedDepartmentCode, setSelectedDepartmentCode] = useState<string>('ALL');
 
@@ -2670,6 +2690,19 @@ export default function FinanceScreen() {
         }
         return renderBody();
     };
+
+    // Gate the entire Finance surface, including detail panes and every modal.
+    // The gate takes effect in the logout render, before cleanup effects run.
+    if (!isAuthenticated || !user) {
+        return (
+            <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#F2F2F7' }}>
+                <Stack.Screen options={{ headerShown: Platform.OS !== 'web', title: 'Finance', headerTransparent: false }} />
+                <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingVertical: 32 }}>
+                    <UnauthenticatedView compact title="Finance" description="Sign in to your Adidaya account to view finance requests, approvals, and payments." buttonText="Sign In" />
+                </ScrollView>
+            </View>
+        );
+    }
 
     const pStats_v = purchasingStats;
     const rStats_v = reimbursementStats;
