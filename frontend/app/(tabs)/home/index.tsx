@@ -285,7 +285,7 @@ export default function HomeScreen() {
                                             <View style={styles.onboardingHero}>
                                                 <FormaLogo size={56} isDark={isDark} />
                                                 <Text style={[styles.onboardingTitle, isDark && styles.onboardingTitleDark]}>
-                                                    Welcome to Forma
+                                                    Welcome to Adidaya
                                                 </Text>
                                                 <Text style={[styles.onboardingSubtitle, isDark && styles.onboardingSubtitleDark]} numberOfLines={2}>
                                                     Sign in to access and manage your workspace.
@@ -303,7 +303,7 @@ export default function HomeScreen() {
                                                 </View>
                                                 <View style={{ flex: 1, gap: 2 }}>
                                                     <Text style={[styles.actionTitle, isDark && styles.actionTitleDark]}>
-                                                        Sign In to Forma
+                                                        Sign In to Adidaya
                                                     </Text>
                                                     <Text style={[styles.actionDesc, isDark && styles.actionDescDark]} numberOfLines={2}>
                                                         Access your account and workspace.
@@ -326,7 +326,7 @@ export default function HomeScreen() {
                                         <View style={styles.onboardingHero}>
                                             <FormaLogo size={56} isDark={isDark} />
                                             <Text style={[styles.onboardingTitle, isDark && styles.onboardingTitleDark]}>
-                                                Welcome to Forma
+                                                Welcome to Adidaya
                                             </Text>
                                             <Text style={[styles.onboardingSubtitle, isDark && styles.onboardingSubtitleDark]} numberOfLines={2}>
                                                 Sign in to access and manage your workspace.
@@ -344,7 +344,7 @@ export default function HomeScreen() {
                                             </View>
                                             <View style={{ flex: 1, gap: 2 }}>
                                                 <Text style={[styles.actionTitle, isDark && styles.actionTitleDark]}>
-                                                    Sign In to Forma
+                                                    Sign In to Adidaya
                                                 </Text>
                                                 <Text style={[styles.actionDesc, isDark && styles.actionDescDark]} numberOfLines={2}>
                                                     Access your account and workspace.
